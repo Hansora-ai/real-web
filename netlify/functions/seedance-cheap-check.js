@@ -26,6 +26,7 @@ exports.handler = async (event) => {
 
     const row = await findProcessingGeneration(ids);
     if (!row) return json(200, { ok: false, status: 'ignored', reason: 'not_processing' });
+    if (row.meta?.source === 'reapi') return require('../../lib/reapi/check.cjs').handler(event);
 
     ids.uid = ids.uid || row.user_id || '';
     ids.run_id = ids.run_id || row.meta?.run_id || '';
@@ -77,6 +78,7 @@ async function handlePost(event) {
 
   const row = await findProcessingGeneration(ids);
   if (!row) return json(200, { ok: false, status: 'ignored', reason: 'not_processing' });
+  if (row.meta?.source === 'reapi') return require('../../lib/reapi/check.cjs').handler(event);
 
   ids.uid = ids.uid || row.user_id || '';
   ids.run_id = ids.run_id || row.meta?.run_id || '';

@@ -14,6 +14,12 @@ exports.handler=async event=>{
   const path=`user_generations?user_id=eq.${encodeURIComponent(q.uid)}&meta->>run_id=eq.${encodeURIComponent(q.run_id)}&select=id,user_id,result_url,meta`;
   const row=(await db(path))?.[0];
   if(!row||row.meta?.source_feature!=='henshin')return json(404,{ok:false,error:'Henshin generation unavailable.'});
+  if(row.meta.source==='reapi') {
+   const response=await require('../../lib/reapi/check.cjs').handler(event);
+   const latest=(await db(path))?.[0];
+   if(audioPending(latest))await enqueue(latest).catch(()=>{});
+   return json(response.statusCode,{...JSON.parse(response.body||'{}'),meta:latest?.meta||row.meta});
+  }
   if(event.httpMethod==='POST'&&!equalToken(q.token,row.meta.callback_token))return json(403,{ok:false,error:'Invalid callback token.'});
   if(audioPending(row)){
    await enqueue(row).catch(()=>{});

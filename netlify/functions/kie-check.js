@@ -28,6 +28,7 @@ exports.handler = async (event) => {
 
     const row = await findProcessingGeneration(ids);
     if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
+    if (row.meta?.source === 'reapi') return require('../../lib/reapi/check.cjs').handler(event);
 
     ids.uid = ids.uid || row.user_id || "";
     ids.run_id = ids.run_id || row.meta?.run_id || "";
@@ -92,6 +93,7 @@ async function handlePost(event) {
 
   const row = await findProcessingGeneration(ids);
   if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
+  if (row.meta?.source === 'reapi') return require('../../lib/reapi/check.cjs').handler(event);
 
   ids.uid = ids.uid || row.user_id || "";
   ids.run_id = ids.run_id || row.meta?.run_id || "";
@@ -276,6 +278,17 @@ async function markDone({ row, ids, urls, enqueueAudio = true }) {
       archive_errors: archive.errors.length ? archive.errors : ["archive_failed"]
     })
   };
+
+  if (row.meta?.source === 'reapi') {
+    if (!archive.paths.length) throw Error('Result archival is pending.');
+    const audio = row.meta.source_feature === 'henshin' && row.meta.source_audio_url;
+    const completion = await require('../../lib/reapi/billing.cjs').transition('complete', row.id, row.user_id, {
+      result_url: audio ? null : savedUrls[0],
+      meta: { ...meta, ...(audio ? { status:'restoring_audio',generated_video_url:savedUrls[0] } : {}) }
+    });
+    if (completion.changed && audio && enqueueAudio) await require('../../lib/henshin/jobs.cjs').enqueue(completion.row).catch(()=>{});
+    return completion.row.result_url ? [completion.row.result_url] : [];
+  }
 
   if (row.meta?.source_feature === 'henshin' && row.meta.source_audio_url) {
     const audioMeta = { ...meta, status: 'restoring_audio', generated_video_url: savedUrls[0] };
@@ -744,3 +757,4 @@ function messageOf(error) {
 exports.callbackStatus = callbackStatus;
 exports.failureReason = failureReason;
 exports.failureCode = failureCode;
+exports.markDone = markDone;
