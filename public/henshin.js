@@ -199,18 +199,21 @@
   resultResizeObserver.observe($('resultsList'));$('resultsList').querySelectorAll('.result').forEach(card=>resultResizeObserver.observe(card));
   layoutResults();$('resultsList').querySelectorAll('video').forEach(video=>historyPlayback.observe(video));
  }
+ // First visit with no history: show the template library instead of an empty list. Decided once; a tab click wins.
+ const startParams=new URLSearchParams(location.search);let autoView=!startParams.has('template')&&startParams.get('preset')!=='1';
+ function autoPickView(){if(!autoView||busy||submission)return;autoView=false;if(!rows.length&&!$('historyView').hidden)openLibrary();}
  async function refresh(){
   if(refreshing)return;refreshing=true;
   try{
    const s=await session();
-   if(!s){rows=[];sessionUser='';renderResults();return;}
+   if(!s){rows=[];sessionUser='';renderResults();autoPickView();return;}
    if(sessionUser!==s.user.id){rows=[];sessionUser=s.user.id;}
    const {data,error}=await sb.from('user_generations').select('id,provider,prompt,result_url,meta,created_at').eq('user_id',s.user.id).eq('kind','video').order('created_at',{ascending:false}).limit(100);
    if(error)throw error;rows=(data||[]).filter(row=>isHenshin(row)||isSeedance(row));
    // Resume shared KIE checking after navigation or a browser reload.
    await Promise.allSettled(rows.filter(row=>!row.result_url&&!/fail|reject|cancel/.test(row.meta?.status||'')&&row.meta?.task_id).map(async row=>{
     const qs=new URLSearchParams({uid:s.user.id,run_id:row.meta.run_id,taskId:row.meta.task_id});const checker=isHenshin(row)?'henshin-check':(row.meta.source==='reapi'?'reapi-check':'kie-check');const r=await fetch('/.netlify/functions/'+checker+'?'+qs,{cache:'no-store',headers:{Authorization:'Bearer '+s.access_token}});const data=await r.json();const url=data.result_url||data.video_url||data.urls?.[0];if(url)row.result_url=url;if(data.meta)row.meta=data.meta;if(data.failed)row.meta.status='failed';
-   }));renderResults();
+   }));renderResults();autoPickView();
   }catch(e){status(t('Could not load recent generations.')+' '+t(e.message),true);}finally{refreshing=false;}
  }
  $('generate').onclick=async()=>{
@@ -305,7 +308,7 @@
    }
  }
  $('libraryMore').onclick=loadMoreTemplates;
- $('templatesOpen').onclick=openLibrary;$('emptyLibrary').onclick=openLibrary;$('historyOpen').onclick=()=>setView('history');
+ $('templatesOpen').onclick=()=>{autoView=false;openLibrary();};$('emptyLibrary').onclick=()=>{autoView=false;openLibrary();};$('historyOpen').onclick=()=>{autoView=false;setView('history');};
  for(const tab of [$('historyOpen'),$('templatesOpen')])tab.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const target=event.key==='Home'?$('historyOpen'):event.key==='End'?$('templatesOpen'):tab===$('historyOpen')?$('templatesOpen'):$('historyOpen');target.click();target.focus();});
  fetchTemplates().catch(()=>{});
  update();refresh();setInterval(()=>{if(document.visibilityState==='visible'&&!busy&&$('libraryView').hidden&&!$('previewDialog').open)refresh();},12000);sb.auth.onAuthStateChange((_event,s)=>{ $('ownerControls').hidden=!(s?.user.email_confirmed_at&&s.user.email?.toLowerCase()===OWNER);const changed=libraryOwner!==owner(s);libraryOwner=owner(s);if(changed&&templateCache&&!$('libraryView').hidden)renderTemplates(templateCache.templates);setTimeout(refresh,0);});

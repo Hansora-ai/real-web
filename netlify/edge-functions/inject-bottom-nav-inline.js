@@ -407,6 +407,19 @@ export default async (request, context) => {
       font:750 16px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
       text-decoration:none;
     }
+    .hs-top-badge{
+      margin-left:auto;
+      display:inline-flex;
+      align-items:center;
+      height:20px;
+      padding:0 8px;
+      border-radius:7px;
+      background:linear-gradient(135deg,#d9ff3d,#a3f05a);
+      color:#0b1203;
+      font:900 11px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.02em;
+      box-shadow:0 0 14px rgba(201,255,61,.3);
+    }
     .hs-feature-toggle{
       width:100%;
       justify-content:space-between;
@@ -505,6 +518,7 @@ export default async (request, context) => {
       <a href="${localizedPath('/search-models.html')}"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> ${copy.image}</a>
       <a data-hs-video-landing href="${localizedPath('/search-models.html?model=gemini-omni-flash-1-1')}"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> ${copy.video}</a>
       <a href="${localizedPath('/audio.html')}"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> ${copy.audio}</a>
+      <a href="${localizedPath('/henshin.html')}"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"></circle><path d="M3.5 20c1.1-3.6 3.6-5.5 6.5-5.5 1.6 0 3 .5 4.1 1.5"></path><path d="M18 13l.9 2.1L21 16l-2.1.9L18 19l-.9-2.1L15 16l2.1-.9L18 13z"></path></svg> Henshin<span class="hs-top-badge">Top</span></a>
       <a href="${localizedPath('/mcp-setup.html')}"><svg viewBox="0 0 24 24"><path d="M9 2v5M15 2v5"></path><path d="M6 7h12v4a6 6 0 0 1-12 0z"></path><path d="M12 17v5"></path></svg> ${copy.chatgptPlugin}</a>
       <button class="hs-feature-toggle" id="hs-feature-toggle" type="button">
         <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> ${copy.features}</span>
