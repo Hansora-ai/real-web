@@ -128,28 +128,29 @@ export default async (request, context) => {
       --hs-panel-2:#171820;
       --hs-grad-a:#8b5cf6;
       --hs-grad-b:#4f9cff;
-      --hs-bottom-height:92px;
-      --hs-safe-bottom:env(safe-area-inset-bottom, 0px);
+      --hs-bottom-height:80px;
+      /* iPhone Safari can draw the page under the home bar without reporting a safe area, so always keep room for it. */
+      --hs-safe-bottom:max(env(safe-area-inset-bottom, 0px), 14px);
     }
     body{ padding-bottom:calc(var(--hs-bottom-height) + var(--hs-safe-bottom)); }
     /* Floating glass dock */
     .hs-bottom-nav{
       position:fixed;
-      left:max(10px, env(safe-area-inset-left, 0px));
-      right:max(10px, env(safe-area-inset-right, 0px));
-      bottom:calc(10px + var(--hs-safe-bottom));
+      left:0;
+      right:0;
+      bottom:0;
+      padding:0 env(safe-area-inset-right, 0px) var(--hs-safe-bottom) env(safe-area-inset-left, 0px);
       z-index:60;
       display:block;
       box-sizing:border-box;
       isolation:isolate;
-      max-width:520px;
-      margin:0 auto;
-      border-radius:26px;
-      border:1px solid rgba(255,255,255,.09);
+      border-radius:24px 24px 0 0;
+      border:0;
+      border-top:1px solid rgba(255,255,255,.10);
       background:rgba(12,14,21,.985);
       -webkit-backdrop-filter:blur(22px) saturate(170%);
       backdrop-filter:blur(22px) saturate(170%);
-      box-shadow:0 18px 44px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07);
+      box-shadow:0 -10px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07);
       transform:translate3d(0,var(--hs-viewport-shift,0px),0);
       -webkit-transform:translate3d(0,var(--hs-viewport-shift,0px),0);
     }
@@ -163,7 +164,9 @@ export default async (request, context) => {
       pointer-events:none;
     }
     .hs-bottom-rail{
-      height:64px;
+      height:78px;
+      max-width:560px;
+      margin:0 auto;
       display:grid;
       grid-template-columns:minmax(0,1fr) minmax(0,1fr) 66px minmax(0,1fr) minmax(0,1fr);
       align-items:center;
@@ -173,23 +176,24 @@ export default async (request, context) => {
       position:relative;
       width:100%;
       min-width:0;
-      height:56px;
+      height:70px;
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:4px;
+      gap:6px;
       border:0;
       border-radius:18px;
       background:transparent;
       color:rgba(226,230,240,.58);
-      font:600 10.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      font:600 11.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
       letter-spacing:.01em;
       text-decoration:none;
       -webkit-tap-highlight-color:transparent;
       transition:color .2s ease, transform .15s ease;
     }
-    html[lang="hy"] .hs-btn, html[lang="hy"] .hs-fab-label{ font-size:9.5px; letter-spacing:0; }
+    html[lang="ru"] .hs-btn, html[lang="ru"] .hs-fab-label{ font-size:10.5px; letter-spacing:0; }
+    html[lang="hy"] .hs-btn, html[lang="hy"] .hs-fab-label{ font-size:10px; letter-spacing:0; }
     .hs-btn span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px; }
     .hs-btn:active{ transform:scale(.92); color:#fff; }
     .hs-btn.is-active{ color:#fff; }
@@ -197,7 +201,7 @@ export default async (request, context) => {
     .hs-btn.is-active::after{
       content:"";
       position:absolute;
-      bottom:3px;
+      bottom:4px;
       left:50%;
       width:16px;
       height:3px;
@@ -216,13 +220,13 @@ export default async (request, context) => {
       stroke-linecap:round;
       stroke-linejoin:round;
     }
-    .hs-btn svg{ width:22px; height:22px; stroke-width:1.9; }
+    .hs-btn svg{ width:24px; height:24px; stroke-width:1.9; }
     .hs-fab-wrap{ display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; }
     .hs-fab{
       position:relative;
       width:58px;
       height:58px;
-      margin-top:-34px;
+      margin-top:-30px;
       display:grid;
       place-items:center;
       padding:0;
@@ -245,9 +249,9 @@ export default async (request, context) => {
     .hs-fab:active{ transform:scale(.92); }
     .hs-fab svg.hs-fab-plus{ width:26px; height:26px; stroke:#fff; stroke-width:2.6; fill:none; stroke-linecap:round; position:relative; }
     .hs-fab-label{
-      margin-top:5px;
+      margin-top:7px;
       color:#fff;
-      font:700 10.5px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      font:700 11.5px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
       letter-spacing:.01em;
       max-width:72px;
       overflow:hidden;
@@ -767,7 +771,9 @@ export default async (request, context) => {
           : window.innerHeight;
         const rect = bottomNav.getBoundingClientRect();
         const unshiftedBottom = rect.bottom - bottomNavShift;
-        bottomNavShift = Math.max(0, Math.round(viewportBottom - unshiftedBottom));
+        // Keep the dock's floating gap above the screen edge instead of pinning it flush to the bottom.
+        const dockGap = parseFloat(getComputedStyle(bottomNav).bottom) || 0;
+        bottomNavShift = Math.max(0, Math.round(viewportBottom - dockGap - unshiftedBottom));
         bottomNav.style.setProperty('--hs-viewport-shift', bottomNavShift + 'px');
       });
     };
