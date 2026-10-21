@@ -129,6 +129,22 @@ function temporaryIssueResult(model, price, unavailable, reason = '') {
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
+// Hansora's own safety check refused the prompt before anything ran. Every model gets the same check,
+// so ChatGPT must not try another one; it offers a clean version of the idea instead.
+const NO_MODEL_WILL = 'Hansora does not create sexual or NSFW content with any model, so trying another model will not help.';
+function contentBlockedResult(model, result) {
+  const sexual = /sexual|nsfw/i.test(String(result.category || ''));
+  const value = {
+    ok: false, error: 'content_blocked', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
+    category: result.category || null,
+    message: sexual ? `This request was blocked: ${NO_MODEL_WILL}` : String(result.message || 'This request was blocked by the content policy.'),
+    next_step: sexual
+      ? `Nothing was generated or charged. Tell the user briefly and kindly, in their language, that every model refuses sexual or NSFW content, so switching models will not help. Offer to make a non-sexual version of their idea instead (for example romantic, playful or stylish), and suggest a concrete rewrite. Do not submit this request or a reworded sexual version to any model.`
+      : 'Nothing was generated or charged. Tell the user why in their language and offer to change the request. Do not submit it to another model.'
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
 function displayModelName(generation) {
   const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
   for (const id of [meta.model_id, meta.engine, meta.model]) {
@@ -704,6 +720,7 @@ export function createHansoraServer(ctx) {
       // start right away at the real price. Only a higher price goes back to the user.
       const verified = Number(result?.displayed_credits);
       const quoted = payload.expected_credits;
+      if (result?.code === 'CONTENT_POLICY_BLOCKED') return contentBlockedResult(model, result);
       if (response.status === 409 && Number.isFinite(result.input_seconds) && Number.isFinite(verified) && (quoted == null || verified <= Number(quoted))) {
         payload.expected_credits = verified;
         ({ response, result } = await submit());

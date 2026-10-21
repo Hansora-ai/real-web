@@ -2,7 +2,7 @@
 
 const crypto = require('node:crypto');
 
-const POLICY_VERSION = '2026-09-03.1';
+const POLICY_VERSION = '2026-10-21.1';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const QUEUE_SECRET = process.env.HANSORA_QUEUE_SECRET || '';
@@ -15,6 +15,8 @@ const DIRECT_SEXUAL_TERMS = [
   'jerk off', 'masturbate', 'masturbating', 'masturbation', 'milf',
   'onlyfans', 'orgasm', 'penis', 'porn', 'pornographic', 'pussy',
   'sexual', 'slut', 'vagina', 'vergina', 'whore', 'xxx', 'sexo',
+  'handjob', 'hand job', 'rimjob', 'deepthroat', 'deep throat', 'cumshot', 'creampie',
+  'horny', 'nsfw', 'tits', 'titties', 'nipples',
   'pornografia', 'sexe', 'порно', 'секс'
 ];
 
@@ -143,7 +145,13 @@ function hasSexualActivityContext(normalized) {
     /\bsex\s+(?:act|acts|activity|activities|scene|scenes|position|positions|video|videos|image|images|photo|photos|content|show|tape|worker|workers|work)\b/,
     /\b(?:during|after|before|while|watching|depicting|showing|performing)\s+sex\b/,
     /\bsex\s+(?:with|between|involving)\b/,
-    /\b(?:oral|anal|group|rough|explicit|graphic|hardcore)\s+sex\b/
+    /\b(?:oral|anal|group|rough|explicit|graphic|hardcore)\s+sex\b/,
+    // Oral sex phrased without explicit words: "suck me off", "give him head", "go down on her".
+    /\bsuck(?:s|ed|ing)?\s+(?:me|him|you|them|us|her)\s+off\b/,
+    /\b(?:give|gives|giving|gave)\s+(?:me\s+|him\s+|you\s+|them\s+)?head\b/,
+    /\b(?:go|goes|going|went)\s+down\s+on\s+(?:me|him|her|you|them)\b/,
+    /\b(?:flirt|flirts|flirting|flirty|tease|teases|teasing|seduce|seduces|seducing|seductive|seductively)\b(?:\s+\w+){0,6}\s+suck(?:s|ed|ing)?\b/,
+    /\bcum(?:s|ming|med)?\b(?!\s+laude)/
   ];
   return patterns.some((pattern) => pattern.test(normalized));
 }
