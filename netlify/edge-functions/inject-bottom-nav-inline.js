@@ -413,21 +413,29 @@ export default async (request, context) => {
       right:0;
       bottom:0;
       max-height:88vh;
+      max-height:86dvh;
       overflow:auto;
       overscroll-behavior:contain;
       -webkit-overflow-scrolling:touch;
-      padding:18px 18px calc(26px + env(safe-area-inset-bottom));
+      padding:0 18px calc(32px + var(--hs-safe-bottom));
       border-radius:28px 28px 0 0;
       border-top:1px solid rgba(255,255,255,.12);
       background:rgba(16,17,23,.98);
       box-shadow:0 -20px 70px rgba(0,0,0,.46);
     }
     .hs-overlay .panel header{
+      /* Title and close button stay pinned while the list scrolls. */
+      position:sticky;
+      top:0;
+      z-index:2;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      margin-bottom:14px;
+      margin:0 -18px 14px;
+      padding:16px 18px 12px;
+      background:#101117;
+      border-bottom:1px solid rgba(255,255,255,.06);
       color:var(--hs-ink);
     }
     .hs-overlay .panel h3{
