@@ -94,6 +94,14 @@ export default async (request, context) => {
     }
   };
   const copy = COPY[language];
+  // Highlight the tab for the page being viewed.
+  const active = /^\/(?:index(?:_(?:ru|arm))?\.html)?$/.test(requestPath)
+    ? 'home'
+    : /^\/models(?:_(?:ru|arm))?\.html$/.test(requestPath)
+      ? 'features'
+      : /^\/usage(?:_(?:ru|arm))?\.html$/.test(requestPath)
+        ? 'history'
+        : '';
   const localizedPath = (value) => {
     if (language === 'en') return value;
     const match = value.match(/^([^?#]+)([?#].*)?$/);
@@ -120,22 +128,28 @@ export default async (request, context) => {
       --hs-panel-2:#171820;
       --hs-grad-a:#8b5cf6;
       --hs-grad-b:#4f9cff;
-      --hs-bottom-height:106px;
+      --hs-bottom-height:92px;
       --hs-safe-bottom:env(safe-area-inset-bottom, 0px);
     }
     body{ padding-bottom:calc(var(--hs-bottom-height) + var(--hs-safe-bottom)); }
+    /* Floating glass dock */
     .hs-bottom-nav{
       position:fixed;
-      left:0;
-      right:0;
-      bottom:0;
+      left:max(10px, env(safe-area-inset-left, 0px));
+      right:max(10px, env(safe-area-inset-right, 0px));
+      bottom:calc(10px + var(--hs-safe-bottom));
       z-index:60;
       display:block;
       box-sizing:border-box;
       isolation:isolate;
-      background:#080a0f;
-      border-top:1px solid var(--hs-line);
-      padding:10px 10px calc(12px + var(--hs-safe-bottom));
+      max-width:520px;
+      margin:0 auto;
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,.09);
+      background:rgba(12,14,21,.985);
+      -webkit-backdrop-filter:blur(22px) saturate(170%);
+      backdrop-filter:blur(22px) saturate(170%);
+      box-shadow:0 18px 44px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07);
       transform:translate3d(0,var(--hs-viewport-shift,0px),0);
       -webkit-transform:translate3d(0,var(--hs-viewport-shift,0px),0);
     }
@@ -144,45 +158,53 @@ export default async (request, context) => {
       position:absolute;
       inset:0;
       z-index:-1;
-      background:linear-gradient(180deg,#101219 0%,#080a0f 100%);
-    }
-    .hs-bottom-nav::after{
-      content:"";
-      position:absolute;
-      left:0;
-      right:0;
-      top:100%;
-      height:max(240px,30vh);
-      background:#080a0f;
+      border-radius:inherit;
+      background:radial-gradient(120% 140% at 50% 0%, rgba(139,92,246,.10), transparent 60%);
       pointer-events:none;
     }
     .hs-bottom-rail{
-      max-width:780px;
-      height:72px;
-      margin:0 auto;
+      height:64px;
       display:grid;
-      grid-template-columns:1fr 1fr auto 1fr 1fr;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr) 66px minmax(0,1fr) minmax(0,1fr);
       align-items:center;
-      padding:0 10px;
-      gap:4px;
+      padding:0 4px;
     }
     .hs-btn{
+      position:relative;
       width:100%;
       min-width:0;
-      height:64px;
+      height:56px;
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:6px;
+      gap:4px;
       border:0;
-      border-radius:16px;
+      border-radius:18px;
       background:transparent;
-      color:var(--hs-muted);
-      font:700 12px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      color:rgba(226,230,240,.58);
+      font:600 10.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
       text-decoration:none;
+      -webkit-tap-highlight-color:transparent;
+      transition:color .2s ease, transform .15s ease;
     }
-    .hs-btn:active{ background:rgba(255,255,255,.06); color:#fff; }
+    html[lang="hy"] .hs-btn, html[lang="hy"] .hs-fab-label{ font-size:9.5px; letter-spacing:0; }
+    .hs-btn span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px; }
+    .hs-btn:active{ transform:scale(.92); color:#fff; }
+    .hs-btn.is-active{ color:#fff; }
+    .hs-btn.is-active svg{ filter:drop-shadow(0 0 8px rgba(167,139,250,.7)); }
+    .hs-btn.is-active::after{
+      content:"";
+      position:absolute;
+      bottom:3px;
+      left:50%;
+      width:16px;
+      height:3px;
+      margin-left:-8px;
+      border-radius:3px;
+      background:linear-gradient(90deg,#a78bfa,#38bdf8);
+    }
     .hs-btn svg,
     .hs-overlay svg,
     .hs-radial svg{
@@ -194,38 +216,43 @@ export default async (request, context) => {
       stroke-linecap:round;
       stroke-linejoin:round;
     }
-    .hs-fab-wrap{ display:flex; justify-content:center; align-items:center; }
+    .hs-btn svg{ width:22px; height:22px; stroke-width:1.9; }
+    .hs-fab-wrap{ display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; }
     .hs-fab{
       position:relative;
-      width:78px;
-      height:78px;
-      margin-top:-36px;
+      width:58px;
+      height:58px;
+      margin-top:-34px;
       display:grid;
       place-items:center;
-      border-radius:24px;
-      border:1px solid rgba(255,255,255,.18);
-      background:
-        radial-gradient(circle at 74% 20%, rgba(71,215,255,.9), transparent 24%),
-        linear-gradient(145deg,var(--hs-grad-a),#7c3aed 48%,var(--hs-grad-b));
-      box-shadow:0 18px 42px rgba(92,82,255,.42), 0 8px 24px rgba(56,189,248,.28);
+      padding:0;
+      border-radius:50%;
+      border:0;
+      background:conic-gradient(from 210deg,#8b5cf6,#6366f1,#38bdf8,#8b5cf6);
+      box-shadow:0 0 0 5px rgba(14,16,24,.92), 0 12px 28px rgba(99,102,241,.55), 0 4px 14px rgba(56,189,248,.35);
       color:#fff;
+      -webkit-tap-highlight-color:transparent;
+      transition:transform .15s ease;
     }
-    .hs-fab .hs-fab-plus{
+    .hs-fab::before{
+      content:"";
       position:absolute;
-      left:0;
-      right:0;
-      top:11px;
-      z-index:2;
-      font:300 32px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      inset:2px;
+      border-radius:50%;
+      background:linear-gradient(160deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%);
+      pointer-events:none;
+    }
+    .hs-fab:active{ transform:scale(.92); }
+    .hs-fab svg.hs-fab-plus{ width:26px; height:26px; stroke:#fff; stroke-width:2.6; fill:none; stroke-linecap:round; position:relative; }
+    .hs-fab-label{
+      margin-top:5px;
       color:#fff;
-    }
-    .hs-fab .hs-fab-label{
-      position:absolute;
-      left:0;
-      right:0;
-      bottom:10px;
-      z-index:2;
-      font:800 12px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      font:700 10.5px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
+      max-width:72px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
     .hs-radial{
       position:fixed;
@@ -411,21 +438,21 @@ export default async (request, context) => {
 
   const NAV = `<nav aria-label="${copy.mobileNav}" class="hs-bottom-nav">
   <div class="hs-bottom-rail">
-    <a aria-label="${copy.home}" class="hs-btn" href="${localizedPath('/index.html')}">
+    <a aria-label="${copy.home}" class="hs-btn${active === 'home' ? ' is-active' : ''}"${active === 'home' ? ' aria-current="page"' : ''} href="${localizedPath('/index.html')}">
       <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
       <span>${copy.home}</span>
     </a>
-    <a aria-label="${copy.features}" class="hs-btn" href="${localizedPath('/models.html#featuresSection')}">
+    <a aria-label="${copy.features}" class="hs-btn${active === 'features' ? ' is-active' : ''}"${active === 'features' ? ' aria-current="page"' : ''} href="${localizedPath('/models.html#featuresSection')}">
       <svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"></path></svg>
       <span>${copy.features}</span>
     </a>
     <div class="hs-fab-wrap">
       <button aria-label="${copy.openCreate}" class="hs-fab" id="hs-models-btn" type="button">
-        <span aria-hidden="true" class="hs-fab-plus">+</span>
-        <span class="hs-fab-label">${copy.create}</span>
+        <svg aria-hidden="true" class="hs-fab-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
       </button>
+      <span aria-hidden="true" class="hs-fab-label">${copy.create}</span>
     </div>
-    <a aria-label="${copy.history}" class="hs-btn" href="${localizedPath('/usage.html')}">
+    <a aria-label="${copy.history}" class="hs-btn${active === 'history' ? ' is-active' : ''}"${active === 'history' ? ' aria-current="page"' : ''} href="${localizedPath('/usage.html')}">
       <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"></path><path d="M3 3v6h6"></path><path d="M12 7v6l4 2"></path></svg>
       <span>${copy.history}</span>
     </a>
