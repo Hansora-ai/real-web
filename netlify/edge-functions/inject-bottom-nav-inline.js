@@ -128,29 +128,29 @@ export default async (request, context) => {
       --hs-panel-2:#171820;
       --hs-grad-a:#8b5cf6;
       --hs-grad-b:#4f9cff;
-      --hs-bottom-height:106px;
-      /* iPhone Safari can draw the page under the home bar without reporting a safe area, so always keep a lift. */
-      --hs-safe-bottom:max(env(safe-area-inset-bottom, 0px), 16px);
+      --hs-bottom-height:80px;
+      /* iPhone Safari can draw the page under the home bar without reporting a safe area, so always keep room for it. */
+      --hs-safe-bottom:max(env(safe-area-inset-bottom, 0px), 14px);
     }
     body{ padding-bottom:calc(var(--hs-bottom-height) + var(--hs-safe-bottom)); }
     /* Floating glass dock */
     .hs-bottom-nav{
       position:fixed;
-      left:max(10px, env(safe-area-inset-left, 0px));
-      right:max(10px, env(safe-area-inset-right, 0px));
-      bottom:calc(10px + var(--hs-safe-bottom));
+      left:0;
+      right:0;
+      bottom:0;
+      padding:0 env(safe-area-inset-right, 0px) var(--hs-safe-bottom) env(safe-area-inset-left, 0px);
       z-index:60;
       display:block;
       box-sizing:border-box;
       isolation:isolate;
-      max-width:520px;
-      margin:0 auto;
-      border-radius:26px;
-      border:1px solid rgba(255,255,255,.09);
+      border-radius:24px 24px 0 0;
+      border:0;
+      border-top:1px solid rgba(255,255,255,.10);
       background:rgba(12,14,21,.985);
       -webkit-backdrop-filter:blur(22px) saturate(170%);
       backdrop-filter:blur(22px) saturate(170%);
-      box-shadow:0 18px 44px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07);
+      box-shadow:0 -10px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07);
       transform:translate3d(0,var(--hs-viewport-shift,0px),0);
       -webkit-transform:translate3d(0,var(--hs-viewport-shift,0px),0);
     }
@@ -165,6 +165,8 @@ export default async (request, context) => {
     }
     .hs-bottom-rail{
       height:78px;
+      max-width:560px;
+      margin:0 auto;
       display:grid;
       grid-template-columns:minmax(0,1fr) minmax(0,1fr) 66px minmax(0,1fr) minmax(0,1fr);
       align-items:center;
