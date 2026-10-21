@@ -12,7 +12,7 @@ const complete = (kind = 'image', run_id = 'run-1') => ({ ...queued(run_id), sta
 // Execute the real card script, including initialization, bridge messages and timers.
 // Only the browser/host boundary is simulated; no generation tools are run.
 function host({ output, input, widgetState, get = () => envelope(complete()), native = true, initialize = true } = {}) {
-  const nodes = new Map(), listeners = new Map(), timers = new Map(), calls = [], messages = [];
+  const nodes = new Map(), listeners = new Map(), timers = new Map(), calls = [], messages = [], fetches = [];
   let now = 100000, timerId = 0, intersection, initializationAttempts = 0;
   const listen = (name, fn) => { if (!listeners.has(name)) listeners.set(name, []); listeners.get(name).push(fn); };
   const emit = (name, value = {}) => { for (const fn of listeners.get(name) || []) fn(value); };
@@ -43,10 +43,11 @@ function host({ output, input, widgetState, get = () => envelope(complete()), na
   async function invoke(params) { calls.push(params); return get(params); }
   if (native) window.openai.callTool = (name, args) => invoke({ name, arguments: args });
   vm.runInNewContext(GENERATION_APP_HTML.match(/<script>([\s\S]*?)<\/script>/)[1], {
+    fetch: (url, options) => { fetches.push({ url, body: JSON.parse(options.body) }); return Promise.resolve({ ok: true }); },
     window, document, URL, Map, Set, Date: class extends Date { static now() { return now; } },
     IntersectionObserver: class { constructor(fn) { intersection = fn; } observe() {} }
   });
-  return { nodes, calls, messages, window, document, emit,
+  return { nodes, calls, messages, fetches, window, document, emit,
     async tick(ms) {
       const end = now + ms;
       await flush();
@@ -250,4 +251,28 @@ test('several generations started together show as one gallery that fills in as 
   const calls = card.calls.length;
   await card.tick(30000);
   assert.equal(card.calls.length, calls); // nothing left to check, so polling stops
+});
+
+test('a finished result can be rated, and a thumbs down can say what was wrong', async () => {
+  const card = host({ output: queued(), get: () => envelope(complete('video')) });
+  await flush();
+  assert.equal(card.section(), 'ready');
+  assert.equal(card.nodes.get('rateLabel').textContent, 'Like it?');
+
+  card.nodes.get('rateDown').listeners.click();
+  await flush();
+  assert.equal(card.nodes.get('rateMore').classList.contains('hidden'), false); // asks what was wrong
+  assert.deepEqual(card.fetches.at(-1).body, { p_run_id: 'run-1', p_rating: -1, p_reasons: [], p_comment: null }); // the 👎 counts right away
+
+  const chip = { textContent: 'Too slow', attributes: {}, setAttribute(name, value) { this.attributes[name] = value; }, getAttribute(name) { return this.attributes[name]; } };
+  chip.setAttribute('aria-pressed', 'true');
+  card.nodes.get('rateReasons').children.push(chip);
+  card.nodes.get('rateComment').value = '  took 10 minutes ';
+  card.nodes.get('rateSend').listeners.click();
+  await flush();
+  assert.equal(card.fetches.at(-1).url, 'https://qmaealblegvcwodlmeht.supabase.co/rest/v1/rpc/rate_generation');
+  assert.deepEqual(card.fetches.at(-1).body, { p_run_id: 'run-1', p_rating: -1, p_reasons: ['Too slow'], p_comment: 'took 10 minutes' });
+  assert.equal(card.nodes.get('rateMore').classList.contains('hidden'), true);
+  assert.equal(card.nodes.get('rateLabel').textContent, 'Thanks for your feedback!');
+  assert.equal(card.snapshot().privateContent.hansoraGeneration.rating, -1); // stays rated after reload
 });
