@@ -399,6 +399,8 @@ export default async (request, context) => {
       inset:0;
       z-index:70;
     }
+    /* Size the menu to the visible screen (not the area behind Safari's toolbar) so the list can scroll all the way. */
+    @supports (height:100dvh){ .hs-overlay{ bottom:auto; height:100dvh; } }
     .hs-overlay.is-open{ display:block; }
     .hs-overlay .backdrop{
       position:absolute;
@@ -417,6 +419,7 @@ export default async (request, context) => {
       overflow:auto;
       overscroll-behavior:contain;
       -webkit-overflow-scrolling:touch;
+      touch-action:pan-y;
       padding:0 18px calc(32px + var(--hs-safe-bottom));
       border-radius:28px 28px 0 0;
       border-top:1px solid rgba(255,255,255,.12);
