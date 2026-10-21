@@ -12,11 +12,19 @@ test('sexual requests phrased without explicit words are blocked', () => {
     'she gives a handjob',
     'cum on her face',
     'horny girl in bed',
-    'go down on him'
+    'go down on him',
+    'suck his dick',
+    'she sucks his cock',
+    'dick pic',
+    'she shows her tits',
+    'grab her tits',
+    'her nipples',
+    'she is so horny',
+    'horny girl in bed'
   ]) assert.equal(evaluatePrompt(prompt).category, 'nsfw_sexual_content', prompt);
 });
 
-test('everyday phrases with the same words still pass', () => {
+test('the same words in an everyday meaning still pass: context decides, not the word', () => {
   for (const prompt of [
     'She flirts and teases me',
     'suck it up and keep running',
@@ -25,6 +33,16 @@ test('everyday phrases with the same words still pass', () => {
     'a hummingbird sucks nectar',
     'she graduated summa cum laude',
     'the team gives a head start',
-    'the elevator goes down on time'
+    'the elevator goes down on time',
+    'a cock crowing at dawn on the farm',
+    'blue tits singing on a branch',
+    'Moby Dick whale chase',
+    'Philip K. Dick style sci-fi city',
+    'Dick Van Dyke dancing on rooftops',
+    'a horny toad in the desert',
+    'baby bottle nipples',
+    'she sucks a lollipop',
+    'male and female sex of the bird',
+    'a cocktail party'
   ]) assert.equal(evaluatePrompt(prompt).allowed, true, prompt);
 });

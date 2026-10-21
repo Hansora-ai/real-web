@@ -10,13 +10,13 @@ const QUEUE_SECRET = process.env.HANSORA_QUEUE_SECRET || '';
 // These terms are explicit enough to block without needing surrounding context.
 const DIRECT_SEXUAL_TERMS = [
   'adult content', 'bare breasts', 'blow job', 'blowjob', 'boob', 'boobs',
-  'clit', 'cock', 'dick', 'erotic', 'explicit sex',
+  'clit', 'erotic', 'explicit sex',
   'fetish', 'fuck', 'fucking', 'genital', 'genitals', 'hardcore', 'hentai',
   'jerk off', 'masturbate', 'masturbating', 'masturbation', 'milf',
   'onlyfans', 'orgasm', 'penis', 'porn', 'pornographic', 'pussy',
   'sexual', 'slut', 'vagina', 'vergina', 'whore', 'xxx', 'sexo',
   'handjob', 'hand job', 'rimjob', 'deepthroat', 'deep throat', 'cumshot', 'creampie',
-  'horny', 'nsfw', 'tits', 'titties', 'nipples',
+  'nsfw',
   'pornografia', 'sexe', 'порно', 'секс'
 ];
 
@@ -151,7 +151,14 @@ function hasSexualActivityContext(normalized) {
     /\b(?:give|gives|giving|gave)\s+(?:me\s+|him\s+|you\s+|them\s+)?head\b/,
     /\b(?:go|goes|going|went)\s+down\s+on\s+(?:me|him|her|you|them)\b/,
     /\b(?:flirt|flirts|flirting|flirty|tease|teases|teasing|seduce|seduces|seducing|seductive|seductively)\b(?:\s+\w+){0,6}\s+suck(?:s|ed|ing)?\b/,
-    /\bcum(?:s|ming|med)?\b(?!\s+laude)/
+    /\bcum(?:s|ming|med)?\b(?!\s+laude)/,
+    // Words with an everyday meaning (a rooster, Moby Dick, blue tits, a horny toad, baby bottle
+    // nipples) count only when they are about a person's body or arousal.
+    /\b(?:his|my|your|her|their|big|huge|hard|erect|show|shows|showing|flash|flashing|suck|sucks|sucking|sucked|lick|licks|licking|stroke|stroking|touch|touching|grab|grabbing|ride|riding)\s+(?:own\s+)?(?:dick|dicks|cock|cocks)\b/,
+    /\b(?:dick|cock)\s+(?:pic|pics|picture|pictures|photo|photos|selfie|size|in\s+(?:her|his|my|your)|out)\b/,
+    /\b(?:her|his|my|your|their|she s|show|shows|showing|flash|flashing|bare|big|huge|naked|grab|grabbing|touch|touching)\s+(?:tits|titties|nipples)\b/,
+    /\bhorny\s+(?:girl|girls|woman|women|man|men|guy|guys|wife|husband|lady|ladies|couple|teen|teens|milf|boyfriend|girlfriend|me|her|him)\b/,
+    /\b(?:i m|im|i am|she s|he s|she is|he is|they are|we are|feel|feels|feeling|so|very|gets|getting|got|get|makes|made)\s+(?:me\s+|her\s+|him\s+)?horny\b/
   ];
   return patterns.some((pattern) => pattern.test(normalized));
 }
