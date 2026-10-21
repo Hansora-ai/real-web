@@ -129,7 +129,8 @@ export default async (request, context) => {
       --hs-grad-a:#8b5cf6;
       --hs-grad-b:#4f9cff;
       --hs-bottom-height:92px;
-      --hs-safe-bottom:env(safe-area-inset-bottom, 0px);
+      /* iPhone Safari can draw the page under the home bar without reporting a safe area, so always keep a lift. */
+      --hs-safe-bottom:max(env(safe-area-inset-bottom, 0px), 16px);
     }
     body{ padding-bottom:calc(var(--hs-bottom-height) + var(--hs-safe-bottom)); }
     /* Floating glass dock */
