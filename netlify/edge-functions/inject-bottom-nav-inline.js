@@ -94,6 +94,14 @@ export default async (request, context) => {
     }
   };
   const copy = COPY[language];
+  // Highlight the tab for the page being viewed.
+  const active = /^\/(?:index(?:_(?:ru|arm))?\.html)?$/.test(requestPath)
+    ? 'home'
+    : /^\/models(?:_(?:ru|arm))?\.html$/.test(requestPath)
+      ? 'features'
+      : /^\/usage(?:_(?:ru|arm))?\.html$/.test(requestPath)
+        ? 'history'
+        : '';
   const localizedPath = (value) => {
     if (language === 'en') return value;
     const match = value.match(/^([^?#]+)([?#].*)?$/);
@@ -120,22 +128,28 @@ export default async (request, context) => {
       --hs-panel-2:#171820;
       --hs-grad-a:#8b5cf6;
       --hs-grad-b:#4f9cff;
-      --hs-bottom-height:106px;
+      --hs-bottom-height:92px;
       --hs-safe-bottom:env(safe-area-inset-bottom, 0px);
     }
     body{ padding-bottom:calc(var(--hs-bottom-height) + var(--hs-safe-bottom)); }
+    /* Floating glass dock */
     .hs-bottom-nav{
       position:fixed;
-      left:0;
-      right:0;
-      bottom:0;
+      left:max(10px, env(safe-area-inset-left, 0px));
+      right:max(10px, env(safe-area-inset-right, 0px));
+      bottom:calc(10px + var(--hs-safe-bottom));
       z-index:60;
       display:block;
       box-sizing:border-box;
       isolation:isolate;
-      background:#080a0f;
-      border-top:1px solid var(--hs-line);
-      padding:10px 10px calc(12px + var(--hs-safe-bottom));
+      max-width:520px;
+      margin:0 auto;
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,.09);
+      background:rgba(12,14,21,.985);
+      -webkit-backdrop-filter:blur(22px) saturate(170%);
+      backdrop-filter:blur(22px) saturate(170%);
+      box-shadow:0 18px 44px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07);
       transform:translate3d(0,var(--hs-viewport-shift,0px),0);
       -webkit-transform:translate3d(0,var(--hs-viewport-shift,0px),0);
     }
@@ -144,45 +158,53 @@ export default async (request, context) => {
       position:absolute;
       inset:0;
       z-index:-1;
-      background:linear-gradient(180deg,#101219 0%,#080a0f 100%);
-    }
-    .hs-bottom-nav::after{
-      content:"";
-      position:absolute;
-      left:0;
-      right:0;
-      top:100%;
-      height:max(240px,30vh);
-      background:#080a0f;
+      border-radius:inherit;
+      background:radial-gradient(120% 140% at 50% 0%, rgba(139,92,246,.10), transparent 60%);
       pointer-events:none;
     }
     .hs-bottom-rail{
-      max-width:780px;
-      height:72px;
-      margin:0 auto;
+      height:64px;
       display:grid;
-      grid-template-columns:1fr 1fr auto 1fr 1fr;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr) 66px minmax(0,1fr) minmax(0,1fr);
       align-items:center;
-      padding:0 10px;
-      gap:4px;
+      padding:0 4px;
     }
     .hs-btn{
+      position:relative;
       width:100%;
       min-width:0;
-      height:64px;
+      height:56px;
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:6px;
+      gap:4px;
       border:0;
-      border-radius:16px;
+      border-radius:18px;
       background:transparent;
-      color:var(--hs-muted);
-      font:700 12px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      color:rgba(226,230,240,.58);
+      font:600 10.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
       text-decoration:none;
+      -webkit-tap-highlight-color:transparent;
+      transition:color .2s ease, transform .15s ease;
     }
-    .hs-btn:active{ background:rgba(255,255,255,.06); color:#fff; }
+    html[lang="hy"] .hs-btn, html[lang="hy"] .hs-fab-label{ font-size:9.5px; letter-spacing:0; }
+    .hs-btn span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px; }
+    .hs-btn:active{ transform:scale(.92); color:#fff; }
+    .hs-btn.is-active{ color:#fff; }
+    .hs-btn.is-active svg{ filter:drop-shadow(0 0 8px rgba(167,139,250,.7)); }
+    .hs-btn.is-active::after{
+      content:"";
+      position:absolute;
+      bottom:3px;
+      left:50%;
+      width:16px;
+      height:3px;
+      margin-left:-8px;
+      border-radius:3px;
+      background:linear-gradient(90deg,#a78bfa,#38bdf8);
+    }
     .hs-btn svg,
     .hs-overlay svg,
     .hs-radial svg{
@@ -194,38 +216,43 @@ export default async (request, context) => {
       stroke-linecap:round;
       stroke-linejoin:round;
     }
-    .hs-fab-wrap{ display:flex; justify-content:center; align-items:center; }
+    .hs-btn svg{ width:22px; height:22px; stroke-width:1.9; }
+    .hs-fab-wrap{ display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; }
     .hs-fab{
       position:relative;
-      width:78px;
-      height:78px;
-      margin-top:-36px;
+      width:58px;
+      height:58px;
+      margin-top:-34px;
       display:grid;
       place-items:center;
-      border-radius:24px;
-      border:1px solid rgba(255,255,255,.18);
-      background:
-        radial-gradient(circle at 74% 20%, rgba(71,215,255,.9), transparent 24%),
-        linear-gradient(145deg,var(--hs-grad-a),#7c3aed 48%,var(--hs-grad-b));
-      box-shadow:0 18px 42px rgba(92,82,255,.42), 0 8px 24px rgba(56,189,248,.28);
+      padding:0;
+      border-radius:50%;
+      border:0;
+      background:conic-gradient(from 210deg,#8b5cf6,#6366f1,#38bdf8,#8b5cf6);
+      box-shadow:0 0 0 5px rgba(14,16,24,.92), 0 12px 28px rgba(99,102,241,.55), 0 4px 14px rgba(56,189,248,.35);
       color:#fff;
+      -webkit-tap-highlight-color:transparent;
+      transition:transform .15s ease;
     }
-    .hs-fab .hs-fab-plus{
+    .hs-fab::before{
+      content:"";
       position:absolute;
-      left:0;
-      right:0;
-      top:11px;
-      z-index:2;
-      font:300 32px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      inset:2px;
+      border-radius:50%;
+      background:linear-gradient(160deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%);
+      pointer-events:none;
+    }
+    .hs-fab:active{ transform:scale(.92); }
+    .hs-fab svg.hs-fab-plus{ width:26px; height:26px; stroke:#fff; stroke-width:2.6; fill:none; stroke-linecap:round; position:relative; }
+    .hs-fab-label{
+      margin-top:5px;
       color:#fff;
-    }
-    .hs-fab .hs-fab-label{
-      position:absolute;
-      left:0;
-      right:0;
-      bottom:10px;
-      z-index:2;
-      font:800 12px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      font:700 10.5px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
+      max-width:72px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
     .hs-radial{
       position:fixed;
@@ -236,22 +263,45 @@ export default async (request, context) => {
     .hs-radial-backdrop{
       position:absolute;
       inset:0;
-      background:rgba(0,0,0,.50);
+      background:radial-gradient(120% 70% at 50% 100%, rgba(76,29,149,.38), rgba(3,4,10,.62) 70%);
+      -webkit-backdrop-filter:blur(6px);
+      backdrop-filter:blur(6px);
+      opacity:0;
+      transition:opacity .25s ease;
     }
+    .hs-radial.is-open .hs-radial-backdrop{ opacity:1; }
     .hs-radial-panel{
       position:absolute;
       left:50%;
       bottom:0;
       width:min(112vw,520px);
-      height:245px;
-      transform:translateX(-50%) translateY(32px) scale(.96);
+      height:262px;
+      transform:translateX(-50%) translateY(40px) scale(.94);
       transform-origin:bottom center;
       border-radius:999px 999px 0 0 / 360px 360px 0 0;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(20,21,25,.98);
-      box-shadow:0 -18px 80px rgba(0,0,0,.45);
+      border:1px solid rgba(255,255,255,.10);
+      border-bottom:0;
+      background:
+        radial-gradient(60% 55% at 50% 0%, rgba(139,92,246,.22), transparent 70%),
+        radial-gradient(45% 45% at 50% 100%, rgba(56,189,248,.14), transparent 70%),
+        linear-gradient(180deg, rgba(24,22,38,.97), rgba(10,11,18,.99));
+      box-shadow:0 -24px 90px rgba(109,40,217,.28), 0 -2px 0 rgba(255,255,255,.04) inset, 0 1px 0 rgba(255,255,255,.10) inset;
+      -webkit-backdrop-filter:blur(22px) saturate(160%);
+      backdrop-filter:blur(22px) saturate(160%);
       opacity:0;
-      transition:opacity .22s ease, transform .22s ease;
+      transition:opacity .25s ease, transform .32s cubic-bezier(.2,.9,.25,1.15);
+    }
+    .hs-radial-panel::before{
+      content:"";
+      position:absolute;
+      inset:-1px -1px 0;
+      border-radius:inherit;
+      padding:1px 1px 0;
+      background:linear-gradient(90deg, rgba(56,189,248,.0), rgba(167,139,250,.75) 30%, rgba(244,114,182,.6) 70%, rgba(56,189,248,0));
+      -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;
+      mask-composite:exclude;
+      pointer-events:none;
     }
     .hs-radial.is-open .hs-radial-panel{
       opacity:1;
@@ -259,32 +309,60 @@ export default async (request, context) => {
     }
     .hs-radial-item{
       position:absolute;
-      width:78px;
+      width:96px;
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:7px;
+      gap:8px;
       border:0;
       background:transparent;
-      color:#d7dbe4;
+      color:#eef0f7;
       text-decoration:none;
       transform:translate(-50%,-50%);
-      font:800 13px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      font:750 12.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
+      -webkit-tap-highlight-color:transparent;
     }
+    .hs-radial-item b{ font-weight:750; text-align:center; text-shadow:0 1px 8px rgba(0,0,0,.5); }
+    html[lang="hy"] .hs-radial-item b{ max-width:84px; }
+    html:has(.hs-radial.is-open) .hsa-launcher{ opacity:0; pointer-events:none; }
     .hs-radial-icon{
-      width:50px;
-      height:50px;
+      position:relative;
+      width:54px;
+      height:54px;
       display:grid;
       place-items:center;
-      border-radius:50%;
-      background:#30333b;
+      border-radius:18px;
+      background:linear-gradient(145deg, var(--hs-c1,#8b5cf6), var(--hs-c2,#38bdf8));
       color:#fff;
+      box-shadow:0 10px 26px -8px var(--hs-glow,rgba(139,92,246,.7)), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -8px 16px rgba(0,0,0,.18);
+      opacity:0;
+      transform:translateY(16px) scale(.7);
+      transition:transform .18s ease, opacity .18s ease;
     }
-    .hs-radial-image{ left:28%; top:38%; }
-    .hs-radial-video{ left:50%; top:24%; }
-    .hs-radial-audio{ left:72%; top:38%; }
-    .hs-radial-trend{ left:16%; top:70%; }
-    .hs-radial-more{ left:84%; top:70%; }
+    .hs-radial-icon::after{
+      content:"";
+      position:absolute;
+      inset:1px;
+      border-radius:17px;
+      background:linear-gradient(180deg, rgba(255,255,255,.22), transparent 45%);
+      pointer-events:none;
+    }
+    .hs-radial-icon svg{ width:25px; height:25px; stroke-width:2.1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
+    .hs-radial.is-open .hs-radial-icon{ animation:hs-radial-pop .42s cubic-bezier(.2,.9,.3,1.3) forwards; }
+    .hs-radial.is-open .hs-radial-video .hs-radial-icon{ animation-delay:.03s; }
+    .hs-radial.is-open .hs-radial-image .hs-radial-icon,
+    .hs-radial.is-open .hs-radial-audio .hs-radial-icon{ animation-delay:.08s; }
+    .hs-radial.is-open .hs-radial-trend .hs-radial-icon,
+    .hs-radial.is-open .hs-radial-more .hs-radial-icon{ animation-delay:.13s; }
+    @keyframes hs-radial-pop{ to{ opacity:1; transform:none; } }
+    .hs-radial-item:active .hs-radial-icon{ transform:scale(.92); }
+    .hs-radial-image{ left:28%; top:38%; --hs-c1:#38bdf8; --hs-c2:#6366f1; --hs-glow:rgba(56,189,248,.65); }
+    .hs-radial-video{ left:50%; top:23%; --hs-c1:#a78bfa; --hs-c2:#7c3aed; --hs-glow:rgba(139,92,246,.75); }
+    .hs-radial-audio{ left:72%; top:38%; --hs-c1:#f472b6; --hs-c2:#c026d3; --hs-glow:rgba(236,72,153,.6); }
+    .hs-radial-trend{ left:16%; top:70%; --hs-c1:#d9ff3d; --hs-c2:#22c55e; --hs-glow:rgba(163,230,53,.5); }
+    .hs-radial-trend .hs-radial-icon{ color:#0b1203; }
+    .hs-radial-more{ left:84%; top:70%; --hs-c1:#fbbf24; --hs-c2:#f97316; --hs-glow:rgba(251,146,60,.55); }
     .hs-radial-close{
       position:absolute;
       left:50%;
@@ -296,10 +374,22 @@ export default async (request, context) => {
       border-radius:50%;
       display:grid;
       place-items:center;
-      background:#30333b;
-      color:#b9bec9;
+      background:
+        linear-gradient(rgba(16,17,26,.92), rgba(16,17,26,.92)) padding-box,
+        conic-gradient(from 210deg, #38bdf8, #8b5cf6, #ec4899, #f59e0b, #38bdf8) border-box;
+      border:2px solid transparent;
+      color:#fff;
+      box-shadow:0 10px 30px rgba(109,40,217,.45);
+      transition:transform .3s cubic-bezier(.2,.9,.3,1.2);
+      -webkit-tap-highlight-color:transparent;
     }
-    .hs-radial-close svg{ width:32px; height:32px; stroke-width:2.6; }
+    .hs-radial.is-open .hs-radial-close{ transform:translateX(-50%) rotate(90deg); }
+    .hs-radial-close:active{ transform:translateX(-50%) rotate(90deg) scale(.92); }
+    .hs-radial-close svg{ width:26px; height:26px; stroke-width:2.6; }
+    @media (prefers-reduced-motion:reduce){
+      .hs-radial-panel, .hs-radial-close, .hs-radial-backdrop{ transition:none; }
+      .hs-radial.is-open .hs-radial-icon{ animation:none; opacity:1; transform:none; }
+    }
     .hs-overlay{
       position:fixed;
       inset:0;
@@ -380,6 +470,19 @@ export default async (request, context) => {
       font:750 16px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
       text-decoration:none;
     }
+    .hs-top-badge{
+      margin-left:auto;
+      display:inline-flex;
+      align-items:center;
+      height:20px;
+      padding:0 8px;
+      border-radius:7px;
+      background:linear-gradient(135deg,#d9ff3d,#a3f05a);
+      color:#0b1203;
+      font:900 11px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.02em;
+      box-shadow:0 0 14px rgba(201,255,61,.3);
+    }
     .hs-feature-toggle{
       width:100%;
       justify-content:space-between;
@@ -411,21 +514,21 @@ export default async (request, context) => {
 
   const NAV = `<nav aria-label="${copy.mobileNav}" class="hs-bottom-nav">
   <div class="hs-bottom-rail">
-    <a aria-label="${copy.home}" class="hs-btn" href="${localizedPath('/index.html')}">
+    <a aria-label="${copy.home}" class="hs-btn${active === 'home' ? ' is-active' : ''}"${active === 'home' ? ' aria-current="page"' : ''} href="${localizedPath('/index.html')}">
       <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
       <span>${copy.home}</span>
     </a>
-    <a aria-label="${copy.features}" class="hs-btn" href="${localizedPath('/models.html#featuresSection')}">
+    <a aria-label="${copy.features}" class="hs-btn${active === 'features' ? ' is-active' : ''}"${active === 'features' ? ' aria-current="page"' : ''} href="${localizedPath('/models.html#featuresSection')}">
       <svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"></path></svg>
       <span>${copy.features}</span>
     </a>
     <div class="hs-fab-wrap">
       <button aria-label="${copy.openCreate}" class="hs-fab" id="hs-models-btn" type="button">
-        <span aria-hidden="true" class="hs-fab-plus">+</span>
-        <span class="hs-fab-label">${copy.create}</span>
+        <svg aria-hidden="true" class="hs-fab-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
       </button>
+      <span aria-hidden="true" class="hs-fab-label">${copy.create}</span>
     </div>
-    <a aria-label="${copy.history}" class="hs-btn" href="${localizedPath('/usage.html')}">
+    <a aria-label="${copy.history}" class="hs-btn${active === 'history' ? ' is-active' : ''}"${active === 'history' ? ' aria-current="page"' : ''} href="${localizedPath('/usage.html')}">
       <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"></path><path d="M3 3v6h6"></path><path d="M12 7v6l4 2"></path></svg>
       <span>${copy.history}</span>
     </a>
@@ -478,6 +581,7 @@ export default async (request, context) => {
       <a href="${localizedPath('/search-models.html')}"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> ${copy.image}</a>
       <a data-hs-video-landing href="${localizedPath('/search-models.html?model=gemini-omni-flash-1-1')}"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> ${copy.video}</a>
       <a href="${localizedPath('/audio.html')}"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> ${copy.audio}</a>
+      <a href="${localizedPath('/henshin.html')}"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"></circle><path d="M3.5 20c1.1-3.6 3.6-5.5 6.5-5.5 1.6 0 3 .5 4.1 1.5"></path><path d="M18 13l.9 2.1L21 16l-2.1.9L18 19l-.9-2.1L15 16l2.1-.9L18 13z"></path></svg> Henshin<span class="hs-top-badge">Top</span></a>
       <a href="${localizedPath('/mcp-setup.html')}"><svg viewBox="0 0 24 24"><path d="M9 2v5M15 2v5"></path><path d="M6 7h12v4a6 6 0 0 1-12 0z"></path><path d="M12 17v5"></path></svg> ${copy.chatgptPlugin}</a>
       <button class="hs-feature-toggle" id="hs-feature-toggle" type="button">
         <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> ${copy.features}</span>

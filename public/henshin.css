@@ -422,3 +422,5 @@ dialog::backdrop { background: #000c; }
 .result { margin:0; grid-row-end:span var(--result-span,1); }
 @media(max-width:1100px) { .results-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:740px) { .results-grid { --result-gap:10px; column-gap:10px; } }
+/* Keep the shared site header identical to every other page (this page's own tokens and 13px base must not leak into it). */
+#sharedHeader { --line: rgba(255,255,255,.11); --text: #f7f7fb; --muted: rgba(247,247,251,.62); font-size: 16px; line-height: 1.45; color: #f7f7fb; }

@@ -2198,15 +2198,52 @@
       .site-header .nav-links{ position:absolute; left:48%; transform:translateX(-50%); }
       html[lang="ru"] .site-header .nav-links, html[lang="hy"] .site-header .nav-links{ left:43.5%; }
       @media (max-width:1400px){ html[lang="ru"] .site-header .nav-links, html[lang="hy"] .site-header .nav-links{ left:40.5%; } }
+      /* Visual polish only: glass bar, gradient hairline, softer nav pill, glow on the main button. */
+      .site-header{ background:linear-gradient(180deg,rgba(13,15,24,.88),rgba(10,12,19,.74)); -webkit-backdrop-filter:blur(20px) saturate(160%); backdrop-filter:blur(20px) saturate(160%); border-bottom-color:transparent; }
+      .site-header::after{ content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px; pointer-events:none; background:linear-gradient(90deg,transparent,rgba(139,92,246,.55) 25%,rgba(56,189,248,.55) 75%,transparent); opacity:.7; }
+      .site-header .brand img{ transition:transform .3s ease, filter .3s ease; }
+      .site-header .brand:hover img{ transform:rotate(-6deg) scale(1.06); filter:drop-shadow(0 0 16px rgba(139,92,246,.6)); }
+      .site-header .nav-links{ background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02)); border-color:rgba(255,255,255,.09); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 8px 30px rgba(0,0,0,.25); }
+      .site-header .nav-links a{ transition:color .18s ease, background .18s ease; }
+      .site-header .nav-links a:hover{ background:linear-gradient(180deg,rgba(139,92,246,.16),rgba(56,189,248,.08)); color:#fff; }
+      .site-header .btn-primary{ box-shadow:0 8px 26px rgba(99,102,241,.38), inset 0 1px 0 rgba(255,255,255,.25); transition:transform .18s ease, box-shadow .18s ease, filter .18s ease; }
+      .site-header .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 12px 34px rgba(99,102,241,.5), inset 0 1px 0 rgba(255,255,255,.3); filter:brightness(1.06); }
+      .nav-links .hansora-nav-henshin{ gap:6px; }
+      .hansora-top-badge{ display:inline-flex; align-items:center; height:17px; padding:0 6px; border-radius:6px; background:linear-gradient(135deg,#d9ff3d,#a3f05a); color:#0b1203; font-size:10px; font-weight:900; letter-spacing:.02em; line-height:1; box-shadow:0 0 12px rgba(201,255,61,.35); }
       /* Mid-size screens: keep the menu between the logo and the buttons instead of floating over them. */
-      @media (min-width:901px) and (max-width:1400px){
-        .site-header .nav-links{ position:static; transform:none; margin:0 auto; gap:2px; flex:0 1 auto; min-width:0; }
-        .site-header .nav-links a{ padding:8px 9px; font-size:.84rem; white-space:nowrap; }
+      @media (min-width:901px){
+        .site-header .nav-links{ position:static; transform:none; margin:0 auto; flex:0 1 auto; min-width:0; }
+        .site-header .nav-links a{ white-space:nowrap; }
+        /* Dropdowns open centred under the whole header so they never run off the left edge. */
+        .site-header .nav{ position:relative; }
+        .site-header .nav-links .hansora-nav-item{ position:static; }
+        .site-header .nav-links .hansora-nav-item:has(> .hansora-mega-compact){ position:relative; }
+        .site-header .nav-links .hansora-nav-item:has(> .hansora-mega-image)::before{ content:none; }
+        .site-header .nav-links .hansora-nav-trigger{ position:relative; }
+        .site-header .nav-links .hansora-nav-trigger::before{ content:""; position:absolute; left:0; right:0; top:100%; height:26px; }
+        .site-header .nav-links .hansora-mega-menu{ top:calc(100% + 6px); left:50%; }
+      }
+      /* Fit every menu item between the logo and the buttons as the screen narrows. */
+      @media (min-width:901px) and (max-width:1600px){
+        .site-header .nav-links{ gap:1px; }
+        .site-header .nav-links a{ padding:8px 9px; font-size:.86rem; }
         .nav-links .hansora-nav-trigger{ gap:6px; }
       }
-      @media (min-width:901px) and (max-width:1120px){
+      @media (min-width:901px){
+        html[lang="ru"] .site-header .nav-links a, html[lang="hy"] .site-header .nav-links a{ padding:8px 7px; font-size:.82rem; }
+      }
+      @media (min-width:901px) and (max-width:1360px){
         .site-header #btnGetStarted{ display:none; }
-        .site-header .nav-links a{ padding:8px 7px; font-size:.8rem; }
+      }
+      @media (min-width:901px) and (max-width:1200px){
+        .site-header .nav-links a{ padding:8px 6px; font-size:.8rem; }
+        html[lang="ru"] .site-header .nav-links a, html[lang="hy"] .site-header .nav-links a{ padding:8px 5px; font-size:.78rem; }
+        .hansora-top-badge{ height:15px; padding:0 4px; font-size:9px; }
+      }
+      @media (min-width:901px) and (max-width:1120px){
+        .site-header .nav-links .hansora-nav-trendlink{ display:none; }
+        .site-header .brand span{ display:none; }
+        html[lang="ru"] .site-header .nav-links a, html[lang="hy"] .site-header .nav-links a{ padding:8px 4px; font-size:.76rem; }
       }
       .site-header.auth-checking #btnLoginSignup{ visibility:hidden !important; pointer-events:none !important; }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
@@ -2984,7 +3021,8 @@
                 { title: copy('audioTools'), items: AUDIO_MENU_ITEMS },
               ]
             })}
-            <a class="hansora-nav-trend" href="${siteHref('/examples.html')}">${copy('trend')}</a>
+            <a class="hansora-nav-trend hansora-nav-henshin" href="${siteHref('/henshin.html')}">Henshin<span class="hansora-top-badge">Top</span></a>
+            <a class="hansora-nav-trend hansora-nav-trendlink" href="${siteHref('/examples.html')}">${copy('trend')}</a>
             <a class="hansora-nav-trend" href="${siteHref('/mcp-setup.html')}" title="${copy('chatgptPluginFull')}">${copy('chatgptPlugin')}</a>
           </nav>
           <div class="nav-actions">
