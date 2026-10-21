@@ -128,7 +128,7 @@ export default async (request, context) => {
       --hs-panel-2:#171820;
       --hs-grad-a:#8b5cf6;
       --hs-grad-b:#4f9cff;
-      --hs-bottom-height:92px;
+      --hs-bottom-height:106px;
       /* iPhone Safari can draw the page under the home bar without reporting a safe area, so always keep a lift. */
       --hs-safe-bottom:max(env(safe-area-inset-bottom, 0px), 16px);
     }
@@ -164,7 +164,7 @@ export default async (request, context) => {
       pointer-events:none;
     }
     .hs-bottom-rail{
-      height:64px;
+      height:78px;
       display:grid;
       grid-template-columns:minmax(0,1fr) minmax(0,1fr) 66px minmax(0,1fr) minmax(0,1fr);
       align-items:center;
@@ -174,23 +174,24 @@ export default async (request, context) => {
       position:relative;
       width:100%;
       min-width:0;
-      height:56px;
+      height:70px;
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:4px;
+      gap:6px;
       border:0;
       border-radius:18px;
       background:transparent;
       color:rgba(226,230,240,.58);
-      font:600 10.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      font:600 11.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
       letter-spacing:.01em;
       text-decoration:none;
       -webkit-tap-highlight-color:transparent;
       transition:color .2s ease, transform .15s ease;
     }
-    html[lang="hy"] .hs-btn, html[lang="hy"] .hs-fab-label{ font-size:9.5px; letter-spacing:0; }
+    html[lang="ru"] .hs-btn, html[lang="ru"] .hs-fab-label{ font-size:10.5px; letter-spacing:0; }
+    html[lang="hy"] .hs-btn, html[lang="hy"] .hs-fab-label{ font-size:10px; letter-spacing:0; }
     .hs-btn span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px; }
     .hs-btn:active{ transform:scale(.92); color:#fff; }
     .hs-btn.is-active{ color:#fff; }
@@ -198,7 +199,7 @@ export default async (request, context) => {
     .hs-btn.is-active::after{
       content:"";
       position:absolute;
-      bottom:3px;
+      bottom:4px;
       left:50%;
       width:16px;
       height:3px;
@@ -217,13 +218,13 @@ export default async (request, context) => {
       stroke-linecap:round;
       stroke-linejoin:round;
     }
-    .hs-btn svg{ width:22px; height:22px; stroke-width:1.9; }
+    .hs-btn svg{ width:24px; height:24px; stroke-width:1.9; }
     .hs-fab-wrap{ display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; }
     .hs-fab{
       position:relative;
       width:58px;
       height:58px;
-      margin-top:-34px;
+      margin-top:-30px;
       display:grid;
       place-items:center;
       padding:0;
@@ -246,9 +247,9 @@ export default async (request, context) => {
     .hs-fab:active{ transform:scale(.92); }
     .hs-fab svg.hs-fab-plus{ width:26px; height:26px; stroke:#fff; stroke-width:2.6; fill:none; stroke-linecap:round; position:relative; }
     .hs-fab-label{
-      margin-top:5px;
+      margin-top:7px;
       color:#fff;
-      font:700 10.5px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      font:700 11.5px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
       letter-spacing:.01em;
       max-width:72px;
       overflow:hidden;
