@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 
-const { evaluatePrompt } = createRequire(import.meta.url)('../../netlify/functions/safe-run.cjs');
+const { evaluatePrompt, evaluateWithModeration } = createRequire(import.meta.url)('../../netlify/functions/safe-run.cjs');
 
 test('sexual requests phrased without explicit words are blocked', () => {
   for (const prompt of [
@@ -45,4 +45,36 @@ test('the same words in an everyday meaning still pass: context decides, not the
     'male and female sex of the bird',
     'a cocktail party'
   ]) assert.equal(evaluatePrompt(prompt).allowed, true, prompt);
+});
+
+test('OpenAI moderation reads the meaning: "she sucks me" is blocked, "she sucks, I don\'t want to talk to her" is not', async () => {
+  const originalFetch = globalThis.fetch;
+  process.env.OPENAI_API_KEY = 'test-key';
+  const seen = [];
+  globalThis.fetch = async (url, options) => {
+    const { input, model } = JSON.parse(options.body);
+    seen.push({ url, model });
+    const sexual = /sucks me|suks me|sucking me/.test(input) && !/talk to her/.test(input);
+    return new Response(JSON.stringify({ results: [{ categories: { sexual, 'sexual/minors': false } }] }), { status: 200 });
+  };
+  try {
+    assert.equal((await evaluateWithModeration('shee suks me')).category, 'nsfw_sexual_content');
+    assert.equal((await evaluateWithModeration('she is sucking me slowly')).source, 'moderation');
+    assert.equal((await evaluateWithModeration("she sucks man i don't want to talk to her")).allowed, true);
+    assert.equal((await evaluateWithModeration('this movie sucks')).allowed, true);
+    assert.deepEqual(seen[0], { url: 'https://api.openai.com/v1/moderations', model: 'omni-moderation-latest' });
+
+    // Clear words are blocked by the filter without asking OpenAI.
+    const before = seen.length;
+    assert.equal((await evaluateWithModeration('porn video')).allowed, false);
+    assert.equal(seen.length, before);
+
+    // If OpenAI is unreachable, the word filter alone decides.
+    globalThis.fetch = async () => { throw new Error('offline'); };
+    assert.equal((await evaluateWithModeration('a calm lake')).allowed, true);
+    assert.equal((await evaluateWithModeration('suck his dick')).allowed, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete process.env.OPENAI_API_KEY;
+  }
 });

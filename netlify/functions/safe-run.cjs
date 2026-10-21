@@ -186,6 +186,37 @@ function evaluatePrompt(prompt) {
   return { allowed: true, category: null, policyVersion: POLICY_VERSION };
 }
 
+// The word filter cannot tell "she sucks me" from "she sucks, I don't want to talk to her". OpenAI's
+// free moderation model reads the whole prompt (context, typos, any language) and decides on sexual
+// content. The word filter still blocks first, and it alone decides if moderation is unavailable.
+const MODERATION_URL = 'https://api.openai.com/v1/moderations';
+async function moderationSaysSexual(text) {
+  const key = process.env.OPENAI_API_KEY || '';
+  if (!key || !text) return null;
+  try {
+    const response = await fetch(MODERATION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: 'omni-moderation-latest', input: text.slice(0, 20000) }),
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!response.ok) return null;
+    const categories = (await response.json())?.results?.[0]?.categories;
+    if (!categories) return null;
+    if (categories['sexual/minors']) return 'sexual_content_involving_minors';
+    return categories.sexual ? 'nsfw_sexual_content' : '';
+  } catch {
+    return null;
+  }
+}
+
+async function evaluateWithModeration(prompt) {
+  const decision = evaluatePrompt(prompt);
+  if (!decision.allowed) return decision;
+  const category = await moderationSaysSexual(String(prompt || '').trim());
+  return category ? { allowed: false, category, policyVersion: POLICY_VERSION, source: 'moderation' } : decision;
+}
+
 function publicMessage(decision) {
   if (!decision || decision.allowed) return '';
   if (decision.category === 'nsfw_sexual_content' || decision.category === 'sexual_content_involving_minors') {
@@ -530,13 +561,14 @@ exports.handler = async function handler(event) {
   collectPromptLikeText(request.payload, 'payload', promptParts, 0);
   const moderationText = Array.from(new Set(promptParts.map((part) => String(part || '').trim()).filter(Boolean))).join('\n');
 
-  const decision = evaluatePrompt(moderationText);
+  const decision = await evaluateWithModeration(moderationText);
   const decisionId = crypto.randomUUID();
   const promptHash = crypto.createHash('sha256').update(moderationText).digest('hex').slice(0, 16);
   console.info('content_safety_decision', JSON.stringify({
     decisionId,
     allowed: decision.allowed,
     category: decision.category,
+    source: decision.source || 'filter',
     policyVersion: decision.policyVersion,
     modelId,
     mediaKind,
@@ -702,5 +734,6 @@ exports.handler = async function handler(event) {
 };
 
 exports.evaluatePrompt = evaluatePrompt;
+exports.evaluateWithModeration = evaluateWithModeration;
 exports.POLICY_VERSION = POLICY_VERSION;
 exports.unlimitedEligibility = unlimitedEligibility;
