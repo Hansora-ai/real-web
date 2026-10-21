@@ -2,7 +2,7 @@
 
 const crypto = require('node:crypto');
 
-const POLICY_VERSION = '2026-09-03.1';
+const POLICY_VERSION = '2026-10-21.1';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const QUEUE_SECRET = process.env.HANSORA_QUEUE_SECRET || '';
@@ -10,11 +10,13 @@ const QUEUE_SECRET = process.env.HANSORA_QUEUE_SECRET || '';
 // These terms are explicit enough to block without needing surrounding context.
 const DIRECT_SEXUAL_TERMS = [
   'adult content', 'bare breasts', 'blow job', 'blowjob', 'boob', 'boobs',
-  'clit', 'cock', 'dick', 'erotic', 'explicit sex',
+  'clit', 'erotic', 'explicit sex',
   'fetish', 'fuck', 'fucking', 'genital', 'genitals', 'hardcore', 'hentai',
   'jerk off', 'masturbate', 'masturbating', 'masturbation', 'milf',
   'onlyfans', 'orgasm', 'penis', 'porn', 'pornographic', 'pussy',
   'sexual', 'slut', 'vagina', 'vergina', 'whore', 'xxx', 'sexo',
+  'handjob', 'hand job', 'rimjob', 'deepthroat', 'deep throat', 'cumshot', 'creampie',
+  'nsfw',
   'pornografia', 'sexe', 'порно', 'секс'
 ];
 
@@ -143,7 +145,20 @@ function hasSexualActivityContext(normalized) {
     /\bsex\s+(?:act|acts|activity|activities|scene|scenes|position|positions|video|videos|image|images|photo|photos|content|show|tape|worker|workers|work)\b/,
     /\b(?:during|after|before|while|watching|depicting|showing|performing)\s+sex\b/,
     /\bsex\s+(?:with|between|involving)\b/,
-    /\b(?:oral|anal|group|rough|explicit|graphic|hardcore)\s+sex\b/
+    /\b(?:oral|anal|group|rough|explicit|graphic|hardcore)\s+sex\b/,
+    // Oral sex phrased without explicit words: "suck me off", "give him head", "go down on her".
+    /\bsuck(?:s|ed|ing)?\s+(?:me|him|you|them|us|her)\s+off\b/,
+    /\b(?:give|gives|giving|gave)\s+(?:me\s+|him\s+|you\s+|them\s+)?head\b/,
+    /\b(?:go|goes|going|went)\s+down\s+on\s+(?:me|him|her|you|them)\b/,
+    /\b(?:flirt|flirts|flirting|flirty|tease|teases|teasing|seduce|seduces|seducing|seductive|seductively)\b(?:\s+\w+){0,6}\s+suck(?:s|ed|ing)?\b/,
+    /\bcum(?:s|ming|med)?\b(?!\s+laude)/,
+    // Words with an everyday meaning (a rooster, Moby Dick, blue tits, a horny toad, baby bottle
+    // nipples) count only when they are about a person's body or arousal.
+    /\b(?:his|my|your|her|their|big|huge|hard|erect|show|shows|showing|flash|flashing|suck|sucks|sucking|sucked|lick|licks|licking|stroke|stroking|touch|touching|grab|grabbing|ride|riding)\s+(?:own\s+)?(?:dick|dicks|cock|cocks)\b/,
+    /\b(?:dick|cock)\s+(?:pic|pics|picture|pictures|photo|photos|selfie|size|in\s+(?:her|his|my|your)|out)\b/,
+    /\b(?:her|his|my|your|their|she s|show|shows|showing|flash|flashing|bare|big|huge|naked|grab|grabbing|touch|touching)\s+(?:tits|titties|nipples)\b/,
+    /\bhorny\s+(?:girl|girls|woman|women|man|men|guy|guys|wife|husband|lady|ladies|couple|teen|teens|milf|boyfriend|girlfriend|me|her|him)\b/,
+    /\b(?:i m|im|i am|she s|he s|she is|he is|they are|we are|feel|feels|feeling|so|very|gets|getting|got|get|makes|made)\s+(?:me\s+|her\s+|him\s+)?horny\b/
   ];
   return patterns.some((pattern) => pattern.test(normalized));
 }
@@ -169,6 +184,37 @@ function evaluatePrompt(prompt) {
     return { allowed: false, category: 'harmful_or_deceptive_deepfake', policyVersion: POLICY_VERSION };
   }
   return { allowed: true, category: null, policyVersion: POLICY_VERSION };
+}
+
+// The word filter cannot tell "she sucks me" from "she sucks, I don't want to talk to her". OpenAI's
+// free moderation model reads the whole prompt (context, typos, any language) and decides on sexual
+// content. The word filter still blocks first, and it alone decides if moderation is unavailable.
+const MODERATION_URL = 'https://api.openai.com/v1/moderations';
+async function moderationSaysSexual(text) {
+  const key = process.env.OPENAI_API_KEY || '';
+  if (!key || !text) return null;
+  try {
+    const response = await fetch(MODERATION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: 'omni-moderation-latest', input: text.slice(0, 20000) }),
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!response.ok) return null;
+    const categories = (await response.json())?.results?.[0]?.categories;
+    if (!categories) return null;
+    if (categories['sexual/minors']) return 'sexual_content_involving_minors';
+    return categories.sexual ? 'nsfw_sexual_content' : '';
+  } catch {
+    return null;
+  }
+}
+
+async function evaluateWithModeration(prompt) {
+  const decision = evaluatePrompt(prompt);
+  if (!decision.allowed) return decision;
+  const category = await moderationSaysSexual(String(prompt || '').trim());
+  return category ? { allowed: false, category, policyVersion: POLICY_VERSION, source: 'moderation' } : decision;
 }
 
 function publicMessage(decision) {
@@ -515,13 +561,14 @@ exports.handler = async function handler(event) {
   collectPromptLikeText(request.payload, 'payload', promptParts, 0);
   const moderationText = Array.from(new Set(promptParts.map((part) => String(part || '').trim()).filter(Boolean))).join('\n');
 
-  const decision = evaluatePrompt(moderationText);
+  const decision = await evaluateWithModeration(moderationText);
   const decisionId = crypto.randomUUID();
   const promptHash = crypto.createHash('sha256').update(moderationText).digest('hex').slice(0, 16);
   console.info('content_safety_decision', JSON.stringify({
     decisionId,
     allowed: decision.allowed,
     category: decision.category,
+    source: decision.source || 'filter',
     policyVersion: decision.policyVersion,
     modelId,
     mediaKind,
@@ -687,5 +734,6 @@ exports.handler = async function handler(event) {
 };
 
 exports.evaluatePrompt = evaluatePrompt;
+exports.evaluateWithModeration = evaluateWithModeration;
 exports.POLICY_VERSION = POLICY_VERSION;
 exports.unlimitedEligibility = unlimitedEligibility;

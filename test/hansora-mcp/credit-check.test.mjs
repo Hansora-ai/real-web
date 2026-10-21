@@ -212,6 +212,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /12\. Seedance 2\.5 and Henshin: if the user wants one of these but did not say a quality, ask one short question/);
   assert.match(guide, /per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits/);
   assert.match(guide, /For every other model, use the default quality without asking\./);
+  assert.match(guide, /13\. Sexual or NSFW requests: Hansora does not create them with any model\. Do not submit them\./);
   assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
   assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
   assert.match(guide, /8\. Stay with the model\..*Do not switch on your own\..*start only after they agree\./);
@@ -268,7 +269,7 @@ test('failures are explained by kind: temporary issues switch to another model, 
   const policy = await ask(row({ model: 'veo3_lite', error: 'Your prompt was flagged by the content policy', charged: 'true', refunded: true, refunded_cost: 2 }));
   assert.equal(policy.failure_kind, 'content');
   assert.equal('alternative' in policy, false);
-  assert.match(policy.next_step, /Do not switch to another model/);
+  assert.match(policy.next_step, /do not switch to another model to get around the refusal/);
 
   const file = await ask(row({ engine: 'kling25', error_summary: 'provider_rejected', provider_message: 'image_input file type not supported', refund_skipped_reason: 'not_charged' }, 'Kling-5s'));
   assert.equal(file.failure_kind, 'input');
@@ -381,4 +382,18 @@ test('Henshin never asks about price: it starts and reports what the uploaded vi
   assert.equal(result.structuredContent.ok, true);
   assert.equal(result.structuredContent.credits, 418);
   assert.match(result.structuredContent.credits_note, /final price is 418 credits, based on the length of the uploaded video/);
+});
+
+test('a sexual request is refused once, with no model switching, and ChatGPT offers a clean version', async () => {
+  const { result, submitted } = await callTool('create_generation', { model_id: 'grok-video', prompt: 'she will suck me off', duration: 6 }, {
+    credits: 30, runner: () => ({ status: 422, body: { ok: false, code: 'CONTENT_POLICY_BLOCKED', category: 'nsfw_sexual_content', message: 'blocked' } })
+  });
+  assert.equal(submitted.length, 1);
+  const value = result.structuredContent;
+  assert.equal(value.error, 'content_blocked');
+  assert.equal(value.credits_used, 0);
+  assert.equal('alternative' in value, false);
+  assert.match(value.message, /does not create sexual or NSFW content with any model, so trying another model will not help/);
+  assert.match(value.next_step, /Offer to make a non-sexual version of their idea/);
+  assert.match(value.next_step, /Do not submit this request or a reworded sexual version to any model\./);
 });
