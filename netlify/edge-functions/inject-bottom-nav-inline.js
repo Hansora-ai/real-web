@@ -263,22 +263,45 @@ export default async (request, context) => {
     .hs-radial-backdrop{
       position:absolute;
       inset:0;
-      background:rgba(0,0,0,.50);
+      background:radial-gradient(120% 70% at 50% 100%, rgba(76,29,149,.38), rgba(3,4,10,.62) 70%);
+      -webkit-backdrop-filter:blur(6px);
+      backdrop-filter:blur(6px);
+      opacity:0;
+      transition:opacity .25s ease;
     }
+    .hs-radial.is-open .hs-radial-backdrop{ opacity:1; }
     .hs-radial-panel{
       position:absolute;
       left:50%;
       bottom:0;
       width:min(112vw,520px);
-      height:245px;
-      transform:translateX(-50%) translateY(32px) scale(.96);
+      height:262px;
+      transform:translateX(-50%) translateY(40px) scale(.94);
       transform-origin:bottom center;
       border-radius:999px 999px 0 0 / 360px 360px 0 0;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(20,21,25,.98);
-      box-shadow:0 -18px 80px rgba(0,0,0,.45);
+      border:1px solid rgba(255,255,255,.10);
+      border-bottom:0;
+      background:
+        radial-gradient(60% 55% at 50% 0%, rgba(139,92,246,.22), transparent 70%),
+        radial-gradient(45% 45% at 50% 100%, rgba(56,189,248,.14), transparent 70%),
+        linear-gradient(180deg, rgba(24,22,38,.97), rgba(10,11,18,.99));
+      box-shadow:0 -24px 90px rgba(109,40,217,.28), 0 -2px 0 rgba(255,255,255,.04) inset, 0 1px 0 rgba(255,255,255,.10) inset;
+      -webkit-backdrop-filter:blur(22px) saturate(160%);
+      backdrop-filter:blur(22px) saturate(160%);
       opacity:0;
-      transition:opacity .22s ease, transform .22s ease;
+      transition:opacity .25s ease, transform .32s cubic-bezier(.2,.9,.25,1.15);
+    }
+    .hs-radial-panel::before{
+      content:"";
+      position:absolute;
+      inset:-1px -1px 0;
+      border-radius:inherit;
+      padding:1px 1px 0;
+      background:linear-gradient(90deg, rgba(56,189,248,.0), rgba(167,139,250,.75) 30%, rgba(244,114,182,.6) 70%, rgba(56,189,248,0));
+      -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;
+      mask-composite:exclude;
+      pointer-events:none;
     }
     .hs-radial.is-open .hs-radial-panel{
       opacity:1;
@@ -286,32 +309,60 @@ export default async (request, context) => {
     }
     .hs-radial-item{
       position:absolute;
-      width:78px;
+      width:96px;
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:7px;
+      gap:8px;
       border:0;
       background:transparent;
-      color:#d7dbe4;
+      color:#eef0f7;
       text-decoration:none;
       transform:translate(-50%,-50%);
-      font:800 13px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      font:750 12.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
+      -webkit-tap-highlight-color:transparent;
     }
+    .hs-radial-item b{ font-weight:750; text-align:center; text-shadow:0 1px 8px rgba(0,0,0,.5); }
+    html[lang="hy"] .hs-radial-item b{ max-width:84px; }
+    html:has(.hs-radial.is-open) .hsa-launcher{ opacity:0; pointer-events:none; }
     .hs-radial-icon{
-      width:50px;
-      height:50px;
+      position:relative;
+      width:54px;
+      height:54px;
       display:grid;
       place-items:center;
-      border-radius:50%;
-      background:#30333b;
+      border-radius:18px;
+      background:linear-gradient(145deg, var(--hs-c1,#8b5cf6), var(--hs-c2,#38bdf8));
       color:#fff;
+      box-shadow:0 10px 26px -8px var(--hs-glow,rgba(139,92,246,.7)), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -8px 16px rgba(0,0,0,.18);
+      opacity:0;
+      transform:translateY(16px) scale(.7);
+      transition:transform .18s ease, opacity .18s ease;
     }
-    .hs-radial-image{ left:28%; top:38%; }
-    .hs-radial-video{ left:50%; top:24%; }
-    .hs-radial-audio{ left:72%; top:38%; }
-    .hs-radial-trend{ left:16%; top:70%; }
-    .hs-radial-more{ left:84%; top:70%; }
+    .hs-radial-icon::after{
+      content:"";
+      position:absolute;
+      inset:1px;
+      border-radius:17px;
+      background:linear-gradient(180deg, rgba(255,255,255,.22), transparent 45%);
+      pointer-events:none;
+    }
+    .hs-radial-icon svg{ width:25px; height:25px; stroke-width:2.1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
+    .hs-radial.is-open .hs-radial-icon{ animation:hs-radial-pop .42s cubic-bezier(.2,.9,.3,1.3) forwards; }
+    .hs-radial.is-open .hs-radial-video .hs-radial-icon{ animation-delay:.03s; }
+    .hs-radial.is-open .hs-radial-image .hs-radial-icon,
+    .hs-radial.is-open .hs-radial-audio .hs-radial-icon{ animation-delay:.08s; }
+    .hs-radial.is-open .hs-radial-trend .hs-radial-icon,
+    .hs-radial.is-open .hs-radial-more .hs-radial-icon{ animation-delay:.13s; }
+    @keyframes hs-radial-pop{ to{ opacity:1; transform:none; } }
+    .hs-radial-item:active .hs-radial-icon{ transform:scale(.92); }
+    .hs-radial-image{ left:28%; top:38%; --hs-c1:#38bdf8; --hs-c2:#6366f1; --hs-glow:rgba(56,189,248,.65); }
+    .hs-radial-video{ left:50%; top:23%; --hs-c1:#a78bfa; --hs-c2:#7c3aed; --hs-glow:rgba(139,92,246,.75); }
+    .hs-radial-audio{ left:72%; top:38%; --hs-c1:#f472b6; --hs-c2:#c026d3; --hs-glow:rgba(236,72,153,.6); }
+    .hs-radial-trend{ left:16%; top:70%; --hs-c1:#d9ff3d; --hs-c2:#22c55e; --hs-glow:rgba(163,230,53,.5); }
+    .hs-radial-trend .hs-radial-icon{ color:#0b1203; }
+    .hs-radial-more{ left:84%; top:70%; --hs-c1:#fbbf24; --hs-c2:#f97316; --hs-glow:rgba(251,146,60,.55); }
     .hs-radial-close{
       position:absolute;
       left:50%;
@@ -323,10 +374,22 @@ export default async (request, context) => {
       border-radius:50%;
       display:grid;
       place-items:center;
-      background:#30333b;
-      color:#b9bec9;
+      background:
+        linear-gradient(rgba(16,17,26,.92), rgba(16,17,26,.92)) padding-box,
+        conic-gradient(from 210deg, #38bdf8, #8b5cf6, #ec4899, #f59e0b, #38bdf8) border-box;
+      border:2px solid transparent;
+      color:#fff;
+      box-shadow:0 10px 30px rgba(109,40,217,.45);
+      transition:transform .3s cubic-bezier(.2,.9,.3,1.2);
+      -webkit-tap-highlight-color:transparent;
     }
-    .hs-radial-close svg{ width:32px; height:32px; stroke-width:2.6; }
+    .hs-radial.is-open .hs-radial-close{ transform:translateX(-50%) rotate(90deg); }
+    .hs-radial-close:active{ transform:translateX(-50%) rotate(90deg) scale(.92); }
+    .hs-radial-close svg{ width:26px; height:26px; stroke-width:2.6; }
+    @media (prefers-reduced-motion:reduce){
+      .hs-radial-panel, .hs-radial-close, .hs-radial-backdrop{ transition:none; }
+      .hs-radial.is-open .hs-radial-icon{ animation:none; opacity:1; transform:none; }
+    }
     .hs-overlay{
       position:fixed;
       inset:0;

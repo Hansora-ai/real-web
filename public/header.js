@@ -2214,6 +2214,14 @@
       @media (min-width:901px){
         .site-header .nav-links{ position:static; transform:none; margin:0 auto; flex:0 1 auto; min-width:0; }
         .site-header .nav-links a{ white-space:nowrap; }
+        /* Dropdowns open centred under the whole header so they never run off the left edge. */
+        .site-header .nav{ position:relative; }
+        .site-header .nav-links .hansora-nav-item{ position:static; }
+        .site-header .nav-links .hansora-nav-item:has(> .hansora-mega-compact){ position:relative; }
+        .site-header .nav-links .hansora-nav-item:has(> .hansora-mega-image)::before{ content:none; }
+        .site-header .nav-links .hansora-nav-trigger{ position:relative; }
+        .site-header .nav-links .hansora-nav-trigger::before{ content:""; position:absolute; left:0; right:0; top:100%; height:26px; }
+        .site-header .nav-links .hansora-mega-menu{ top:calc(100% + 6px); left:50%; }
       }
       /* Fit every menu item between the logo and the buttons as the screen narrows. */
       @media (min-width:901px) and (max-width:1600px){
