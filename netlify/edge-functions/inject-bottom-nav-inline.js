@@ -768,7 +768,9 @@ export default async (request, context) => {
           : window.innerHeight;
         const rect = bottomNav.getBoundingClientRect();
         const unshiftedBottom = rect.bottom - bottomNavShift;
-        bottomNavShift = Math.max(0, Math.round(viewportBottom - unshiftedBottom));
+        // Keep the dock's floating gap above the screen edge instead of pinning it flush to the bottom.
+        const dockGap = parseFloat(getComputedStyle(bottomNav).bottom) || 0;
+        bottomNavShift = Math.max(0, Math.round(viewportBottom - dockGap - unshiftedBottom));
         bottomNav.style.setProperty('--hs-viewport-shift', bottomNavShift + 'px');
       });
     };
