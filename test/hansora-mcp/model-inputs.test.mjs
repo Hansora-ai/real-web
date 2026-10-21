@@ -81,3 +81,11 @@ test('Wan MCP quotes, explicit source clips and all reference types match the we
  const bare=buildGenerationPayload('wan-3',{prompt:'Text only'},'u','r');assert.equal(bare.resolution,'1080p');assert.equal(bare.expected_credits,quote('wan-3').displayedCredits);
  assert.throws(()=>buildGenerationPayload('wan-3',{...request,first_frame_url:img('first')},'u','r'),/frames_cannot_mix/);
 });
+
+test('Seedance from ChatGPT has sound unless the user asked for silence', () => {
+  for (const id of ['seedance25', 'seedance20', 'seedance20-mini']) {
+    assert.equal(buildGenerationPayload(id, { prompt: 'a village at sunrise, no dialogue' }, 'u', 'r').generate_audio, true, id);
+    assert.equal(buildGenerationPayload(id, { prompt: 'silent clip', generate_audio: false }, 'u', 'r').generate_audio, false, id);
+    assert.equal(buildGenerationPayload(id, { prompt: 'silent clip', sound: false }, 'u', 'r').generate_audio, false, id);
+  }
+});
