@@ -204,16 +204,15 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
   assert.match(guide, /not from how long or detailed your own prompt is/);
   assert.match(guide, /3\. Simple: generate directly, do not ask\.\n   - Up to 8 seconds: Veo 3\.1 Lite, 1080p\.\n   - 9 to 10 seconds: Gemini Omni Flash, 1080p\..*\n   - 11 to 30 seconds: Wan 3\.0, 720p\./);
-  assert.match(guide, /4\. Complex: ask the user before generating, at any length/);
-  assert.match(guide, /Seedance 2\.5, 720p \(sharper\): recommended/);
-  assert.match(guide, /Seedance 2\.5, 480p \(good quality, lower price\)/);
-  assert.match(guide, /Seedance 2\.5, 480p \(good quality, lower price\)\n   - Kling 4\.0, 720p: very strong, close to Seedance 2\.5 at a lower price/);
-  assert.match(guide, /Seedance 2\.5, 1080p \(sharpest, highest price\): offer only when the user asks for 1080p/);
-  assert.match(guide, /Seedance 2\.0, 720p: very strong for complex scenes \(up to 15 seconds only\)/);
-  assert.match(guide, /pick the first option that fits/);
+  assert.match(guide, /If you are not sure, treat it as complex/);
+  // One short question with three plain choices, so users who know no model names can pick.
+  assert.match(guide, /4\. Complex: ask one short question before generating, at any length, with exactly these three options/);
+  assert.match(guide, /   - Best quality: Seedance 2\.5, 720p \(recommended\)\n   - Great quality, lower price: Kling 4\.0, 720p\n   - Budget: Wan 3\.0, 720p\n   Do not list other models or resolutions in this question\./);
+  assert.match(guide, /1080p \(sharpest, only when the user asks for 1080p or the best possible quality; never pick it on your own\)/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
-  assert.match(guide, /12\. Seedance 2\.5: if the user wants it but did not say a quality, ask one short question/);
+  assert.match(guide, /answers vaguely \("ok", "go", "yes"\), start the first option that fits without asking again/);
+  assert.match(guide, /12\. Quality: never ask about resolution\. If the user did not say a quality, use the one named above \(Seedance 2\.5: 720p\)/);
   assert.match(guide, /Video edits .*: use Henshin Lite directly, without asking which version, at 720p unless the user asks for 1080p \(it costs 220 credits per 10 seconds of their video at 720p, 340 at 1080p\)/);
   assert.match(guide, /After a Henshin Lite result, only if the user is not satisfied, offer to redo it with Henshin, the stronger version \(per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits\)/);
   assert.match(guide, /For every other model, use the default quality without asking\./);
