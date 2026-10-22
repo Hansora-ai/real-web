@@ -19,7 +19,7 @@ const db=new PGlite(),uid=randomUUID(),other=randomUUID();
 const source='https://example.supabase.co/storage/v1/object/public/generation-history/source.mp4';
 const fixture=await readFile(new URL('../henshin/fixtures/source.mp4',import.meta.url));
 const originalFetch=globalThis.fetch;
-let posts=[],tasks=new Map(),reject=false,uncertain=false,providerStatus=200,failArchive=false;
+let posts=[],stored=[],tasks=new Map(),reject=false,uncertain=false,providerStatus=200,failArchive=false;
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
 const event=(patch={},run=randomUUID())=>({httpMethod:'POST',headers:{authorization:'Bearer customer'},body:JSON.stringify({uid,run_id:run,prompt:'A cinematic kitten in warm light.',resolution:'720p',duration:10,expected_credits:190,...patch})});
 async function balance(){return Number((await db.query('select credits from profiles where user_id=$1',[uid])).rows[0].credits);}
@@ -46,7 +46,10 @@ before(async()=>{
   }
   if(u.hostname==='cdn.kie.ai')return failArchive?new Response(null,{status:503}):new Response(fixture,{headers:{'content-type':'video/mp4'}});
   if(u.pathname.includes('/auth/'))return json({id:opts.headers.Authorization==='Bearer other'?other:uid});
-  if(u.pathname.includes('/storage/'))return opts.method==='POST'?json({ok:true}):new Response(fixture);
+  if(u.pathname.includes('/storage/')){
+   if(opts.method==='POST'){stored.push({url:String(u),bytes:Buffer.from(opts.body)});return json({ok:true});}
+   return new Response(fixture);
+  }
   if(u.pathname.endsWith('/rpc/reapi_generation_transition')){
    try{return json((await db.query('select reapi_generation_transition($1,$2,$3,$4) as result',[body.p_action,body.p_id,body.p_user,body.p_payload])).rows[0].result);}
    catch(e){return json({message:e.message},400);}
@@ -62,7 +65,7 @@ before(async()=>{
  };
 });
 beforeEach(async()=>{
- posts=[];tasks=new Map();reject=false;uncertain=false;providerStatus=200;failArchive=false;
+ posts=[];stored=[];tasks=new Map();reject=false;uncertain=false;providerStatus=200;failArchive=false;
  await db.exec('delete from user_generations;delete from profiles;');
  await db.query('insert into profiles values($1,1000)',[uid]);
 });
@@ -99,6 +102,12 @@ test('simultaneous retries debit and submit only once',async()=>{
  assert.equal(posts.length,1);assert.equal(await balance(),981);assert.equal((await saved())[0].meta.charged_cost,19);
  assert.equal((await launch25(request)).statusCode,200);assert.equal(posts.length,1);
 });
+test('Search Models retains original video audio even when a stale client sends false',async()=>{
+ const response=await launch25(event({video_urls:[source],keep_original_sound:false,expected_credits:227}));
+ assert.equal(response.statusCode,201,response.body);
+ assert.equal(posts[0].input.keep_original_sound,true);
+ assert.equal((await saved())[0].meta.keep_original_sound,true);
+});
 test('insufficient balance and changed verified quote cannot submit a paid task',async()=>{
  assert.equal((await launch25(event({expected_credits:1}))).statusCode,409);assert.equal(posts.length,0);assert.equal(await balance(),1000);
  await db.query('update profiles set credits=1 where user_id=$1',[uid]);
@@ -134,7 +143,20 @@ test('Lite probes real source length and applies the 220-credit rate without cha
  response=await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],keep_audio:true,source_video_duration:5,mode:'motion',expected_credits:110}));
  assert.equal(response.statusCode,201,response.body);assert.equal(await balance(),989);assert.equal(posts[0].input.duration,5);
  assert.ok(posts[0].input.prompt.includes('@video_1'));assert.ok(posts[0].input.prompt.includes('@image_1'));
- const row=(await saved())[0];assert.equal(row.meta.finish_video,true);assert.ok(row.meta.source_audio_url);
+ assert.equal(posts[0].input.keep_original_sound,true);
+ const row=(await saved())[0];assert.equal(row.meta.finish_video,false);assert.equal(row.meta.source_audio_url,null);
+ assert.ok(posts[0].input.video_urls[0].endsWith('/verified-source.mp4'));
+ assert.ok(stored.length);assert.ok(stored.every(file=>file.url.endsWith('/verified-source.mp4')));
+ assert.ok(stored.every(file=>file.bytes.equals(fixture)),'The original video and audio stay intact');
+ tasks.get(row.meta.task_id).state='success';tasks.get(row.meta.task_id).resultJson=JSON.stringify({resultUrls:['https://cdn.kie.ai/result.mp4']});
+ const completed=JSON.parse((await checker(polling(row))).body);
+ assert.ok(completed.result_url);assert.notEqual(completed.meta.status,'restoring_audio');
+});
+test('Lite passes the native audio choice to Kling without creating a separate soundtrack',async()=>{
+ const response=await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],keep_audio:false,source_video_duration:5,mode:'motion',expected_credits:110}));
+ assert.equal(response.statusCode,201,response.body);assert.equal(posts[0].input.keep_original_sound,false);
+ assert.equal((await saved())[0].meta.source_audio_url,null);
+ assert.equal(stored.length,1);assert.ok(stored[0].bytes.equals(fixture));
 });
 test('clients cannot rewrite protected Kling task or refund metadata',async()=>{
  await launch25(event());const row=(await saved())[0];

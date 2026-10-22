@@ -4284,8 +4284,6 @@ svg.download-progress-spinner { display:inline-block!important;width:18px!import
 svg.download-progress-spinner circle { fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:42 15; }
 @keyframes download-progress-rotate { to { transform:rotate(360deg); } }
 .model-top-badge { margin-left:auto;padding:2px 7px;border-radius:7px;background:#d6ff34;color:#151515;font-size:10px;font-weight:800; }
-.kling4-options { margin:8px 0;padding:12px;border:1px solid #ffffff20;border-radius:14px;font-size:12px;color:#a7a8b2; }
-.kling4-options label { display:flex;gap:8px;align-items:center;color:inherit;margin-bottom:8px; }
 </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
@@ -4643,10 +4641,6 @@ svg.download-progress-spinner circle { fill:none;stroke:currentColor;stroke-widt
 
           <!-- New KIE video models: Wan 2.7 / HappyHorse / Grok -->
           <div id="videoRefsUploadWrap" class="hidden flex-col gap-3 model-upload-grid">
-            <div id="kling4Options" class="kling4-options hidden">
-              <label><input id="kling4KeepSound" type="checkbox">Keep original video audio</label>
-              <div id="kling4ReferenceHint">Use @image_1, @video_1 and @voice_1 in your prompt. Up to 10 images, 5 videos (30 seconds combined), and 3 voices; 15 references total.</div>
-            </div>
             <div id="videoFramesSection" class="upload-section-card upload-section-wide">
               <div class="upload-section-head">
                 <span class="upload-section-icon">🎬</span>
@@ -10431,7 +10425,6 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const showsSourceVideo = kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni';
       const showsVideoReferences = kind === 'wan27' || kind === 'wan30' || kind === 'kling40';
       const showsAudioReferences = kind === 'wan27' || kind === 'wan30' || kind === 'kling40';
-      show('kling4Options', kind === 'kling40');
       show('videoFramesSection', showsFirstFrame || showsLastFrame);
       show('videoImageReferencesSection', true);
       show('videoVideoReferencesSection', showsSourceVideo || showsVideoReferences);
@@ -12842,7 +12835,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const images=(urls||[]).slice(0,videoRefImageFiles.length), start=images.length;
           const videos=(urls||[]).slice(start,start+videoRefVideoFiles.length);
           const voices=(urls||[]).slice(start+videoRefVideoFiles.length);
-          return {uid,run_id:runId,prompt,duration:Number(duration||5),resolution:currentResolution||'720p',aspect_ratio:aspect||'auto',image_urls:images,video_urls:videos,audio_urls:voices,keep_original_sound:!!document.getElementById('kling4KeepSound')?.checked};
+          return {uid,run_id:runId,prompt,duration:Number(duration||5),resolution:currentResolution||'720p',aspect_ratio:aspect||'auto',image_urls:images,video_urls:videos,audio_urls:voices,keep_original_sound:true};
         }
         case 'wan-3': {
           let cursor = 0;

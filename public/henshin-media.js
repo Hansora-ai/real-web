@@ -46,6 +46,14 @@
    let data;try{data=JSON.parse(new TextDecoder().decode(await ff.readFile('probe.json')));}catch{throw Error(t('Could not read this video. Try exporting it as MP4 (H.264).'));}
    const stream=data.streams?.find(s=>s.codec_type==='video');if(!stream)throw Error(t('This file has no readable video track.'));
    const seconds=validDuration(Number.isFinite(Number(stream.duration))?Number(stream.duration):Number(data.format?.duration));
+   let inputs=['-i','source'],audio='0:a:0?';
+   if(stream.codec_name==='av1'){
+    const {decodeToH264}=await import('/henshin-native-video.mjs');
+    await ff.writeFile('decoded.mp4',await decodeToH264(file,seconds));
+    // The browser converts frames only. Read the original audio directly so a
+    // silent browser decoder never removes sound from a published template.
+    inputs=['-i','decoded.mp4','-i','source'];audio='1:a:0?';
+   }
    // Autorotation precedes the filter. Letterbox unusual shapes without cropping
    // or stretching; normalize pixel aspect, resolution, frame rate and codecs.
    const filter=example?"scale=w='trunc(iw*sar/2)*2':h='trunc(ih/2)*2',setsar=1": "scale=w='trunc(iw*sar/2)*2':h='trunc(ih/2)*2',setsar=1,pad=w='max(iw,ceil(ih*0.405/2)*2)':h='max(ih,ceil(iw/2.45/2)*2)':x='(ow-iw)/2':y='(oh-ih)/2',scale=w='trunc(sqrt(921600*iw/ih)/2)*2':h='trunc(sqrt(921600*ih/iw)/2)*2',fps=30";
@@ -53,7 +61,7 @@
    // exactly instead of resizing and re-encoding an already compressed video.
    const copy=example&&file.size<=95*MB&&stream.codec_name==='h264'&&stream.pix_fmt==='yuv420p';
    const videoArgs=copy?['-c:v','copy']:['-vf',filter,'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf',example?'18':'21'];
-   const code=await ff.exec(['-i','source','-map','0:v:0','-map','0:a:0?','-t',String(seconds),...videoArgs,...(maxMB<=10?['-maxrate','2000k','-bufsize','4000k']:[]),'-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
+   const code=await ff.exec([...inputs,'-map','0:v:0','-map',audio,'-t',String(seconds),...videoArgs,...(maxMB<=10?['-maxrate','2000k','-bufsize','4000k']:[]),'-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
    if(code)throw Error(t('Could not convert this video codec. Export it as MP4 (H.264) and try again.'));
    const result=new File([await ff.readFile('prepared.mp4')],(file.name||'source').replace(/\.[^.]+$/,'')+'.mp4',{type:'video/mp4'});
    size(result,maxMB,'processed video');converted.add(result);return result;
