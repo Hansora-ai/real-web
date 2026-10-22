@@ -12,13 +12,15 @@ const { resetHealthCache, unavailableFromRuns } = await import('../../lib/hansor
 const token = `x.${Buffer.from(JSON.stringify({ client_id: 'chatgpt', scope: 'email' })).toString('base64url')}.y`;
 
 // Drives the real /mcp handler; only Supabase and the generation runner are simulated.
-async function callTool(name, args, { credits, generations = [], runner = () => ({ status: 202, body: { ok: true, submitted: true } }), kieCheck = null }) {
+async function callTool(name, args, { credits, generations = [], runner = () => ({ status: 202, body: { ok: true, submitted: true } }), kieCheck = null, rest = null }) {
   const submitted = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, options = {}) => {
     const href = String(url);
     const reply = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
     if (href.endsWith('/auth/v1/user')) return reply(200, { id: 'user-1', email: 'user@example.com' });
+    const custom = rest && href.includes('/rest/v1/') ? await rest(href) : undefined;
+    if (custom) return custom;
     if (href.includes('/rest/v1/profiles')) return reply(200, [{ credits }]);
     if (href.includes('/rest/v1/user_subscriptions')) return reply(200, []);
     if (href.includes('/rest/v1/user_generations')) return reply(200, generations);
@@ -439,4 +441,43 @@ test('a Supabase outage never logs users out: sign-in checks that cannot run ans
   const invalid = await call(() => new Response(JSON.stringify({ msg: 'invalid JWT' }), { status: 401 }));
   assert.equal(invalid.status, 401); // a really invalid token still asks the user to sign in
   assert.match(invalid.headers.get('www-authenticate'), /resource_metadata=/);
+});
+
+test('a database hiccup is retried once, so the user never notices', async () => {
+  let calls = 0;
+  const { result } = await callTool('get_account', {}, {
+    credits: 30,
+    rest: (href) => (href.includes('/rest/v1/profiles') && ++calls === 1 ? new Response('busy', { status: 503 }) : undefined)
+  });
+  assert.equal(calls, 2);
+  assert.equal(result.structuredContent.credits, 300);
+});
+
+test('when the database stays down, the user gets a calm message instead of a raw error', async () => {
+  const down = () => new Response('timeout', { status: 504 });
+  const account = (await callTool('get_account', {}, { credits: 30, rest: down })).result;
+  assert.equal(account.isError, true);
+  assert.equal(account.structuredContent.error, 'temporarily_unavailable');
+  assert.match(account.structuredContent.next_step, /Wait a few seconds and call the same tool once more/);
+  const check = (await callTool('get_generation', { run_id: 'user-1-mcp-1792338247134-03250856' }, { credits: 30, rest: down })).result;
+  assert.equal(check.structuredContent.message, 'Hansora could not check this right now. Your generation keeps running.');
+});
+
+test('a slow submission answers in time with the run id instead of letting ChatGPT show server error', async () => {
+  const { result } = await callTool('create_generation', { model_id: 'grok-video', prompt: 'waves at sunset', duration: 6 }, {
+    credits: 30, runner: () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); }
+  });
+  assert.equal(result.isError, undefined);
+  assert.equal(result.structuredContent.status, 'queued');
+  assert.match(result.structuredContent.run_id, /^user-1-mcp-\d{13}-/);
+  assert.match(result.structuredContent.next_step, /Do not start it again/);
+});
+
+test('a run that has only just started is shown as starting, not as missing', async () => {
+  const fresh = `user-1-mcp-${Date.now()}-abcd1234`;
+  const starting = (await callTool('get_generation', { run_id: fresh }, { credits: 30, generations: [] })).result;
+  assert.equal(starting.structuredContent.status, 'processing');
+  const old = (await callTool('get_generation', { run_id: 'user-1-mcp-1700000000000-abcd1234' }, { credits: 30, generations: [] })).result;
+  assert.equal(old.isError, true);
+  assert.match(old.content[0].text, /generation_not_found/);
 });
