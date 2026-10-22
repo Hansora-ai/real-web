@@ -19,7 +19,7 @@ const db=new PGlite(),uid=randomUUID(),other=randomUUID();
 const source='https://example.supabase.co/storage/v1/object/public/generation-history/source.mp4';
 const fixture=await readFile(new URL('../henshin/fixtures/source.mp4',import.meta.url));
 const originalFetch=globalThis.fetch;
-let posts=[],stored=[],tasks=new Map(),reject=false,uncertain=false,providerStatus=200,failArchive=false;
+let posts=[],stored=[],tasks=new Map(),reject=false,uncertain=false,providerStatus=200,failArchive=false,inputFixture=fixture;
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
 const event=(patch={},run=randomUUID())=>({httpMethod:'POST',headers:{authorization:'Bearer customer'},body:JSON.stringify({uid,run_id:run,prompt:'A cinematic kitten in warm light.',resolution:'720p',duration:10,expected_credits:190,...patch})});
 async function balance(){return Number((await db.query('select credits from profiles where user_id=$1',[uid])).rows[0].credits);}
@@ -28,7 +28,7 @@ function polling(row,patch={}){return {httpMethod:'GET',headers:{authorization:'
 before(async()=>{
  await db.exec(`create role anon;create role authenticated;create role service_role;
  create table profiles(user_id uuid primary key,credits numeric(12,1));
- create table user_generations(id uuid primary key,user_id uuid,provider text,kind text,prompt text,result_url text,meta jsonb,created_at timestamptz default now());grant select,update on user_generations to authenticated;`);
+ create table user_generations(id uuid primary key,user_id uuid,provider text,kind text,prompt text,result_url text,meta jsonb,created_at timestamptz default now());grant select,update on user_generations to authenticated,service_role;`);
  await db.exec(await readFile(new URL('../../supabase/18_reapi_generation_billing.sql',import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../../supabase/20_kling4_generation_billing.sql',import.meta.url),'utf8'));
  globalThis.fetch=async(raw,opts={})=>{
@@ -48,13 +48,21 @@ before(async()=>{
   if(u.pathname.includes('/auth/'))return json({id:opts.headers.Authorization==='Bearer other'?other:uid});
   if(u.pathname.includes('/storage/')){
    if(opts.method==='POST'){stored.push({url:String(u),bytes:Buffer.from(opts.body)});return json({ok:true});}
-   return new Response(fixture);
+   return new Response(inputFixture);
   }
   if(u.pathname.endsWith('/rpc/reapi_generation_transition')){
    try{return json((await db.query('select reapi_generation_transition($1,$2,$3,$4) as result',[body.p_action,body.p_id,body.p_user,body.p_payload])).rows[0].result);}
    catch(e){return json({message:e.message},400);}
   }
   if(u.pathname.endsWith('/user_generations')){
+   if(opts.method==='PATCH'){
+    // Exercise the deployed trigger with its real service role. Recovery may
+    // resolve finishing fields, but cannot alter task, billing or refund data.
+    const rows=await db.transaction(async tx=>{
+     await tx.exec('set local role service_role');
+     return (await tx.query("update user_generations set result_url=$3,meta=$4 where id=$1 and user_id=$2 and meta->>'status'=$5 and coalesce(meta->>'audio_lease','')=$6 returning *",[u.searchParams.get('id').slice(3),u.searchParams.get('user_id').slice(3),body.result_url,body.meta,u.searchParams.get('meta->>status').slice(3),u.searchParams.get('meta->>audio_lease')==='is.null'?'':u.searchParams.get('meta->>audio_lease').slice(3)])).rows;
+    });return json(rows);
+   }
    assert.ok(!opts.method||opts.method==='GET','New generation metadata must use atomic transitions');
    let rows=(await db.query('select * from user_generations')).rows;
    for(const key of ['id','user_id'])if(u.searchParams.has(key))rows=rows.filter(row=>row[key]===u.searchParams.get(key).slice(3));
@@ -65,7 +73,7 @@ before(async()=>{
  };
 });
 beforeEach(async()=>{
- posts=[];stored=[];tasks=new Map();reject=false;uncertain=false;providerStatus=200;failArchive=false;
+ posts=[];stored=[];tasks=new Map();reject=false;uncertain=false;providerStatus=200;failArchive=false;inputFixture=fixture;
  await db.exec('delete from user_generations;delete from profiles;');
  await db.query('insert into profiles values($1,1000)',[uid]);
 });
@@ -162,4 +170,32 @@ test('clients cannot rewrite protected Kling task or refund metadata',async()=>{
  await launch25(event());const row=(await saved())[0];
  await assert.rejects(db.exec(`set role authenticated;update user_generations set meta=meta||'{"refunded":true}' where id='${row.id}'`),/Server-owned/);
  await db.exec('reset role');
+});
+test('fractional Lite sources complete directly without a soundtrack or trim job',async()=>{
+ await require('../../lib/henshin/server-media.cjs').withCore(async core=>{
+  core.FS.writeFile('source.mp4',fixture);core.reset();assert.equal(core.exec('-i','source.mp4','-t','4.5','-c','copy','fractional.mp4'),0);
+  inputFixture=Buffer.from(core.FS.readFile('fractional.mp4'));
+ });
+ const response=await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],keep_audio:true,source_video_duration:4.5,mode:'motion',expected_credits:110}));
+ assert.equal(response.statusCode,201,response.body);const row=(await saved())[0];assert.equal(row.meta.duration,5);assert.equal(row.meta.finish_video,false);
+ tasks.get(row.meta.task_id).state='success';tasks.get(row.meta.task_id).resultJson=JSON.stringify({resultUrls:['https://cdn.kie.ai/result.mp4']});
+ const out=JSON.parse((await checker(polling(row))).body);
+ assert.ok(out.result_url);assert.equal(out.meta.status,'done');assert.equal(require('../../lib/henshin/jobs.cjs').audioPending(out),false);assert.equal(await balance(),989);
+});
+for(const status of ['restoring_audio','audio_retry','audio_failed'])test(`archived Lite results recover from ${status} without another charge or generation`,async()=>{
+ await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],keep_audio:true,source_video_duration:5,mode:'motion',expected_credits:110}));
+ const row=(await saved())[0],archived=source.replace('source.mp4',`${uid}/${row.id}/result.mp4`);
+ const meta={...row.meta,status,generated_video_url:archived,finish_video:true,source_audio_url:source+'.m4a',audio_error:'Could not process the soundtrack.',audio_lease:'old-worker',audio_lease_until:Date.now()+60000};
+ await db.query('update user_generations set meta=$2 where id=$1',[row.id,meta]);
+ const responses=await Promise.all([checker(polling(row)),checker(polling(row))]);
+ for(const response of responses){const out=JSON.parse(response.body);assert.equal(response.statusCode,200,response.body);assert.equal(out.result_url,archived);assert.equal(out.meta.status,'done');assert.equal(out.failed,false);}
+ const recovered=(await saved())[0];assert.equal(recovered.result_url,archived);assert.equal(recovered.meta.audio_error,null);assert.notEqual(recovered.meta.audio_lease,'old-worker');
+ assert.equal(recovered.meta.task_id,row.meta.task_id);assert.equal(recovered.meta.charged_cost,row.meta.charged_cost);assert.equal(await balance(),989);assert.equal(posts.length,1);
+ assert.equal(await require('../../lib/henshin/jobs.cjs').enqueue(recovered),false);
+});
+test('a genuine Lite provider failure still fails and refunds exactly once',async()=>{
+ await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],source_video_duration:5,mode:'motion',expected_credits:110}));
+ const row=(await saved())[0];tasks.get(row.meta.task_id).state='fail';
+ const out=JSON.parse((await checker(polling(row))).body);assert.equal(out.failed,true);assert.equal(out.result_url,null);assert.equal(await balance(),1000);
+ await checker(polling(row));assert.equal(await balance(),1000);assert.equal(posts.length,1);
 });

@@ -283,7 +283,7 @@ async function markDone({ row, ids, urls, enqueueAudio = true }) {
 
   if (['reapi','kie-kling4'].includes(row.meta?.source)) {
     if (!archive.paths.length) throw Error('Result archival is pending.');
-    const audio = row.meta.source_feature === 'henshin' && (row.meta.source_audio_url || row.meta.finish_video);
+    const audio = row.meta.source_feature === 'henshin' && !require('../../lib/henshin/jobs.cjs').isLite(row) && (row.meta.source_audio_url || row.meta.finish_video);
     const completion = await require('../../lib/reapi/billing.cjs').transition('complete', row.id, row.user_id, {
       result_url: audio ? null : savedUrls[0],
       meta: { ...meta, ...(audio ? { status:'restoring_audio',generated_video_url:savedUrls[0] } : {}) }

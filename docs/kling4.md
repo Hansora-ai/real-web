@@ -21,7 +21,7 @@ Henshin Lite uses the owner's explicit retail rates: **220 / 340 displayed credi
 
 ## Source handling
 
-Lite is the default model in Henshin. The server verifies source duration, requests the next whole output second (KIE accepts integers from 3 to 30), and uses the source aspect ratio. Henshin's source range remains 4–30 seconds. Quotes use that requested duration; fractional clips may therefore bill the next second. The finisher trims the delivered result to the real source length. Lite references are compressed to a maximum of 10 MB before upload; up to 10 images are supported.
+Lite is the default model in Henshin. The server verifies source duration, requests the next whole output second (KIE accepts integers from 3 to 30), and uses the source aspect ratio. Henshin's source range remains 4–30 seconds. Quotes use that requested duration; fractional clips may therefore bill the next second. Lite delivers Kling’s finished video directly at that whole-second duration. Lite references are compressed to a maximum of 10 MB before upload; up to 10 images are supported.
 
 Lite sends the verified source video with its audio intact and uses Kling's native `keep_original_sound` setting. It does not extract or reconnect a separate soundtrack. Standard Henshin also sends the original video and asks the model to retain or replace audio. Legacy soundtrack jobs retain their existing worker and recovery behavior.
 
@@ -29,7 +29,7 @@ Search Models exposes the reference-to-video variant with up to 10 images, 5 vid
 
 ## Billing and recovery
 
-Launches authenticate the customer, verify source duration and quotes, and reserve credits atomically with the history row. Retries with the same run ID do not submit or charge again. Definite rejections and provider-confirmed task failures refund once. Timeouts or ambiguous submissions remain reserved for a signed callback or scheduled reconciliation, avoiding a duplicate paid task. Missing-task reservations refund after 30 minutes. Polling checks the task ID and model against KIE's canonical record; callback contents cannot forge a result. Output is archived before completion. Fractional Lite durations use the durable finisher only to trim the generated video and its existing audio to the source length.
+Launches authenticate the customer, verify source duration and quotes, and reserve credits atomically with the history row. Retries with the same run ID do not submit or charge again. Definite rejections and provider-confirmed task failures refund once. Timeouts or ambiguous submissions remain reserved for a signed callback or scheduled reconciliation, avoiding a duplicate paid task. Missing-task reservations refund after 30 minutes. Polling checks the task ID and model against KIE's canonical record; callback contents cannot forge a result. Output is archived before completion. Lite never queues a soundtrack or trimming job. Polling also recovers archived Lite results left in the older audio-finishing states into `result_url`, without another generation or charge.
 
 Validation uses fixtures and mocked provider calls with a real PostgreSQL billing ledger. No paid provider generation is run automatically by tests.
 

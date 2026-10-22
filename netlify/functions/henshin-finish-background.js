@@ -11,6 +11,9 @@ exports.handler=async event=>{
  const path=`user_generations?id=eq.${id}&select=id,user_id,result_url,meta`;
  let row=(await db(path))?.[0];
  if(row?.meta?.source_feature!=='henshin')return json(404,{ok:false});
+ if(require('../../lib/henshin/jobs.cjs').isLite(row)){
+  return json(200,await require('../../lib/kling4/check.cjs').reconcile(row,{enqueueAudio:false}));
+ }
  if(row.result_url&&(!(row.meta.source_audio_url||row.meta.finish_video)||row.meta.audio_restored))return json(200,{ok:true});
  if(!audioPending(row)&&row.meta.task_id&&['processing','pending'].includes(row.meta.status)){
   if(row.meta.source==='kie-kling4')await require('../../lib/kling4/check.cjs').reconcile(row,{enqueueAudio:false});
