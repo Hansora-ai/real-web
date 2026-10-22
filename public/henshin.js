@@ -6,7 +6,7 @@
  const OWNER='hansora.ai.bot@gmail.com';
  let source=null,seconds=0,sourceURL='',images=[],resolution='720p',mode='motion',filter='all',busy=false,rows=[],refreshing=false,sessionUser='',uploadingTemplate=false;
  let sourceSelection=0,sourcePending=false,imagePending=0,imageChain=Promise.resolve(),activePreview=null,submission=null,libraryOwner=false,libraryObserver=null,templatePromise=null,libraryEpoch=0;
- let henshinModel='lite';
+ let henshinModel='lite';const activeDownloads=new Set();
  let copyReset=null;
  function resetCopy(){clearTimeout(copyReset);copyReset=null;$('previewCopy').textContent=t('Copy prompt');}
  const CACHE_KEY='hansora:henshin-templates:v2';let templateCache=null,libraryMoreBusy=false;
@@ -177,7 +177,8 @@
  function isHenshin(row){return row.meta?.source_feature==='henshin';}
  function isSeedance(row){return row.meta?.engine==='seedance-2.5'||row.provider==='Seedance 2.5';}
  function action(label,fn){const button=document.createElement('button');button.textContent=label;button.onclick=fn;return button;}
- async function download(url,button){if(button?.disabled)return;const original=button?.innerHTML,start=Date.now();if(button){button.disabled=true;button.setAttribute('aria-busy','true');button.innerHTML='<svg class="download-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>';}try{const r=await fetch(url);if(!r.ok)throw Error();const blobURL=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=blobURL;a.download='hansora-henshin.mp4';a.click();setTimeout(()=>URL.revokeObjectURL(blobURL),1000);}catch{window.open(url,'_blank','noopener');}finally{if(button){await new Promise(resolve=>setTimeout(resolve,Math.max(0,500-(Date.now()-start))));button.innerHTML=original;button.disabled=false;button.removeAttribute('aria-busy');}}}
+ function downloadAction(url){const button=decorate(action('',event=>download(url,event.currentTarget)),'download',t('Download'));if(activeDownloads.has(url)){button.disabled=true;button.setAttribute('aria-busy','true');button.innerHTML='<svg class="download-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>';}return button;}
+ async function download(url,button){if(button?.disabled||activeDownloads.has(url))return;activeDownloads.add(url);const original=button?.innerHTML,start=Date.now();if(button){button.disabled=true;button.setAttribute('aria-busy','true');button.innerHTML='<svg class="download-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>';}try{const r=await fetch(url);if(!r.ok)throw Error();const blobURL=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=blobURL;a.download='hansora-henshin.mp4';a.click();setTimeout(()=>URL.revokeObjectURL(blobURL),1000);}catch{window.open(url,'_blank','noopener');}finally{await new Promise(resolve=>setTimeout(resolve,Math.max(0,500-(Date.now()-start))));activeDownloads.delete(url);if(button){button.innerHTML=original;button.disabled=false;button.removeAttribute('aria-busy');}renderResults();}}
  function renderResults(){
   historyPlayback.disconnect();resultResizeObserver.disconnect();
   $('resultsList').querySelectorAll('video').forEach(v=>{v.pause();v.removeAttribute('src');v.load();});
@@ -198,7 +199,7 @@
    const body=document.createElement('div');body.className='result-body';const head=document.createElement('div');head.className='result-head';const title=document.createElement('strong');title.textContent=details.title;const kind=document.createElement('span');kind.textContent=t('VIDEO');head.append(title,kind);
    const prompt=document.createElement('p');prompt.className='result-prompt';prompt.textContent=details.prompt||t('Character transformation using your references');prompt.title=details.prompt||'';
    const bottom=document.createElement('div');bottom.className='result-bottom';const state=document.createElement('span');state.className='result-state'+(ready?' ready':failed?' failed':'');state.textContent=chip.textContent;state.title=new Date(row.created_at||Date.now()).toLocaleString(i18n?.language||'en');const actions=document.createElement('div');actions.className='result-actions';bottom.append(state,actions);body.append(head,prompt,bottom);card.append(body);
-   if(ready){actions.append(decorate(action('',()=>preview(details)),'preview',t('Preview')));if(details.source_video_url)actions.append(decorate(action('',async()=>{try{await recreate(details);}catch(e){status(t(e.message),true);}}),'recreate',t('Recreate')));actions.append(decorate(action('',event=>download(row.result_url,event.currentTarget)),'download',t('Download')));}
+   if(ready){actions.append(decorate(action('',()=>preview(details)),'preview',t('Preview')));if(details.source_video_url)actions.append(decorate(action('',async()=>{try{await recreate(details);}catch(e){status(t(e.message),true);}}),'recreate',t('Recreate')));actions.append(downloadAction(row.result_url));}
    if(audioFailed)actions.append(action(t('Retry audio'),async()=>{try{await request('henshin-result',{id:row.id});await refresh();}catch(e){status(t(e.message),true);}}),action(t('Preview generated video'),()=>preview({...details,video_url:meta.generated_video_url||row.result_url})));
    $('resultsList').append(card);
   }

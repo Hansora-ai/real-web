@@ -77,7 +77,7 @@ begin
   end if;
   if p_action = 'attach' then
     task := p_payload->>'task_id';
-    if task is null or task !~ '^[a-zA-Z0-9_-]{1,200}$' then raise exception 'Invalid task id'; end if;
+    if task is null or task !~ '^[a-zA-Z0-9_.-]{1,200}$' then raise exception 'Invalid task id'; end if;
     if nullif(m->>'task_id','') is not null and m->>'task_id' <> task then raise exception 'Task id mismatch'; end if;
     m := m || jsonb_build_object('task_id',task,'submission_uncertain',false);
     if m->>'status'='pending' then m:=m||jsonb_build_object('status','processing'); end if;

@@ -80,6 +80,11 @@ test('Kling 25% quotes and the explicit Lite price use the same units as the UI'
  assert.equal(pricing.quote({inputSeconds:10.08,lite:true}).duration,11);
  assert.throws(()=>pricing.quote({resolution:'480p'}));
 });
+test('documented Kling task IDs containing model-version dots are accepted',async()=>{
+ const id='task_kling-4.0-reference-to-video_abc123';assert.equal(require('../../lib/kling4/client.cjs').taskId({code:200,data:{taskId:id}}),id);
+ await launch25(event());const row=(await saved())[0];await db.query("update user_generations set meta=meta-'task_id' where id=$1",[row.id]);const updated=await transition('attach',row.id,uid,{task_id:id});assert.equal(updated.row.meta.task_id,id);
+});
+
 test('exact API mapping supports 10k prompts, references and optional original audio',()=>{
  const {payload}=build({prompt:'x'.repeat(10000),duration:30,resolution:'1080p',aspect_ratio:'auto',image_urls:[source+'.jpg'],video_urls:[source],audio_urls:[source+'.mp3'],keep_original_sound:false},{inputSeconds:10});
  assert.equal(payload.model,'kling-4.0/reference-to-video');assert.equal(payload.input.prompt.length,10000);
