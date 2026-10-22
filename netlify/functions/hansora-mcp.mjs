@@ -859,7 +859,8 @@ export function createHansoraServer(ctx) {
     try {
       let generation = await getGeneration(userId, run_id);
       if (!generation) return toolError(new Error('generation_not_found'));
-      const unavailable = await unavailableModels();
+      // The card refreshes through this tool every few seconds; never query model health here.
+      const unavailable = new Set();
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
       const siblings = await getGenerationBatch(userId, run_id).catch(() => []);
       if (await refreshFromProvider(userId, [generation, ...siblings], origin)) {

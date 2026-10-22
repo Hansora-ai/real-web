@@ -4,6 +4,7 @@ import test from 'node:test';
 process.env.SUPABASE_URL = 'https://supabase.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key';
 process.env.URL = 'https://hansora.test';
+process.env.HANSORA_MODEL_HEALTH = 'on'; // the outage check is off in production unless switched on
 
 const { default: hansoraMcp } = await import('../../netlify/functions/hansora-mcp.mjs');
 const { resetHealthCache, unavailableFromRuns } = await import('../../lib/hansora-mcp/health.mjs');
@@ -396,4 +397,20 @@ test('a sexual request is refused once, with no model switching, and ChatGPT off
   assert.match(value.message, /does not create sexual or NSFW content with any model, so trying another model will not help/);
   assert.match(value.next_step, /Offer to make a non-sexual version of their idea/);
   assert.match(value.next_step, /Do not submit this request or a reworded sexual version to any model\./);
+});
+
+test('the model health check makes no database query unless switched on', async () => {
+  const { unavailableModels } = await import('../../lib/hansora-mcp/health.mjs');
+  const originalFetch = globalThis.fetch;
+  let queried = false;
+  globalThis.fetch = async () => { queried = true; throw new Error('should not query'); };
+  delete process.env.HANSORA_MODEL_HEALTH;
+  try {
+    resetHealthCache();
+    assert.equal((await unavailableModels()).size, 0);
+    assert.equal(queried, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env.HANSORA_MODEL_HEALTH = 'on';
+  }
 });
