@@ -204,16 +204,17 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
   assert.match(guide, /not from how long or detailed your own prompt is/);
   assert.match(guide, /3\. Simple: generate directly, do not ask\.\n   - Up to 8 seconds: Veo 3\.1 Lite, 1080p\.\n   - 9 to 10 seconds: Gemini Omni Flash, 1080p\..*\n   - 11 to 30 seconds: Wan 3\.0, 720p\./);
-  assert.match(guide, /4\. Complex: ask the user before generating, at any length/);
-  assert.match(guide, /Seedance 2\.5, 720p \(sharper\): recommended/);
-  assert.match(guide, /Seedance 2\.5, 480p \(good quality, lower price\)/);
-  assert.match(guide, /Seedance 2\.5, 1080p \(sharpest, highest price\): offer only when the user asks for 1080p/);
-  assert.match(guide, /Seedance 2\.0, 720p: very strong for complex scenes \(up to 15 seconds only\)/);
-  assert.match(guide, /pick the first option that fits/);
+  assert.match(guide, /If you are not sure, treat it as complex/);
+  // One short question with three plain choices, so users who know no model names can pick.
+  assert.match(guide, /4\. Complex: ask one short question before generating, at any length, with exactly these three options/);
+  assert.match(guide, /   - Best quality: Seedance 2\.5, 720p \(recommended\)\n   - Great quality, lower price: Kling 4\.0, 720p\n   - Budget: Wan 3\.0, 720p\n   Do not list other models or resolutions in this question\./);
+  assert.match(guide, /1080p \(sharpest, only when the user asks for 1080p or the best possible quality; never pick it on your own\)/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
-  assert.match(guide, /12\. Seedance 2\.5 and Henshin: if the user wants one of these but did not say a quality, ask one short question/);
-  assert.match(guide, /per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits/);
+  assert.match(guide, /answers vaguely \("ok", "go", "yes"\), start the first option that fits without asking again/);
+  assert.match(guide, /12\. Quality: never ask about resolution\. If the user did not say a quality, use the one named above \(Seedance 2\.5: 720p\)/);
+  assert.match(guide, /Video edits .*: use Henshin Lite directly, without asking which version, at 720p unless the user asks for 1080p \(it costs 220 credits per 10 seconds of their video at 720p, 340 at 1080p\)/);
+  assert.match(guide, /After a Henshin Lite result, only if the user is not satisfied, offer to redo it with Henshin, the stronger version \(per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits\)/);
   assert.match(guide, /For every other model, use the default quality without asking\./);
   assert.match(guide, /13\. Sexual or NSFW requests: Hansora does not create them with any model\. Do not submit them\./);
   assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
@@ -480,4 +481,49 @@ test('a run that has only just started is shown as starting, not as missing', as
   const old = (await callTool('get_generation', { run_id: 'user-1-mcp-1700000000000-abcd1234' }, { credits: 30, generations: [] })).result;
   assert.equal(old.isError, true);
   assert.match(old.content[0].text, /generation_not_found/);
+});
+
+test('Henshin Lite is offered for video edits and starts at the measured price without asking again', async () => {
+  const list = await callTool('list_models', { category: 'video' }, { credits: 100 });
+  const lite = list.result.structuredContent.models.find((model) => model.id === 'henshin-lite');
+  assert.equal(lite.name, 'Henshin Lite');
+  assert.deepEqual(lite.input.resolutions, ['720p', '1080p']);
+  assert.match(lite.recommendation, /Default for video edits: use it directly/);
+
+  // After a Lite result ChatGPT may offer the stronger Henshin, but only if the user is unhappy.
+  const ready = { id: 'g', provider: 'Hansora Henshin Lite', kind: 'video', prompt: 'edit', result_url: 'https://qmaealblegvcwodlmeht.supabase.co/r.mp4', created_at: new Date().toISOString(), meta: { run_id: 'user-1-mcp-1-x', status: 'done', henshin_model: 'lite', source_feature: 'henshin' } };
+  const shown = await callTool('get_generation', { run_id: 'user-1-mcp-1-x' }, { credits: 100, generations: [ready] });
+  assert.match(shown.result.structuredContent.next_step, /Only if they are not satisfied, offer to redo it with Henshin, the stronger version/);
+
+  let calls = 0;
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'henshin-lite', prompt: 'put the woman from the photo into the video', duration: 10, resolution: '1080p',
+    source_video_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/dance.mp4',
+    image_urls: ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/woman.png']
+  }, {
+    credits: 100,
+    runner: () => (++calls === 1
+      ? { status: 409, body: { ok: false, input_seconds: 12.3, displayed_credits: 442 } }
+      : { status: 201, body: { ok: true, submitted: true, debited: 44.2 } })
+  });
+  assert.equal(submitted[0].target_endpoint, '/.netlify/functions/run-henshin');
+  assert.equal(submitted[0].payload.henshin_model, 'lite');
+  assert.deepEqual(submitted.map((call) => call.payload.expected_credits), [340, 442]); // higher, but no question for edits
+  assert.equal(result.structuredContent.ok, true);
+  assert.equal(result.structuredContent.credits, 442);
+  assert.match(result.structuredContent.credits_note, /based on the length of the uploaded video/);
+});
+
+test('Kling 4.0 is offered right after Seedance 2.5 and always sends the quoted price its launcher requires', async () => {
+  const model = (await callTool('get_model', { model_id: 'kling-4.0' }, { credits: 100 })).result.structuredContent;
+  assert.equal(model.id, 'kling40');
+  assert.match(model.pricing, /^190 \/ 284 Hansora credits per 10 seconds/);
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'kling40', prompt: 'the samurai from @image1 fights in the rain', duration: 10, aspect_ratio: '9:16',
+    image_urls: ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/samurai.png']
+  }, { credits: 100, runner: () => ({ status: 201, body: { ok: true, submitted: true, debited: 19 } }) });
+  assert.equal(submitted[0].target_endpoint, '/.netlify/functions/run-kling-40');
+  assert.equal(submitted[0].payload.expected_credits, 190); // required even without video input
+  assert.equal(submitted[0].payload.prompt, 'the samurai from @image_1 fights in the rain');
+  assert.equal(result.structuredContent.credits, 190);
 });
