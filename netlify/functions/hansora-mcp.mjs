@@ -280,7 +280,7 @@ export function createHansoraServer(ctx) {
       category: z.enum(['image', 'video', 'audio']).optional().describe('Optional category filter.'),
       include_unavailable: z.boolean().default(true).describe('Include announced models whose generation runner is not deployed yet.')
     }),
-    annotations: { title: 'List Hansora models', readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ category, include_unavailable }) => {
     const unavailable = await unavailableModels();
     const models = listModels({ category, includeUnavailable: include_unavailable }).map((model) => withHealth(model, unavailable));
@@ -293,7 +293,7 @@ export function createHansoraServer(ctx) {
     title: 'Get Hansora model',
     description: 'Get capabilities, media requirements, allowed settings, availability and recommendations for one Hansora model.',
     inputSchema: z.object({ model_id: z.string().min(1) }),
-    annotations: { title: 'Get Hansora model', readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ model_id }) => {
     const model = getModel(model_id);
     return model ? jsonText(withHealth(model, await unavailableModels())) : toolError(new Error('unsupported_model'));
@@ -313,7 +313,7 @@ export function createHansoraServer(ctx) {
       has_video_input: z.boolean().optional(),
       source_video_duration: z.number().nonnegative().optional().describe('For Wan 3.0 video input, combined duration in seconds of all reference videos. Verified by the server before charging.')
     }),
-    annotations: { title: 'Quote a Hansora generation', readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true }
   }, async ({ model_id, ...options }) => {
     try { return jsonText(publicQuote(quote(model_id, options))); } catch (error) { return toolError(error); }
@@ -323,7 +323,7 @@ export function createHansoraServer(ctx) {
     title: 'Get Hansora balance',
     description: 'Read the connected Hansora account credit balance and active subscription.',
     inputSchema: z.object({}),
-    annotations: { title: 'Get Hansora balance', readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async () => {
     try { return jsonText(accountSummary(await getAccount(userId))); } catch (error) { return toolError(error); }
   });
@@ -343,7 +343,7 @@ export function createHansoraServer(ctx) {
       prompt_extend: z.boolean().optional(),
       usage_mode: z.enum(['credits', 'unlimited']).default('credits')
     }),
-    annotations: { title: 'Open image-to-video upload card', readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: generationToolMeta('Opening Hansora image upload…', 'Hansora image upload ready')
   }, async (input) => {
     try {
@@ -402,7 +402,7 @@ export function createHansoraServer(ctx) {
       image_url: z.string().url().optional().describe('Optional public image URL for a model that also requires an image.'),
       usage_mode: z.enum(['credits', 'unlimited']).default('credits')
     }),
-    annotations: { title: 'Transform an uploaded video', readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: generationToolMeta('Opening Hansora video upload…', 'Hansora video upload ready')
   }, async (input) => {
     try {
@@ -464,7 +464,7 @@ export function createHansoraServer(ctx) {
       motion_model: z.enum(['kling26', 'kling30']).optional(),
       usage_mode: z.enum(['credits', 'unlimited']).default('credits')
     }),
-    annotations: { title: 'Create with uploaded reference media', readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: generationToolMeta('Opening Hansora media upload…', 'Hansora media upload ready')
   }, async (input) => {
     try {
@@ -534,7 +534,7 @@ export function createHansoraServer(ctx) {
       voice_id: z.string().optional().describe('Required for Voice Changer. Call list_audio_voices first.'),
       remove_background_noise: z.boolean().default(true)
     }),
-    annotations: { title: 'Process an uploaded audio file', readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: generationToolMeta('Opening Hansora audio upload…', 'Hansora audio upload ready')
   }, async (input) => {
     try {
@@ -563,7 +563,7 @@ export function createHansoraServer(ctx) {
       mime: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif']),
       size: z.number().int().positive().max(30 * 1024 * 1024)
     }),
-    annotations: { title: 'Prepare Hansora image upload', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     _meta: { ui: { visibility: ['app'] }, 'openai/visibility': 'private' }
   }, async ({ filename, mime, size }) => {
     try { return await signUploadForApp(ctx, token, { filename, mime, size }); }
@@ -578,7 +578,7 @@ export function createHansoraServer(ctx) {
       mime: z.enum(['video/mp4', 'video/quicktime', 'video/webm']),
       size: z.number().int().positive().max(200 * 1024 * 1024)
     }),
-    annotations: { title: 'Prepare Hansora video upload', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     _meta: { ui: { visibility: ['app'] }, 'openai/visibility': 'private' }
   }, async ({ filename, mime, size }) => {
     try { return await signUploadForApp(ctx, token, { filename, mime, size }); }
@@ -593,7 +593,7 @@ export function createHansoraServer(ctx) {
       mime: z.enum(['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/flac']),
       size: z.number().int().positive().max(200 * 1024 * 1024)
     }),
-    annotations: { title: 'Prepare Hansora audio upload', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     _meta: { ui: { visibility: ['app'] }, 'openai/visibility': 'private' }
   }, async ({ filename, mime, size }) => {
     try { return await signUploadForApp(ctx, token, { filename, mime, size }); }
@@ -604,7 +604,7 @@ export function createHansoraServer(ctx) {
     title: 'List Hansora audio voices',
     description: 'List the current voices available for text to speech and voice changing.',
     inputSchema: z.object({}),
-    annotations: { title: 'List Hansora audio voices', readOnlyHint: true, destructiveHint: false, openWorldHint: true }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
   }, async () => {
     try {
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
@@ -650,7 +650,7 @@ export function createHansoraServer(ctx) {
       motion_model: z.enum(['kling26', 'kling30']).optional(),
       usage_mode: z.enum(['credits', 'unlimited']).default('credits')
     }),
-    annotations: { title: 'Create with Hansora', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     _meta: {
       ...generationToolMeta('Starting Hansora generation…', 'Hansora generation started'),
       'openai/fileParams': OPENAI_FILE_PARAMS
@@ -809,7 +809,7 @@ export function createHansoraServer(ctx) {
       weirdness_constraint: z.number().min(0).max(1).optional(),
       audio_weight: z.number().min(0).max(1).optional()
     }),
-    annotations: { title: 'Create audio with Hansora', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     _meta: generationToolMeta('Starting Hansora audio…', 'Hansora audio started')
   }, async (input) => {
     try {
@@ -853,7 +853,7 @@ export function createHansoraServer(ctx) {
     title: 'Get Hansora generation',
     description: 'Check one Hansora image, video, or audio generation by the run_id returned from a create tool.',
     inputSchema: z.object({ run_id: z.string().min(1) }),
-    annotations: { title: 'Get Hansora generation', readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: generationToolMeta('Checking Hansora generation…', 'Hansora generation updated')
   }, async ({ run_id }) => {
     try {
@@ -876,7 +876,7 @@ export function createHansoraServer(ctx) {
       limit: z.number().int().min(1).max(50).default(10),
       status: z.string().optional()
     }),
-    annotations: { title: 'List Hansora generations', readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ limit, status }) => {
     try { return jsonText({ generations: await listGenerations(userId, limit, status) }); } catch (error) { return toolError(error); }
   });
