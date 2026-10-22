@@ -261,6 +261,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-kling-26',
   '/.netlify/functions/run-kling-3-turbo',
   '/.netlify/functions/run-kling-30',
+  '/.netlify/functions/run-kling-40',
   '/.netlify/functions/run-kling-motion-control',
   '/.netlify/functions/run-kling21',
   '/.netlify/functions/run-midjourney',

@@ -207,6 +207,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /4\. Complex: ask the user before generating, at any length/);
   assert.match(guide, /Seedance 2\.5, 720p \(sharper\): recommended/);
   assert.match(guide, /Seedance 2\.5, 480p \(good quality, lower price\)/);
+  assert.match(guide, /Seedance 2\.5, 480p \(good quality, lower price\)\n   - Kling 4\.0, 720p: very strong, close to Seedance 2\.5 at a lower price/);
   assert.match(guide, /Seedance 2\.5, 1080p \(sharpest, highest price\): offer only when the user asks for 1080p/);
   assert.match(guide, /Seedance 2\.0, 720p: very strong for complex scenes \(up to 15 seconds only\)/);
   assert.match(guide, /pick the first option that fits/);
@@ -512,4 +513,18 @@ test('Henshin Lite is offered for video edits and starts at the measured price w
   assert.equal(result.structuredContent.ok, true);
   assert.equal(result.structuredContent.credits, 442);
   assert.match(result.structuredContent.credits_note, /based on the length of the uploaded video/);
+});
+
+test('Kling 4.0 is offered right after Seedance 2.5 and always sends the quoted price its launcher requires', async () => {
+  const model = (await callTool('get_model', { model_id: 'kling-4.0' }, { credits: 100 })).result.structuredContent;
+  assert.equal(model.id, 'kling40');
+  assert.match(model.pricing, /^190 \/ 284 Hansora credits per 10 seconds/);
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'kling40', prompt: 'the samurai from @image1 fights in the rain', duration: 10, aspect_ratio: '9:16',
+    image_urls: ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/samurai.png']
+  }, { credits: 100, runner: () => ({ status: 201, body: { ok: true, submitted: true, debited: 19 } }) });
+  assert.equal(submitted[0].target_endpoint, '/.netlify/functions/run-kling-40');
+  assert.equal(submitted[0].payload.expected_credits, 190); // required even without video input
+  assert.equal(submitted[0].payload.prompt, 'the samurai from @image_1 fights in the rain');
+  assert.equal(result.structuredContent.credits, 190);
 });
