@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { authenticateToken, getAccount, getGeneration, getGenerationBatch, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, getGenerationBatch, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -230,6 +230,14 @@ function authenticationRequired() {
       'Cache-Control': 'no-store',
       'WWW-Authenticate': `Bearer resource_metadata="${getOAuthProtectedResourceMetadataUrl(MCP_URL)}"`
     }
+  });
+}
+
+// Sign-in could not be checked because Supabase is unreachable; the user's login is still valid.
+function temporarilyUnavailable() {
+  return new Response(JSON.stringify({ error: 'temporarily_unavailable', error_description: 'Hansora is temporarily unavailable. Please try again in a minute.' }), {
+    status: 503,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Retry-After': '30' }
   });
 }
 
@@ -895,7 +903,16 @@ export default async function hansoraMcp(request) {
     return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type, MCP-Protocol-Version, Mcp-Session-Id' } });
   }
   const token = bearerToken(request);
-  const user = await authenticateToken(token).catch(() => null);
+  let user = null;
+  try {
+    user = await authenticateToken(token);
+  } catch (error) {
+    if (error instanceof AuthUnavailableError) {
+      console.warn('hansora_mcp_request', JSON.stringify({ requestId, method: request.method, protocolVersion, tokenProvided: true, authenticated: null, status: 503, durationMs: Date.now() - startedAt }));
+      return withCors(temporarilyUnavailable());
+    }
+    user = null;
+  }
   if (!user) {
     console.warn('hansora_mcp_request', JSON.stringify({
       requestId,
