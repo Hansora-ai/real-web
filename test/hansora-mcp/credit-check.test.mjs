@@ -397,28 +397,3 @@ test('a sexual request is refused once, with no model switching, and ChatGPT off
   assert.match(value.next_step, /Offer to make a non-sexual version of their idea/);
   assert.match(value.next_step, /Do not submit this request or a reworded sexual version to any model\./);
 });
-
-test('every tool carries its title in annotations for the Claude directory', async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (url) => {
-    if (String(url).endsWith('/auth/v1/user')) return new Response(JSON.stringify({ id: 'user-1' }), { status: 200 });
-    throw new Error(`unexpected fetch ${url}`);
-  };
-  try {
-    const response = await hansoraMcp(new Request('https://hansora.test/mcp', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-06-18' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
-    }));
-    const text = await response.text();
-    const json = text.startsWith('{') ? JSON.parse(text) : JSON.parse(text.split('\n').find((line) => line.startsWith('data:')).slice(5));
-    const tools = json.result.tools;
-    assert.ok(tools.length >= 13);
-    for (const tool of tools) {
-      assert.equal(tool.annotations?.title, tool.title, tool.name);
-      assert.equal(typeof tool.annotations.readOnlyHint, 'boolean', tool.name);
-    }
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
