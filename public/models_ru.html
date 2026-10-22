@@ -262,6 +262,7 @@
 
     const VIDEO_MODELS = fromHeaderItems([
       { label: 'Seedance 2.5', id: 'seedance25', logo: 5, note: 'Модель кинематографичного видео' },
+      { label: 'Kling 4.0', id: 'kling40', logo: 14, note: 'Создание и редактирование видео' },
       { label: 'Gemini Omni Flash 1.1', id: 'gemini-omni-flash-1-1', logo: 3, note: 'Prompt, изображение и видео на входе' },
       { label: 'Wan 3.0', id: 'wan-3', logo: 6, note: 'Продвинутая генерация видео' },
       { label: 'Seedance 2.0', id: 'seedance-2', logo: 5, note: 'Модель кинематографичного видео' },
@@ -303,7 +304,7 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation', logo: 20, note: 'Создавать музыкальные треки' }
     ], 'audio', 9);
 
-    const MX_TAGS = { 'seedance25': 'TOP', 'gpt-image-2-5': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+    const MX_TAGS = { 'seedance25': 'TOP', 'kling40': 'HOT', 'gpt-image-2-5': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
 
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';
