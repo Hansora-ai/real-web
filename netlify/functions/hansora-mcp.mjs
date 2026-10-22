@@ -20,15 +20,41 @@ const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
 const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance20', 'wan-3']);
 // Launchers that report the real charge, measured from the uploaded files.
 const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'henshin']);
+// ChatGPT gives up on a tool call after roughly a minute; answer well before that.
+const SUBMIT_BUDGET_MS = 25000;
 const PUBLIC_GENERATION_FAILURE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
 
 function jsonText(value) {
   return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
-function toolError(error) {
+// Database or network trouble on Hansora's side. The user gets a calm explanation instead of a raw
+// error code, and ChatGPT knows nothing was charged and what to do next.
+const INFRASTRUCTURE_ERROR = /data_request_failed|server_misconfigured|abort|timeout|timed out|fetch failed|network|socket|ECONN|ENOTFOUND|upload_sign_failed_5|generation_submit_failed_5/i;
+const BUSY_STEPS = {
+  read: 'Tell the user, in their language, that Hansora could not check this for a moment. Any generation keeps running and nothing extra was charged. Wait a few seconds and call the same tool once more; if it still fails, ask them to check again in a minute.',
+  create: 'Tell the user, in their language, that Hansora is busy for a moment and nothing was charged. Wait a few seconds and try the same request once more; if it fails again, ask them to try again in a minute.'
+};
+
+function toolError(error, kind = 'read') {
   const message = error instanceof Error ? error.message : String(error || 'unknown_error');
-  return { isError: true, content: [{ type: 'text', text: message }] };
+  if (!INFRASTRUCTURE_ERROR.test(message)) return { isError: true, content: [{ type: 'text', text: message }] };
+  console.warn('hansora_mcp_busy', JSON.stringify({ kind, reason: message.slice(0, 200) }));
+  const value = {
+    ok: false,
+    error: 'temporarily_unavailable',
+    message: kind === 'create' ? 'Hansora is busy for a moment. Nothing was charged.' : 'Hansora could not check this right now. Your generation keeps running.',
+    credits_used: 0,
+    next_step: BUSY_STEPS[kind] || BUSY_STEPS.read
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// A run started a moment ago may not have its row yet (slow submit or database); it is starting, not missing.
+function startingRun(runId) {
+  const startedAt = Number((String(runId).match(/-mcp-(?:audio-)?(\d{13})-/) || [])[1]);
+  if (!Number.isFinite(startedAt) || Date.now() - startedAt > 5 * 60 * 1000) return null;
+  return { run_id: runId, status: 'processing', message: 'Starting. This card updates automatically.', next_step: 'The generation is starting. Check again with get_generation in a little while.' };
 }
 
 function generationToolMeta(invoking, invoked) {
@@ -196,7 +222,7 @@ async function refreshFromProvider(userId, generations, origin) {
   if (lastProviderCheck.size > 2000) lastProviderCheck.clear();
   await Promise.all(due.map((generation) => fetch(
     `${origin}/.netlify/functions/kie-check?uid=${encodeURIComponent(userId)}&run_id=${encodeURIComponent(generation.meta.run_id)}`,
-    { signal: AbortSignal.timeout(20000) }
+    { signal: AbortSignal.timeout(8000) }
   ).catch(() => null)));
   return due.length > 0;
 }
@@ -715,14 +741,31 @@ export function createHansoraServer(ctx) {
             usage_mode: normalizedInput.usage_mode,
             payload
           }),
-          signal: AbortSignal.timeout(58000)
+          signal: AbortSignal.timeout(SUBMIT_BUDGET_MS)
         });
         const text = await reply.text();
         let body;
         try { body = JSON.parse(text); } catch { body = { message: text }; }
         return { response: reply, result: body };
       };
-      let { response, result } = await submit();
+      let submitted;
+      try {
+        submitted = await submit();
+      } catch (error) {
+        if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) throw error;
+        // The submission is still running on Hansora's side; answer before ChatGPT gives up. The card and
+        // get_generation follow the run by its id, and charging only happens if it really starts.
+        console.warn('hansora_mcp_submit_slow', JSON.stringify({ runId, model: model.id }));
+        return jsonText({
+          ...(await batchFields(userId, runId).catch(() => ({}))),
+          ok: true, run_id: runId, model_id: model.id, model_name: model.name, media_type: model.category,
+          credits: price ? price.displayedCredits : undefined, status: 'queued', prompt: normalizedInput.prompt,
+          aspect_ratio: normalizedInput.aspect_ratio || null, duration: normalizedInput.duration || null,
+          resolution: normalizedInput.resolution || normalizedInput.quality || null,
+          next_step: 'The generation is starting. Tell the user it is on its way; the card updates automatically. Do not start it again.'
+        });
+      }
+      let { response, result } = submitted;
       let charged = price ? price.displayedCredits : undefined;
       // The measured video made it no more expensive than the price ChatGPT gave (or ChatGPT gave none):
       // start right away at the real price. Only a higher price goes back to the user.
@@ -786,7 +829,7 @@ export function createHansoraServer(ctx) {
         provider: result
       });
     } catch (error) {
-      return toolError(error);
+      return toolError(error, 'create');
     }
   });
 
@@ -854,7 +897,7 @@ export function createHansoraServer(ctx) {
         prompt: payload.prompt || input.text || input.title || '',
         provider: result
       });
-    } catch (error) { return toolError(error); }
+    } catch (error) { return toolError(error, 'create'); }
   });
 
   server.registerTool('get_generation', {
@@ -866,7 +909,10 @@ export function createHansoraServer(ctx) {
   }, async ({ run_id }) => {
     try {
       let generation = await getGeneration(userId, run_id);
-      if (!generation) return toolError(new Error('generation_not_found'));
+      if (!generation) {
+        const starting = startingRun(run_id);
+        return starting ? jsonText(starting) : toolError(new Error('generation_not_found'));
+      }
       // The card refreshes through this tool every few seconds; never query model health here.
       const unavailable = new Set();
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;

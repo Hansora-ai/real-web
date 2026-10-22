@@ -276,3 +276,16 @@ test('a finished result can be rated, and a thumbs down can say what was wrong',
   assert.equal(card.nodes.get('rateLabel').textContent, 'Thanks for your feedback!');
   assert.equal(card.snapshot().privateContent.hansoraGeneration.rating, -1); // stays rated after reload
 });
+
+test('while Hansora is briefly busy, the card keeps checking quietly and then shows the result', async () => {
+  let busy = true;
+  const busyReply = { isError: true, structuredContent: { error: 'temporarily_unavailable' }, content: [{ type: 'text', text: '{}' }] };
+  const card = host({ output: queued(), get: () => (busy ? busyReply : envelope(complete('video'))) });
+  await flush();
+  for (let i = 0; i < 5; i += 1) await card.tick(7000);
+  assert.equal(card.section(), 'processing'); // never "could not refresh"
+  assert.equal(card.nodes.get('processingText').textContent, 'Hansora is busy for a moment. Still checking…');
+  busy = false;
+  await card.tick(7000);
+  assert.equal(card.section(), 'ready');
+});
