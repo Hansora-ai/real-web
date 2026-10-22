@@ -470,6 +470,7 @@
   const VIDEO_MENU_ITEMS = [
     { label: 'Henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Transform video characters' },
     { label: 'Seedance 2.5', id: 'seedance25', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },
+    { label: 'Kling 4.0', id: 'kling40', icon: 'K4', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Image, video and voice references' },
     { label: 'Gemini Omni Flash 1.1', id: 'gemini-omni-flash-1-1', icon: 'GO', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/3.png', note: 'Prompt, image, and video inputs' },
     { label: 'Wan 3.0', id: 'wan-3', icon: 'W3', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/6.png', note: 'Advanced video generation' },
     { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },

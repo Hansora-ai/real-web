@@ -14,6 +14,7 @@ exports.handler=async event=>{
   const path=`user_generations?user_id=eq.${encodeURIComponent(q.uid)}&meta->>run_id=eq.${encodeURIComponent(q.run_id)}&select=id,user_id,result_url,meta`;
   const row=(await db(path))?.[0];
   if(!row||row.meta?.source_feature!=='henshin')return json(404,{ok:false,error:'Henshin generation unavailable.'});
+  if(row.meta?.source==='kie-kling4')return require('../../lib/kling4/check.cjs').handler(event);
   if(row.meta.source==='reapi') {
    const response=await require('../../lib/reapi/check.cjs').handler(event);
    const latest=(await db(path))?.[0];

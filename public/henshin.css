@@ -424,3 +424,21 @@ dialog::backdrop { background: #000c; }
 @media(max-width:740px) { .results-grid { --result-gap:10px; column-gap:10px; } }
 /* Keep the shared site header identical to every other page (this page's own tokens and 13px base must not leak into it). */
 #sharedHeader { --line: rgba(255,255,255,.11); --text: #f7f7fb; --muted: rgba(247,247,251,.62); font-size: 16px; line-height: 1.45; color: #f7f7fb; }
+
+/* Model selection and visible download feedback on every viewport. */
+.henshin-model-picker { display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:16px;border:1px solid #ffffff20;border-radius:16px;background:#191a20;color:#f4f4f7;margin:12px 0; }
+.henshin-model-picker>span:first-child { color:#a5a3ad; }
+.henshin-model-picker strong { margin-left:auto; }
+.henshin-model-picker>span:last-child { font-size:26px;margin-left:20px; }
+.henshin-model-dialog { background:#191a20;color:#f4f4f7;border:1px solid #ffffff30;border-radius:20px;padding:18px;width:min(380px,90vw); }
+.henshin-model-dialog::backdrop { background:#0009; }
+.henshin-model-heading { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
+.henshin-model-dialog>[data-henshin-model] { display:flex;justify-content:space-between;align-items:center;width:100%;padding:18px 12px;border:1px solid #ffffff20;border-radius:12px;margin-top:10px; }
+.henshin-model-dialog>[aria-pressed=true] { border-color:#a792e0;background:#a792e022; }
+.henshin-model-dialog button span { font-size:12px;color:#aaa; }
+svg.download-spinner { display:block!important;width:20px!important;height:20px!important;flex:none;animation:henshin-download-spin .7s linear infinite!important; }
+svg.download-spinner circle { fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:42 15; }
+@keyframes henshin-download-spin { to { transform:rotate(360deg); } }
+@media(max-width:740px),(hover:none) { .result-preview-open { display:none!important; } .result-actions [data-action=preview] { display:none; } }
+
+button[aria-busy="true"] { opacity:1!important;cursor:wait; }

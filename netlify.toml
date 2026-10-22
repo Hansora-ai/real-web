@@ -21,6 +21,16 @@
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
 
+[functions."run-kling-40"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
+[functions."kling4-check"]
+  timeout = 60
+
+[functions."kling4-sweep"]
+  timeout = 60
+
 [functions."henshin-check"]
   timeout = 60
 

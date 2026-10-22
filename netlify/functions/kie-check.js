@@ -28,6 +28,7 @@ exports.handler = async (event) => {
 
     const row = await findProcessingGeneration(ids);
     if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
+    if (row.meta?.source === 'kie-kling4') return require('../../lib/kling4/check.cjs').handler(event);
     if (row.meta?.source === 'reapi') return require('../../lib/reapi/check.cjs').handler(event);
 
     ids.uid = ids.uid || row.user_id || "";
@@ -93,6 +94,7 @@ async function handlePost(event) {
 
   const row = await findProcessingGeneration(ids);
   if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
+  if(row.meta?.source==='kie-kling4')return require('../../lib/kling4/check.cjs').handler(event);
   if (row.meta?.source === 'reapi') return require('../../lib/reapi/check.cjs').handler(event);
 
   ids.uid = ids.uid || row.user_id || "";
@@ -279,9 +281,9 @@ async function markDone({ row, ids, urls, enqueueAudio = true }) {
     })
   };
 
-  if (row.meta?.source === 'reapi') {
+  if (['reapi','kie-kling4'].includes(row.meta?.source)) {
     if (!archive.paths.length) throw Error('Result archival is pending.');
-    const audio = row.meta.source_feature === 'henshin' && row.meta.source_audio_url;
+    const audio = row.meta.source_feature === 'henshin' && (row.meta.source_audio_url || row.meta.finish_video);
     const completion = await require('../../lib/reapi/billing.cjs').transition('complete', row.id, row.user_id, {
       result_url: audio ? null : savedUrls[0],
       meta: { ...meta, ...(audio ? { status:'restoring_audio',generated_video_url:savedUrls[0] } : {}) }

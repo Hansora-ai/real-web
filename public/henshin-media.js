@@ -37,8 +37,8 @@
   });
  }
  function validDuration(d){if(!Number.isFinite(d)||d<=0)throw Error(t('Could not read this video. Try exporting it as MP4 (H.264).'));if(d<4||d>30)throw Error(t('This video is {seconds} seconds. Henshin needs a 4–30 second clip; trim it before uploading.',{seconds:d.toFixed(1)}));return d;}
- async function compress(file,{example=false}={}){
-  if(converted.has(file))return file;
+ async function compress(file,{example=false,maxMB=100}={}){
+  if(converted.has(file)&&file.size<=maxMB*MB)return file;
   size(file,200,'video');
   return process(async ff=>{
    await ff.writeFile('source',new Uint8Array(await file.arrayBuffer()));
@@ -53,10 +53,10 @@
    // exactly instead of resizing and re-encoding an already compressed video.
    const copy=example&&file.size<=95*MB&&stream.codec_name==='h264'&&stream.pix_fmt==='yuv420p';
    const videoArgs=copy?['-c:v','copy']:['-vf',filter,'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf',example?'18':'21'];
-   const code=await ff.exec(['-i','source','-map','0:v:0','-map','0:a:0?','-t',String(seconds),...videoArgs,'-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
+   const code=await ff.exec(['-i','source','-map','0:v:0','-map','0:a:0?','-t',String(seconds),...videoArgs,...(maxMB<=10?['-maxrate','2000k','-bufsize','4000k']:[]),'-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
    if(code)throw Error(t('Could not convert this video codec. Export it as MP4 (H.264) and try again.'));
    const result=new File([await ff.readFile('prepared.mp4')],(file.name||'source').replace(/\.[^.]+$/,'')+'.mp4',{type:'video/mp4'});
-   size(result,100,'processed video');converted.add(result);return result;
+   size(result,maxMB,'processed video');converted.add(result);return result;
   });
  }
  async function prepareVideo(input,options={}){
