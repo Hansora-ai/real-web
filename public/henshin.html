@@ -7,7 +7,7 @@
   <meta name="description" content="Transform your video with character, product and wardrobe references.">
   <link rel="icon" href="/favicon.png">
   <link rel="stylesheet" href="/header.css">
-  <link rel="stylesheet" href="/henshin.css?v=20261022-lite">
+  <link rel="stylesheet" href="/henshin.css?v=20261022-compact">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="/henshin-i18n.js?v=20261022-lite"></script>
 <script defer src="/header.js"></script>
@@ -29,6 +29,7 @@
           <h1>Henshin</h1>
           <p>Transform the scene. Keep the motion.</p>
         </div>
+        <button id="henshinModelButton" class="henshin-model-picker" type="button" aria-haspopup="dialog"><span>Model</span><strong id="henshinModelLabel">Henshin Lite</strong><span aria-hidden="true">›</span></button>
         <div class="modes" role="group" aria-label="Transformation mode">
           <button data-mode="motion" class="active" aria-pressed="true">Motion transfer</button>
           <button data-mode="swap" aria-pressed="false">Object swap</button>
@@ -45,7 +46,6 @@
           <video id="sourceVideo" controls playsinline></video>
           <div class="source-details"><span id="sourceName"></span></div>
         </div>
-        <button id="henshinModelButton" class="henshin-model-picker" type="button" aria-haspopup="dialog"><span>Model</span><strong id="henshinModelLabel">Henshin Lite</strong><span aria-hidden="true">›</span></button>
         <p id="videoStatus" class="upload-status" role="status" aria-live="polite"></p>
         <input id="imagesInput" type="file" accept="image/*,.heic,.heif,.tif,.tiff" multiple hidden>
         <div class="drop image-drop" id="imagesDrop" role="group" aria-label="Reference images">
