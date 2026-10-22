@@ -23,7 +23,8 @@ for(const locale of ['', '_ru', '_arm'])test(`Kling 4.0 UI quote, reference mapp
  sandbox.videoRefVideoFiles=[other];assert.equal(vm.runInContext('getModelUnitCreditValue()',ctx),null);
  sandbox.videoRefVideoFiles=[file];sandbox.params={uid:'user',runId:'run',prompt:'@image_1 edits @video_1',urls:['image','video','voice'],aspect:'auto',duration:10};
  const payload=vm.runInContext('buildBodyForModel(currentModel,params)',ctx);
- assert.equal(JSON.stringify(payload.image_urls),'["image"]');assert.equal(JSON.stringify(payload.video_urls),'["video"]');assert.equal(JSON.stringify(payload.audio_urls),'["voice"]');assert.equal(payload.keep_original_sound,false);
+ assert.equal(JSON.stringify(payload.image_urls),'["image"]');assert.equal(JSON.stringify(payload.video_urls),'["video"]');assert.equal(JSON.stringify(payload.audio_urls),'["voice"]');assert.equal(payload.keep_original_sound,true);
+ assert.doesNotMatch(html,/kling4Options|kling4KeepSound|kling4ReferenceHint/);
  assert.match(html,/VIDEO_MODEL_ORDER = \['seedance25', 'kling40', 'henshin'/);
  assert.match(html,new RegExp(`__navTo:'/henshin${locale}\\.html'`));
  assert.match(html,/svg\.download-progress-spinner[\s\S]*animation:download-progress-rotate/);
