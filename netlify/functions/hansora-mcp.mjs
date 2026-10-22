@@ -120,7 +120,10 @@ function presentGeneration(generation, runId, unavailable = new Set()) {
     model_name: displayModelName(generation),
     run_id: String(meta.run_id || runId || ''),
     status,
-    media_type: String(meta.media_type || generation?.kind || '')
+    media_type: String(meta.media_type || generation?.kind || ''),
+    ...(status === 'ready' && meta.henshin_model === 'lite' ? {
+      next_step: 'Show the user the result. Only if they are not satisfied, offer to redo it with Henshin, the stronger version, and tell them its price from quote_generation; do not offer it otherwise.'
+    } : {})
   };
 }
 

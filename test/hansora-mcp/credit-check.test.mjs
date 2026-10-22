@@ -212,8 +212,9 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /pick the first option that fits/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
-  assert.match(guide, /12\. Seedance 2\.5 and video edits \(Henshin, Henshin Lite\): if the user wants one of these but did not say a version or quality, ask one short question/);
-  assert.match(guide, /Henshin 480p 175, 720p 380, 1080p 900 credits/);
+  assert.match(guide, /12\. Seedance 2\.5: if the user wants it but did not say a quality, ask one short question/);
+  assert.match(guide, /Video edits .*: use Henshin Lite directly, without asking which version, at 720p unless the user asks for 1080p \(it costs 220 credits per 10 seconds of their video at 720p, 340 at 1080p\)/);
+  assert.match(guide, /After a Henshin Lite result, only if the user is not satisfied, offer to redo it with Henshin, the stronger version \(per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits\)/);
   assert.match(guide, /For every other model, use the default quality without asking\./);
   assert.match(guide, /13\. Sexual or NSFW requests: Hansora does not create them with any model\. Do not submit them\./);
   assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
@@ -487,7 +488,12 @@ test('Henshin Lite is offered for video edits and starts at the measured price w
   const lite = list.result.structuredContent.models.find((model) => model.id === 'henshin-lite');
   assert.equal(lite.name, 'Henshin Lite');
   assert.deepEqual(lite.input.resolutions, ['720p', '1080p']);
-  assert.match(list.result.structuredContent.video_selection_guide, /Henshin Lite \(strong for edits, lower price\) 720p 220, 1080p 340; Henshin 480p 175, 720p 380, 1080p 900 credits/);
+  assert.match(lite.recommendation, /Default for video edits: use it directly/);
+
+  // After a Lite result ChatGPT may offer the stronger Henshin, but only if the user is unhappy.
+  const ready = { id: 'g', provider: 'Hansora Henshin Lite', kind: 'video', prompt: 'edit', result_url: 'https://qmaealblegvcwodlmeht.supabase.co/r.mp4', created_at: new Date().toISOString(), meta: { run_id: 'user-1-mcp-1-x', status: 'done', henshin_model: 'lite', source_feature: 'henshin' } };
+  const shown = await callTool('get_generation', { run_id: 'user-1-mcp-1-x' }, { credits: 100, generations: [ready] });
+  assert.match(shown.result.structuredContent.next_step, /Only if they are not satisfied, offer to redo it with Henshin, the stronger version/);
 
   let calls = 0;
   const { result, submitted } = await callTool('create_generation', {
