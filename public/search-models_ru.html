@@ -4243,8 +4243,18 @@
     @media (max-width:900px){body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;}}
 
 	    </style>
+  <script src="/kling4-pricing.js?v=20261022"></script>
   <script src="/seedance-pricing.js?v=20261020"></script>
   <script src="/wan-pricing.js?v=20261021"></script>
+<style>
+button[aria-busy="true"] { opacity:1!important;cursor:wait; }
+svg.download-progress-spinner { display:inline-block!important;width:18px!important;height:18px!important;min-width:18px;flex:none;vertical-align:middle;animation:download-progress-rotate .7s linear infinite!important; }
+svg.download-progress-spinner circle { fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:42 15; }
+@keyframes download-progress-rotate { to { transform:rotate(360deg); } }
+.model-top-badge { margin-left:auto;padding:2px 7px;border-radius:7px;background:#d6ff34;color:#151515;font-size:10px;font-weight:800; }
+.kling4-options { margin:8px 0;padding:12px;border:1px solid #ffffff20;border-radius:14px;font-size:12px;color:#a7a8b2; }
+.kling4-options label { display:flex;gap:8px;align-items:center;color:inherit;margin-bottom:8px; }
+</style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
   <div id="sharedHeader"></div>
@@ -4601,6 +4611,10 @@
 
           <!-- New KIE video models: Wan 2.7 / HappyHorse / Grok -->
           <div id="videoRefsUploadWrap" class="hidden flex-col gap-3 model-upload-grid">
+            <div id="kling4Options" class="kling4-options hidden">
+              <label><input id="kling4KeepSound" type="checkbox">Сохранить исходный звук видео</label>
+              <div id="kling4ReferenceHint">В промпте используйте @image_1, @video_1 и @voice_1. До 10 изображений, 5 видео (всего до 30 секунд) и 3 голосов; не более 15 референсов.</div>
+            </div>
             <div id="videoFramesSection" class="upload-section-card upload-section-wide">
               <div class="upload-section-head"><span class="upload-section-icon">🎬</span><div><p>Кадры</p><small>Первый и последний кадры используются вместе</small></div></div>
               <div class="frame-pair-grid">
@@ -4932,7 +4946,7 @@ async function __mjFetchNbCheck(params){
     url = `/.netlify/functions/${checker}?taskId=${encodeURIComponent(taskId)}&uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
   }
   else url = `/.netlify/functions/${checker}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
-  const session = checker === 'reapi-check' ? (await window.__HANSORA_SB__.auth.getSession()).data?.session : null;
+  const session = ['reapi-check','kling4-check','henshin-check'].includes(checker) ? (await window.__HANSORA_SB__.auth.getSession()).data?.session : null;
   const r = await fetch(url, {
     method: 'GET',
     cache: 'no-store',
@@ -5123,12 +5137,12 @@ async function __mjFetchNbCheck(params){
       const handler = window.hansoraPreviewActions && window.hansoraPreviewActions[action];
       if (typeof handler !== 'function') return;
       e.preventDefault();
-      const original = btn.innerHTML;
+      const original = btn.innerHTML, downloadStarted = Date.now();
       btn.disabled = true;
       if (action === 'download') {
         btn.setAttribute('aria-busy', 'true');
         const icon = btn.querySelector('svg');
-        if (icon) icon.outerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
+        if (icon) icon.outerHTML = '<svg class="download-progress-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>';
       }
       setPreviewStatus(action === 'download' ? 'Preparing download...' : 'Preparing...', '');
       try {
@@ -5136,6 +5150,7 @@ async function __mjFetchNbCheck(params){
       } catch (error) {
         setPreviewStatus(error && error.message ? error.message : 'Action failed. Please try again.', 'error');
       } finally {
+        if(action === 'download') await new Promise(resolve=>setTimeout(resolve,Math.max(0,500-(Date.now()-downloadStarted))));
         btn.disabled = false;
         if (action === 'download') {
           btn.removeAttribute('aria-busy');
@@ -5513,7 +5528,7 @@ async function __mjFetchNbCheck(params){
       if (typeof handler !== 'function') return;
       const original = button.innerHTML;
       button.disabled = true;
-      button.innerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
+      button.innerHTML = '<svg class="download-progress-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>';
       try {
         await handler(data || {}, () => {});
       } catch (error) {
@@ -5526,13 +5541,14 @@ async function __mjFetchNbCheck(params){
 
     async function downloadResultShortcut(button, url, kind, provider) {
       if (!url || !button || button.disabled) return;
-      const original = button.innerHTML;
+      const original = button.innerHTML, started = Date.now();
       button.disabled = true;
       button.setAttribute('aria-busy', 'true');
-      button.innerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
+      button.innerHTML = '<svg class="download-progress-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>';
       try {
         await downloadAsset(url, kind, provider);
       } finally {
+        await new Promise(resolve => setTimeout(resolve, Math.max(0, 500 - (Date.now() - started))));
         button.disabled = false;
         button.removeAttribute('aria-busy');
         button.innerHTML = original;
@@ -7443,6 +7459,16 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 5.9
       },
       {
+        id: 'kling40', name: 'Kling 4.0', emoji: 'K4', subtitle: 'Text / Image / Video / Voice → Video', category: 'video',
+        description: 'Kling 4.0 with image, video and voice references, native audio, and 3–30 second videos.',
+        endpoint: '/.netlify/functions/run-kling-40', needsImage: false, maxFiles: 0,
+        uploadMaxMB: 10, uploadLimitsMB: { image: 10, video: 10, audio: 10 }, specificUpload: 'kling40',
+        aspectOptions: ['auto','16:9','9:16','1:1','21:9'], defaultAspect: 'auto',
+        resolutionOptions: ['720p','1080p'], defaultResolution: '720p',
+        durations: Array.from({length:28},(_,i)=>i+3), costLabel: '', minCredits: 5.7, isNew: true
+      },
+      { id:'henshin', name:'Henshin', emoji:'H', category:'video', subtitle:'Transform the scene. Keep the motion.', __navTo:'/henshin_ru.html', isTop:true },
+      {
         id: 'seedance20',
         name: 'Seedance 2.0',
         emoji: '🌱',
@@ -7746,7 +7772,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
 	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
 	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance25', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['seedance25', 'kling40', 'henshin', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
       return String(value || '').trim().toLowerCase();
@@ -7953,6 +7979,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('seedance20') || id === 'seedance25') return MODEL_LOGO_BASE_URL + '5.png';
       if (id.includes('gemini-omni') || id.includes('veo')) return MODEL_LOGO_BASE_URL + '3.png';
       if (id.includes('happyhorse')) return MODEL_LOGO_BASE_URL + '15.png';
+      if (id === 'henshin') return '/icons/henshin.svg';
       if (id.includes('kling')) return MODEL_LOGO_BASE_URL + '14.png';
       if (id.includes('aleph')) return MODEL_LOGO_BASE_URL + '16.png';
       return '';
@@ -8133,10 +8160,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         kling30ElementsThumbs: { inputId: 'kling30ElementsInput', kind: 'image', max: 4 }
       };
       if (id === 'videoRefVideosThumbs') {
-        return { inputId: 'videoRefVideosInput', kind: 'video', max: currentModel && currentModel.id === 'wan-3' ? 5 : 3 };
+        return { inputId: 'videoRefVideosInput', kind: 'video', max: currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 5 : 3 };
       }
       if (id === 'videoRefAudioThumbs') {
-        return { inputId: 'videoRefAudioInput', kind: 'audio', max: currentModel && currentModel.id === 'wan-3' ? 5 : 1 };
+        return { inputId: 'videoRefAudioInput', kind: 'audio', max: currentModel && currentModel.id === 'kling40' ? 3 : (currentModel && currentModel.id === 'wan-3' ? 5 : 1) };
       }
       if (id === 'seedanceImageRefsThumbs') {
         return { inputId: 'seedanceImageRefsInput', kind: 'image', max: getSeedanceReferenceLimit('image') };
@@ -8150,7 +8177,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id === 'videoRefImagesThumbs') {
         const max = currentModel && currentModel.id === 'grok-video'
           ? getGrokVideoImageLimit()
-          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : (currentModel && currentModel.id === 'wan-3' ? 10 : 9));
+          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : (currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 10 : 9));
         return { inputId: 'videoRefImagesInput', kind: 'image', max };
       }
       return byId[id] || null;
@@ -8367,7 +8394,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 		    let promptImageMentionChipToReplace = null;
 
 	    function hasNumberedPromptImageMention(text) {
-	      return /@image\s*\d/i.test(String(text || ''));
+	      return /@image[_\s]*\d/i.test(String(text || ''));
 	    }
 
 	    function getPromptMentionPreviewUrl(file) {
@@ -8389,6 +8416,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	    }
 
 	    function getPromptMentionImageItems() {
+          if(currentModel?.id==='kling40') return videoRefImageFiles.map((file,index)=>({file,key:getPromptMentionFileKey(file),label:'image_'+(index+1),url:getPromptMentionPreviewUrl(file)}));
 	      const files = [];
 	      const seen = new Set();
 	      const addFile = (file) => {
@@ -8756,10 +8784,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (!editor) return;
 	      const text = String(value || '');
 	      const items = getPromptMentionImageItems();
-	      const parts = text.split(/(@image\s*\d+)/gi);
+	      const parts = text.split(/(@image[_\s]*\d+)/gi);
 	      editor.innerHTML = '';
 	      parts.forEach((part) => {
-	        const match = part.match(/^@image\s*(\d+)$/i);
+	        const match = part.match(/^@image[_\s]*(\d+)$/i);
 	        if (match) {
 	          const item = items[Number(match[1]) - 1];
 	          if (item) {
@@ -8977,9 +9005,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function selectWorkspaceModel(id, options = {}) {
       const next = MODELS.find((m) => m.id === id);
       if (!next) return;
+      if (next.__navTo) { window.location.href = next.__navTo; return; }
       const shouldPreserveUploads = options.preserveUploads !== false;
       const reusableImages = shouldPreserveUploads ? collectReusableImageFiles() : [];
       currentModel = next;
+      if (next.id === 'kling40') { videoFirstFrameFile = null; videoLastFrameFile = null; videoSourceFile = null; }
       currentMode = next.category === 'video' ? 'video' : 'image';
       const btnImage = document.getElementById('btnModeImage');
       const btnVideo = document.getElementById('btnModeVideo');
@@ -9129,7 +9159,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         btn.type = 'button';
         const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-lite' && ['veo31-lite','veo31-fast','veo31'].includes(currentModel.id)));
         btn.className = 'model-tab' + (active ? ' active' : '');
-        const newMark = model.isNew ? '<span class="text-[9px] font-bold uppercase tracking-wide text-emerald-300">NEW</span>' : '';
+        const newMark = model.isTop ? '<span class="model-top-badge">Top</span>' : model.isNew ? '<span class="text-[9px] font-bold uppercase tracking-wide text-emerald-300">NEW</span>' : '';
         btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>' + newMark;
         btn.addEventListener('click', () => selectWorkspaceModel(model.id));
         rail.appendChild(btn);
@@ -9257,6 +9287,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 5));
         const rate = currentResolution === '1080p' ? 2 : 1.5;
         return Number((seconds * rate).toFixed(1));
+      }
+      if (model.id === 'kling40') {
+        const inputSeconds = wan3InputSeconds();
+        if (inputSeconds === null) return null;
+        try { return window.Kling4Pricing.quote({resolution:currentResolution,duration:Number(currentDuration||5),inputSeconds}).internalCredits; } catch { return null; }
       }
       if (model.id === 'wan-3') {
         const inputSeconds = wan3InputSeconds();
@@ -9731,7 +9766,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           'w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
         const unlimitedModel = model.__defaultId ? (MODELS.find((m) => m.id === model.__defaultId) || model) : model;
         const unlimitedMark = isModelSelectionUnlimited(unlimitedModel) ? unlimitedBadgeMarkup('overlay-unlimited-badge') : '';
-        const newMark = model.isNew ? '<span class="text-[10px] font-bold uppercase tracking-wide text-emerald-300">NEW</span>' : '';
+        const newMark = model.isTop ? '<span class="model-top-badge">Top</span>' : model.isNew ? '<span class="text-[10px] font-bold uppercase tracking-wide text-emerald-300">NEW</span>' : '';
         row.innerHTML = `
           <div class="w-7 h-7 flex items-center justify-center">${modelLogoHTML(model)}</div>
           <div class="flex-1">
@@ -10259,7 +10294,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           kling30Wrap.classList.remove('hidden');
           kling30Wrap.classList.add('flex');
         }
-      } else if (['wan27', 'wan30', 'happyhorse', 'grokVideo', 'geminiOmni'].includes(currentModel.specificUpload)) {
+      } else if (['wan27', 'wan30', 'happyhorse', 'grokVideo', 'geminiOmni', 'kling40'].includes(currentModel.specificUpload)) {
         if (videoRefsWrap) {
           videoRefsWrap.classList.remove('hidden');
           videoRefsWrap.classList.add('flex');
@@ -10305,8 +10340,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const showsFirstFrame = kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash;
       const showsLastFrame = kind === 'wan27' || kind === 'wan30' || isGeminiFlash;
       const showsSourceVideo = kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni';
-      const showsVideoReferences = kind === 'wan27' || kind === 'wan30';
-      const showsAudioReferences = kind === 'wan27' || kind === 'wan30';
+      const showsVideoReferences = kind === 'wan27' || kind === 'wan30' || kind === 'kling40';
+      const showsAudioReferences = kind === 'wan27' || kind === 'wan30' || kind === 'kling40';
+      show('kling4Options', kind === 'kling40');
       show('videoFramesSection', showsFirstFrame || showsLastFrame);
       show('videoImageReferencesSection', true);
       show('videoVideoReferencesSection', showsSourceVideo || showsVideoReferences);
@@ -11528,7 +11564,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         showStatus('Удалите кадры перед добавлением референсов изображений.', 'error');
         return;
       }
-      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : (currentModel && currentModel.id === 'wan-3' ? 10 : 9));
+      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : (currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 10 : 9));
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
       e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
@@ -11549,7 +11585,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         showStatus('Удалите кадры перед добавлением референсов видео.', 'error');
         return;
       }
-      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'wan-3' ? 5 : 3);
+      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 5 : 3);
       renderFileListThumbs(videoRefVideoFiles, document.getElementById('videoRefVideosThumbs'), (index) => {
         videoRefVideoFiles.splice(index, 1);
         document.getElementById('videoRefVideosInput').value = '';
@@ -11566,7 +11602,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        showStatus('Удалите кадры перед добавлением аудиореференсов.', 'error');
 	        return;
 	      }
-	      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'wan-3' ? 5 : 1);
+	      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'kling40' ? 3 : (currentModel && currentModel.id === 'wan-3' ? 5 : 1));
 	      renderFileListThumbs(videoRefAudioFiles, document.getElementById('videoRefAudioThumbs'), (index) => {
 	        videoRefAudioFiles.splice(index, 1);
 	        document.getElementById('videoRefAudioInput').value = '';
@@ -12692,6 +12728,12 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 	            run_id: runId
 	          };
         }
+        case 'kling40': {
+          const images=(urls||[]).slice(0,videoRefImageFiles.length), start=images.length;
+          const videos=(urls||[]).slice(start,start+videoRefVideoFiles.length);
+          const voices=(urls||[]).slice(start+videoRefVideoFiles.length);
+          return {uid,run_id:runId,prompt,duration:Number(duration||5),resolution:currentResolution||'720p',aspect_ratio:aspect||'auto',image_urls:images,video_urls:videos,audio_urls:voices,keep_original_sound:!!document.getElementById('kling4KeepSound')?.checked};
+        }
         case 'wan-3': {
           let cursor = 0;
           const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
@@ -12920,7 +12962,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     }
 
     function persistGenerationInputUrlsInBackground(details) {
-      if (['seedance20','seedance25','wan-3'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
+      if (['seedance20','seedance25','wan-3','kling40'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
       const uid = String(details && details.uid || '').trim();
       const runId = String(details && details.runId || '').trim();
       const inputUrls = Array.isArray(details && details.urls)
@@ -13004,6 +13046,16 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         removeClientRequestPlaceholder(initialRequestContext);
         showStatus('Сначала войдите в аккаунт.', 'error');
         return;
+      }
+
+      if (currentModel.id === 'kling40') {
+        const durations=await Promise.all(videoRefVideoFiles.map(readWan3VideoDuration));
+        const total=durations.reduce((sum,value)=>sum+value,0);
+        const count=videoRefImageFiles.length+videoRefVideoFiles.length+videoRefAudioFiles.length;
+        if (!prompt || prompt.length>10000 || videoRefImageFiles.length>10 || videoRefVideoFiles.length>5 || videoRefAudioFiles.length>3 || count>15 || durations.some(value=>!Number.isFinite(value)||value<2||value>30) || total>30.0001) {
+          removeClientRequestPlaceholder(initialRequestContext);
+          showStatus('Kling 4.0: use 1–10,000 prompt characters, up to 10 images, 5 videos (2–30 seconds each, 30 seconds combined), 3 voices, and 15 reference items total.','error');return;
+        }
       }
 
       if (['seedance20','seedance25'].includes(currentModel.id)) {
@@ -13179,7 +13231,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           ? await uploadImagesAndGetUrls([seedanceFirstFrameFile, seedanceLastFrameFile, ...seedanceImageRefFiles, ...seedanceVideoRefFiles, ...seedanceAudioRefFiles].filter(Boolean))
           : currentModel.specificUpload === 'kling30'
           ? (syncKling30LegacyData(), await uploadImagesAndGetUrls([kling30FirstFrameFile, ...(kling30MultiShots ? [] : [kling30LastFrameFile]), ...kling30ElementFiles].filter(Boolean)))
-          : ['wan27', 'wan30', 'happyhorse', 'grokVideo', 'geminiOmni'].includes(currentModel.specificUpload)
+          : ['wan27', 'wan30', 'happyhorse', 'grokVideo', 'geminiOmni', 'kling40'].includes(currentModel.specificUpload)
           ? await uploadImagesAndGetUrls((currentModel.specificUpload === 'grokVideo'
             ? videoRefImageFiles
             : currentModel.specificUpload === 'geminiOmni'
@@ -13219,7 +13271,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           soraQuality: __soraQuality,
           resolution: currentResolution
         });
-        if (['seedance20','seedance25','wan-3'].includes(currentModel.id)) {
+        if (['seedance20','seedance25','wan-3','kling40'].includes(currentModel.id)) {
           const unitCredits = getModelUnitCreditValue();
           if (!Number.isFinite(unitCredits)) throw new Error('Please check the reference durations and output length before generating.');
           body.expected_credits = Math.round(unitCredits * 10);
@@ -13415,7 +13467,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               seedanceVerifiedQuote = {files:[...seedanceVideoRefFiles],seconds:j.input_seconds};
               updateCostDisplay(); updateRunButtonLabel();
             }
-            if (res.status === 409 && currentModel.id === 'wan-3' && Number.isFinite(j.input_seconds)) {
+            if (res.status === 409 && ['wan-3','kling40'].includes(currentModel.id) && Number.isFinite(j.input_seconds)) {
               wan3VerifiedQuote = {files:[...videoRefVideoFiles],seconds:j.input_seconds};
               updateCostDisplay(); updateRunButtonLabel();
             }
@@ -13670,6 +13722,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         'wan27image': 'wan-2-7-image',
         'grok video': 'grok-video',
         'grokvideo': 'grok-video',
+        'kling 4.0': 'kling40', 'kling-4': 'kling40', 'kling40': 'kling40',
         'kling 3.0': 'kling30',
         'kling30': 'kling30',
         'kling 3 turbo': 'kling3-turbo',

@@ -11,9 +11,10 @@ exports.handler=async event=>{
  const path=`user_generations?id=eq.${id}&select=id,user_id,result_url,meta`;
  let row=(await db(path))?.[0];
  if(row?.meta?.source_feature!=='henshin')return json(404,{ok:false});
- if(row.result_url&&(!row.meta.source_audio_url||row.meta.audio_restored))return json(200,{ok:true});
+ if(row.result_url&&(!(row.meta.source_audio_url||row.meta.finish_video)||row.meta.audio_restored))return json(200,{ok:true});
  if(!audioPending(row)&&row.meta.task_id&&['processing','pending'].includes(row.meta.status)){
-  if(row.meta.source==='reapi')await require('../../lib/reapi/check.cjs').reconcile(row,{enqueueAudio:false});
+  if(row.meta.source==='kie-kling4')await require('../../lib/kling4/check.cjs').reconcile(row,{enqueueAudio:false});
+  else if(row.meta.source==='reapi')await require('../../lib/reapi/check.cjs').reconcile(row,{enqueueAudio:false});
   else await shared.handler({httpMethod:'GET',henshinFinishInline:true,queryStringParameters:{uid:row.user_id,run_id:row.meta.run_id,taskId:row.meta.task_id}});
   row=(await db(path))?.[0];
  }
