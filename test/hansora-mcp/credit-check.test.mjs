@@ -414,3 +414,29 @@ test('the model health check makes no database query unless switched on', async 
     process.env.HANSORA_MODEL_HEALTH = 'on';
   }
 });
+
+test('a Supabase outage never logs users out: sign-in checks that cannot run answer 503, not 401', async () => {
+  const originalFetch = globalThis.fetch;
+  const call = async (authReply) => {
+    globalThis.fetch = async (url) => {
+      if (String(url).endsWith('/auth/v1/user')) return authReply();
+      throw new Error(`unexpected fetch ${url}`);
+    };
+    try {
+      return await hansoraMcp(new Request('https://hansora.test/mcp', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-06-18' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
+      }));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  };
+  const down = await call(() => { throw new Error('connect timeout'); });
+  assert.equal(down.status, 503);
+  assert.equal(down.headers.get('www-authenticate'), null); // ChatGPT keeps the login
+  assert.equal((await call(() => new Response('upstream', { status: 504 }))).status, 503);
+  const invalid = await call(() => new Response(JSON.stringify({ msg: 'invalid JWT' }), { status: 401 }));
+  assert.equal(invalid.status, 401); // a really invalid token still asks the user to sign in
+  assert.match(invalid.headers.get('www-authenticate'), /resource_metadata=/);
+});
