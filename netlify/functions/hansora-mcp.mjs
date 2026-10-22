@@ -19,7 +19,8 @@ const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
 // Models that add a reference video's length to the price (on every platform that offers them).
 const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance20', 'wan-3']);
 // Launchers that report the real charge, measured from the uploaded files.
-const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'henshin']);
+const EDIT_MODELS = new Set(['henshin', 'henshin-lite']);
+const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'henshin', 'henshin-lite']);
 // ChatGPT gives up on a tool call after roughly a minute; answer well before that.
 const SUBMIT_BUDGET_MS = 25000;
 const PUBLIC_GENERATION_FAILURE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
@@ -724,7 +725,7 @@ export function createHansoraServer(ctx) {
       // ChatGPT can't see how long a reference video is, so its quote guesses. These launchers measure
       // the real files and refuse (charging nothing) when the measured length changes the quoted price.
       const hasVideoInput = Boolean(normalizedInput.source_video_url || normalizedInput.video_urls?.length);
-      if (REFERENCE_VIDEO_MODELS.has(model.id) && hasVideoInput && price && payload.expected_credits == null) {
+      if ((REFERENCE_VIDEO_MODELS.has(model.id) || model.id === 'henshin-lite') && hasVideoInput && price && payload.expected_credits == null) {
         payload.expected_credits = price.displayedCredits;
       }
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
@@ -772,7 +773,8 @@ export function createHansoraServer(ctx) {
       const verified = Number(result?.displayed_credits);
       const quoted = payload.expected_credits;
       if (result?.code === 'CONTENT_POLICY_BLOCKED') return contentBlockedResult(model, result);
-      if (response.status === 409 && Number.isFinite(result.input_seconds) && Number.isFinite(verified) && (quoted == null || verified <= Number(quoted))) {
+      // Video edits (Henshin) are priced by the uploaded video itself, so they never ask again.
+      if (response.status === 409 && Number.isFinite(result.input_seconds) && Number.isFinite(verified) && (quoted == null || verified <= Number(quoted) || EDIT_MODELS.has(model.id))) {
         payload.expected_credits = verified;
         ({ response, result } = await submit());
         charged = verified;
@@ -820,7 +822,7 @@ export function createHansoraServer(ctx) {
         model_name: model.name,
         media_type: model.category,
         credits: charged,
-        ...(price && charged != null && charged !== price.displayedCredits ? { credits_note: `The final price is ${charged} credits${model.id === 'henshin' ? ', based on the length of the uploaded video' : charged < price.displayedCredits ? `, lower than the ${price.displayedCredits} quoted` : ''}. Tell the user the final amount.` } : {}),
+        ...(price && charged != null && charged !== price.displayedCredits ? { credits_note: `The final price is ${charged} credits${model.id === 'henshin' || model.id === 'henshin-lite' ? ', based on the length of the uploaded video' : charged < price.displayedCredits ? `, lower than the ${price.displayedCredits} quoted` : ''}. Tell the user the final amount.` } : {}),
         status: response.status === 202 ? 'queued' : 'submitted',
         prompt: normalizedInput.prompt,
         aspect_ratio: normalizedInput.aspect_ratio || null,

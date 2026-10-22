@@ -212,8 +212,8 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /pick the first option that fits/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
-  assert.match(guide, /12\. Seedance 2\.5 and Henshin: if the user wants one of these but did not say a quality, ask one short question/);
-  assert.match(guide, /per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits/);
+  assert.match(guide, /12\. Seedance 2\.5 and video edits \(Henshin, Henshin Lite\): if the user wants one of these but did not say a version or quality, ask one short question/);
+  assert.match(guide, /Henshin 480p 175, 720p 380, 1080p 900 credits/);
   assert.match(guide, /For every other model, use the default quality without asking\./);
   assert.match(guide, /13\. Sexual or NSFW requests: Hansora does not create them with any model\. Do not submit them\./);
   assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
@@ -480,4 +480,30 @@ test('a run that has only just started is shown as starting, not as missing', as
   const old = (await callTool('get_generation', { run_id: 'user-1-mcp-1700000000000-abcd1234' }, { credits: 30, generations: [] })).result;
   assert.equal(old.isError, true);
   assert.match(old.content[0].text, /generation_not_found/);
+});
+
+test('Henshin Lite is offered for video edits and starts at the measured price without asking again', async () => {
+  const list = await callTool('list_models', { category: 'video' }, { credits: 100 });
+  const lite = list.result.structuredContent.models.find((model) => model.id === 'henshin-lite');
+  assert.equal(lite.name, 'Henshin Lite');
+  assert.deepEqual(lite.input.resolutions, ['720p', '1080p']);
+  assert.match(list.result.structuredContent.video_selection_guide, /Henshin Lite \(strong for edits, lower price\) 720p 220, 1080p 340; Henshin 480p 175, 720p 380, 1080p 900 credits/);
+
+  let calls = 0;
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'henshin-lite', prompt: 'put the woman from the photo into the video', duration: 10, resolution: '1080p',
+    source_video_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/dance.mp4',
+    image_urls: ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/woman.png']
+  }, {
+    credits: 100,
+    runner: () => (++calls === 1
+      ? { status: 409, body: { ok: false, input_seconds: 12.3, displayed_credits: 442 } }
+      : { status: 201, body: { ok: true, submitted: true, debited: 44.2 } })
+  });
+  assert.equal(submitted[0].target_endpoint, '/.netlify/functions/run-henshin');
+  assert.equal(submitted[0].payload.henshin_model, 'lite');
+  assert.deepEqual(submitted.map((call) => call.payload.expected_credits), [340, 442]); // higher, but no question for edits
+  assert.equal(result.structuredContent.ok, true);
+  assert.equal(result.structuredContent.credits, 442);
+  assert.match(result.structuredContent.credits_note, /based on the length of the uploaded video/);
 });
