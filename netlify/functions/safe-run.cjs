@@ -2,7 +2,7 @@
 
 const crypto = require('node:crypto');
 
-const POLICY_VERSION = '2026-10-21.1';
+const POLICY_VERSION = '2026-10-23.1';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const QUEUE_SECRET = process.env.HANSORA_QUEUE_SECRET || '';
@@ -163,8 +163,13 @@ function hasSexualActivityContext(normalized) {
   return patterns.some((pattern) => pattern.test(normalized));
 }
 
+// ChatGPT often adds safety notes to its prompts ("no NSFW", "nothing sexual", "non-sexual, no nudity").
+// Those words say the opposite of what the filter looks for, so drop them before checking. Only
+// negations directly in front of a sexual word count: "no limits sexual video" is still checked.
+const NEGATED_SEXUAL_WORDS = /\b(?:no|not|non|nothing|without|avoid|avoiding|never|zero|free of|free from)\s+(?:(?:explicit|graphic|adult|suggestive|sexual|sexualized|sexy|or|and|any)\s+){0,3}(?:nsfw|nudity|nude|naked|sexual|sexualized|sexualised|sex|explicit|erotic|erotica|porn|pornographic|suggestive)(?:\s+(?:content|material|elements|themes|imagery|scenes|details|acts))?\b/g;
+
 function evaluatePrompt(prompt) {
-  const normalized = normalizePrompt(prompt);
+  const normalized = normalizePrompt(prompt).replace(NEGATED_SEXUAL_WORDS, ' ').replace(/\s+/g, ' ').trim();
   if (!normalized) return { allowed: true, category: null, policyVersion: POLICY_VERSION };
 
   const sexual = containsTerm(normalized, DIRECT_SEXUAL_TERMS)
@@ -190,6 +195,7 @@ function evaluatePrompt(prompt) {
 // free moderation model reads the whole prompt (context, typos, any language) and decides on sexual
 // content. The word filter still blocks first, and it alone decides if moderation is unavailable.
 const MODERATION_URL = 'https://api.openai.com/v1/moderations';
+const MODERATION_SEXUAL_THRESHOLD = 0.8;
 async function moderationSaysSexual(text) {
   const key = process.env.OPENAI_API_KEY || '';
   if (!key || !text) return null;
@@ -201,9 +207,14 @@ async function moderationSaysSexual(text) {
       signal: AbortSignal.timeout(4000)
     });
     if (!response.ok) return null;
-    const categories = (await response.json())?.results?.[0]?.categories;
+    const result = (await response.json())?.results?.[0];
+    const categories = result?.categories;
     if (!categories) return null;
     if (categories['sexual/minors']) return 'sexual_content_involving_minors';
+    // OpenAI's own flag fires on borderline scores too (a dog "running like a human" was flagged), so
+    // block only when the model is confident. Clearly sexual prompts score far above this.
+    const score = Number(result?.category_scores?.sexual);
+    if (Number.isFinite(score)) return score >= MODERATION_SEXUAL_THRESHOLD ? 'nsfw_sexual_content' : '';
     return categories.sexual ? 'nsfw_sexual_content' : '';
   } catch {
     return null;
@@ -583,6 +594,7 @@ exports.handler = async function handler(event) {
       code: 'CONTENT_POLICY_BLOCKED',
       message: publicMessage(decision),
       category: decision.category,
+      source: decision.source || 'filter',
       decision_id: decisionId,
       policy_version: decision.policyVersion
     }, { 'X-Content-Safety': 'blocked' });

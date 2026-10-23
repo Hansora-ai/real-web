@@ -113,6 +113,33 @@ test('each tool call is logged for the funnel, without slowing or changing the a
   assert.equal(logged.length, 1);
 });
 
+test('when no video fits a returning user\'s credits, an image of the same idea is offered once', async () => {
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'seedance25', prompt: 'A dragon over a castle', duration: 10, resolution: '720p'
+  }, { credits: 1.2, rest: returningUser });
+  assert.equal(submitted.length, 0);
+  const value = result.structuredContent;
+  assert.deepEqual(value.options_within_balance, []);
+  assert.ok(value.image_instead && value.image_instead.credits <= 12);
+  assert.match(value.next_step, new RegExp(`offer once, in one short line, to make an image of the same idea with ${value.image_instead.model_name} for ${value.image_instead.credits} credits`));
+  assert.match(value.next_step, /Do not call create_generation again for this request\./);
+  assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
+});
+
+test('a started generation tells ChatGPT the card follows it, and a ready one hands over the exact link', async () => {
+  const started = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A cat', duration: 6, resolution: '720p' }, { credits: 3 });
+  assert.match(started.result.structuredContent.next_step, /do not call get_generation on your own/);
+  const url = 'https://supabase.test/storage/v1/object/public/generation-history/user-1/gen-1.mp4';
+  const ready = await callTool('get_generation', { run_id: 'user-1-mcp-1-ready' }, {
+    credits: 3,
+    generations: [{ id: 'gen-1', provider: 'Grok', kind: 'video', prompt: 'A cat', result_url: url, created_at: new Date().toISOString(), meta: { run_id: 'user-1-mcp-1-ready', status: 'done' } }]
+  });
+  const value = ready.result.structuredContent;
+  assert.equal(value.link_for_user, url);
+  assert.ok(value.next_step.includes(`copied character for character: ${url} `));
+  assert.match(value.next_step, /Never build, shorten or change a link yourself/);
+});
+
 test('a request the balance covers is submitted as before', async () => {
   const { result, submitted } = await callTool('create_generation', {
     model_id: 'grok-video', prompt: 'A cat doctor explainer', duration: 6, resolution: '720p'
@@ -247,7 +274,8 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /3\. Simple: generate directly, do not ask\.\n   - Up to 8 seconds: Veo 3\.1 Lite, 1080p\.\n   - 9 to 10 seconds: Gemini Omni Flash, 1080p\..*\n   - 11 to 30 seconds: Wan 3\.0, 720p\./);
   assert.match(guide, /If you are not sure, treat it as complex/);
   // One short question with three plain choices, so users who know no model names can pick.
-  assert.match(guide, /4\. Complex: ask one short question before generating, at any length, with exactly these three options/);
+  assert.match(guide, /4\. Complex: first call get_account to see the balance \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with exactly these three options/);
+  assert.match(guide, /If the balance covers none of the three, do not ask and do not show their prices/);
   assert.match(guide, /   - Best quality: Seedance 2\.5, 720p \(recommended\)\n   - Great quality, lower price: Kling 4\.0, 720p\n   - Budget: Wan 3\.0, 720p\n   Do not list other models or resolutions in this question\./);
   assert.match(guide, /1080p \(sharpest, only when the user asks for 1080p or the best possible quality; never pick it on your own\)/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);

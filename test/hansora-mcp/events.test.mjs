@@ -22,6 +22,17 @@ test('an event row keeps the step, model, outcome and price, never the prompt', 
   assert.equal(eventRow('user-1', 'create_generation', { model_id: 'veo31-lite' }, { structuredContent: { ok: true, run_id: 'r-mcp-1', credits: 20 } }).outcome, 'ok');
 });
 
+test('a blocked request keeps its prompt and who blocked it; a plain-text error keeps its reason', () => {
+  const blocked = eventRow('user-1', 'create_generation', { model_id: 'veo31-lite', prompt: 'A dog running like a human' },
+    { isError: true, structuredContent: { error: 'content_blocked', category: 'nsfw_sexual_content', blocked_by: 'moderation' } });
+  assert.equal(blocked.outcome, 'content_blocked');
+  assert.deepEqual(blocked.details, { category: 'nsfw_sexual_content', blocked_by: 'moderation', prompt: 'A dog running like a human' });
+  const failed = eventRow('user-1', 'create_generation', { model_id: 'kling25', prompt: 'secret' }, { isError: true, content: [{ type: 'text', text: 'provider_rejected' }] });
+  assert.equal(failed.outcome, 'error');
+  assert.equal(failed.details.reason, 'provider_rejected');
+  assert.doesNotMatch(JSON.stringify(failed), /secret/);
+});
+
 test('logging never throws, skips card polling, and turns itself off when the table is missing', async () => {
   const originalFetch = globalThis.fetch;
   const posts = [];
