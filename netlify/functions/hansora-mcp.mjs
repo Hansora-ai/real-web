@@ -40,6 +40,10 @@ const BUSY_STEPS = {
   create: 'Tell the user, in their language, that Hansora is busy for a moment and nothing was charged. Wait a few seconds and try the same request once more; if it fails again, ask them to try again in a minute.'
 };
 
+// Each get_generation call draws another card, so after a start the assistant should leave updates to the
+// card unless the user asks.
+const CARD_FOLLOWS_RUN = 'Tell the user briefly that it has started. The card shows progress and the result by itself, so do not call get_generation on your own; call it only when the user asks about the status or the result, or says they cannot see it.';
+
 function toolError(error, kind = 'read') {
   const message = error instanceof Error ? error.message : String(error || 'unknown_error');
   if (!INFRASTRUCTURE_ERROR.test(message)) return { isError: true, content: [{ type: 'text', text: message }] };
@@ -124,8 +128,14 @@ function presentGeneration(generation, runId, unavailable = new Set()) {
     run_id: String(meta.run_id || runId || ''),
     status,
     media_type: String(meta.media_type || generation?.kind || ''),
-    ...(status === 'ready' && meta.henshin_model === 'lite' ? {
-      next_step: 'Show the user the result. Only if they are not satisfied, offer to redo it with Henshin, the stronger version, and tell them its price from quote_generation; do not offer it otherwise.'
+    ...(status === 'ready' ? {
+      // Some ChatGPT apps cannot show the card; then the assistant once built a download link itself and
+      // got it wrong. Hand it the exact link to pass on.
+      link_for_user: generation.result_url,
+      next_step: [
+        `The result is ready. Give the user this exact link to open or download it, copied character for character: ${generation.result_url} . Never build, shorten or change a link yourself.`,
+        meta.henshin_model === 'lite' ? 'Only if they are not satisfied, offer to redo it with Henshin, the stronger version, and tell them its price from quote_generation; do not offer it otherwise.' : ''
+      ].filter(Boolean).join(' ')
     } : {})
   };
 }
@@ -170,6 +180,7 @@ function contentBlockedResult(model, result) {
   const value = {
     ok: false, error: 'content_blocked', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
     category: result.category || null,
+    blocked_by: result.source || 'filter',
     message: sexual ? `This request was blocked: ${NO_MODEL_WILL}` : String(result.message || 'This request was blocked by the content policy.'),
     next_step: sexual
       ? `Nothing was generated or charged. Tell the user briefly and kindly, in their language, that every model refuses sexual or NSFW content, so switching models will not help. Offer to make a non-sexual version of their idea instead (for example romantic, playful or stylish), and suggest a concrete rewrite. Do not submit this request or a reworded sexual version to any model.`
@@ -777,7 +788,7 @@ export function createHansoraServer(ctx) {
           credits: price ? price.displayedCredits : undefined, status: 'queued', prompt: normalizedInput.prompt,
           aspect_ratio: normalizedInput.aspect_ratio || null, duration: normalizedInput.duration || null,
           resolution: normalizedInput.resolution || normalizedInput.quality || null,
-          next_step: 'The generation is starting. Tell the user it is on its way; the card updates automatically. Do not start it again.'
+          next_step: `${CARD_FOLLOWS_RUN} Do not start it again.`
         });
       }
       let { response, result } = submitted;
@@ -842,6 +853,7 @@ export function createHansoraServer(ctx) {
         aspect_ratio: normalizedInput.aspect_ratio || null,
         duration: normalizedInput.duration || null,
         resolution: normalizedInput.resolution || normalizedInput.quality || null,
+        next_step: CARD_FOLLOWS_RUN,
         provider: result
       });
     } catch (error) {
@@ -957,6 +969,24 @@ export function createHansoraServer(ctx) {
 
 const handler = createMcpHandler(createHansoraServer, { legacy: 'stateless', responseMode: 'auto', onerror: (error) => console.error('hansora_mcp_error', error?.message || error) });
 
+// Who a token belongs to, read without verifying it: only used to record a failed connection.
+function tokenClaims(token) {
+  try {
+    const claims = JSON.parse(Buffer.from(String(token || '').split('.')[1] || '', 'base64url').toString('utf8'));
+    return claims && typeof claims === 'object' ? claims : {};
+  } catch {
+    return {};
+  }
+}
+
+// Failures before any tool runs (login, Hansora down, a crash) never reach the tool log, yet ChatGPT
+// shows them to the user as "internal error". Record them under the user so we can see how often.
+function recordConnectionEvent(token, outcome, waitUntil, details = {}) {
+  const claims = tokenClaims(token);
+  if (typeof claims.sub !== 'string' || !claims.sub) return;
+  recordToolEvent(claims.sub, 'connection', {}, { isError: true, structuredContent: { error: outcome, ...details } }, waitUntil);
+}
+
 export default async function hansoraMcp(request, context) {
   const startedAt = Date.now();
   const requestId = String(request.headers.get('x-nf-request-id') || 'unknown');
@@ -965,11 +995,13 @@ export default async function hansoraMcp(request, context) {
     return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type, MCP-Protocol-Version, Mcp-Session-Id' } });
   }
   const token = bearerToken(request);
+  const waitUntil = typeof context?.waitUntil === 'function' ? context.waitUntil.bind(context) : undefined;
   let user = null;
   try {
     user = await authenticateToken(token);
   } catch (error) {
     if (error instanceof AuthUnavailableError) {
+      recordConnectionEvent(token, 'auth_unavailable', waitUntil);
       console.warn('hansora_mcp_request', JSON.stringify({ requestId, method: request.method, protocolVersion, tokenProvided: true, authenticated: null, status: 503, durationMs: Date.now() - startedAt }));
       return withCors(temporarilyUnavailable());
     }
@@ -985,11 +1017,22 @@ export default async function hansoraMcp(request, context) {
       status: 401,
       durationMs: Date.now() - startedAt
     }));
+    // An expired token is normal (ChatGPT refreshes it); a rejected one that has not expired is a broken login.
+    if (token) {
+      const expiresAt = Number(tokenClaims(token).exp) * 1000;
+      recordConnectionEvent(token, Number.isFinite(expiresAt) && expiresAt < Date.now() ? 'token_expired' : 'login_rejected', waitUntil);
+    }
     return withCors(authenticationRequired());
   }
-  const waitUntil = typeof context?.waitUntil === 'function' ? context.waitUntil.bind(context) : undefined;
   const authInfo = { token, clientId: user.clientId, scopes: user.scopes, extra: { userId: user.id, email: user.email, waitUntil } };
-  const response = withCors(await handler.fetch(request, { authInfo }));
+  let response;
+  try {
+    response = withCors(await handler.fetch(request, { authInfo }));
+  } catch (error) {
+    recordConnectionEvent(token, 'server_error', waitUntil, { reason: String(error?.message || error) });
+    throw error;
+  }
+  if (response.status >= 500) recordConnectionEvent(token, 'server_error', waitUntil, { reason: `status ${response.status}` });
   console.info('hansora_mcp_request', JSON.stringify({
     requestId,
     method: request.method,

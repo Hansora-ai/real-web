@@ -78,3 +78,37 @@ test('OpenAI moderation reads the meaning: "she sucks me" is blocked, "she sucks
     delete process.env.OPENAI_API_KEY;
   }
 });
+
+test('safety notes ChatGPT adds ("no NSFW", "nothing sexual") do not block an ordinary request', () => {
+  for (const prompt of [
+    'A silly dog running like a human, family friendly, no NSFW content',
+    'A dog jogging upright, nothing sexual, safe for work',
+    'A dog running in a park, non-sexual, no nudity, no explicit or suggestive content',
+    'Two friends laughing at a cafe, without any sexual themes'
+  ]) assert.equal(evaluatePrompt(prompt).allowed, true, prompt);
+  // A negation elsewhere in the prompt does not hide a sexual request.
+  for (const prompt of ['A woman portrait, no limits sexual video', 'naked woman, no explicit content', 'porn video without any nudity']) {
+    assert.equal(evaluatePrompt(prompt).allowed, false, prompt);
+  }
+});
+
+test('OpenAI moderation blocks only when it is confident; minors are blocked on any flag', async () => {
+  const originalFetch = globalThis.fetch;
+  process.env.OPENAI_API_KEY = 'test-key';
+  const reply = (sexual, score, minors = false) => new Response(JSON.stringify({ results: [{
+    categories: { sexual, 'sexual/minors': minors }, category_scores: { sexual: score, 'sexual/minors': minors ? 0.6 : 0.01 }
+  }] }), { status: 200 });
+  try {
+    globalThis.fetch = async () => reply(true, 0.42); // a borderline flag, like the dog running like a human
+    assert.equal((await evaluateWithModeration('A silly dog running like a human')).allowed, true);
+    globalThis.fetch = async () => reply(true, 0.97);
+    const blocked = await evaluateWithModeration('shee suks me');
+    assert.equal(blocked.category, 'nsfw_sexual_content');
+    assert.equal(blocked.source, 'moderation');
+    globalThis.fetch = async () => reply(false, 0.3, true);
+    assert.equal((await evaluateWithModeration('a child at the beach')).category, 'sexual_content_involving_minors');
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete process.env.OPENAI_API_KEY;
+  }
+});
