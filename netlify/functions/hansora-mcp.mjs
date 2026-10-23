@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, getGenerationBatch, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, getGenerationBatch, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -12,6 +12,7 @@ import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema, storeGe
 import { VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
 import { alternativeFor, classifyFailure, failureView, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
+import { recordToolEvent } from '../../lib/hansora-mcp/events.mjs';
 import { accountSummary, insufficientCreditsResult, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
@@ -306,6 +307,14 @@ export function createHansoraServer(ctx) {
   const userId = String(ctx.authInfo?.extra?.userId || '');
   const token = String(ctx.authInfo?.token || '');
   const server = new McpServer({ name: 'Hansora AI', version: '1.0.0' }, { capabilities: { tools: {} } });
+  // Record each tool call (tool, model, outcome, price) without changing any tool definition.
+  const waitUntil = ctx.authInfo?.extra?.waitUntil;
+  const registerTool = server.registerTool.bind(server);
+  server.registerTool = (name, config, callback) => registerTool(name, config, async (input, extra) => {
+    const result = await callback(input, extra);
+    recordToolEvent(userId, name, input, result, waitUntil);
+    return result;
+  });
 
   server.registerResource('hansora-generation-app', GENERATION_APP_URI, {
     title: 'Hansora generation',
@@ -721,7 +730,7 @@ export function createHansoraServer(ctx) {
         // The runner re-checks the balance, so a failed lookup here should not block the request.
         const account = await getAccount(userId).catch(() => null);
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
-          return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput });
+          return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
         }
       }
       const storedInput = await storeGenerationFiles(input);
@@ -803,7 +812,7 @@ export function createHansoraServer(ctx) {
         const charged = Number.isFinite(need) && need > 0
           ? { ...(price || {}), displayedCredits: Number((need * 10).toFixed(2)) }
           : price;
-        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput });
+        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
       }
       // Henshin and reference-video launchers measure the uploaded files and report the real charge.
       const debited = Number(result?.debited);
@@ -948,7 +957,7 @@ export function createHansoraServer(ctx) {
 
 const handler = createMcpHandler(createHansoraServer, { legacy: 'stateless', responseMode: 'auto', onerror: (error) => console.error('hansora_mcp_error', error?.message || error) });
 
-export default async function hansoraMcp(request) {
+export default async function hansoraMcp(request, context) {
   const startedAt = Date.now();
   const requestId = String(request.headers.get('x-nf-request-id') || 'unknown');
   const protocolVersion = String(request.headers.get('mcp-protocol-version') || 'unspecified');
@@ -978,7 +987,8 @@ export default async function hansoraMcp(request) {
     }));
     return withCors(authenticationRequired());
   }
-  const authInfo = { token, clientId: user.clientId, scopes: user.scopes, extra: { userId: user.id, email: user.email } };
+  const waitUntil = typeof context?.waitUntil === 'function' ? context.waitUntil.bind(context) : undefined;
+  const authInfo = { token, clientId: user.clientId, scopes: user.scopes, extra: { userId: user.id, email: user.email, waitUntil } };
   const response = withCors(await handler.fetch(request, { authInfo }));
   console.info('hansora_mcp_request', JSON.stringify({
     requestId,

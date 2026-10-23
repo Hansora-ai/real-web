@@ -52,10 +52,15 @@ async function callTool(name, args, { credits, generations = [], runner = () => 
   }
 }
 
+// A user who already received a result: the first-generation shortcut below does not apply.
+const returningUser = (href) => (href.includes('result_url=not.is.null')
+  ? new Response(JSON.stringify([{ id: 'earlier' }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  : undefined);
+
 test('an over-budget request is refused before anything is submitted, in displayed credits', async () => {
   const { result, submitted } = await callTool('create_generation', {
     model_id: 'grok-video', prompt: 'A cat doctor explainer', duration: 30, resolution: '1080p'
-  }, { credits: 3 });
+  }, { credits: 3, rest: returningUser });
   assert.equal(submitted.length, 0);
   assert.equal(result.isError, true);
   const value = result.structuredContent;
@@ -70,6 +75,42 @@ test('an over-budget request is refused before anything is submitted, in display
   });
   assert.match(value.next_step, /Do not call create_generation again on your own/);
   assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
+});
+
+test('a new user whose free credits do not cover the request gets their first video without a question', async () => {
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'seedance25', prompt: 'A dragon fights a knight on a castle wall', duration: 10, resolution: '720p'
+  }, { credits: 3 });
+  assert.equal(submitted.length, 0);
+  const value = result.structuredContent;
+  assert.equal(value.error, 'insufficient_credits');
+  assert.equal(value.first_generation, true);
+  assert.equal(value.credits_used, 0);
+  const first = value.options_within_balance[0];
+  assert.ok(first.credits <= 30);
+  assert.match(value.next_step, new RegExp(`do not ask the user to choose\\. Call create_generation right now with model_id ${first.model_id}`));
+  assert.match(value.next_step, /their first video is being made with/);
+  assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
+});
+
+test('the first-video shortcut is used only once: if that option is refused too, the user chooses', async () => {
+  const { result } = await callTool('create_generation', {
+    model_id: 'grok-video', prompt: 'A cat doctor explainer', duration: 6, resolution: '720p'
+  }, { credits: 3, runner: () => ({ status: 402, body: { error: 'insufficient_credits', need: 1.8 } }) });
+  const value = result.structuredContent;
+  assert.equal(value.error, 'insufficient_credits');
+  assert.equal(value.first_generation, undefined);
+  assert.match(value.next_step, /Do not call create_generation again on your own/);
+});
+
+test('each tool call is logged for the funnel, without slowing or changing the answer', async () => {
+  const logged = [];
+  const { result } = await callTool('quote_generation', { model_id: 'kling40', duration: 10, resolution: '720p' }, {
+    credits: 3,
+    rest: (href) => { if (href.includes('/rest/v1/chatgpt_events')) { logged.push(href); return new Response(null, { status: 201 }); } return undefined; }
+  });
+  assert.equal(result.structuredContent.credits, 190);
+  assert.equal(logged.length, 1);
 });
 
 test('a request the balance covers is submitted as before', async () => {
