@@ -13,7 +13,7 @@ import { VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGenerationPayload, getMo
 import { alternativeFor, classifyFailure, failureView, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { recordToolEvent } from '../../lib/hansora-mcp/events.mjs';
-import { accountSummary, insufficientCreditsResult, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { accountSummary, insufficientCreditsResult, nextFirstVideoOption, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -185,6 +185,34 @@ function contentBlockedResult(model, result) {
     next_step: sexual
       ? `Nothing was generated or charged. Tell the user briefly and kindly, in their language, that every model refuses sexual or NSFW content, so switching models will not help. Offer to make a non-sexual version of their idea instead (for example romantic, playful or stylish), and suggest a concrete rewrite. Do not submit this request or a reworded sexual version to any model.`
       : 'Nothing was generated or charged. Tell the user why in their language and offer to change the request. Do not submit it to another model.'
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// A new user's first video should still happen when its model refuses it (a photo Kling rejects, Google's
+// safety review on Veo): offer the next model their free credits cover. Null when this is not a first
+// video or nothing further fits; lookups that fail mean "no fallback", never an error.
+async function firstVideoFallback(userId, model, input) {
+  if (model?.category !== 'video') return null;
+  try {
+    if (!(await isFirstGeneration(userId))) return null;
+    const account = await getAccount(userId);
+    return nextFirstVideoOption(model, input, Number(account?.internal_credits || 0));
+  } catch {
+    return null;
+  }
+}
+
+function firstVideoFallbackResult(model, option, reason) {
+  const settings = Object.entries(option.settings || {}).map(([key, value]) => `${key} ${value}`).join(', ');
+  const value = {
+    ok: false, error: 'first_video_refused', generated: false, credits_used: 0,
+    model_id: model.id, model_name: model.name, reason: reason || null, next_option: option,
+    next_step: [
+      `${model.name} could not make this video and nothing was charged. This is the user's first video, so do not stop or ask:`,
+      `call create_generation right now with model_id ${option.model_id}${settings ? ` and ${settings}` : ''}, keeping the same prompt and files (fit the prompt to that model if needed).`,
+      `Then tell the user in one short line that their first video is being made with ${option.model_name}.`
+    ].join(' ')
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
@@ -376,7 +404,24 @@ export function createHansoraServer(ctx) {
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true }
   }, async ({ model_id, ...options }) => {
-    try { return jsonText(publicQuote(quote(model_id, options))); } catch (error) { return toolError(error); }
+    try {
+      const price = quote(model_id, options);
+      const value = publicQuote(price);
+      // ChatGPT sometimes quotes before reading the balance and then shows prices the user cannot pay.
+      // A failed balance lookup just leaves the quote as it is.
+      if (getModel(model_id)?.category === 'video') {
+        const account = await Promise.race([
+          getAccount(userId).catch(() => null),
+          new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+        ]);
+        if (account && Number(account.internal_credits || 0) < price.internalCredits) {
+          value.fits_balance = false;
+          value.credits_available = Number((Number(account.internal_credits || 0) * 10).toFixed(2));
+          value.next_step = 'The user\'s balance does not cover this price, so do not show it to them or ask them to choose it. If you were about to offer options, call create_generation with the recommended option instead and follow the next_step it returns: it starts a video their credits cover or says what fits.';
+        }
+      }
+      return jsonText(value);
+    } catch (error) { return toolError(error); }
   });
 
   server.registerTool('get_account', {
@@ -837,6 +882,8 @@ export function createHansoraServer(ctx) {
         const reason = result.message || result.error || `generation_submit_failed_${response.status}`;
         const submitKind = classifyFailure({ provider_message: providerReason, error: String(reason), error_code: result.details?.code ?? response.status });
         if (submitKind === 'temporary') return temporaryIssueResult(model, price, unavailable, providerReason || String(reason).slice(0, 200));
+        const fallback = await firstVideoFallback(userId, model, normalizedInput);
+        if (fallback) return firstVideoFallbackResult(model, fallback, providerReason || String(reason).slice(0, 200));
         throw new Error(providerReason && providerReason !== reason ? `${reason}: ${providerReason}. Nothing was generated and no credits were used.` : reason);
       }
       return jsonText({
@@ -948,7 +995,22 @@ export function createHansoraServer(ctx) {
       if (await refreshFromProvider(userId, [generation, ...siblings], origin)) {
         generation = (await getGeneration(userId, run_id)) || generation;
       }
-      return jsonText({ ...presentGeneration(generation, run_id, unavailable), ...(await batchFields(userId, run_id)) });
+      const presented = presentGeneration(generation, run_id, unavailable);
+      // A refused first video (temporary issues already switch model on their own).
+      if (presented.status === 'failed' && presented.failure_kind && presented.failure_kind !== 'temporary') {
+        const meta = generation.meta && typeof generation.meta === 'object' ? generation.meta : {};
+        const model = [meta.model_id, meta.engine, meta.model].map((id) => (typeof id === 'string' && id ? getModel(id) : null)).find(Boolean);
+        const fallback = model && await firstVideoFallback(userId, model, {
+          image_urls: Array.isArray(meta.reference_image_urls) ? meta.reference_image_urls : [],
+          video_urls: Array.isArray(meta.reference_video_urls) ? meta.reference_video_urls : []
+        });
+        if (fallback) {
+          const step = firstVideoFallbackResult(model, fallback).structuredContent.next_step;
+          presented.next_option = fallback;
+          presented.next_step = step.replace(' could not make this video and nothing was charged.', ' could not make this video; its credits were refunded.');
+        }
+      }
+      return jsonText({ ...presented, ...(await batchFields(userId, run_id)) });
     } catch (error) { return toolError(error); }
   });
 
