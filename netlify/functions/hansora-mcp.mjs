@@ -9,11 +9,12 @@ import {
   generationAppResource
 } from '../../lib/hansora-mcp/generation-app.mjs';
 import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema, storeGenerationFiles } from '../../lib/hansora-mcp/file-inputs.mjs';
-import { VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
+import { PHOTO_SHAPED_MODELS, VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote, startingFrame } from '../../lib/hansora-mcp/registry.mjs';
+import { photoShape } from '../../lib/hansora-mcp/image-shape.mjs';
 import { alternativeFor, classifyFailure, failureView, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { recordToolEvent } from '../../lib/hansora-mcp/events.mjs';
-import { accountSummary, insufficientCreditsResult, nextFirstVideoOption, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -197,7 +198,7 @@ async function firstVideoFallback(userId, model, input) {
   try {
     if (!(await isFirstGeneration(userId))) return null;
     const account = await getAccount(userId);
-    return nextFirstVideoOption(model, input, Number(account?.internal_credits || 0));
+    return nextFirstVideoOption(model, input, Number(account?.internal_credits || 0), firstVideoOrder(userId, input).order);
   } catch {
     return null;
   }
@@ -786,10 +787,16 @@ export function createHansoraServer(ctx) {
         // The runner re-checks the balance, so a failed lookup here should not block the request.
         const account = await getAccount(userId).catch(() => null);
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
-          return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
+          return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId), userId });
         }
       }
       const storedInput = await storeGenerationFiles(input);
+      // A tall photo animated at the default 16:9 gets its top cut off; match the photo unless a shape was asked for.
+      if (!String(storedInput.aspect_ratio || '').trim() && PHOTO_SHAPED_MODELS.has(model.id)) {
+        const frame = startingFrame(model.id, storedInput);
+        const shape = frame ? await photoShape(frame) : null;
+        if (shape) storedInput.aspect_ratio = shape;
+      }
       const runId = `${userId}-mcp-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       const payload = buildGenerationPayload(input.model_id, storedInput, userId, runId);
       // ChatGPT can't see how long a reference video is, so its quote guesses. These launchers measure
@@ -868,7 +875,7 @@ export function createHansoraServer(ctx) {
         const charged = Number.isFinite(need) && need > 0
           ? { ...(price || {}), displayedCredits: Number((need * 10).toFixed(2)) }
           : price;
-        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
+        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId), userId });
       }
       // Henshin and reference-video launchers measure the uploaded files and report the real charge.
       const debited = Number(result?.debited);
@@ -1001,6 +1008,7 @@ export function createHansoraServer(ctx) {
         const meta = generation.meta && typeof generation.meta === 'object' ? generation.meta : {};
         const model = [meta.model_id, meta.engine, meta.model].map((id) => (typeof id === 'string' && id ? getModel(id) : null)).find(Boolean);
         const fallback = model && await firstVideoFallback(userId, model, {
+          duration: meta.duration,
           image_urls: Array.isArray(meta.reference_image_urls) ? meta.reference_image_urls : [],
           video_urls: Array.isArray(meta.reference_video_urls) ? meta.reference_video_urls : []
         });

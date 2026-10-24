@@ -12,7 +12,7 @@ const { resetHealthCache, unavailableFromRuns } = await import('../../lib/hansor
 const token = `x.${Buffer.from(JSON.stringify({ client_id: 'chatgpt', scope: 'email' })).toString('base64url')}.y`;
 
 // Drives the real /mcp handler; only Supabase and the generation runner are simulated.
-async function callTool(name, args, { credits, generations = [], runner = () => ({ status: 202, body: { ok: true, submitted: true } }), kieCheck = null, rest = null }) {
+async function callTool(name, args, { credits, generations = [], runner = () => ({ status: 202, body: { ok: true, submitted: true } }), kieCheck = null, rest = null, files = {} }) {
   const submitted = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, options = {}) => {
@@ -30,6 +30,7 @@ async function callTool(name, args, { credits, generations = [], runner = () => 
       const result = runner();
       return reply(result.status, result.body);
     }
+    if (files[href]) return new Response(files[href], { status: 206 });
     throw new Error(`unexpected fetch ${href}`);
   };
   resetHealthCache();
@@ -183,6 +184,40 @@ test('a video price the balance does not cover is marked so ChatGPT does not sho
   const fits = (await callTool('quote_generation', { model_id: 'veo31-lite', duration: 8, resolution: '1080p' }, { credits: 3 })).result.structuredContent;
   assert.equal(fits.fits_balance, undefined);
   assert.equal(fits.next_step, undefined);
+});
+
+test('a video animated from a tall photo is made tall, unless a shape was asked for', async () => {
+  const png = Buffer.alloc(33);
+  png.writeUInt32BE(0x89504e47, 0); png.write('IHDR', 12, 'latin1'); png.writeUInt32BE(1080, 16); png.writeUInt32BE(1920, 20);
+  const photo = 'https://cdn.test/portrait.png';
+  const run = async (args) => (await callTool('create_generation', {
+    model_id: 'veo31-lite', prompt: 'She smiles', duration: 8, resolution: '720p', image_urls: [photo], ...args
+  }, { credits: 3, files: { [photo]: png } })).submitted[0].payload;
+  assert.equal((await run({})).aspectRatio, '9:16');
+  assert.equal((await run({ aspect_ratio: '16:9' })).aspectRatio, '16:9');
+});
+
+test('new users are split for good between a Grok-first and a Veo-first first video', async () => {
+  const { firstVideoArm, firstVideoOrder, insufficientCreditsResult } = await import('../../lib/hansora-mcp/credits.mjs');
+  const { getModel } = await import('../../lib/hansora-mcp/registry.mjs');
+  const ids = Array.from({ length: 200 }, (_, index) => `user-${index}`);
+  const grok = ids.filter((id) => firstVideoArm(id) === 'grok_first').length;
+  assert.ok(grok > 70 && grok < 130, `about half, got ${grok}`);
+  assert.equal(firstVideoArm('user-7'), firstVideoArm('user-7'));
+  const grokUser = ids.find((id) => firstVideoArm(id) === 'grok_first');
+  assert.equal(firstVideoOrder(grokUser, { duration: 6 }).order[0], 'grok-video');
+  assert.equal(firstVideoOrder(grokUser, { duration: 10 }).order[0], 'veo31-lite', 'asked for more than 6 seconds');
+
+  const seedance = getModel('seedance25');
+  const result = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true, userId: grokUser }).structuredContent;
+  assert.equal(result.first_video_arm, 'grok_first');
+  assert.equal(result.options_within_balance[0].model_id, 'grok-video');
+  assert.match(result.next_step, /Exception: if people in the video must speak a language other than English or Chinese, use model_id veo31-lite with duration 8, resolution 1080p instead\./);
+  const veoUser = ids.find((id) => firstVideoArm(id) === 'veo_first');
+  const veo = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true, userId: veoUser }).structuredContent;
+  assert.equal(veo.first_video_arm, 'veo_first');
+  assert.equal(veo.options_within_balance[0].model_id, 'veo31-lite');
+  assert.doesNotMatch(veo.next_step, /Exception/);
 });
 
 test('a request the balance covers is submitted as before', async () => {
