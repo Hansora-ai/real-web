@@ -140,6 +140,51 @@ test('a started generation tells ChatGPT the card follows it, and a ready one ha
   assert.match(value.next_step, /Never build, shorten or change a link yourself/);
 });
 
+test('a new user\'s first video goes to Veo 3.1 Lite in 1080p, then Grok, before older models', async () => {
+  const { result } = await callTool('create_generation', {
+    model_id: 'seedance25', prompt: 'A knight fights a dragon', duration: 10, resolution: '720p'
+  }, { credits: 3 });
+  const value = result.structuredContent;
+  assert.deepEqual(value.options_within_balance.map((option) => option.model_id).slice(0, 2), ['veo31-lite', 'grok-video']);
+  assert.deepEqual(value.options_within_balance[0].settings, { duration: 8, resolution: '1080p' });
+  assert.equal(value.options_within_balance[0].credits, 25);
+  assert.match(value.next_step, /Call create_generation right now with model_id veo31-lite and duration 8, resolution 1080p/);
+});
+
+test('if the first video is refused by its model, the next model in line is started without a question', async () => {
+  const { result } = await callTool('create_generation', {
+    model_id: 'veo31-lite', prompt: 'A girl waving', duration: 8, resolution: '1080p'
+  }, { credits: 3, runner: () => ({ status: 400, body: { ok: false, error: 'provider_rejected' } }) });
+  const value = result.structuredContent;
+  assert.equal(value.error, 'first_video_refused');
+  assert.equal(value.credits_used, 0);
+  assert.equal(value.next_option.model_id, 'grok-video');
+  assert.match(value.next_step, /This is the user's first video, so do not stop or ask: call create_generation right now with model_id grok-video/);
+
+  // The chain always ends: after the last model there is no further suggestion.
+  const last = await callTool('create_generation', {
+    model_id: 'kling25', prompt: 'A girl waving', duration: 5, resolution: '1080p'
+  }, { credits: 3, runner: () => ({ status: 400, body: { ok: false, error: 'provider_rejected' } }) });
+  assert.notEqual(last.result.structuredContent?.error, 'first_video_refused');
+
+  // A returning user gets the usual explanation, not an automatic switch.
+  const returning = await callTool('create_generation', {
+    model_id: 'veo31-lite', prompt: 'A girl waving', duration: 8, resolution: '1080p'
+  }, { credits: 3, rest: returningUser, runner: () => ({ status: 400, body: { ok: false, error: 'provider_rejected' } }) });
+  assert.notEqual(returning.result.structuredContent?.error, 'first_video_refused');
+});
+
+test('a video price the balance does not cover is marked so ChatGPT does not show it', async () => {
+  const pricey = (await callTool('quote_generation', { model_id: 'seedance25', duration: 10, resolution: '720p' }, { credits: 3 })).result.structuredContent;
+  assert.equal(pricey.credits, 318);
+  assert.equal(pricey.fits_balance, false);
+  assert.equal(pricey.credits_available, 30);
+  assert.match(pricey.next_step, /do not show it to them/);
+  const fits = (await callTool('quote_generation', { model_id: 'veo31-lite', duration: 8, resolution: '1080p' }, { credits: 3 })).result.structuredContent;
+  assert.equal(fits.fits_balance, undefined);
+  assert.equal(fits.next_step, undefined);
+});
+
 test('a request the balance covers is submitted as before', async () => {
   const { result, submitted } = await callTool('create_generation', {
     model_id: 'grok-video', prompt: 'A cat doctor explainer', duration: 6, resolution: '720p'

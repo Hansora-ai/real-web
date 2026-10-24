@@ -11,7 +11,7 @@ test('an event row keeps the step, model, outcome and price, never the prompt', 
     { model_id: 'seedance25', prompt: 'secret prompt', duration: 10, resolution: '720p' },
     { isError: true, structuredContent: { error: 'insufficient_credits', credits_required: 318, credits_available: 30, options_within_balance: [{ model_id: 'grok-video' }], first_generation: true } });
   assert.deepEqual(row, {
-    user_id: 'user-1', tool: 'create_generation', model_id: 'seedance25', outcome: 'insufficient_credits',
+    user_id: 'user-1', tool: 'create_generation', model_id: 'seedance25', outcome: 'switched_to_affordable',
     credits: 318, balance: 30, run_id: null,
     details: { duration: 10, resolution: '720p', options: ['grok-video'], first_generation: true }
   });
