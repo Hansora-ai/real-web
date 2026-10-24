@@ -32,6 +32,16 @@ Video references add their **measured combined length** to output seconds. Seeda
 
 ## Billing and recovery
 
+### 480p results and the Make it 1080p action
+
+New Search Models Seedance 2.5 requests at 480p set `draft: true` on the same generation; their current customer price is unchanged. Completed, unexpired drafts get a compact Make it 1080p action on desktop and mobile, including Russian and Armenian pages. Older ordinary 480p tasks are not relabeled as drafts. The provider requires a genuine draft task less than seven days old.
+
+The action obtains an authenticated server quote and displays the credit price before submission. `run-seedance-25-final` loads the original task ID from the customer's protected history row; arbitrary provider IDs and client-provided media/duration are not trusted. The provider receives only the draft task ID and permitted output options. Finalization uses the published no-video-input 1080p rate on output plus the original reference-video seconds, without the normal reference-video minimum. The customer price targets 5% gross margin, rounded up to a whole displayed credit: a 10-second final without source video is 677 displayed credits; a 10-second final with ten seconds of source video is 1,354. These charges are additional to the original 480p generation.
+
+Each original draft has one active or successful finalization. Concurrent confirmations share a deterministic billed row; a confirmed failed/refunded attempt can be explicitly retried. Ambiguous submissions are recovered without another paid POST. The 1080p result is stored separately, and finalization failures refund only their own frozen charge. This reuses the existing billing migration; no additional SQL is required.
+
+Finalization source: [reAPI Draft mode and billing](https://test.reapi.ai/docs/seedance-2-5#draft-mode), checked 2026-10-24. Provider rates remain centralized in `public/seedance-pricing.js`.
+
 The SQL transition function reserves the run and debits the balance in one transaction. A deterministic row ID prevents duplicate paid submissions for the same account/run, including concurrent requests. The server-owned history guard prevents clients changing charge/refund fields or deleting an unfinished reAPI row.
 
 Confirmed submit rejections and failed tasks refund the frozen original charge once, atomically with the failure state. Temporary HTTP/polling errors never count as provider failure. Submission POSTs are never automatically retried. An ambiguous submission waits for its signed webhook; if no task ID can be recovered after thirty minutes, recovery refunds it without resubmitting. Known provider task IDs are never expired by this orphan policy.

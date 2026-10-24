@@ -40,6 +40,9 @@
 [functions."run-seedance-25"]
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+[functions."run-seedance-25-final"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
 [functions."run-seedance-cheap"]
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]

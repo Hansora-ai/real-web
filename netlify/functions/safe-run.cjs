@@ -286,6 +286,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-seedance-2',
   '/.netlify/functions/run-seedance-2-mini',
   '/.netlify/functions/run-seedance-25',
+  '/.netlify/functions/run-seedance-25-final',
   '/.netlify/functions/run-seedance-25-cheap',
   '/.netlify/functions/run-seedance-cheap',
   '/.netlify/functions/run-seedream-4-5',
