@@ -33,5 +33,15 @@
       : round(rate * billedSeconds * 10 / (1 - margins[quality]));
     return { internalCredits, displayedCredits: Math.round(internalCredits * 10), duration: seconds, inputSeconds: source, billedSeconds, resolution: quality, providerCostUSD: Math.ceil(rate * billedSeconds * 1000 - 1e-8) / 1000 };
   }
-  return { quote, henshinRates };
+  // Draft finalization uses the no-video 1080p rate for output + original
+  // reference seconds. The normal reference-video minimum does not apply.
+  function quoteFinal({ duration, inputSeconds = 0 } = {}) {
+    const seconds = Number(duration), source = Number(inputSeconds);
+    if (!Number.isInteger(seconds) || seconds < 4 || seconds > 30 || !Number.isFinite(source) || source < 0 || source > 30.0001) throw Error('Invalid Seedance draft duration.');
+    const billedSeconds = seconds + Math.ceil(source);
+    const providerCostUSD = Math.ceil(rates.seedance25.text['1080p'] * billedSeconds * 1000 - 1e-8) / 1000;
+    const internalCredits = round(providerCostUSD * 10 / .95);
+    return { duration: seconds, inputSeconds: source, billedSeconds, resolution: '1080p', providerCostUSD, internalCredits, displayedCredits: Math.round(internalCredits * 10) };
+  }
+  return { quote, quoteFinal, henshinRates };
 });

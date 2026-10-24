@@ -4276,7 +4276,8 @@
 
 	    </style>
   <script src="/kling4-pricing.js?v=20261022"></script>
-  <script src="/seedance-pricing.js?v=20261020"></script>
+  <script src="/seedance-pricing.js?v=20261024-draft"></script>
+  <script src="/seedance-draft.js?v=20261024"></script>
   <script src="/wan-pricing.js?v=20261021"></script>
 <style>
 button[aria-busy="true"] { opacity:1!important;cursor:wait; }
@@ -5657,6 +5658,38 @@ async function __mjFetchNbCheck(params){
       requestFirstFrame();
     }
 
+    function createSeedanceFinalAction(data) {
+      return window.SeedanceDraftUI.createButton(data, {
+        async token() {
+          const {data:session} = await supabaseClient.auth.getSession();
+          const token = session?.session?.access_token;
+          if (!token) throw Error('Please log in first.');
+          return token;
+        },
+        start(runId, original) {
+          return createClientRequestPlaceholder({uid:currentUser?.id,runId,
+            model:{id:'seedance25',name:'Seedance 2.5 · 1080p',category:'video'},
+            prompt:original.prompt||'',resolution:'1080p'});
+        },
+        async accepted(reply, context) {
+          if (!context || context.runId !== reply.run_id) {
+            if (context) context.remove();
+            await loadRecentHistory();
+          } else {
+            context.markGenerating();
+            context.controller.apply({status:reply.result_url?'ready':'generating',result_url:reply.result_url||null,meta:reply.meta||{}});
+            if (!reply.result_url) startPollGeneration(reply.run_id,[context.controller],reply.taskId||'','reapi-check');
+          }
+          await refreshCredits();
+        },
+        async rejected(error, context) {
+          if (context) context.remove();
+          showStatus(error.message,'error');
+          await refreshCredits();
+        }
+      });
+    }
+
     function createResultThumb(data) {
       if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Model';
@@ -5798,6 +5831,8 @@ async function __mjFetchNbCheck(params){
 
       actions.appendChild(state);
       actions.appendChild(getBtn);
+      const finalAction = createSeedanceFinalAction(data);
+      actions.appendChild(finalAction.button);
 
       row.appendChild(meta);
       row.appendChild(actions);
@@ -5815,6 +5850,7 @@ async function __mjFetchNbCheck(params){
       let __previewBound = !!url;
 
       function apply(next) {
+        finalAction.update(next || {});
         try {
           const nextStatusRaw = (next && next.status != null) ? String(next.status) : statusRaw;
           const nextStatusLower = String(nextStatusRaw || '').toLowerCase();
@@ -6071,6 +6107,7 @@ function createResultCard(data) {
       const createVideoBtn = createResultShortcutButton('create-video', 'Create video');
       const recreateBtn = createResultShortcutButton('recreate', 'Recreate');
       const downloadBtn = createResultShortcutButton('download', 'Download');
+      const finalAction = createSeedanceFinalAction(data);
       downloadBtn.classList.add('hidden');
       createVideoBtn.classList.add('hidden');
       createVideoBtn.addEventListener('click', (event) => {
@@ -6092,6 +6129,7 @@ function createResultCard(data) {
       cardActions.appendChild(createVideoBtn);
       cardActions.appendChild(recreateBtn);
       cardActions.appendChild(downloadBtn);
+      cardActions.appendChild(finalAction.button);
       bottomRow.appendChild(statusText);
       bottomRow.appendChild(cardActions);
 
@@ -6103,6 +6141,7 @@ function createResultCard(data) {
       card.appendChild(body);
 
       function apply(newData) {
+        finalAction.update(newData || {});
         const stRaw = (newData.status || '').toString();
         const st = stRaw.toLowerCase();
         const hasUrlNow = !!newData.result_url;
@@ -6805,7 +6844,7 @@ function createResultCard(data) {
               const directUrl = directResultUrlFromCheck(js);
               const urls = directUrl ? [directUrl] : __mjTryExtractAllImageUrls(js);
               if (urls && urls.length) {
-                item.controller.apply({ status: 'ready', result_url: urls[0] });
+                item.controller.apply({ ...js, status: 'ready', result_url: urls[0] });
                 await refreshCredits();
                 return;
               }
@@ -6983,7 +7022,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     if (token && token.cancelled) return;
     if (document.visibilityState === 'hidden') continue;
     try {
-      if (taskId || (checker || 'kie-check') === 'kie-check') {
+      if (taskId || ['kie-check','reapi-check'].includes(checker || 'kie-check')) {
         const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId, checker: checker || 'kie-check' });
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
         const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('cancel');
@@ -7000,7 +7039,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const directUrl = directResultUrlFromCheck(nb?.js);
         if (directUrl) {
           for (let i = 0; i < controllers.length; i++) {
-            controllers[i].apply({ status: 'ready', result_url: directUrl });
+            controllers[i].apply({ ...nb.js, status: 'ready', result_url: directUrl });
           }
           await refreshCredits();
           return;
@@ -7034,6 +7073,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           const u = urls[i] || null;
           controllers[i].apply({
             status: u ? status : 'processing',
+            meta: data.meta,
             result_url: u
           });
         }
@@ -12795,6 +12835,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             duration: model.id === 'seedance25' && seedance25UsesSourceVideoSettings() ? -1 : (duration ? Number(duration) : 5),
             source_video_duration: model.id === 'seedance25' && seedance25UsesSourceVideoSettings() ? seedanceSingleVideoDuration : undefined,
             resolution: model.id === 'seedance20-mini' ? (currentResolution || '720p') : (currentSeedanceVariant === 'fast' ? '720p' : (currentResolution || '720p')),
+            draft: model.id === 'seedance25' && currentResolution === '480p',
             generate_audio: !!seedanceGenerateAudio,
             enable_web_search: !!seedanceWebSearch,
             web_search: !!seedanceWebSearch,
