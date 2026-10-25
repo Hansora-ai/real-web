@@ -6,8 +6,8 @@ import { createHash, createHmac } from "node:crypto";
 import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
 
 // Label credits → expected ruble amount and the credits actually granted. 150 and 265 are the Hansora
-// Automation Starter and Growth packs. The Creative packs give 90 / 200 / 500 / 1000 since 2026-10-25; labels
-// from pages opened before then (100 / 210 / 535 / 1100) still pay out, at the new amount for the same price.
+// Automation Starter and Growth packs. The Creative packs give 90 / 200 / 510 / 1050 since 2026-10-25; labels
+// from pages opened before then still pay out, at the new amount for the same price.
 const PACKS = {
   90: { rub: 750, grant: 90 },
   100: { rub: 750, grant: 90 },
@@ -15,10 +15,12 @@ const PACKS = {
   265: { rub: 1850, grant: 265 },
   200: { rub: 1500, grant: 200 },
   210: { rub: 1500, grant: 200 },
-  500: { rub: 3700, grant: 500 },
-  535: { rub: 3700, grant: 500 },
-  1000: { rub: 7400, grant: 1000 },
-  1100: { rub: 7400, grant: 1000 }
+  500: { rub: 3700, grant: 510 },
+  510: { rub: 3700, grant: 510 },
+  535: { rub: 3700, grant: 510 },
+  1000: { rub: 7400, grant: 1050 },
+  1050: { rub: 7400, grant: 1050 },
+  1100: { rub: 7400, grant: 1050 }
 };
 
 export async function handler(event) {

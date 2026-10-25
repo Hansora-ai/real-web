@@ -190,9 +190,9 @@ html[data-payment-mode="ru"] .buy-credits { margin-top: 12px !important; }
 
 html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="90"]) .buy-credits { margin-top: 12px !important; }
 
-html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="500"]) .buy-credits { margin-top: 12px !important; }
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="510"]) .buy-credits { margin-top: 12px !important; }
 
-html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="1000"]) .buy-credits { margin-top: 12px !important; }
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="1050"]) .buy-credits { margin-top: 12px !important; }
 
 html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits) > .mt-2.text-sm { min-height: 38px; display: flex; align-items: flex-start; }
 
@@ -865,6 +865,17 @@ img, video { max-width: 100%; height: auto; }
 <link rel="preconnect" href="https://yoomoney.ru" crossorigin>
 <link rel="dns-prefetch" href="//yoomoney.ru">
 <link rel="stylesheet" href="pricing-polish.css?v=20261013c">
+
+<style data-hansora-gift-offer>
+.hs-gift-badge{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:999px;background:linear-gradient(90deg,#22c55e,#10b981);color:#03140b;font-weight:800;font-size:13px;letter-spacing:.01em;box-shadow:0 0 22px rgba(34,197,94,.45);white-space:nowrap;animation:hsGiftGlow 2.4s ease-in-out infinite}
+.hs-gift-split{margin-top:6px;font-size:15px;font-weight:600;color:rgba(255,255,255,.72)}
+.hs-gift-split b{color:#4ade80;font-weight:800}
+.hs-gift-line,.price-card p.hs-gift-line{margin-top:12px;font-size:15px;font-weight:800;color:#4ade80}
+.hs-upsell{margin-top:10px;padding:7px 10px;border:1px dashed rgba(52,211,153,.45);border-radius:10px;background:rgba(16,185,129,.09);color:#a7f3d0;font-size:13px;line-height:1.35}
+.hs-upsell b{color:#4ade80}
+@keyframes hsGiftGlow{0%,100%{box-shadow:0 0 14px rgba(34,197,94,.35)}50%{box-shadow:0 0 26px rgba(34,197,94,.7)}}
+@media (prefers-reduced-motion:reduce){.hs-gift-badge{animation:none}}
+</style>
 </head>
 <body>
 <div id="sharedHeader"></div>
@@ -914,6 +925,7 @@ img, video { max-width: 100%; height: auto; }
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$14.99</div>
 </div>
 <div class="mt-2 text-sm text-purple-200">Launch discount price</div>
+<div class="hs-upsell">🎁 Get <b>200 free credits</b> with the $19.99 pack</div>
 <a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="90" data-product="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="750" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=750.00&amp;targets=HANSORA%20AI%2090%20credits&amp;label=hansora_web_90" href="#buy-90">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 300 images (depends on the model)</span><span class="block">Up to 50 videos (depends on the model)</span><span class="block">Up to 90 audio generations (depends on the model)</span></span></li>
@@ -933,15 +945,16 @@ img, video { max-width: 100%; height: auto; }
 <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-400 via-purple-400 to-sky-400" style="top:1px"></div>
 <div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-lg shadow-purple-500/25" data-plan-badge="popular">Most Popular</span></div>
 <div class="flex items-center justify-between gap-3 mt-1">
-<div class="text-sm text-white/60">180 + 20 credits</div>
+<div class="hs-gift-badge">🎁 +200 FREE credits</div>
 <span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $10</span>
 </div>
 <div class="mt-3 text-5xl font-extrabold tracking-tight">200 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="hs-gift-split">1,800 + <b>200 free</b></div>
 <div class="mt-4 flex items-end gap-3">
 <div class="text-4xl font-extrabold text-white">$19.99</div>
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$29.99</div>
 </div>
-<div class="mt-2 text-sm text-purple-200">Includes 20 gift credits (11%)</div>
+<div class="hs-gift-line">🎁 You get 11% more credits, free</div>
 <a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/25" data-credits="200" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="1500" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=1500.00&amp;targets=HANSORA%20AI%20200%20credits&amp;label=hansora_web_200" href="#buy-200">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 666 images (depends on the model)</span><span class="block">Up to 111 videos (depends on the model)</span><span class="block">Up to 200 audio generations (depends on the model)</span></span></li>
@@ -961,18 +974,19 @@ img, video { max-width: 100%; height: auto; }
 <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 via-white/5 to-white/[.03] shadow-soft p-6 flex flex-col relative overflow-hidden">
 <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-400 to-sky-400"></div>
 <div class="flex items-center justify-between gap-3">
-<div class="text-sm text-white/60">450 + 50 credits</div>
+<div class="hs-gift-badge">🎁 +600 FREE credits</div>
 <span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $25</span>
 </div>
 <div class="mt-3 text-5xl font-extrabold tracking-tight">500 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="hs-gift-split">4,500 + <b>600 free</b></div>
 <div class="mt-4 flex items-end gap-3">
 <div class="text-4xl font-extrabold text-white">$49.99</div>
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$74.99</div>
 </div>
-<div class="mt-2 text-sm text-purple-200">Includes 50 gift credits (11%)</div>
-<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="500" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20500%20credits&amp;label=hansora_web_500" href="#buy-500">Buy</a>
+<div class="hs-gift-line">🎁 You get 13% more credits, free</div>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="510" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20510%20credits&amp;label=hansora_web_510" href="#buy-510">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 1666 images (depends on the model)</span><span class="block">Up to 277 videos (depends on the model)</span><span class="block">Up to 500 audio generations (depends on the model)</span></span></li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 1700 images (depends on the model)</span><span class="block">Up to 283 videos (depends on the model)</span><span class="block">Up to 510 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p-4k high quality (model‑dependent)</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates &amp; Examples/Prompts</li>
@@ -982,7 +996,7 @@ img, video { max-width: 100%; height: auto; }
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Regular feature updates &amp; improvements</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to new models as they launch</li>
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+50 gift credits (11%)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+60 gift credits (13%)</li>
 </ul>
 </div>
 <!-- Plan 1100 -->
@@ -990,18 +1004,19 @@ img, video { max-width: 100%; height: auto; }
 <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-400 to-purple-400" style="top:1px"></div>
 <div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-lg shadow-sky-500/20" data-plan-badge="value">Best Value</span></div>
 <div class="flex items-center justify-between gap-3 mt-1">
-<div class="text-sm text-white/60">900 + 100 credits</div>
+<div class="hs-gift-badge">🎁 +1,500 FREE credits</div>
 <span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $50</span>
 </div>
 <div class="mt-3 text-5xl font-extrabold tracking-tight">1000 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="hs-gift-split">9,000 + <b>1,500 free</b></div>
 <div class="mt-4 flex items-end gap-3">
 <div class="text-4xl font-extrabold text-white">$99.99</div>
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$149.99</div>
 </div>
-<div class="mt-2 text-sm text-purple-200">Includes 100 gift credits (11%)</div>
-<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="1000" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201000%20credits&amp;label=hansora_web_1000" href="#buy-1000">Buy</a>
+<div class="hs-gift-line">🎁 You get 17% more credits, free</div>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="1050" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201050%20credits&amp;label=hansora_web_1050" href="#buy-1050">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 3333 images (depends on the model)</span><span class="block">Up to 555 videos (depends on the model)</span><span class="block">Up to 1000 audio generations (depends on the model)</span></span></li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 3500 images (depends on the model)</span><span class="block">Up to 583 videos (depends on the model)</span><span class="block">Up to 1050 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p-4k high quality (model‑dependent)</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates &amp; Examples/Prompts</li>
@@ -1011,7 +1026,7 @@ img, video { max-width: 100%; height: auto; }
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Regular feature updates &amp; improvements</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to new models as they launch</li>
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+100 gift credits (11%)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+150 gift credits (17%)</li>
 </ul>
 </div>
 </div>
@@ -1144,15 +1159,15 @@ Pay once, use credits across image, video, product card, audio, and creative too
 </div>
 <div class="plan-cell">
 <strong>Pro</strong>
-<div class="plan-credit-line"><span>450 + 50 credits (11%)</span><em class="plan-save">Save $25</em></div>
+<div class="plan-credit-line"><span>450 + 60 credits (13%)</span><em class="plan-save">Save $25</em></div>
 <div class="plan-price">$49.99 <span class="plan-old-price">$74.99</span></div>
-<a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="500" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20500%20credits&amp;label=hansora_web_500" href="#buy-500">Buy</a>
+<a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="510" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20510%20credits&amp;label=hansora_web_510" href="#buy-510">Buy</a>
 </div>
 <div class="plan-cell plan-featured">
 <strong>Large</strong>
-<div class="plan-credit-line"><span>900 + 100 credits (11%)</span><em class="plan-save">Save $50</em></div>
+<div class="plan-credit-line"><span>900 + 150 credits (17%)</span><em class="plan-save">Save $50</em></div>
 <div class="plan-price">$99.99 <span class="plan-old-price">$149.99</span></div>
-<a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="1000" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201000%20credits&amp;label=hansora_web_1000" href="#buy-1000">Buy</a>
+<a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="1050" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201050%20credits&amp;label=hansora_web_1050" href="#buy-1050">Buy</a>
 </div>
 </div>
 
@@ -1160,75 +1175,75 @@ Pay once, use credits across image, video, product card, audio, and creative too
 <div class="model-usage-category">Video <span>top models</span></div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Seedance 2 Mini</strong><small>5.2 credits / 4s</small></div>
-<div class="model-usage-count">17 videos</div><div class="model-usage-count">38 videos</div><div class="model-usage-count">96 videos</div><div class="model-usage-count">192 videos</div>
+<div class="model-usage-count">17 videos</div><div class="model-usage-count">38 videos</div><div class="model-usage-count">98 videos</div><div class="model-usage-count">201 videos</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Seedance 2.0 720p</strong><small>10 credits / 4s</small></div>
-<div class="model-usage-count">9 videos</div><div class="model-usage-count">20 videos</div><div class="model-usage-count">50 videos</div><div class="model-usage-count">100 videos</div>
+<div class="model-usage-count">9 videos</div><div class="model-usage-count">20 videos</div><div class="model-usage-count">51 videos</div><div class="model-usage-count">105 videos</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Kling 3.0 Turbo</strong><small>3.6 credits / 3s</small></div>
-<div class="model-usage-count">25 videos</div><div class="model-usage-count">55 videos</div><div class="model-usage-count">138 videos</div><div class="model-usage-count">277 videos</div>
+<div class="model-usage-count">25 videos</div><div class="model-usage-count">55 videos</div><div class="model-usage-count">141 videos</div><div class="model-usage-count">291 videos</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Gemini Omni Flash</strong><small>4.5 credits / 4s</small></div>
-<div class="model-usage-count">20 videos</div><div class="model-usage-count">44 videos</div><div class="model-usage-count">111 videos</div><div class="model-usage-count">222 videos</div>
+<div class="model-usage-count">20 videos</div><div class="model-usage-count">44 videos</div><div class="model-usage-count">113 videos</div><div class="model-usage-count">233 videos</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Kling 3.0 720p</strong><small>3 credits / 3s</small></div>
-<div class="model-usage-count">30 videos</div><div class="model-usage-count">66 videos</div><div class="model-usage-count">166 videos</div><div class="model-usage-count">333 videos</div>
+<div class="model-usage-count">30 videos</div><div class="model-usage-count">66 videos</div><div class="model-usage-count">170 videos</div><div class="model-usage-count">350 videos</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Grok Video</strong><small>1.8 credits / 6s</small></div>
-<div class="model-usage-count">50 videos</div><div class="model-usage-count">111 videos</div><div class="model-usage-count">277 videos</div><div class="model-usage-count">555 videos</div>
+<div class="model-usage-count">50 videos</div><div class="model-usage-count">111 videos</div><div class="model-usage-count">283 videos</div><div class="model-usage-count">583 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Kling 3.0 1080p</strong><small>3.9 credits / 3s</small></div>
-<div class="model-usage-count is-soft">23 videos</div><div class="model-usage-count is-soft">51 videos</div><div class="model-usage-count is-soft">128 videos</div><div class="model-usage-count is-soft">256 videos</div>
+<div class="model-usage-count is-soft">23 videos</div><div class="model-usage-count is-soft">51 videos</div><div class="model-usage-count is-soft">130 videos</div><div class="model-usage-count is-soft">269 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Kling 3.0 4K</strong><small>12 credits / 3s</small></div>
-<div class="model-usage-count is-soft">7 videos</div><div class="model-usage-count is-soft">16 videos</div><div class="model-usage-count is-soft">41 videos</div><div class="model-usage-count is-soft">83 videos</div>
+<div class="model-usage-count is-soft">7 videos</div><div class="model-usage-count is-soft">16 videos</div><div class="model-usage-count is-soft">42 videos</div><div class="model-usage-count is-soft">87 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Seedance 2.0 4K</strong><small>48 credits / 4s</small></div>
-<div class="model-usage-count is-soft">1 videos</div><div class="model-usage-count is-soft">4 videos</div><div class="model-usage-count is-soft">10 videos</div><div class="model-usage-count is-soft">20 videos</div>
+<div class="model-usage-count is-soft">1 videos</div><div class="model-usage-count is-soft">4 videos</div><div class="model-usage-count is-soft">10 videos</div><div class="model-usage-count is-soft">21 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Seedance 2.0 1080p</strong><small>22 credits / 4s</small></div>
-<div class="model-usage-count is-soft">4 videos</div><div class="model-usage-count is-soft">9 videos</div><div class="model-usage-count is-soft">22 videos</div><div class="model-usage-count is-soft">45 videos</div>
+<div class="model-usage-count is-soft">4 videos</div><div class="model-usage-count is-soft">9 videos</div><div class="model-usage-count is-soft">23 videos</div><div class="model-usage-count is-soft">47 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Happy Horse 1.1 720p</strong><small>7.5 credits / 5s</small></div>
-<div class="model-usage-count is-soft">12 videos</div><div class="model-usage-count is-soft">26 videos</div><div class="model-usage-count is-soft">66 videos</div><div class="model-usage-count is-soft">133 videos</div>
+<div class="model-usage-count is-soft">12 videos</div><div class="model-usage-count is-soft">26 videos</div><div class="model-usage-count is-soft">68 videos</div><div class="model-usage-count is-soft">140 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Veo 3.1 1080p</strong><small>5 credits / video</small></div>
-<div class="model-usage-count is-soft">18 videos</div><div class="model-usage-count is-soft">40 videos</div><div class="model-usage-count is-soft">100 videos</div><div class="model-usage-count is-soft">200 videos</div>
+<div class="model-usage-count is-soft">18 videos</div><div class="model-usage-count is-soft">40 videos</div><div class="model-usage-count is-soft">102 videos</div><div class="model-usage-count is-soft">210 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Veo 3.1 4K</strong><small>12 credits / video</small></div>
-<div class="model-usage-count is-soft">7 videos</div><div class="model-usage-count is-soft">16 videos</div><div class="model-usage-count is-soft">41 videos</div><div class="model-usage-count is-soft">83 videos</div>
+<div class="model-usage-count is-soft">7 videos</div><div class="model-usage-count is-soft">16 videos</div><div class="model-usage-count is-soft">42 videos</div><div class="model-usage-count is-soft">87 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Kling 2.6</strong><small>4 credits / 5s</small></div>
-<div class="model-usage-count is-soft">22 videos</div><div class="model-usage-count is-soft">50 videos</div><div class="model-usage-count is-soft">125 videos</div><div class="model-usage-count is-soft">250 videos</div>
+<div class="model-usage-count is-soft">22 videos</div><div class="model-usage-count is-soft">50 videos</div><div class="model-usage-count is-soft">127 videos</div><div class="model-usage-count is-soft">262 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Kling 2.5</strong><small>4 credits / 5s</small></div>
-<div class="model-usage-count is-soft">22 videos</div><div class="model-usage-count is-soft">50 videos</div><div class="model-usage-count is-soft">125 videos</div><div class="model-usage-count is-soft">250 videos</div>
+<div class="model-usage-count is-soft">22 videos</div><div class="model-usage-count is-soft">50 videos</div><div class="model-usage-count is-soft">127 videos</div><div class="model-usage-count is-soft">262 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Wan 2.7 Video</strong><small>7.5 credits / 5s</small></div>
-<div class="model-usage-count is-soft">12 videos</div><div class="model-usage-count is-soft">26 videos</div><div class="model-usage-count is-soft">66 videos</div><div class="model-usage-count is-soft">133 videos</div>
+<div class="model-usage-count is-soft">12 videos</div><div class="model-usage-count is-soft">26 videos</div><div class="model-usage-count is-soft">68 videos</div><div class="model-usage-count is-soft">140 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Motion Control 3.0</strong><small>1.5 credits / 3s</small></div>
-<div class="model-usage-count is-soft">60 videos</div><div class="model-usage-count is-soft">133 videos</div><div class="model-usage-count is-soft">333 videos</div><div class="model-usage-count is-soft">666 videos</div>
+<div class="model-usage-count is-soft">60 videos</div><div class="model-usage-count is-soft">133 videos</div><div class="model-usage-count is-soft">340 videos</div><div class="model-usage-count is-soft">700 videos</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Runway Aleph</strong><small>8 credits / video</small></div>
-<div class="model-usage-count is-soft">11 videos</div><div class="model-usage-count is-soft">25 videos</div><div class="model-usage-count is-soft">62 videos</div><div class="model-usage-count is-soft">125 videos</div>
+<div class="model-usage-count is-soft">11 videos</div><div class="model-usage-count is-soft">25 videos</div><div class="model-usage-count is-soft">63 videos</div><div class="model-usage-count is-soft">131 videos</div>
 </div>
 <button class="model-usage-toggle" type="button" aria-expanded="false" data-usage-toggle="">
 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -1240,63 +1255,63 @@ Pay once, use credits across image, video, product card, audio, and creative too
 <div class="model-usage-category">Image <span>popular image models</span></div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>GPT Image 2 1K-2K</strong><small>1 credit / image</small></div>
-<div class="model-usage-count">90 images</div><div class="model-usage-count">200 images</div><div class="model-usage-count">500 images</div><div class="model-usage-count">1000 images</div>
+<div class="model-usage-count">90 images</div><div class="model-usage-count">200 images</div><div class="model-usage-count">510 images</div><div class="model-usage-count">1050 images</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Nano Banana 2 Lite</strong><small>0.5 credits / image</small></div>
-<div class="model-usage-count">180 images</div><div class="model-usage-count">400 images</div><div class="model-usage-count">1000 images</div><div class="model-usage-count">2000 images</div>
+<div class="model-usage-count">180 images</div><div class="model-usage-count">400 images</div><div class="model-usage-count">1020 images</div><div class="model-usage-count">2100 images</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Nano Banana 2 1K-2K</strong><small>1 credit / image</small></div>
-<div class="model-usage-count">90 images</div><div class="model-usage-count">200 images</div><div class="model-usage-count">500 images</div><div class="model-usage-count">1000 images</div>
+<div class="model-usage-count">90 images</div><div class="model-usage-count">200 images</div><div class="model-usage-count">510 images</div><div class="model-usage-count">1050 images</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Seedream 5.0 Lite</strong><small>0.5 credits / image</small></div>
-<div class="model-usage-count">180 images</div><div class="model-usage-count">400 images</div><div class="model-usage-count">1000 images</div><div class="model-usage-count">2000 images</div>
+<div class="model-usage-count">180 images</div><div class="model-usage-count">400 images</div><div class="model-usage-count">1020 images</div><div class="model-usage-count">2100 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Nano Banana 2 4K</strong><small>1.5 credits / image</small></div>
-<div class="model-usage-count is-soft">60 images</div><div class="model-usage-count is-soft">133 images</div><div class="model-usage-count is-soft">333 images</div><div class="model-usage-count is-soft">666 images</div>
+<div class="model-usage-count is-soft">60 images</div><div class="model-usage-count is-soft">133 images</div><div class="model-usage-count is-soft">340 images</div><div class="model-usage-count is-soft">700 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Nano Banana Pro 4K</strong><small>2 credits / image</small></div>
-<div class="model-usage-count is-soft">45 images</div><div class="model-usage-count is-soft">100 images</div><div class="model-usage-count is-soft">250 images</div><div class="model-usage-count is-soft">500 images</div>
+<div class="model-usage-count is-soft">45 images</div><div class="model-usage-count is-soft">100 images</div><div class="model-usage-count is-soft">255 images</div><div class="model-usage-count is-soft">525 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>GPT Image 2 4K</strong><small>1.5 credits / image</small></div>
-<div class="model-usage-count is-soft">60 images</div><div class="model-usage-count is-soft">133 images</div><div class="model-usage-count is-soft">333 images</div><div class="model-usage-count is-soft">666 images</div>
+<div class="model-usage-count is-soft">60 images</div><div class="model-usage-count is-soft">133 images</div><div class="model-usage-count is-soft">340 images</div><div class="model-usage-count is-soft">700 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Nano Banana Pro 1K-2K</strong><small>1.5 credits / image</small></div>
-<div class="model-usage-count is-soft">60 images</div><div class="model-usage-count is-soft">133 images</div><div class="model-usage-count is-soft">333 images</div><div class="model-usage-count is-soft">666 images</div>
+<div class="model-usage-count is-soft">60 images</div><div class="model-usage-count is-soft">133 images</div><div class="model-usage-count is-soft">340 images</div><div class="model-usage-count is-soft">700 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Grok Image</strong><small>0.5 credits / image</small></div>
-<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1000 images</div><div class="model-usage-count is-soft">2000 images</div>
+<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1020 images</div><div class="model-usage-count is-soft">2100 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Seedream 4.5</strong><small>0.5 credits / image</small></div>
-<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1000 images</div><div class="model-usage-count is-soft">2000 images</div>
+<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1020 images</div><div class="model-usage-count is-soft">2100 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Wan 2.7 Image</strong><small>0.5 credits / image</small></div>
-<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1000 images</div><div class="model-usage-count is-soft">2000 images</div>
+<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1020 images</div><div class="model-usage-count is-soft">2100 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Qwen Image 2.0</strong><small>0.5 credits / image</small></div>
-<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1000 images</div><div class="model-usage-count is-soft">2000 images</div>
+<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1020 images</div><div class="model-usage-count is-soft">2100 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Z Image 2.0</strong><small>0.2 credits / image</small></div>
-<div class="model-usage-count is-soft">450 images</div><div class="model-usage-count is-soft">1000 images</div><div class="model-usage-count is-soft">2500 images</div><div class="model-usage-count is-soft">5000 images</div>
+<div class="model-usage-count is-soft">450 images</div><div class="model-usage-count is-soft">1000 images</div><div class="model-usage-count is-soft">2550 images</div><div class="model-usage-count is-soft">5250 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>GPT Image 1.5</strong><small>1.5 credits / image</small></div>
-<div class="model-usage-count is-soft">60 images</div><div class="model-usage-count is-soft">133 images</div><div class="model-usage-count is-soft">333 images</div><div class="model-usage-count is-soft">666 images</div>
+<div class="model-usage-count is-soft">60 images</div><div class="model-usage-count is-soft">133 images</div><div class="model-usage-count is-soft">340 images</div><div class="model-usage-count is-soft">700 images</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Nano Banana</strong><small>0.5 credits / image</small></div>
-<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1000 images</div><div class="model-usage-count is-soft">2000 images</div>
+<div class="model-usage-count is-soft">180 images</div><div class="model-usage-count is-soft">400 images</div><div class="model-usage-count is-soft">1020 images</div><div class="model-usage-count is-soft">2100 images</div>
 </div>
 <button class="model-usage-toggle" type="button" aria-expanded="false" data-usage-toggle="">
 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -1308,19 +1323,19 @@ Pay once, use credits across image, video, product card, audio, and creative too
 <div class="model-usage-category">Audio <span>voice and music</span></div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Suno</strong><small>1.5 credits / generation</small></div>
-<div class="model-usage-count">60 audio</div><div class="model-usage-count">133 audio</div><div class="model-usage-count">333 audio</div><div class="model-usage-count">666 audio</div>
+<div class="model-usage-count">60 audio</div><div class="model-usage-count">133 audio</div><div class="model-usage-count">340 audio</div><div class="model-usage-count">700 audio</div>
 </div>
 <div class="model-usage-row">
 <div class="model-usage-model"><strong>Text to Speech</strong><small>1 credit / generation</small></div>
-<div class="model-usage-count">90 audio</div><div class="model-usage-count">200 audio</div><div class="model-usage-count">500 audio</div><div class="model-usage-count">1000 audio</div>
+<div class="model-usage-count">90 audio</div><div class="model-usage-count">200 audio</div><div class="model-usage-count">510 audio</div><div class="model-usage-count">1050 audio</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Voice Changer</strong><small>1 credit / generation</small></div>
-<div class="model-usage-count is-soft">90 audio</div><div class="model-usage-count is-soft">200 audio</div><div class="model-usage-count is-soft">500 audio</div><div class="model-usage-count is-soft">1000 audio</div>
+<div class="model-usage-count is-soft">90 audio</div><div class="model-usage-count is-soft">200 audio</div><div class="model-usage-count is-soft">510 audio</div><div class="model-usage-count is-soft">1050 audio</div>
 </div>
 <div class="model-usage-row is-extra">
 <div class="model-usage-model"><strong>Voice Isolator</strong><small>1 credit / generation</small></div>
-<div class="model-usage-count is-soft">90 audio</div><div class="model-usage-count is-soft">200 audio</div><div class="model-usage-count is-soft">500 audio</div><div class="model-usage-count is-soft">1000 audio</div>
+<div class="model-usage-count is-soft">90 audio</div><div class="model-usage-count is-soft">200 audio</div><div class="model-usage-count is-soft">510 audio</div><div class="model-usage-count is-soft">1050 audio</div>
 </div>
 <button class="model-usage-toggle" type="button" aria-expanded="false" data-usage-toggle="">
 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -1773,10 +1788,10 @@ Pay once, use credits across image, video, product card, audio, and creative too
 // Russian-card presentation: Russian copy, RUB prices, and pay-as-you-go only.
 (function(){
   const RUB_PACKS = {
-    "90": { price:"₽750", old:"₽1,100", save:"Скидка ₽350", gift:"Цена со скидкой", line:"90 + 0 кредитов", title:"90" },
-    "200": { price:"₽1,500", old:"₽2,200", save:"Скидка ₽700", gift:"Включает 20 подарочных кредитов (11%)", line:"180 + 20 кредитов", title:"200" },
-    "500": { price:"₽3,700", old:"₽5,500", save:"Скидка ₽1,800", gift:"Включает 50 подарочных кредитов (11%)", line:"450 + 50 кредитов", title:"500" },
-    "1000": { price:"₽7,400", old:"₽9,600", save:"Скидка ₽2,200", gift:"Включает 100 подарочных кредитов (11%)", line:"900 + 100 кредитов", title:"1000" }
+    "90": { price:"₽750", old:"₽1,100", save:"Скидка ₽350", gift:"Цена со скидкой", line:"90 + 0 кредитов", title:"90", upsell:"🎁 Получите <b>200 кредитов в подарок</b> с пакетом ₽1,500" },
+    "200": { price:"₽1,500", old:"₽2,200", save:"Скидка ₽700", gift:"Включает 20 подарочных кредитов (11%)", line:"180 + 20 кредитов", title:"200", badge:"🎁 +200 в подарок", split:"1 800 + <b>200 в подарок</b>", offer:"🎁 На 11% больше кредитов — бесплатно" },
+    "510": { price:"₽3,700", old:"₽5,500", save:"Скидка ₽1,800", gift:"Включает 60 подарочных кредитов (13%)", line:"450 + 60 кредитов", title:"510", badge:"🎁 +600 в подарок", split:"4 500 + <b>600 в подарок</b>", offer:"🎁 На 13% больше кредитов — бесплатно" },
+    "1050": { price:"₽7,400", old:"₽9,600", save:"Скидка ₽2,200", gift:"Включает 150 подарочных кредитов (17%)", line:"900 + 150 кредитов", title:"1050", badge:"🎁 +1 500 в подарок", split:"9 000 + <b>1 500 в подарок</b>", offer:"🎁 На 17% больше кредитов — бесплатно" }
   };
   const RU_FEATURES = {
     "90": [
@@ -1792,19 +1807,19 @@ Pay once, use credits across image, video, product card, audio, and creative too
       "Быстрая генерация", "Поддержка по email", "Регулярные обновления и улучшения", "Доступ к новым моделям после запуска",
       "+20 подарочных кредитов (11%)"
     ],
-    "500": [
-      ["До 1666 изображений (зависит от модели)", "До 277 видео (зависит от модели)", "До 500 аудио-генераций (зависит от модели)"],
+    "510": [
+      ["До 1700 изображений (зависит от модели)", "До 283 видео (зависит от модели)", "До 510 аудио-генераций (зависит от модели)"],
       "Все функции", "Качество 720–1080p–4K (зависит от модели)", "Доступ к шаблонам, примерам и промптам",
       "Право использовать наши промпты в коммерческих целях", "Генерация до 30 секунд (по лимитам модели)",
       "Быстрая генерация", "Поддержка по email", "Регулярные обновления и улучшения", "Доступ к новым моделям после запуска",
-      "+50 подарочных кредитов (11%)"
+      "+60 подарочных кредитов (13%)"
     ],
-    "1000": [
-      ["До 3333 изображений (зависит от модели)", "До 555 видео (зависит от модели)", "До 1000 аудио-генераций (зависит от модели)"],
+    "1050": [
+      ["До 3500 изображений (зависит от модели)", "До 583 видео (зависит от модели)", "До 1050 аудио-генераций (зависит от модели)"],
       "Все функции", "Качество 720–1080p–4K (зависит от модели)", "Доступ к шаблонам, примерам и промптам",
       "Право использовать наши промпты в коммерческих целях", "Генерация до 30 секунд (по лимитам модели)",
       "Быстрая генерация", "Приоритетная поддержка", "Регулярные обновления и улучшения", "Доступ к новым моделям после запуска",
-      "+100 подарочных кредитов (11%)"
+      "+150 подарочных кредитов (17%)"
     ]
   };
   const ORIGINAL_CARDS = new WeakMap();
@@ -1834,6 +1849,11 @@ Pay once, use credits across image, video, product card, audio, and creative too
     if (prices[0]) prices[0].textContent = pack.price;
     if (prices[1]) prices[1].textContent = pack.old;
     setText(card.querySelector(".mt-2.text-sm"), pack.gift);
+    const badge = card.querySelector(".hs-gift-badge"), split = card.querySelector(".hs-gift-split"), offer = card.querySelector(".hs-gift-line"), upsell = card.querySelector(".hs-upsell");
+    if (badge && pack.badge) badge.textContent = pack.badge;
+    if (split && pack.split) split.innerHTML = pack.split;
+    if (offer && pack.offer) offer.textContent = pack.offer;
+    if (upsell && pack.upsell) upsell.innerHTML = pack.upsell;
     setText(button, "Купить");
     const list = card.querySelector("ul");
     if (list) list.innerHTML = featureHtml(RU_FEATURES[credits] || []);
@@ -1935,25 +1955,27 @@ Pay once, use credits across image, video, product card, audio, and creative too
     });
   }
 
+  function groupThousands(text){ return String(text).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
   function setPackageTitle(title, internalCredits){
     if (!title) return;
     const numberNode = Array.from(title.childNodes).find(function(node){
       return node.nodeType === Node.TEXT_NODE && /\d/.test(node.nodeValue || "");
     });
     if (!numberNode) return;
-    const displayed = formatNumber(internalCredits * CREDIT_DISPLAY_MULTIPLIER) + " ";
+    const displayed = groupThousands(formatNumber(internalCredits * CREDIT_DISPLAY_MULTIPLIER)) + " ";
     if (numberNode.nodeValue !== displayed) numberNode.nodeValue = displayed;
   }
 
   function correctChangedModelRows(){
     const corrections = {
-      "GPT Image 2 1K-2K": { cost: "0.5–0.7", counts: ["128–180", "285–400", "714–1000", "1428–2000"] },
-      "Nano Banana 2 Lite": { cost: "0.3", counts: ["300", "666", "1666", "3333"] },
-      "Nano Banana 2 1K-2K": { cost: "0.5–0.8", counts: ["112–180", "250–400", "625–1000", "1250–2000"] },
-      "Nano Banana 2 4K": { cost: "1.3", counts: ["69", "153", "384", "769"] },
-      "Nano Banana Pro 4K": { cost: "1.5", counts: ["60", "133", "333", "666"] },
-      "GPT Image 2 4K": { cost: "1.2", counts: ["75", "166", "416", "833"] },
-      "Nano Banana Pro 1K-2K": { cost: "1.2", counts: ["75", "166", "416", "833"] }
+      "GPT Image 2 1K-2K": { cost: "0.5–0.7", counts: ["128–180", "285–400", "728–1020", "1500–2100"] },
+      "Nano Banana 2 Lite": { cost: "0.3", counts: ["300", "666", "1700", "3500"] },
+      "Nano Banana 2 1K-2K": { cost: "0.5–0.8", counts: ["112–180", "250–400", "637–1020", "1312–2100"] },
+      "Nano Banana 2 4K": { cost: "1.3", counts: ["69", "153", "392", "807"] },
+      "Nano Banana Pro 4K": { cost: "1.5", counts: ["60", "133", "340", "700"] },
+      "GPT Image 2 4K": { cost: "1.2", counts: ["75", "166", "425", "875"] },
+      "Nano Banana Pro 1K-2K": { cost: "1.2", counts: ["75", "166", "425", "875"] }
     };
 
     document.querySelectorAll(".model-usage-row").forEach(function(row){

@@ -23,11 +23,11 @@ function automationPlanConfig(planId) {
 // metadata_plan_id, but anyone can edit a link before paying, so for these products the metadata is ignored.
 // Products not listed keep the old behaviour (metadata), so nothing that sells today stops working.
 const PACK_PRODUCT_CREDITS = {
-  // Creative packs since 2026-10-25: 900 / 1,800 + 200 gift / 4,500 + 500 gift / 9,000 + 1,000 gift displayed.
+  // Creative packs since 2026-10-25: 900 / 1,800 + 200 gift / 4,500 + 600 gift / 9,000 + 1,500 gift displayed.
   pdt_Gi01FZTv21T44htKut7lG: 90,   // Creative Beginner $9.99 (also course pages)
   pdt_YNeJAH4NMLe8gJF7ff0Fe: 200,  // Creative Medium $19.99 (also course pages)
-  pdt_oVJI6GNjziGZKrXtVczUY: 500,  // Creative Pro / Automation Business $49.99 (Automation needs its own product before launch)
-  pdt_e8UPGoRi6Sf36NoxV7fAF: 1000, // Creative Large / Automation Scale $99.99 (Automation needs its own product before launch)
+  pdt_oVJI6GNjziGZKrXtVczUY: 510,  // Creative Pro / Automation Business $49.99 (Automation needs its own product before launch)
+  pdt_e8UPGoRi6Sf36NoxV7fAF: 1050, // Creative Large / Automation Scale $99.99 (Automation needs its own product before launch)
   pdt_0NpePPSth80ohulWU0r3D: 150,  // Automation Starter $14.99
   pdt_0NpeQ0zMDMcghYvelVXBm: 265   // Automation Growth $24.99
 };

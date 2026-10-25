@@ -36,8 +36,8 @@ async function run(payload, { signed = true } = {}) {
   } finally { process.env = old; globalThis.fetch = oldFetch; }
 }
 
-test('Creative packs give 90 / 200 / 500 / 1000 stored credits whatever the link metadata says', async () => {
-  const packs = [['pdt_Gi01FZTv21T44htKut7lG', 999, 90], ['pdt_YNeJAH4NMLe8gJF7ff0Fe', 1999, 200], ['pdt_oVJI6GNjziGZKrXtVczUY', 4999, 500], ['pdt_e8UPGoRi6Sf36NoxV7fAF', 9999, 1000]];
+test('Creative packs give 90 / 200 / 510 / 1050 stored credits whatever the link metadata says', async () => {
+  const packs = [['pdt_Gi01FZTv21T44htKut7lG', 999, 90], ['pdt_YNeJAH4NMLe8gJF7ff0Fe', 1999, 200], ['pdt_oVJI6GNjziGZKrXtVczUY', 4999, 510], ['pdt_e8UPGoRi6Sf36NoxV7fAF', 9999, 1050]];
   for (const [product, cents, credits] of packs) {
     const { writes } = await run({ type: 'payment.succeeded', data: { status: 'succeeded', payment_id: `p-${product}`, total_amount: cents, currency: 'USD', product_cart: [{ product_id: product, quantity: 1 }], metadata: { uid: 'u1', credits: '1100' } } });
     const payment = writes.find((item) => item.u.includes('/payments') && item.method === 'POST');
