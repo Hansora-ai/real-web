@@ -40,20 +40,23 @@ async function pay(labelCredits, amount) {
   }
 }
 
-test('Creative packs grant 90 / 200 / 500 / 1000 stored credits for the same rouble prices', async () => {
+test('Creative packs grant 90 / 200 / 510 / 1050 stored credits for the same rouble prices', async () => {
   assert.deepEqual(await pay(90, 750), { status: 200, granted: 90 });
   assert.deepEqual(await pay(200, 1500), { status: 200, granted: 200 });
-  assert.deepEqual(await pay(500, 3700), { status: 200, granted: 500 });
-  assert.deepEqual(await pay(1000, 7400), { status: 200, granted: 1000 });
+  assert.deepEqual(await pay(510, 3700), { status: 200, granted: 510 });
+  assert.deepEqual(await pay(1050, 7400), { status: 200, granted: 1050 });
+  // Labels from the first version of the new packs (500 / 1000) also get the larger gift.
+  assert.deepEqual(await pay(500, 3700), { status: 200, granted: 510 });
+  assert.deepEqual(await pay(1000, 7400), { status: 200, granted: 1050 });
 });
 
 test('a page opened before the change still pays out, at the new amount, never the old one', async () => {
   assert.deepEqual(await pay(100, 750), { status: 200, granted: 90 });
   assert.deepEqual(await pay(210, 1500), { status: 200, granted: 200 });
-  assert.deepEqual(await pay(1100, 7400), { status: 200, granted: 1000 });
+  assert.deepEqual(await pay(1100, 7400), { status: 200, granted: 1050 });
 });
 
 test('a label whose price does not match its pack is refused before any credit', async () => {
-  assert.equal((await pay(1000, 750)).status, 400);
-  assert.equal((await pay(1000, 750)).granted, null);
+  assert.equal((await pay(1050, 750)).status, 400);
+  assert.equal((await pay(1050, 750)).granted, null);
 });
