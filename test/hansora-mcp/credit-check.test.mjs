@@ -141,15 +141,15 @@ test('a started generation tells ChatGPT the card follows it, and a ready one ha
   assert.match(value.next_step, /Never build, shorten or change a link yourself/);
 });
 
-test('a new user\'s first video goes to Veo 3.1 Lite in 1080p, then Grok, before older models', async () => {
+test('a new user who asked for more than 6 seconds gets Veo 3.1 Lite at 720p first, then Grok', async () => {
   const { result } = await callTool('create_generation', {
     model_id: 'seedance25', prompt: 'A knight fights a dragon', duration: 10, resolution: '720p'
   }, { credits: 3 });
   const value = result.structuredContent;
   assert.deepEqual(value.options_within_balance.map((option) => option.model_id).slice(0, 2), ['veo31-lite', 'grok-video']);
-  assert.deepEqual(value.options_within_balance[0].settings, { duration: 8, resolution: '1080p' });
-  assert.equal(value.options_within_balance[0].credits, 25);
-  assert.match(value.next_step, /Call create_generation right now with model_id veo31-lite and duration 8, resolution 1080p/);
+  assert.deepEqual(value.options_within_balance[0].settings, { duration: 8, resolution: '720p' });
+  assert.equal(value.options_within_balance[0].credits, 20);
+  assert.match(value.next_step, /Call create_generation right now with model_id veo31-lite and duration 8, resolution 720p/);
 });
 
 test('if the first video is refused by its model, the next model in line is started without a question', async () => {
@@ -177,7 +177,7 @@ test('if the first video is refused by its model, the next model in line is star
 
 test('a video price the balance does not cover is marked so ChatGPT does not show it', async () => {
   const pricey = (await callTool('quote_generation', { model_id: 'seedance25', duration: 10, resolution: '720p' }, { credits: 3 })).result.structuredContent;
-  assert.equal(pricey.credits, 318);
+  assert.equal(pricey.credits, 380);
   assert.equal(pricey.fits_balance, false);
   assert.equal(pricey.credits_available, 30);
   assert.match(pricey.next_step, /do not show it to them/);
@@ -197,27 +197,24 @@ test('a video animated from a tall photo is made tall, unless a shape was asked 
   assert.equal((await run({ aspect_ratio: '16:9' })).aspectRatio, '16:9');
 });
 
-test('new users are split for good between a Grok-first and a Veo-first first video', async () => {
-  const { firstVideoArm, firstVideoOrder, insufficientCreditsResult } = await import('../../lib/hansora-mcp/credits.mjs');
+test('a new user\'s first video starts on Grok; Veo 3.1 Lite 720p for longer videos or other languages', async () => {
+  const { firstVideoOrder, insufficientCreditsResult } = await import('../../lib/hansora-mcp/credits.mjs');
   const { getModel } = await import('../../lib/hansora-mcp/registry.mjs');
-  const ids = Array.from({ length: 200 }, (_, index) => `user-${index}`);
-  const grok = ids.filter((id) => firstVideoArm(id) === 'grok_first').length;
-  assert.ok(grok > 70 && grok < 130, `about half, got ${grok}`);
-  assert.equal(firstVideoArm('user-7'), firstVideoArm('user-7'));
-  const grokUser = ids.find((id) => firstVideoArm(id) === 'grok_first');
-  assert.equal(firstVideoOrder(grokUser, { duration: 6 }).order[0], 'grok-video');
-  assert.equal(firstVideoOrder(grokUser, { duration: 10 }).order[0], 'veo31-lite', 'asked for more than 6 seconds');
+  assert.equal(firstVideoOrder({ duration: 6 })[0], 'grok-video');
+  assert.equal(firstVideoOrder({})[0], 'grok-video');
+  assert.equal(firstVideoOrder({ duration: 10 })[0], 'veo31-lite', 'asked for more than 6 seconds');
 
   const seedance = getModel('seedance25');
-  const result = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true, userId: grokUser }).structuredContent;
-  assert.equal(result.first_video_arm, 'grok_first');
-  assert.equal(result.options_within_balance[0].model_id, 'grok-video');
-  assert.match(result.next_step, /Exception: if people in the video must speak a language other than English or Chinese, use model_id veo31-lite with duration 8, resolution 1080p instead\./);
-  const veoUser = ids.find((id) => firstVideoArm(id) === 'veo_first');
-  const veo = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true, userId: veoUser }).structuredContent;
-  assert.equal(veo.first_video_arm, 'veo_first');
-  assert.equal(veo.options_within_balance[0].model_id, 'veo31-lite');
-  assert.doesNotMatch(veo.next_step, /Exception/);
+  const short = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true }).structuredContent;
+  assert.deepEqual(short.options_within_balance[0], { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18, same_model: false });
+  assert.match(short.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
+  assert.match(short.next_step, /Exception: if people in the video must speak a language other than English or Chinese, use model_id veo31-lite with duration 8, resolution 720p instead\./);
+  const long = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 10 }, firstGeneration: true }).structuredContent;
+  assert.equal(long.options_within_balance[0].model_id, 'veo31-lite');
+  assert.doesNotMatch(long.next_step, /Exception/);
+  // A returning user's choices are not reordered for the first video.
+  const returning = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 } }).structuredContent;
+  assert.equal(returning.options_within_balance[0].model_id, 'veo31-lite');
 });
 
 test('a request the balance covers is submitted as before', async () => {

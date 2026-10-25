@@ -198,7 +198,7 @@ async function firstVideoFallback(userId, model, input) {
   try {
     if (!(await isFirstGeneration(userId))) return null;
     const account = await getAccount(userId);
-    return nextFirstVideoOption(model, input, Number(account?.internal_credits || 0), firstVideoOrder(userId, input).order);
+    return nextFirstVideoOption(model, input, Number(account?.internal_credits || 0), firstVideoOrder(input));
   } catch {
     return null;
   }
@@ -787,7 +787,7 @@ export function createHansoraServer(ctx) {
         // The runner re-checks the balance, so a failed lookup here should not block the request.
         const account = await getAccount(userId).catch(() => null);
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
-          return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId), userId });
+          return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
         }
       }
       const storedInput = await storeGenerationFiles(input);
@@ -875,7 +875,7 @@ export function createHansoraServer(ctx) {
         const charged = Number.isFinite(need) && need > 0
           ? { ...(price || {}), displayedCredits: Number((need * 10).toFixed(2)) }
           : price;
-        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId), userId });
+        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
       }
       // Henshin and reference-video launchers measure the uploaded files and report the real charge.
       const debited = Number(result?.debited);

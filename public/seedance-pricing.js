@@ -8,6 +8,9 @@
 })(typeof globalThis === 'object' ? globalThis : this, function () {
   'use strict';
   const margins = { '480p': .18, '720p': .16, '1080p': .15, '4k': .15 };
+  // Seedance 2.5 without a reference video at 480p/720p: the prices customers paid before the reAPI
+  // switch (170 / 380 displayed credits for 10 seconds), which leaves a healthy margin at the reAPI cost.
+  const seedance25Margins = { '480p': .297, '720p': .297 };
   const rates = {
     seedance25: { text: { '480p': .119, '720p': .267, '1080p': .643 }, video: { '480p': .072, '720p': .161, '1080p': .384 } },
     seedance20: { text: { '480p': .072, '720p': .154, '1080p': .383, '4k': .780 }, video: { '480p': .044, '720p': .094, '1080p': .233, '4k': .480 } },
@@ -30,7 +33,7 @@
     // The agreed Henshin/video-input prices apply to both Search and Henshin.
     const internalCredits = model === 'seedance25' && source > 0
       ? round(billedSeconds * henshinRates[quality] / 2)
-      : round(rate * billedSeconds * 10 / (1 - margins[quality]));
+      : round(rate * billedSeconds * 10 / (1 - ((model === 'seedance25' && seedance25Margins[quality]) || margins[quality])));
     return { internalCredits, displayedCredits: Math.round(internalCredits * 10), duration: seconds, inputSeconds: source, billedSeconds, resolution: quality, providerCostUSD: Math.ceil(rate * billedSeconds * 1000 - 1e-8) / 1000 };
   }
   // Draft finalization uses the no-video 1080p rate for output + original
