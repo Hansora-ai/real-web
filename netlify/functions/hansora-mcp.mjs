@@ -34,10 +34,13 @@ function jsonText(value) {
 }
 
 // The model of the user's last video, offered first when they ask for a new one. Video edits are a
-// different job, and a model ChatGPT can no longer start is left out.
+// different job (Henshin runs on Kling 4.0 or Seedance, so it is read from the provider and engine), and
+// a model that needs a source video or that ChatGPT can no longer start is left out.
+const EDIT_RUN = /henshin|video-edit/i;
 function lastVideoModel(generation) {
-  const model = generation ? getModel(modelIdOf(generation)) : null;
-  if (!model || model.category !== 'video' || EDIT_MODELS.has(model.id)) return null;
+  if (!generation || EDIT_RUN.test(`${generation.provider || ''} ${generation.meta?.engine || ''}`)) return null;
+  const model = getModel(modelIdOf(generation));
+  if (!model || model.category !== 'video' || EDIT_MODELS.has(model.id) || model.input?.requires_video) return null;
   if (model.availability !== 'available' || !getRunner(model.id)) return null;
   return { model_id: model.id, model_name: model.name };
 }

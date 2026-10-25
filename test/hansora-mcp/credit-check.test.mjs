@@ -683,10 +683,33 @@ test('the balance names the model of the user\'s last video, so ChatGPT can offe
   assert.deepEqual(account.last_video, { model_id: 'grok-video', model_name: 'Grok Video' });
   assert.match(account.last_video_note, /offer it first as "Same as your last video"/);
 
-  // A video edit is a different job, so it is not offered for a new video.
-  const edit = { id: 'h1', provider: 'Hansora Henshin Lite', kind: 'video', created_at: '2026-10-25T10:00:00Z', meta: {} };
-  const afterEdit = (await callTool('get_account', {}, { credits: 200, generations: [edit] })).result.structuredContent;
-  assert.equal('last_video' in afterEdit, false);
+  // Every video model is found from what its runner saves, not only Grok.
+  const saved = [
+    [{ provider: 'veo3.1lite', meta: { model: 'veo3_lite' } }, 'veo31-lite'],
+    [{ provider: 'Wan 3.0', meta: { model: 'wan/3-0-video', engine: 'wan-3' } }, 'wan-3'],
+    [{ provider: 'Kling-5s', meta: { model: 'kling/v2-5-turbo-image-to-video-pro' } }, 'kling25'],
+    [{ provider: 'Seedance 2.5', meta: { model: 'bytedance/seedance-2-5', engine: 'seedance-2.5' } }, 'seedance25'],
+    [{ provider: 'Gemini Omni 1.1 Flash', meta: { model: 'gemini-omni-flash-1-1', engine: 'gemini-omni-flash-1-1' } }, 'gemini-omni-flash-1-1'],
+    [{ provider: 'Kling 3 Turbo', meta: { model: 'kling/v3-turbo-text-to-video', engine: 'kling-v3-turbo' } }, 'kling3-turbo']
+  ];
+  for (const [row, modelId] of saved) {
+    const value = (await callTool('get_account', {}, { credits: 200, generations: [{ id: 'v', kind: 'video', ...row }] })).result.structuredContent;
+    assert.equal(value.last_video?.model_id, modelId, row.provider);
+  }
+
+  // Video edits are a different job (Henshin Lite runs on Kling 4.0), and Motion Control needs a source
+  // video, so none of them is offered for a new video.
+  const notOffered = [
+    { provider: 'Hansora Henshin Lite', meta: { model: 'kling-4.0/reference-to-video', engine: 'kling4' } },
+    { provider: 'Hansora Henshin', meta: { model: 'bytedance/seedance-2-5', engine: 'henshin' } },
+    { provider: 'Video Edit', meta: { model: 'gemini-omni-video', engine: 'video-edit-gemini-omni' } },
+    { provider: 'kling-motion-control', meta: { model: 'kling-motion-control' } },
+    { provider: 'Hansora Captions', meta: {} }
+  ];
+  for (const row of notOffered) {
+    const value = (await callTool('get_account', {}, { credits: 200, generations: [{ id: 'e', kind: 'video', ...row }] })).result.structuredContent;
+    assert.equal('last_video' in value, false, row.provider);
+  }
 
   // No video yet, or the lookup fails: the balance is still answered, without last_video.
   const none = (await callTool('get_account', {}, { credits: 200 })).result.structuredContent;
