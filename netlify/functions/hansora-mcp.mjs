@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, getGenerationBatch, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -11,7 +11,7 @@ import {
 import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema, storeGenerationFiles } from '../../lib/hansora-mcp/file-inputs.mjs';
 import { PHOTO_SHAPED_MODELS, VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote, startingFrame } from '../../lib/hansora-mcp/registry.mjs';
 import { photoShape } from '../../lib/hansora-mcp/image-shape.mjs';
-import { alternativeFor, classifyFailure, failureView, switchStep } from '../../lib/hansora-mcp/failures.mjs';
+import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { recordToolEvent } from '../../lib/hansora-mcp/events.mjs';
 import { accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
@@ -31,6 +31,15 @@ const PUBLIC_GENERATION_FAILURE = 'Generation failed. Please try again and make 
 
 function jsonText(value) {
   return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// The model of the user's last video, offered first when they ask for a new one. Video edits are a
+// different job, and a model ChatGPT can no longer start is left out.
+function lastVideoModel(generation) {
+  const model = generation ? getModel(modelIdOf(generation)) : null;
+  if (!model || model.category !== 'video' || EDIT_MODELS.has(model.id)) return null;
+  if (model.availability !== 'available' || !getRunner(model.id)) return null;
+  return { model_id: model.id, model_name: model.name };
 }
 
 // Database or network trouble on Hansora's side. The user gets a calm explanation instead of a raw
@@ -418,7 +427,7 @@ export function createHansoraServer(ctx) {
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
           value.fits_balance = false;
           value.credits_available = Number((Number(account.internal_credits || 0) * 10).toFixed(2));
-          value.next_step = 'The user\'s balance does not cover this price, so do not show it to them or ask them to choose it. If you were about to offer options, call create_generation with the recommended option instead and follow the next_step it returns: it starts a video their credits cover or says what fits.';
+          value.next_step = 'The user\'s balance does not cover this price, so do not show it to them or ask them to choose it. If you were about to offer options, call create_generation with the first option instead and follow the next_step it returns: it starts a video their credits cover or says what fits.';
         }
       }
       return jsonText(value);
@@ -431,7 +440,14 @@ export function createHansoraServer(ctx) {
     inputSchema: z.object({}),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async () => {
-    try { return jsonText(accountSummary(await getAccount(userId))); } catch (error) { return toolError(error); }
+    try {
+      // The last video is extra: a slow or failed lookup leaves it out instead of delaying the balance.
+      const [account, lastVideo] = await Promise.all([
+        getAccount(userId),
+        Promise.race([getLastVideo(userId), new Promise((resolve) => setTimeout(() => resolve(null), 2500))])
+      ]);
+      return jsonText(accountSummary(account, lastVideoModel(lastVideo)));
+    } catch (error) { return toolError(error); }
   });
 
   server.registerTool('open_image_to_video_upload_card', {
