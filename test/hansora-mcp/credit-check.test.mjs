@@ -197,27 +197,24 @@ test('a video animated from a tall photo is made tall, unless a shape was asked 
   assert.equal((await run({ aspect_ratio: '16:9' })).aspectRatio, '16:9');
 });
 
-test('new users are split for good between a Grok-first and a Veo-first first video', async () => {
-  const { firstVideoArm, firstVideoOrder, insufficientCreditsResult } = await import('../../lib/hansora-mcp/credits.mjs');
+test('a new user\'s first video starts on Grok, or on Veo when they asked for more than 6 seconds', async () => {
+  const { firstVideoOrder, insufficientCreditsResult } = await import('../../lib/hansora-mcp/credits.mjs');
   const { getModel } = await import('../../lib/hansora-mcp/registry.mjs');
-  const ids = Array.from({ length: 200 }, (_, index) => `user-${index}`);
-  const grok = ids.filter((id) => firstVideoArm(id) === 'grok_first').length;
-  assert.ok(grok > 70 && grok < 130, `about half, got ${grok}`);
-  assert.equal(firstVideoArm('user-7'), firstVideoArm('user-7'));
-  const grokUser = ids.find((id) => firstVideoArm(id) === 'grok_first');
-  assert.equal(firstVideoOrder(grokUser, { duration: 6 }).order[0], 'grok-video');
-  assert.equal(firstVideoOrder(grokUser, { duration: 10 }).order[0], 'veo31-lite', 'asked for more than 6 seconds');
+  assert.equal(firstVideoOrder({ duration: 6 })[0], 'grok-video');
+  assert.equal(firstVideoOrder({})[0], 'grok-video');
+  assert.equal(firstVideoOrder({ duration: 10 })[0], 'veo31-lite', 'asked for more than 6 seconds');
 
   const seedance = getModel('seedance25');
-  const result = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true, userId: grokUser }).structuredContent;
-  assert.equal(result.first_video_arm, 'grok_first');
-  assert.equal(result.options_within_balance[0].model_id, 'grok-video');
-  assert.match(result.next_step, /Exception: if people in the video must speak a language other than English or Chinese, use model_id veo31-lite with duration 8, resolution 1080p instead\./);
-  const veoUser = ids.find((id) => firstVideoArm(id) === 'veo_first');
-  const veo = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true, userId: veoUser }).structuredContent;
-  assert.equal(veo.first_video_arm, 'veo_first');
-  assert.equal(veo.options_within_balance[0].model_id, 'veo31-lite');
-  assert.doesNotMatch(veo.next_step, /Exception/);
+  const short = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true }).structuredContent;
+  assert.equal(short.options_within_balance[0].model_id, 'grok-video');
+  assert.match(short.next_step, /Call create_generation right now with model_id grok-video/);
+  assert.match(short.next_step, /Exception: if people in the video must speak a language other than English or Chinese, use model_id veo31-lite with duration 8, resolution 1080p instead\./);
+  const long = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 10 }, firstGeneration: true }).structuredContent;
+  assert.equal(long.options_within_balance[0].model_id, 'veo31-lite');
+  assert.doesNotMatch(long.next_step, /Exception/);
+  // A returning user's choices are not reordered for the first video.
+  const returning = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 318 }, balanceInternal: 3, input: { duration: 5 } }).structuredContent;
+  assert.equal(returning.options_within_balance[0].model_id, 'veo31-lite');
 });
 
 test('a request the balance covers is submitted as before', async () => {
@@ -356,7 +353,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   // One short question with three plain choices, so users who know no model names can pick.
   assert.match(guide, /4\. Complex: first call get_account to see the balance \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with exactly these three options/);
   assert.match(guide, /If the balance covers none of the three, do not ask and do not show their prices/);
-  assert.match(guide, /   - Best quality: Seedance 2\.5, 720p \(recommended\)\n   - Great quality, lower price: Kling 4\.0, 720p\n   - Budget: Wan 3\.0, 720p\n   Do not list other models or resolutions in this question\./);
+  assert.match(guide, /   - Recommended: Kling 4\.0, 720p \(great quality at a lower price\)\n   - Best quality: Seedance 2\.5, 720p\n   - Budget: Wan 3\.0, 720p\n   Do not list other models or resolutions in this question\./);
   assert.match(guide, /1080p \(sharpest, only when the user asks for 1080p or the best possible quality; never pick it on your own\)/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
