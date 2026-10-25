@@ -90,7 +90,8 @@ test('a new user whose free credits do not cover the request gets their first vi
   const first = value.options_within_balance[0];
   assert.ok(first.credits <= 30);
   assert.match(value.next_step, new RegExp(`do not ask the user to choose\\. Call create_generation right now with model_id ${first.model_id}`));
-  assert.match(value.next_step, /their first video is being made with/);
+  assert.match(value.next_step, new RegExp(`their first video is being made with ${first.model_name} \\(${first.credits} credits\\)`));
+  assert.match(value.next_step, /is the model in use for the user's next videos/);
   assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
 });
 
@@ -208,7 +209,7 @@ test('a new user\'s first video starts on Grok; Veo 3.1 Lite 720p for longer vid
   const short = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true }).structuredContent;
   assert.deepEqual(short.options_within_balance[0], { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18, same_model: false });
   assert.match(short.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
-  assert.match(short.next_step, /Exception: if people in the video must speak a language other than English or Chinese, use model_id veo31-lite with duration 8, resolution 720p instead\./);
+  assert.match(short.next_step, /Exception: if people in the video must speak a language other than English or Chinese, use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead\./);
   const long = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 10 }, firstGeneration: true }).structuredContent;
   assert.equal(long.options_within_balance[0].model_id, 'veo31-lite');
   assert.doesNotMatch(long.next_step, /Exception/);
@@ -348,16 +349,18 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /only Veo 3\.1 Lite \(8 seconds\), Gemini Omni Flash and Gemini Omni \(up to 10 seconds\) can speak it/);
   assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
   assert.match(guide, /not from how long or detailed your own prompt is/);
-  assert.match(guide, /3\. Simple: generate directly, do not ask\.\n   - Up to 8 seconds: Veo 3\.1 Lite, 1080p\.\n   - 9 to 10 seconds: Gemini Omni Flash, 1080p\..*\n   - 11 to 30 seconds: Wan 3\.0, 720p\./);
+  assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - Up to 8 seconds: Veo 3\.1 Lite, 1080p\.\n   - 9 to 10 seconds: Gemini Omni Flash, 1080p\..*\n   - 11 to 30 seconds: Wan 3\.0, 720p\./);
   assert.match(guide, /If you are not sure, treat it as complex/);
-  // One short question with three plain choices, so users who know no model names can pick.
-  assert.match(guide, /4\. Complex: first call get_account to see the balance \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with exactly these three options/);
-  assert.match(guide, /If the balance covers none of the three, do not ask and do not show their prices/);
-  assert.match(guide, /   - Best quality: Seedance 2\.5, 720p \(recommended\)\n   - Great quality, lower price: Kling 4\.0, 720p\n   - Budget: Wan 3\.0, 720p\n   Do not list other models or resolutions in this question\./);
+  // One short question with plain choices, so users who know no model names can pick. The model of
+  // the user's last video comes first, so "ok" keeps the price they already know.
+  assert.match(guide, /4\. Complex: first call get_account to see the balance and last_video \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with these options/);
+  assert.match(guide, /If the balance covers none of the options, do not ask and do not show their prices/);
+  assert.match(guide, /   - Same as your last video: .*it always comes first and is the default\.\n   - Best for complex scenes: Seedance 2\.5, 720p\n   - Great quality, lower price: Kling 4\.0, 720p\n   - Good quality, low price: Wan 3\.0, 720p\n/);
+  assert.match(guide, /list it only once, first, as "Same as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, add \(recommended\) to Seedance 2\.5\./);
   assert.match(guide, /1080p \(sharpest, only when the user asks for 1080p or the best possible quality; never pick it on your own\)/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
-  assert.match(guide, /answers vaguely \("ok", "go", "yes"\), start the first option that fits without asking again/);
+  assert.match(guide, /answers vaguely \("ok", "go", "yes"\), start the first option that fits without asking again \(the last video's model when it is listed\)/);
   assert.match(guide, /12\. Quality: never ask about resolution\. If the user did not say a quality, use the one named above \(Seedance 2\.5: 720p\)/);
   assert.match(guide, /Video edits .*: use Henshin Lite directly, without asking which version, at 720p unless the user asks for 1080p \(it costs 220 credits per 10 seconds of their video at 720p, 340 at 1080p\)/);
   assert.match(guide, /After a Henshin Lite result, only if the user is not satisfied, offer to redo it with Henshin, the stronger version \(per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits\)/);
@@ -365,7 +368,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /13\. Sexual or NSFW requests: Hansora does not create them with any model\. Do not submit them\./);
   assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
   assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
-  assert.match(guide, /8\. Stay with the model\..*Do not switch on your own\..*start only after they agree\./);
+  assert.match(guide, /8\. Stay with the model\. .*also when Hansora started their first video on a model their free credits cover\. Keep using it and its resolution for the next simple videos without asking; for complex videos ask step 4 with it listed first\. Never move to a model that costs more on your own.*start only after they agree\./);
   assert.ok(list.result.structuredContent.models.every((model) => !('video_selection_guide' in model)));
 
   const seedance = await callTool('get_model', { model_id: 'seedance25' }, { credits: 30 });
@@ -672,4 +675,47 @@ test('Kling 4.0 is offered right after Seedance 2.5 and always sends the quoted 
   assert.equal(submitted[0].payload.expected_credits, 190); // required even without video input
   assert.equal(submitted[0].payload.prompt, 'the samurai from @image_1 fights in the rain');
   assert.equal(result.structuredContent.credits, 190);
+});
+
+test('the balance names the model of the user\'s last video, so ChatGPT can offer it first', async () => {
+  const grok = { id: 'g1', provider: 'Grok', kind: 'video', created_at: '2026-10-25T10:00:00Z', meta: { model: 'grok-imagine/text-to-video' } };
+  const account = (await callTool('get_account', {}, { credits: 200, generations: [grok] })).result.structuredContent;
+  assert.deepEqual(account.last_video, { model_id: 'grok-video', model_name: 'Grok Video' });
+  assert.match(account.last_video_note, /offer it first as "Same as your last video"/);
+
+  // Every video model is found from what its runner saves, not only Grok.
+  const saved = [
+    [{ provider: 'veo3.1lite', meta: { model: 'veo3_lite' } }, 'veo31-lite'],
+    [{ provider: 'Wan 3.0', meta: { model: 'wan/3-0-video', engine: 'wan-3' } }, 'wan-3'],
+    [{ provider: 'Kling-5s', meta: { model: 'kling/v2-5-turbo-image-to-video-pro' } }, 'kling25'],
+    [{ provider: 'Seedance 2.5', meta: { model: 'bytedance/seedance-2-5', engine: 'seedance-2.5' } }, 'seedance25'],
+    [{ provider: 'Gemini Omni 1.1 Flash', meta: { model: 'gemini-omni-flash-1-1', engine: 'gemini-omni-flash-1-1' } }, 'gemini-omni-flash-1-1'],
+    [{ provider: 'Kling 3 Turbo', meta: { model: 'kling/v3-turbo-text-to-video', engine: 'kling-v3-turbo' } }, 'kling3-turbo']
+  ];
+  for (const [row, modelId] of saved) {
+    const value = (await callTool('get_account', {}, { credits: 200, generations: [{ id: 'v', kind: 'video', ...row }] })).result.structuredContent;
+    assert.equal(value.last_video?.model_id, modelId, row.provider);
+  }
+
+  // Video edits are a different job (Henshin Lite runs on Kling 4.0), and Motion Control needs a source
+  // video, so none of them is offered for a new video.
+  const notOffered = [
+    { provider: 'Hansora Henshin Lite', meta: { model: 'kling-4.0/reference-to-video', engine: 'kling4' } },
+    { provider: 'Hansora Henshin', meta: { model: 'bytedance/seedance-2-5', engine: 'henshin' } },
+    { provider: 'Video Edit', meta: { model: 'gemini-omni-video', engine: 'video-edit-gemini-omni' } },
+    { provider: 'kling-motion-control', meta: { model: 'kling-motion-control' } },
+    { provider: 'Hansora Captions', meta: {} }
+  ];
+  for (const row of notOffered) {
+    const value = (await callTool('get_account', {}, { credits: 200, generations: [{ id: 'e', kind: 'video', ...row }] })).result.structuredContent;
+    assert.equal('last_video' in value, false, row.provider);
+  }
+
+  // No video yet, or the lookup fails: the balance is still answered, without last_video.
+  const none = (await callTool('get_account', {}, { credits: 200 })).result.structuredContent;
+  assert.equal('last_video' in none, false);
+  const down = (href) => (href.includes('/rest/v1/user_generations') ? new Response('busy', { status: 503 }) : undefined);
+  const failed = (await callTool('get_account', {}, { credits: 200, rest: down })).result.structuredContent;
+  assert.equal(failed.credits, 2000);
+  assert.equal('last_video' in failed, false);
 });
