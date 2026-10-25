@@ -72,7 +72,7 @@ after(async()=>{globalThis.fetch=originalFetch;await db.close();});
 
 test('agreed prices, source-plus-output billing and minimums are shared with the browser',()=>{
  for(const [resolution,expected]of [['480p',175],['720p',380],['1080p',900]])assert.equal(pricing.quote({resolution,inputSeconds:10,edit:true}).displayedCredits,expected);
- for(const [model,values]of [['seedance25',[146,318,757]],['seedance20',[88,184,451]]]){
+ for(const [model,values]of [['seedance25',[170,380,757]],['seedance20',[88,184,451]]]){
   ['480p','720p','1080p'].forEach((resolution,i)=>assert.equal(pricing.quote({model,resolution,duration:10}).displayedCredits,values[i]));
  }
  assert.equal(pricing.quote({inputSeconds:2,duration:10}).billedSeconds,17);
@@ -100,8 +100,8 @@ test('simultaneous retries reserve and submit exactly once, with the UI price de
  const request=event(),responses=await Promise.all([launch25(request),launch25(request)]);
  assert.ok(responses.every(r=>r.statusCode===200||r.statusCode===201));
  assert.equal(posts.length,1);assert.equal(posts[0].model,'doubao-seedance-2.5-face');
- assert.equal(await balance(),985.4);assert.equal((await saved()).length,1);
- const row=(await saved())[0];assert.equal(row.meta.charged_cost,14.6);assert.equal(row.meta.refund_amount,14.6);assert.equal(row.meta.checker,'reapi-check');
+ assert.equal(await balance(),983);assert.equal((await saved()).length,1);
+ const row=(await saved())[0];assert.equal(row.meta.charged_cost,17);assert.equal(row.meta.refund_amount,17);assert.equal(row.meta.checker,'reapi-check');
  assert.equal((await launch25(request)).statusCode,200);assert.equal(posts.length,1);
 });
 
@@ -122,7 +122,7 @@ test('explicit rejection and repeated failed callbacks refund exactly once',asyn
 
 test('transient polling errors neither refund nor complete a generation',async()=>{
  await launch25(event());const row=(await saved())[0];providerStatus=503;
- const out=JSON.parse((await checker(polling(row))).body);assert.equal(out.status,'pending');assert.equal(await balance(),985.4);assert.equal((await saved())[0].meta.refunded,undefined);
+ const out=JSON.parse((await checker(polling(row))).body);assert.equal(out.status,'pending');assert.equal(await balance(),983);assert.equal((await saved())[0].meta.refunded,undefined);
 });
 
 test('callbacks cannot forge outputs or cross account boundaries',async()=>{
@@ -140,21 +140,21 @@ test('completion archives the verified output, never an input, and cannot later 
  task.status='completed';task.output={video_urls:['https://cdn.reapi.ai/video.mp4']};
  failArchive=true;assert.equal((await checker(polling(row))).statusCode,502);assert.equal((await saved())[0].result_url,null);
  failArchive=false;const out=JSON.parse((await checker(polling(row))).body);assert.equal(out.status,'done');assert.match(out.result_url,/generation-history/);
- const refund=await transition('fail',row.id,uid,{error:'late failure'});assert.equal(refund.changed,false);assert.equal(await balance(),985.4);
+ const refund=await transition('fail',row.id,uid,{error:'late failure'});assert.equal(refund.changed,false);assert.equal(await balance(),983);
 });
 
 test('ambiguous submit never retries paid POST and a verified webhook can recover its task id',async()=>{
  uncertain=true;const request=event();assert.equal((await launch25(request)).statusCode,202);
- const row=(await saved())[0];assert.equal(await balance(),985.4);
+ const row=(await saved())[0];assert.equal(await balance(),983);
  await launch25(request);assert.equal(posts.length,1);
  const id='task_late';tasks.set(id,{id,model:row.meta.model,status:'processing'});
  await checker({httpMethod:'POST',queryStringParameters:{uid,run_id:row.meta.run_id,token:new URL(posts.at(-1).webhook_url).searchParams.get('token')},body:JSON.stringify({id})});
- assert.equal((await saved())[0].meta.task_id,id);assert.equal(await balance(),985.4);
+ assert.equal((await saved())[0].meta.task_id,id);assert.equal(await balance(),983);
 });
 
 test('orphan recovery waits thirty minutes and never refunds a known task',async()=>{
  uncertain=true;await launch25(event());let row=(await saved())[0];
- await checker(polling(row));assert.equal(await balance(),985.4);
+ await checker(polling(row));assert.equal(await balance(),983);
  await db.query("update user_generations set created_at=now()-interval '31 minutes' where id=$1",[row.id]);
  await checker(polling(row));assert.equal(await balance(),1000);
  await checker(polling(row));assert.equal(await balance(),1000);
@@ -175,7 +175,7 @@ test('a failed refund transaction rolls back both balance and terminal status',a
  await launch25(event());const row=(await saved())[0];
  await db.exec(`create function reject_refund() returns trigger language plpgsql as $$begin raise exception 'simulated failure';end;$$;create trigger reject_refund before update on profiles for each row execute function reject_refund();`);
  await assert.rejects(transition('fail',row.id,uid,{error:'failed'}));
- assert.equal((await saved())[0].meta.status,'processing');assert.equal(await balance(),985.4);
+ assert.equal((await saved())[0].meta.status,'processing');assert.equal(await balance(),983);
  await db.exec('drop trigger reject_refund on profiles;drop function reject_refund();');
  await transition('fail',row.id,uid,{error:'failed'});assert.equal(await balance(),1000);
 });
@@ -188,7 +188,7 @@ test('owner-visible history cannot modify billing, switch providers, or expose c
   await assert.rejects(db.query("update user_generations set meta='{}'::jsonb where id=$1",[row.id]),/Server-owned/);
   await assert.rejects(db.query('delete from user_generations where id=$1',[row.id]),/Wait for/);
  } finally {await db.exec('reset role');}
- assert.equal((await saved())[0].meta.refund_amount,14.6);assert.equal(await balance(),985.4);
+ assert.equal((await saved())[0].meta.refund_amount,17);assert.equal(await balance(),983);
 });
 
 test('legacy text-only URLs also use reAPI and share duplicate protection',async()=>{
@@ -210,7 +210,7 @@ test('scheduled recovery completes a missed callback without a browser',async()=
  const sweep=await import('../../netlify/functions/reapi-sweep.mjs');
  assert.equal((await sweep.default(new Request('https://local.test',{method:'POST',body:'{}'}))).status,401);
  const res=await sweep.default(new Request('https://local.test',{method:'POST',body:JSON.stringify({next_run:new Date().toISOString()})}));
- assert.equal((await res.json()).checked,1);assert.equal((await saved())[0].meta.status,'done');assert.equal(await balance(),985.4);
+ assert.equal((await res.json()).checked,1);assert.equal((await saved())[0].meta.status,'done');assert.equal(await balance(),983);
 });
 
 test('legacy service-role writes cannot refund reAPI rows; audio workers keep their narrow write path',async()=>{
@@ -226,7 +226,7 @@ test('legacy service-role writes cannot refund reAPI rows; audio workers keep th
   await assert.rejects(db.query("update user_generations set meta=meta || '{\"refunded\":true}'::jsonb where id=$1",[row.id]),/Server-owned/);
   await db.query("update user_generations set result_url=$2,meta=meta || '{\"status\":\"done\",\"audio_restored\":true}'::jsonb where id=$1",[row.id,source]);
  } finally {await db.exec('reset role');}
- assert.equal((await saved())[0].meta.audio_restored,true);assert.equal(await balance(),985.4);
+ assert.equal((await saved())[0].meta.audio_restored,true);assert.equal(await balance(),983);
 });
 
 test('Wan prices preserve every current rate and bill fractional source length without rounding seconds',()=>{
@@ -317,20 +317,20 @@ test('drafts keep the normal 480p price, while the 1080p action targets 5% margi
 });
 
 test('final quote is free; concurrent confirmations submit once using only the owned draft ID and output options',async()=>{
- const parent=await completedDraft();assert.equal(await balance(),985.4);
+ const parent=await completedDraft();assert.equal(await balance(),983);
  const quoted=JSON.parse((await finalize(finalEvent(parent,{quote_only:true}))).body);
- assert.equal(quoted.displayedCredits,677);assert.equal(await balance(),985.4);assert.equal(posts.length,1);
+ assert.equal(quoted.displayedCredits,677);assert.equal(await balance(),983);assert.equal(posts.length,1);
  const req=finalEvent(parent,{expected_credits:677,draft_task_id:'forged',duration:4,source_video_duration:0,resolution:'480p'});
  const replies=await Promise.all([finalize(req),finalize(req)]);
  assert.ok(replies.every(r=>[200,201].includes(r.statusCode)),JSON.stringify(replies));
- assert.equal(posts.length,2);assert.equal(await balance(),917.7);
+ assert.equal(posts.length,2);assert.equal(await balance(),915.3);
  assert.equal(posts[1].draft_task_id,parent.meta.task_id);assert.equal(posts[1].resolution,'1080p');
  assert.deepEqual(Object.keys(posts[1]).sort(),['bitrate_mode','draft_task_id','model','output_format','resolution','watermark','webhook_url']);
  assert.equal((await finalize(req)).statusCode,200);assert.equal(posts.length,2);
  const final=(await saved()).find(r=>r.meta.draft_final);assert.equal(final.meta.run_id,quoted.run_id);assert.equal(final.meta.refund_amount,67.7);
  tasks.get(final.meta.task_id).status='completed';tasks.get(final.meta.task_id).output={video_urls:['https://cdn.reapi.ai/final.mp4']};
  assert.equal(JSON.parse((await checker(polling(final))).body).status,'done');
- assert.equal((await saved()).find(r=>r.id===parent.id).result_url,parent.result_url);assert.equal(await balance(),917.7);
+ assert.equal((await saved()).find(r=>r.id===parent.id).result_url,parent.result_url);assert.equal(await balance(),915.3);
 });
 
 test('non-drafts, unfinished or expired drafts and other accounts cannot be finalized or charged',async()=>{
@@ -351,29 +351,29 @@ test('non-drafts, unfinished or expired drafts and other accounts cannot be fina
 test('upgrade refuses a missing or changed quote before deduction',async()=>{
  const parent=await completedDraft();
  for(const patch of [{},{expected_credits:1}])assert.equal((await finalize(finalEvent(parent,patch))).statusCode,409);
- assert.equal(await balance(),985.4);assert.equal(posts.length,1);
+ assert.equal(await balance(),983);assert.equal(posts.length,1);
 });
 
 test('rejected finalization refunds only the upgrade; an explicit retry gets a new protected attempt',async()=>{
  const parent=await completedDraft();reject=true;
  const req=finalEvent(parent,{expected_credits:677});assert.equal((await finalize(req)).statusCode,422);
- assert.equal(await balance(),985.4);assert.equal((await saved()).find(r=>r.id===parent.id).meta.refunded,undefined);
- reject=false;const reply=JSON.parse((await finalize(req)).body);assert.equal(reply.meta.final_attempt,2);assert.equal(await balance(),917.7);
+ assert.equal(await balance(),983);assert.equal((await saved()).find(r=>r.id===parent.id).meta.refunded,undefined);
+ reject=false;const reply=JSON.parse((await finalize(req)).body);assert.equal(reply.meta.final_attempt,2);assert.equal(await balance(),915.3);
  assert.equal((await finalize(req)).statusCode,200);assert.equal(posts.length,3);
  const final=(await saved()).find(r=>r.meta.final_attempt===2);tasks.get(final.meta.task_id).status='failed';
- await Promise.all([checker(polling(final)),checker(polling(final))]);assert.equal(await balance(),985.4);
+ await Promise.all([checker(polling(final)),checker(polling(final))]);assert.equal(await balance(),983);
  assert.equal((await saved()).find(r=>r.id===parent.id).result_url,parent.result_url);
 });
 
 test('uncertain finalization never repeats its paid POST and signed recovery can attach the task',async()=>{
  const parent=await completedDraft();uncertain=true;
  const req=finalEvent(parent,{expected_credits:677});assert.equal((await finalize(req)).statusCode,202);
- await finalize(req);assert.equal(posts.length,2);assert.equal(await balance(),917.7);
+ await finalize(req);assert.equal(posts.length,2);assert.equal(await balance(),915.3);
  const final=(await saved()).find(r=>r.meta.draft_final),id='task_final_late';
  tasks.set(id,{id,model:final.meta.model,status:'processing'});
  const token=new URL(posts.at(-1).webhook_url).searchParams.get('token');
  await checker({httpMethod:'POST',queryStringParameters:{uid,run_id:final.meta.run_id,token},body:JSON.stringify({id})});
- assert.equal((await saved()).find(r=>r.id===final.id).meta.task_id,id);assert.equal(await balance(),917.7);
+ assert.equal((await saved()).find(r=>r.id===final.id).meta.task_id,id);assert.equal(await balance(),915.3);
 });
 
 test('video-edit draft finalization quotes the delivered length plus original reference seconds',async()=>{
@@ -389,5 +389,5 @@ test('client-writable legacy metadata cannot impersonate an existing paid finali
  const parent=await completedDraft();
  await db.query('insert into user_generations(id,user_id,provider,result_url,meta) values($1,$2,$3,$4,$5)',[randomUUID(),uid,'Legacy','https://untrusted.test/fake.mp4',{source:'kie',draft_parent_run_id:parent.meta.run_id,draft_final:true,status:'done'}]);
  const quote=JSON.parse((await finalize(finalEvent(parent,{quote_only:true}))).body);
- assert.equal(quote.quote_only,true);assert.equal(quote.displayedCredits,677);assert.equal(quote.submitted,undefined);assert.equal(await balance(),985.4);
+ assert.equal(quote.quote_only,true);assert.equal(quote.displayedCredits,677);assert.equal(quote.submitted,undefined);assert.equal(await balance(),983);
 });

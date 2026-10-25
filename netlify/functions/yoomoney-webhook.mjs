@@ -5,14 +5,20 @@
 import { createHash, createHmac } from "node:crypto";
 import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
 
-// Credits → expected ruble amount. 150 and 265 are the Hansora Automation Starter and Growth packs.
+// Label credits → expected ruble amount and the credits actually granted. 150 and 265 are the Hansora
+// Automation Starter and Growth packs. The Creative packs give 90 / 200 / 500 / 1000 since 2026-10-25; labels
+// from pages opened before then (100 / 210 / 535 / 1100) still pay out, at the new amount for the same price.
 const PACKS = {
-  100: { rub: 750 },
-  150: { rub: 1100 },
-  265: { rub: 1850 },
-  210: { rub: 1500 },
-  535: { rub: 3700 },
-  1100: { rub: 7400 }
+  90: { rub: 750, grant: 90 },
+  100: { rub: 750, grant: 90 },
+  150: { rub: 1100, grant: 150 },
+  265: { rub: 1850, grant: 265 },
+  200: { rub: 1500, grant: 200 },
+  210: { rub: 1500, grant: 200 },
+  500: { rub: 3700, grant: 500 },
+  535: { rub: 3700, grant: 500 },
+  1000: { rub: 7400, grant: 1000 },
+  1100: { rub: 7400, grant: 1000 }
 };
 
 export async function handler(event) {
@@ -42,9 +48,10 @@ export async function handler(event) {
     const info = parseLabel(label);
     const uid = info.uid || null;
     const email = info.email || null;
-    const credits = Number(info.credits || 0);
+    const labelCredits = Number(info.credits || 0);
+    const credits = PACKS[labelCredits]?.grant || 0;
     const amountRub = amountNumber(payload.withdraw_amount || payload.amount);
-    const expected = PACKS[credits]?.rub || null;
+    const expected = PACKS[labelCredits]?.rub || null;
     const currency = normalizeCurrency(payload.currency);
     const amount_cents = Number.isFinite(amountRub) ? Math.round(amountRub * 100) : null;
     const paid_at = payload.datetime || new Date().toISOString();
