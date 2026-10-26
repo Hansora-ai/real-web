@@ -142,15 +142,16 @@ test('a started generation tells ChatGPT the card follows it, and a ready one ha
   assert.match(value.next_step, /Never build, shorten or change a link yourself/);
 });
 
-test('a new user who asked for more than 6 seconds gets Veo 3.1 Lite at 720p first, then Grok', async () => {
+test('a new user\'s 10-second request still starts on Grok; ChatGPT uses Veo 3.1 Lite only if the user asked for the length', async () => {
   const { result } = await callTool('create_generation', {
     model_id: 'seedance25', prompt: 'A knight fights a dragon', duration: 10, resolution: '720p'
   }, { credits: 3 });
   const value = result.structuredContent;
-  assert.deepEqual(value.options_within_balance.map((option) => option.model_id).slice(0, 2), ['veo31-lite', 'grok-video']);
-  assert.deepEqual(value.options_within_balance[0].settings, { duration: 8, resolution: '720p' });
-  assert.equal(value.options_within_balance[0].credits, 20);
-  assert.match(value.next_step, /Call create_generation right now with model_id veo31-lite and duration 8, resolution 720p/);
+  assert.deepEqual(value.options_within_balance.map((option) => option.model_id).slice(0, 2), ['grok-video', 'veo31-lite']);
+  assert.deepEqual(value.options_within_balance[1].settings, { duration: 8, resolution: '720p' });
+  assert.equal(value.options_within_balance[1].credits, 20);
+  assert.match(value.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
+  assert.match(value.next_step, /use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if the user themselves asked for a video longer than 6 seconds/);
 });
 
 test('if the first video is refused by its model, the next model in line is started without a question', async () => {
@@ -160,8 +161,9 @@ test('if the first video is refused by its model, the next model in line is star
   const value = result.structuredContent;
   assert.equal(value.error, 'first_video_refused');
   assert.equal(value.credits_used, 0);
-  assert.equal(value.next_option.model_id, 'grok-video');
-  assert.match(value.next_step, /This is the user's first video, so do not stop or ask: call create_generation right now with model_id grok-video/);
+  // Grok comes before Veo, so the next model in line after Veo is Wan 3.0.
+  assert.equal(value.next_option.model_id, 'wan-3');
+  assert.match(value.next_step, /This is the user's first video, so do not stop or ask: call create_generation right now with model_id wan-3/);
 
   // The chain always ends: after the last model there is no further suggestion.
   const last = await callTool('create_generation', {
@@ -198,21 +200,23 @@ test('a video animated from a tall photo is made tall, unless a shape was asked 
   assert.equal((await run({ aspect_ratio: '16:9' })).aspectRatio, '16:9');
 });
 
-test('a new user\'s first video starts on Grok; Veo 3.1 Lite 720p for longer videos or other languages', async () => {
+test('a new user\'s first video starts on Grok; Veo 3.1 Lite 720p only when the user asked for longer or another language', async () => {
   const { firstVideoOrder, insufficientCreditsResult } = await import('../../lib/hansora-mcp/credits.mjs');
   const { getModel } = await import('../../lib/hansora-mcp/registry.mjs');
   assert.equal(firstVideoOrder({ duration: 6 })[0], 'grok-video');
   assert.equal(firstVideoOrder({})[0], 'grok-video');
-  assert.equal(firstVideoOrder({ duration: 10 })[0], 'veo31-lite', 'asked for more than 6 seconds');
+  // ChatGPT often picks 10 seconds itself, so the duration does not move the first video to Veo.
+  assert.equal(firstVideoOrder({ duration: 10 })[0], 'grok-video');
 
   const seedance = getModel('seedance25');
   const short = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true }).structuredContent;
   assert.deepEqual(short.options_within_balance[0], { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18, same_model: false });
   assert.match(short.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
-  assert.match(short.next_step, /Exception: if people in the video must speak a language other than English or Chinese, use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead\./);
+  assert.match(short.next_step, /Exception: use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if the user themselves asked for a video longer than 6 seconds, or if people in the video must speak a language other than English or Chinese\. A length you picked yourself does not count\. In that case name Veo 3\.1 Lite and its credits in your line\./);
   const long = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 10 }, firstGeneration: true }).structuredContent;
-  assert.equal(long.options_within_balance[0].model_id, 'veo31-lite');
-  assert.doesNotMatch(long.next_step, /Exception/);
+  assert.equal(long.options_within_balance[0].model_id, 'grok-video');
+  assert.match(long.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
+  assert.match(long.next_step, /only if the user themselves asked for a video longer than 6 seconds/);
   // A returning user's choices are not reordered for the first video.
   const returning = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 } }).structuredContent;
   assert.equal(returning.options_within_balance[0].model_id, 'veo31-lite');
