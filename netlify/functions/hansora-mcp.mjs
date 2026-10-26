@@ -45,6 +45,21 @@ function lastVideoModel(generation) {
   return { model_id: model.id, model_name: model.name };
 }
 
+// Henshin and Henshin Lite are priced by the length of the user's video. Before that length is known, the
+// rate per 10 seconds stands in for the price instead of an error.
+function videoLengthRate(model, resolution) {
+  if (!model || !EDIT_MODELS.has(model.id)) return null;
+  const limits = model.input?.source_video_seconds || {};
+  const per10 = quote(model.id, { duration: 10, resolution });
+  return {
+    price_by_video_length: true,
+    credits_per_10_seconds: per10.displayedCredits,
+    resolution: per10.settings.resolution,
+    min_video_seconds: Number(limits.min) || null,
+    max_video_seconds: Number(limits.max) || null
+  };
+}
+
 // Database or network trouble on Hansora's side. The user gets a calm explanation instead of a raw
 // error code, and ChatGPT knows nothing was charged and what to do next.
 const INFRASTRUCTURE_ERROR = /data_request_failed|server_misconfigured|abort|timeout|timed out|fetch failed|network|socket|ECONN|ENOTFOUND|upload_sign_failed_5|generation_submit_failed_5/i;
@@ -418,6 +433,15 @@ export function createHansoraServer(ctx) {
     _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true }
   }, async ({ model_id, ...options }) => {
     try {
+      const rate = !(Number(options.duration) > 0) ? videoLengthRate(getModel(model_id), options.resolution) : null;
+      if (rate) {
+        return jsonText({
+          model_id: getModel(model_id).id,
+          model_name: getModel(model_id).name,
+          ...rate,
+          next_step: `${getModel(model_id).name} is priced by the length of the user's video: ${rate.credits_per_10_seconds} credits per 10 seconds at ${rate.resolution}. If you know the video's length, quote again with it as duration for the exact price. Otherwise give the user this rate and go ahead: Hansora measures the video and shows or charges the exact price for its real length.`
+        });
+      }
       const price = quote(model_id, options);
       const value = publicQuote(price);
       // ChatGPT sometimes quotes before reading the balance and then shows prices the user cannot pay.
@@ -538,7 +562,9 @@ export function createHansoraServer(ctx) {
       if (model.category !== 'video' || !acceptsVideo) throw new Error('model_does_not_support_video_input');
       if (limits.requires_image && !input.image_url) throw new Error('model_also_requires_image_url');
       if (model.availability !== 'available' || !getRunner(model.id)) throw new Error('model_not_available');
-      const price = quote(model.id, {
+      // The video is not chosen yet, so a Henshin price waits for its length: the card reads it and quotes.
+      const rate = !(Number(input.duration) > 0) ? videoLengthRate(model, input.resolution || input.quality) : null;
+      const price = rate ? null : quote(model.id, {
         duration: input.duration,
         resolution: input.resolution || input.quality,
         sound: input.sound,
@@ -546,6 +572,7 @@ export function createHansoraServer(ctx) {
         has_video_input: true
       });
       return jsonText({
+        ...(rate || {}),
         mode: 'video_upload',
         status: 'awaiting_upload',
         model_id: model.id,
@@ -810,8 +837,11 @@ export function createHansoraServer(ctx) {
         }
       }
       const storedInput = await storeGenerationFiles(input);
-      // A tall photo animated at the default 16:9 gets its top cut off; match the photo unless a shape was asked for.
-      if (!String(storedInput.aspect_ratio || '').trim() && PHOTO_SHAPED_MODELS.has(model.id)) {
+      // A tall photo animated at 16:9 gets its top and bottom cut off. Match the photo when no shape was given,
+      // and also when ChatGPT sent the opposite of the photo's shape (it often fills in 16:9 on its own). Any
+      // other shape, such as 1:1, is kept as asked.
+      const askedShape = String(storedInput.aspect_ratio || '').trim();
+      if ((!askedShape || askedShape === '16:9' || askedShape === '9:16') && PHOTO_SHAPED_MODELS.has(model.id)) {
         const frame = startingFrame(model.id, storedInput);
         const shape = frame ? await photoShape(frame) : null;
         if (shape) storedInput.aspect_ratio = shape;

@@ -289,3 +289,11 @@ test('while Hansora is briefly busy, the card keeps checking quietly and then sh
   await card.tick(7000);
   assert.equal(card.section(), 'ready');
 });
+
+test('the video upload card reads a Henshin video\'s length and quotes it before Generate is enabled', () => {
+  const script = GENERATION_APP_HTML.match(/<script>([\s\S]*?)<\/script>/)[1];
+  assert.match(script, /preview\.addEventListener\('loadedmetadata', \(\) => finishVideoSelection\(preview, file\)/);
+  assert.match(script, /name: 'quote_generation', arguments: args/);
+  assert.match(script, /el\('generate'\)\.disabled = audio \|\| priceByLength/);
+  assert.match(script, /Please choose a video from ' \+ \(min \|\| 1\) \+ ' to ' \+ \(max \|\| 30\) \+ ' seconds\./);
+});

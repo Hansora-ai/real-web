@@ -189,15 +189,24 @@ test('a video price the balance does not cover is marked so ChatGPT does not sho
   assert.equal(fits.next_step, undefined);
 });
 
-test('a video animated from a tall photo is made tall, unless a shape was asked for', async () => {
-  const png = Buffer.alloc(33);
-  png.writeUInt32BE(0x89504e47, 0); png.write('IHDR', 12, 'latin1'); png.writeUInt32BE(1080, 16); png.writeUInt32BE(1920, 20);
-  const photo = 'https://cdn.test/portrait.png';
-  const run = async (args) => (await callTool('create_generation', {
-    model_id: 'veo31-lite', prompt: 'She smiles', duration: 8, resolution: '720p', image_urls: [photo], ...args
-  }, { credits: 3, files: { [photo]: png } })).submitted[0].payload;
-  assert.equal((await run({})).aspectRatio, '9:16');
-  assert.equal((await run({ aspect_ratio: '16:9' })).aspectRatio, '16:9');
+test('a video animated from a tall photo is made tall, even when ChatGPT sent 16:9', async () => {
+  const pngOf = (width, height) => {
+    const png = Buffer.alloc(33);
+    png.writeUInt32BE(0x89504e47, 0); png.write('IHDR', 12, 'latin1'); png.writeUInt32BE(width, 16); png.writeUInt32BE(height, 20);
+    return png;
+  };
+  const files = { 'https://cdn.test/portrait.png': pngOf(1080, 1920), 'https://cdn.test/wide.png': pngOf(1920, 1080), 'https://cdn.test/square.png': pngOf(1000, 1000) };
+  const run = async (photo, args = {}, modelId = 'veo31-lite') => (await callTool('create_generation', {
+    model_id: modelId, prompt: 'She smiles', duration: modelId === 'grok-video' ? 6 : 8, resolution: '720p', image_urls: [`https://cdn.test/${photo}.png`], ...args
+  }, { credits: 3, files })).submitted[0].payload;
+  assert.equal((await run('portrait')).aspectRatio, '9:16');
+  // ChatGPT often fills in 16:9 by itself; cropping a tall photo that way cuts off heads.
+  assert.equal((await run('portrait', { aspect_ratio: '16:9' })).aspectRatio, '9:16');
+  assert.equal((await run('portrait', { aspect_ratio: '16:9' }, 'grok-video')).aspect_ratio, '9:16');
+  assert.equal((await run('wide', { aspect_ratio: '9:16' })).aspectRatio, '16:9');
+  // A square photo has no clear shape, and any other shape is kept as asked.
+  assert.equal((await run('square', { aspect_ratio: '16:9' })).aspectRatio, '16:9');
+  assert.equal((await run('portrait', { aspect_ratio: '1:1' }, 'grok-video')).aspect_ratio, '1:1');
 });
 
 test('a new user\'s first video starts on Grok; Veo 3.1 Lite 720p only when the user asked for longer or another language', async () => {
@@ -722,4 +731,32 @@ test('the balance names the model of the user\'s last video, so ChatGPT can offe
   const failed = (await callTool('get_account', {}, { credits: 200, rest: down })).result.structuredContent;
   assert.equal(failed.credits, 2000);
   assert.equal('last_video' in failed, false);
+});
+
+test('Henshin before its video is chosen gets the rate per 10 seconds instead of a price error', async () => {
+  // The upload card opens before the user picks a video, so there is no length to price yet.
+  const card = (await callTool('start_video_generation', { model_id: 'henshin-lite', prompt: 'Put me in the video', resolution: '720p' }, { credits: 100 })).result;
+  assert.equal(card.isError, undefined);
+  const value = card.structuredContent;
+  assert.equal(value.mode, 'video_upload');
+  assert.equal(value.price_by_video_length, true);
+  assert.equal(value.credits_per_10_seconds, 220);
+  assert.equal(value.min_video_seconds, 4);
+  assert.equal(value.max_video_seconds, 30);
+  assert.equal(value.quote, null);
+
+  const rate = (await callTool('quote_generation', { model_id: 'henshin-lite', resolution: '720p' }, { credits: 100 })).result;
+  assert.equal(rate.isError, undefined);
+  assert.equal(rate.structuredContent.credits_per_10_seconds, 220);
+  assert.match(rate.structuredContent.next_step, /priced by the length of the user's video: 220 credits per 10 seconds at 720p/);
+
+  // With the length (the card reads it from the chosen file) the exact price comes back as before.
+  const exact = (await callTool('quote_generation', { model_id: 'henshin-lite', duration: 19, resolution: '720p' }, { credits: 100 })).result.structuredContent;
+  assert.equal(exact.credits, 418);
+  const henshin = (await callTool('start_video_generation', { model_id: 'henshin', prompt: 'Restyle it', resolution: '720p' }, { credits: 100 })).result.structuredContent;
+  assert.equal(henshin.price_by_video_length, true);
+  // Models with a fixed price are unchanged.
+  const seedance = (await callTool('start_video_generation', { model_id: 'seedance25', prompt: 'Follow this motion', duration: 10, resolution: '720p' }, { credits: 100 })).result.structuredContent;
+  assert.equal(seedance.price_by_video_length, undefined);
+  assert.ok(seedance.quote.credits > 0);
 });
