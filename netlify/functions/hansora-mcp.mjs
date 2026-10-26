@@ -810,8 +810,11 @@ export function createHansoraServer(ctx) {
         }
       }
       const storedInput = await storeGenerationFiles(input);
-      // A tall photo animated at the default 16:9 gets its top cut off; match the photo unless a shape was asked for.
-      if (!String(storedInput.aspect_ratio || '').trim() && PHOTO_SHAPED_MODELS.has(model.id)) {
+      // A tall photo animated at 16:9 gets its top and bottom cut off. Match the photo when no shape was given,
+      // and also when ChatGPT sent the opposite of the photo's shape (it often fills in 16:9 on its own). Any
+      // other shape, such as 1:1, is kept as asked.
+      const askedShape = String(storedInput.aspect_ratio || '').trim();
+      if ((!askedShape || askedShape === '16:9' || askedShape === '9:16') && PHOTO_SHAPED_MODELS.has(model.id)) {
         const frame = startingFrame(model.id, storedInput);
         const shape = frame ? await photoShape(frame) : null;
         if (shape) storedInput.aspect_ratio = shape;
