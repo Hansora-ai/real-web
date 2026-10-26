@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TikTok comment replies — Hansora Automation</title><link rel="icon" href="/favicon.png" type="image/png"><link rel="apple-touch-icon" href="/favicon.png">
+  <meta name="description" content="Reply to comments on your TikTok videos automatically.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js?v=20261008"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261014"><link rel="stylesheet" href="automation-tiktok-comments.css?v=20261026">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-tiktok-comments.js?v=20261026"></script>
+</head>
+<body class="ui" data-automation-page="comments">
+  <div data-automation-header></div>
+  <main class="ui-page tt-page">
+    <div id="tt-loading" class="ui-skeleton" style="height:520px;border-radius:16px;margin-top:24px" aria-label="Loading"></div>
+    <div class="ui-alert" id="tt-error" role="alert" hidden></div>
+    <div id="tt-app" class="ui-enter" hidden>
+      <nav class="ui-crumbs" aria-label="Breadcrumb"><a id="tt-back" href="automation-workflows.html">← TikTok automations</a></nav>
+      <header class="tt-head">
+        <span class="tt-logo" data-icon="tiktok" aria-hidden="true"></span>
+        <div class="tt-title">
+          <input id="tt-name" value="Reply to comments" maxlength="200" aria-label="Automation name">
+          <p><span class="tt-dot" id="tt-dot"></span><span id="tt-status">Draft</span> · <span id="tt-account">TikTok comments</span><span id="tt-runs"></span></p>
+        </div>
+        <div class="tt-actions">
+          <button class="ui-btn ghost sm" id="tt-pause" type="button" hidden>Pause</button>
+          <button class="ui-btn secondary sm" id="tt-save" type="button">Save</button>
+          <button class="ui-btn accent sm" id="tt-live" type="button">Set live</button>
+        </div>
+      </header>
+      <p class="tt-notice"><span data-icon="comment" aria-hidden="true"></span><span>On TikTok, Hansora <b>replies publicly</b> under the comment. TikTok doesn’t allow sending private messages to people who comment.</span></p>
+      <div class="ui-alert" id="tt-connect" hidden></div>
+
+      <div class="tt-layout">
+        <div class="tt-steps">
+          <section class="ui-card tt-step">
+            <h2><span>1</span>Which videos?</h2>
+            <div class="ui-options">
+              <label class="ui-option"><input type="radio" name="tt-scope" value="all" checked><span class="ui-option-text"><strong>All my videos</strong><small>Every video, old and new</small></span><span class="ui-option-radio"></span></label>
+              <label class="ui-option"><input type="radio" name="tt-scope" value="selected"><span class="ui-option-text"><strong>Specific videos</strong><small>Only the videos you pick</small></span><span class="ui-option-radio"></span></label>
+              <label class="ui-option"><input type="radio" name="tt-scope" value="next"><span class="ui-option-text"><strong>The next video I post</strong><small>Starts with your next upload</small></span><span class="ui-option-radio"></span></label>
+            </div>
+            <div class="tt-chosen" id="tt-chosen" hidden>
+              <div class="tt-thumbs" id="tt-thumbs"></div>
+              <button class="ui-btn secondary sm" id="tt-pick" type="button" data-icon="play">Choose videos</button>
+            </div>
+          </section>
+
+          <section class="ui-card tt-step">
+            <h2><span>2</span>Which comments?</h2>
+            <div class="ui-options">
+              <label class="ui-option"><input type="radio" name="tt-match" value="any" checked><span class="ui-option-text"><strong>Any comment</strong><small>Reply to everyone who comments</small></span><span class="ui-option-radio"></span></label>
+              <label class="ui-option"><input type="radio" name="tt-match" value="contains"><span class="ui-option-text"><strong>Comments with certain words</strong><small>For example “price”, “menu” or “how much”</small></span><span class="ui-option-radio"></span></label>
+            </div>
+            <div class="tt-words" id="tt-words" hidden>
+              <div class="tt-word-box"><span id="tt-word-list"></span><input id="tt-word-input" placeholder="Type a word and press Enter" maxlength="60" aria-label="Add a word"></div>
+              <p class="ui-hint">Small typos and capital letters still match.</p>
+            </div>
+            <label class="tt-toggle"><input type="checkbox" class="ui-switch" id="tt-once" checked><span><b>Reply once per person</b><small>If someone comments again on the same video, Hansora doesn’t reply twice.</small></span></label>
+          </section>
+
+          <section class="ui-card tt-step">
+            <h2><span>3</span>Your reply</h2>
+            <div class="ui-segmented tt-mode"><label><input type="radio" name="tt-mode" value="fixed" checked><span>I write the reply</span></label><label><input type="radio" name="tt-mode" value="ai"><span>✨ AI writes the reply</span></label></div>
+            <div id="tt-fixed">
+              <div class="tt-replies" id="tt-replies"></div>
+              <button class="ui-btn ghost sm" id="tt-add-reply" type="button">+ Add another version</button>
+              <p class="ui-hint">Hansora rotates your versions. TikTok hides replies that are exactly the same many times, so 2–3 versions work best. 1⚡ per reply.</p>
+            </div>
+            <div id="tt-ai" hidden>
+              <p class="tt-ai-copy">Your AI employee reads the comment and answers it in one or two short sentences, using your business info. For example, “price?” gets your real price.</p>
+              <label class="ui-field"><span class="ui-label">Anything the AI should keep in mind? (optional)</span><textarea class="ui-textarea" id="tt-ai-note" rows="2" maxlength="500" placeholder="e.g. Mention free delivery in the city. Keep it fun."></textarea></label>
+              <p class="ui-hint">Replies are public, so the AI never asks for phone numbers or takes orders in comments. 1.2⚡ per reply.</p>
+            </div>
+          </section>
+        </div>
+
+        <aside class="tt-preview" aria-label="Preview">
+          <p class="tt-preview-label">Preview</p>
+          <div class="tt-phone">
+            <div class="tt-video" id="tt-preview-video"><span class="tt-play">▶</span></div>
+            <div class="tt-sheet">
+              <p class="tt-sheet-head" id="tt-preview-count">1 comment</p>
+              <div class="tt-comment"><span class="tt-avatar">A</span><div><b>ani.styles</b><p id="tt-preview-comment">How much is this?</p><div class="tt-reply"><span class="tt-avatar you" data-icon="tiktok"></span><div><b id="tt-preview-you">You</b> <em>Creator</em><p id="tt-preview-reply">Thanks! 🙌</p></div></div></div></div>
+            </div>
+          </div>
+          <p class="ui-hint tt-preview-hint">TikTok sends new comments to Hansora within a few minutes, so replies appear 1–5 minutes after the comment.</p>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <dialog class="ui-dialog tt-picker" id="tt-picker">
+    <div class="ui-dialog-head"><div><h2>Choose videos</h2><p class="ui-hint">Tap the videos this automation should reply on.</p></div><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
+    <div class="tt-grid" id="tt-grid"></div>
+    <div class="tt-more"><button class="ui-btn ghost sm" id="tt-more" type="button" hidden>Load older videos</button></div>
+    <div class="ui-dialog-actions"><button class="ui-btn ghost" type="button" data-close-dialog>Cancel</button><button class="ui-btn primary" id="tt-use" type="button">Use selected</button></div>
+  </dialog>
+</body>
+</html>

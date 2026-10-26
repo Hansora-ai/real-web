@@ -1,5 +1,5 @@
 import { serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
-import { exchangeTikTokCode, getTikTokBusinessProfile, readTikTokState } from '../../lib/automation/tiktok.mjs';
+import { exchangeTikTokCode, getTikTokBusinessProfile, readTikTokState, subscribeTikTokComments } from '../../lib/automation/tiktok.mjs';
 import { saveTikTokTokens } from '../../lib/automation/tiktok-account.mjs';
 import { tiktokRedirectUri } from './automation-tiktok-connect.mjs';
 
@@ -27,6 +27,9 @@ export async function handler(event) {
     const label = profile.username ? `@${profile.username}` : profile.name || 'TikTok account';
     const account = await serviceUpsert('automation_provider_resources', 'business_id,provider,resource_type,provider_resource_id', { business_id: state.businessId, provider: 'tiktok', resource_type: 'tiktok_account', provider_resource_id: tokens.businessId, status: 'active', safe_config: { username: profile.username, display_name: profile.name, picture: profile.picture, scope: tokens.scope }, last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() });
     await saveTikTokTokens({ account, tokens });
+    // Comment notifications are an app-level subscription; renewing it on every connection keeps the address current.
+    const site = String(process.env.URL || (() => { try { return new URL(event.rawUrl || '').origin; } catch (_) { return ''; } })()).replace(/\/$/, '');
+    if (site) await subscribeTikTokComments({ callbackUrl: `${site}/.netlify/functions/automation-tiktok-webhook` }).catch(error => console.error('tiktok comment webhook subscription failed', { message: error?.message, providerCode: error?.providerCode, providerMessage: error?.providerMessage }));
     await serviceUpdate('automation_channel_connections', `business_id=eq.${state.businessId}&channel_type=eq.tiktok`, { status: 'connecting', provider: 'tiktok', connected_account_label: label, connected_at: null, last_error_code: null, updated_at: new Date().toISOString() });
     return back(state.businessId, 'connected');
   } catch (error) {
