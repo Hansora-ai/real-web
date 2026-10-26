@@ -732,3 +732,31 @@ test('the balance names the model of the user\'s last video, so ChatGPT can offe
   assert.equal(failed.credits, 2000);
   assert.equal('last_video' in failed, false);
 });
+
+test('Henshin before its video is chosen gets the rate per 10 seconds instead of a price error', async () => {
+  // The upload card opens before the user picks a video, so there is no length to price yet.
+  const card = (await callTool('start_video_generation', { model_id: 'henshin-lite', prompt: 'Put me in the video', resolution: '720p' }, { credits: 100 })).result;
+  assert.equal(card.isError, undefined);
+  const value = card.structuredContent;
+  assert.equal(value.mode, 'video_upload');
+  assert.equal(value.price_by_video_length, true);
+  assert.equal(value.credits_per_10_seconds, 220);
+  assert.equal(value.min_video_seconds, 4);
+  assert.equal(value.max_video_seconds, 30);
+  assert.equal(value.quote, null);
+
+  const rate = (await callTool('quote_generation', { model_id: 'henshin-lite', resolution: '720p' }, { credits: 100 })).result;
+  assert.equal(rate.isError, undefined);
+  assert.equal(rate.structuredContent.credits_per_10_seconds, 220);
+  assert.match(rate.structuredContent.next_step, /priced by the length of the user's video: 220 credits per 10 seconds at 720p/);
+
+  // With the length (the card reads it from the chosen file) the exact price comes back as before.
+  const exact = (await callTool('quote_generation', { model_id: 'henshin-lite', duration: 19, resolution: '720p' }, { credits: 100 })).result.structuredContent;
+  assert.equal(exact.credits, 418);
+  const henshin = (await callTool('start_video_generation', { model_id: 'henshin', prompt: 'Restyle it', resolution: '720p' }, { credits: 100 })).result.structuredContent;
+  assert.equal(henshin.price_by_video_length, true);
+  // Models with a fixed price are unchanged.
+  const seedance = (await callTool('start_video_generation', { model_id: 'seedance25', prompt: 'Follow this motion', duration: 10, resolution: '720p' }, { credits: 100 })).result.structuredContent;
+  assert.equal(seedance.price_by_video_length, undefined);
+  assert.ok(seedance.quote.credits > 0);
+});
