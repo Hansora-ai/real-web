@@ -26,6 +26,8 @@ export async function handler(event){
     const contact=await first(`/rest/v1/automation_contacts?id=eq.${conversation.contact_id}&business_id=eq.${business.id}&select=*&limit=1`);if(!contact)return json(404,{error:'contact_not_found'});
     if(!['instagram_dm','whatsapp','telegram','messenger','tiktok'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
     let providerMessageId='',provider='meta';
+    // A TikTok comment chat: TikTok does not allow messaging someone who only commented.
+    if(conversation.channel_type==='tiktok'&&String(conversation.external_thread_id||'').startsWith('comment:'))return json(409,{error:'tiktok_comment_thread',message:'This person only commented. TikTok doesn’t allow sending them a message; reply under the comment in the TikTok app.'});
     // TikTok: replies are possible for 48 hours after the customer's last message.
     if(conversation.channel_type==='tiktok'){
       if(template)return json(400,{error:'template_whatsapp_only'});
