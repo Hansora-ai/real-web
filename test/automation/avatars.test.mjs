@@ -37,3 +37,18 @@ test('customer photo: anything that is not a small image keeps the original link
   assert.equal(await keepAvatar({ url: 'http://x.example/p', businessId: BUSINESS, channel: 'instagram', customerId: '1' }), '');
   assert.equal(isKeptAvatar('https://scontent.cdninstagram.com/p.jpg'), false);
 }));
+
+test('Telegram photo: the smallest size of at least 160 px is copied', withEnv(async () => {
+  const { telegramProfilePhotoUrl } = await import('../../lib/automation/telegram.mjs');
+  process.env.TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '123:abc';
+  const asked = [];
+  const fetchImpl = async (url, options) => {
+    const method = String(url).split('/').pop(); asked.push({ method, body: JSON.parse(options.body) });
+    if (method === 'getUserProfilePhotos') return new Response(JSON.stringify({ ok: true, result: { photos: [[{ file_id: 'small', width: 160 }, { file_id: 'big', width: 640 }]] } }));
+    return new Response(JSON.stringify({ ok: true, result: { file_path: 'photos/file_1.jpg' } }));
+  };
+  const url = await telegramProfilePhotoUrl('42', fetchImpl);
+  assert.match(url, /\/file\/bot.+\/photos\/file_1\.jpg$/);
+  assert.deepEqual(asked.map(item => item.method), ['getUserProfilePhotos', 'getFile']);
+  assert.equal(asked[1].body.file_id, 'small');
+}));

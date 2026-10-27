@@ -1,3 +1,4 @@
+import { isKeptAvatar, keepAvatar } from '../../lib/automation/avatars.mjs';
 import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { canAfford, chargeCredits, handleOutOfCredits, automationPricesFor, replyPrice } from '../../lib/automation/billing.mjs';
@@ -11,7 +12,7 @@ import { mediaFallback, mediaMessage, understandMedia } from '../../lib/automati
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
 import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { phonePauseExpired } from '../../lib/automation/whatsapp.mjs';
-import { sendTelegramPhoto, sendTelegramText, sendTelegramTyping, telegramDisplayName, telegramFileUrl, telegramMessageParts } from '../../lib/automation/telegram.mjs';
+import { sendTelegramPhoto, sendTelegramText, sendTelegramTyping, telegramDisplayName, telegramFileUrl, telegramMessageParts, telegramProfilePhotoUrl } from '../../lib/automation/telegram.mjs';
 import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
 
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) });
@@ -42,7 +43,11 @@ export async function handler(event) {
     const customerName = telegramDisplayName(message.chat);
     const contactQuery = `/rest/v1/automation_contacts?business_id=eq.${account.business_id}&channel_type=eq.telegram&external_contact_id=eq.${encodeURIComponent(chatId)}&select=*&limit=1`;
     const known = await first(contactQuery);
-    const contact = await serviceUpsert('automation_contacts', 'business_id,channel_type,external_contact_id', { business_id: account.business_id, display_name: known?.display_name && fromOwner ? known.display_name : customerName, channel_type: 'telegram', external_contact_id: chatId, last_seen_at: fromOwner ? known?.last_seen_at || occurredAt : occurredAt, profile: { ...(known?.profile || {}), telegram_id: chatId, ...(message.chat?.username ? { username: message.chat.username } : {}) } });
+    // Profile photo: Hansora keeps its own copy (Telegram's link holds the bot token and expires), checked once a day.
+    const lookPhoto = !fromOwner && !isKeptAvatar(known?.profile?.profile_pic) && !(Date.parse(known?.profile?.photo_checked_at || '') > Date.now() - 86_400_000);
+    const photo = lookPhoto ? await telegramProfilePhotoUrl(chatId).then(url => url ? keepAvatar({ url, businessId: account.business_id, channel: 'telegram', customerId: chatId }) : '').catch(() => '') : '';
+    const photoFields = lookPhoto ? { photo_checked_at: new Date().toISOString(), ...(isKeptAvatar(photo) ? { profile_pic: photo } : {}) } : {};
+    const contact = await serviceUpsert('automation_contacts', 'business_id,channel_type,external_contact_id', { business_id: account.business_id, display_name: known?.display_name && fromOwner ? known.display_name : customerName, channel_type: 'telegram', external_contact_id: chatId, last_seen_at: fromOwner ? known?.last_seen_at || occurredAt : occurredAt, profile: { ...(known?.profile || {}), telegram_id: chatId, ...(message.chat?.username ? { username: message.chat.username } : {}), ...photoFields } });
     const shown = parts.text || parts.label || 'Message';
     const conversation = await serviceUpsert('automation_conversations', 'business_id,channel_type,external_thread_id', { business_id: account.business_id, contact_id: contact.id, channel_connection_id: connection?.id || null, channel_type: 'telegram', external_thread_id: chatId, last_message_preview: shown.slice(0, 1000), last_message_at: occurredAt, ...(fromOwner ? {} : { status: 'open' }) });
 
