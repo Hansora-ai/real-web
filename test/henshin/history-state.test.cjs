@@ -28,6 +28,12 @@ test('new Lite jobs wait for original soundtrack restoration instead of exposing
  const done=state(row({audio_strategy:'original',status:'done',finish_video:true,audio_restored:true},'/final.mp4'));
  assert.equal(done.ready,true);assert.equal(done.videoURL,'/final.mp4');
 });
+test('original-audio jobs show Generating until the provider returns a video to finish',()=>{
+ for(const henshin_model of ['lite','standard']){
+  const result=state(row({henshin_model,audio_strategy:'original',status:'processing',task_id:'accepted',finish_video:true,source_audio_url:'/original.m4a'}));
+  assert.equal(result.label,'Generating');assert.equal(result.audioPending,false);assert.equal(result.ready,false);
+ }
+});
 test('technical upload status messages do not replace the Processing card label',()=>{
  const element={classList:{toggle(){}}};context.$=()=>element;context.submission='requesting';
  const node=declarations.find(node=>node.id.name==='status');vm.runInContext(source.slice(node.start,node.end),context);

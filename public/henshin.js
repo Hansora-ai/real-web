@@ -162,8 +162,9 @@
  function resultState(row){
   const m=row.meta||{},lite=isHenshin(row)&&m.henshin_model==='lite'&&m.audio_strategy!=='original';
   const recovered=lite&&!m.refunded&&['restoring_audio','audio_retry','audio_failed'].includes(m.status)?m.generated_video_url:null;
-  const videoURL=row.result_url||recovered,audioPending=!lite&&isHenshin(row)&&(m.source_audio_url||m.finish_video)&&!m.audio_restored;
-  const failed=/fail|error|reject|cancel/.test(m.status||'')&&!recovered,ready=!!videoURL&&!audioPending&&!failed;
+  const videoURL=row.result_url||recovered,finishRequired=!lite&&isHenshin(row)&&(m.source_audio_url||m.finish_video)&&!m.audio_restored;
+  const audioPending=!!(finishRequired&&(m.generated_video_url||row.result_url));
+  const failed=/fail|error|reject|cancel/.test(m.status||'')&&!recovered,ready=!!videoURL&&!finishRequired&&!failed;
   const stage=/queued/.test(m.status||'')?'queued':!m.task_id||/requesting|uploading|preparing/.test(m.status||'')?'requesting':'generating';
   return {videoURL,ready,failed,audioPending,audioFailed:!lite&&m.status==='audio_failed',stage,label:t(stage==='queued'?'In Queue':stage==='requesting'?'Processing request…':'Generating')};
  }
