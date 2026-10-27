@@ -857,3 +857,13 @@ test('a new user\'s first video that fails on the provider\'s side is started on
   const twice = await callTool('get_generation', { run_id: `${old}-retry` }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && !href.includes('not.is.null') ? reply([retryFailed]) : world()(href)) });
   assert.equal(twice.submitted.length, 0);
 });
+
+test('an over-long Seedance prompt comes back to ChatGPT to shorten, before anything starts', async () => {
+  for (const modelId of ['seedance20-mini', 'seedance20', 'seedance25']) {
+    const { result, submitted } = await callTool('create_generation', { model_id: modelId, prompt: 'x'.repeat(23556), duration: 10, resolution: '720p' }, { credits: 1000 });
+    assert.equal(submitted.length, 0, modelId);
+    assert.equal(result.structuredContent.error, 'prompt_too_long', modelId);
+    assert.equal(result.structuredContent.max_prompt_characters, 20000, modelId);
+    assert.match(result.structuredContent.next_step, /Shorten it to under 20000 characters/);
+  }
+});
