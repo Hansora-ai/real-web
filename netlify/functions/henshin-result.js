@@ -8,7 +8,7 @@ exports.handler=async event=>{
   if(!/^[a-f0-9-]{36}$/i.test(body.id||''))throw Error('Invalid result.');
   const row=(await db(`user_generations?id=eq.${body.id}&user_id=eq.${user.id}&select=id,user_id,meta,result_url`))?.[0];
   if(row?.meta?.source_feature!=='henshin')return json(404,{ok:false,error:'Henshin result unavailable.'});
-  if(require('../../lib/henshin/jobs.cjs').isLite(row))return json(200,await require('../../lib/kling4/check.cjs').reconcile(row));
+  if(require('../../lib/henshin/jobs.cjs').isNativeLite(row))return json(200,await require('../../lib/kling4/check.cjs').reconcile(row));
   if(row.meta.audio_restored)return json(200,{ok:true,result_url:row.result_url});
   if(!audioPending(row))return json(409,{ok:false,error:'Wait for the generated video.'});
   if(Number(row.meta.audio_lease_until)>Date.now())return json(202,{ok:true,status:'restoring_audio'});

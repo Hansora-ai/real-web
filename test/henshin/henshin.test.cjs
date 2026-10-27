@@ -139,6 +139,31 @@ test('Source preparation uploads a silent video and saves the original soundtrac
   });
  }finally{global.fetch=original;}
 });
+test('Lite accepts a source above 10 MB and submits a smaller silent file while saving original audio',async()=>{
+ const original=global.fetch,services=mockServices();
+ const padding=Buffer.alloc(11*1024*1024);padding.writeUInt32BE(padding.length);padding.write('free',4);
+ const large=Buffer.concat([fs.readFileSync('test/henshin/fixtures/source.mp4'),padding]);
+ global.fetch=(url,options={})=>String(url).endsWith('/source.mp4')&&!options.method?Promise.resolve(new Response(large)):services.fetch(url,options);
+ try{
+  const media=require('../../lib/henshin/server-media.cjs');
+  const prepared=await media.prepareSource(url,{uid:'fixture',id:'large-lite',keepAudio:true,maxMB:100,maxVideoMB:9.5});
+  assert.ok(large.length>10*1024*1024);assert.ok(prepared.audioURL);assert.equal(prepared.seconds,5);
+  const bytes=services.state().media.get(prepared.videoURL);assert.ok(bytes.length<9.5*1024*1024);
+  await media.withCore(async core=>{core.FS.writeFile('submitted.mp4',bytes);assert.deepEqual(media.probe(core,'submitted.mp4').streams.map(s=>s.codec_type),['video']);});
+ }finally{global.fetch=original;}
+});
+test('Silent footage exceeding its byte budget is re-encoded below the limit without cutting its duration',async()=>{
+ const media=require('../../lib/henshin/server-media.cjs');let bytes;
+ await media.withCore(async core=>{core.reset();assert.equal(core.exec('-f','lavfi','-i','testsrc2=size=320x180:rate=24','-t','5','-an','-c:v','libx264','-crf','10','large.mp4'),0);bytes=Buffer.from(core.FS.readFile('large.mp4'));});
+ const original=global.fetch,services=mockServices(),budget=.06;
+ assert.ok(bytes.length>budget*1024*1024);
+ global.fetch=(raw,options={})=>String(raw)===url&&!options.method?Promise.resolve(new Response(bytes)):services.fetch(raw,options);
+ try{
+  const prepared=await media.prepareSource(url,{uid:'fixture',id:'compressed-lite',keepAudio:true,maxVideoMB:budget});
+  const fitted=services.state().media.get(prepared.videoURL);assert.ok(fitted.length<=budget*1024*1024);assert.equal(prepared.audioURL,null);
+  await media.withCore(async core=>{core.FS.writeFile('fitted.mp4',fitted);const report=media.probe(core,'fitted.mp4');assert.ok(Math.abs(Number(report.format.duration)-5)<.1);assert.deepEqual(report.streams.map(s=>s.codec_type),['video']);});
+ }finally{global.fetch=original;}
+});
 function finishServices({status='processing',duration=5,downloadFailure=false}={}){
  const uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
  const bytes=fs.readFileSync('test/henshin/fixtures/source.mp4'),objects=new Map([[url,bytes]]),jobs=[];
@@ -172,6 +197,17 @@ function finishServices({status='processing',duration=5,downloadFailure=false}={
  }};
 }
 const backgroundEvent=id=>({httpMethod:'POST',headers:{'x-henshin-internal':require('../../lib/henshin/jobs.cjs').internalToken()},body:JSON.stringify({id})});
+test('Original-audio Lite leaves silent sources silent even when Kling returns a generated soundtrack',async()=>{
+ const original=global.fetch,services=finishServices({status:'restoring_audio'});
+ services.row.meta={...services.row.meta,source:'kie-kling4',henshin_model:'lite',audio_strategy:'original',finish_video:true,duration:5,source_audio_url:null,generated_video_url:url};
+ global.fetch=services.fetch;
+ try{
+  const result=await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.row.id));
+  assert.equal(JSON.parse(result.body).ok,true,result.body);assert.equal(services.row.meta.audio_restored,true);
+  const bytes=services.objects.get(services.row.result_url),media=require('../../lib/henshin/server-media.cjs');
+  await media.withCore(async core=>{core.FS.writeFile('silent-final.mp4',bytes);assert.deepEqual(media.probe(core,'silent-final.mp4').streams.map(s=>s.codec_type),['video']);});
+ }finally{global.fetch=original;}
+});
 test('A signed callback and server worker finish a video with audio without any browser call',async()=>{
  const original=global.fetch,services=finishServices();global.fetch=services.fetch;
  try{
