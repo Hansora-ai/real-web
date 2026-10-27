@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, getFirstVideoRecipe, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -13,8 +13,8 @@ import { PHOTO_SHAPED_MODELS, VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGen
 import { photoShape } from '../../lib/hansora-mcp/image-shape.mjs';
 import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
-import { recordToolEvent } from '../../lib/hansora-mcp/events.mjs';
-import { accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { recordFirstVideoRecipe, recordToolEvent } from '../../lib/hansora-mcp/events.mjs';
+import { accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -243,6 +243,88 @@ function firstVideoFallbackResult(model, option, reason) {
     ].join(' ')
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// Sends a run to Hansora's runner (safe-run checks content and credits first).
+async function submitRun({ origin, token, userId, endpoint, model, prompt, usageMode, payload, timeoutMs = SUBMIT_BUDGET_MS }) {
+  const reply = await fetch(`${origin}/.netlify/functions/safe-run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-USER-ID': userId },
+    body: JSON.stringify({ target_endpoint: endpoint, model_id: model.id, model_name: model.name, kind: model.category, prompt, usage_mode: usageMode, payload }),
+    signal: AbortSignal.timeout(timeoutMs)
+  });
+  const text = await reply.text();
+  let body;
+  try { body = JSON.parse(text); } catch { body = { message: text }; }
+  return { response: reply, result: body };
+}
+
+// A new user's first video that failed on the provider's side (an outage, not the prompt or photo) is
+// started once more on another model their free credits cover, under a fixed run id so it can never start
+// twice. The card keeps following the original run id and simply shows the new video. Content blocks,
+// unusable inputs, returning users and retries of a retry are left as they are. Null means "no retry".
+const RETRY_SUFFIX = '-retry';
+async function firstVideoRetry({ userId, token, origin, runId, presented, generation }) {
+  if (presented.status !== 'failed' || runId.endsWith(RETRY_SUFFIX)) return null;
+  if (!['temporary', 'unknown'].includes(presented.failure_kind)) return null;
+  const retryId = `${runId}${RETRY_SUFFIX}`;
+  let retry = await getGeneration(userId, retryId).catch(() => null);
+  let startedModel = null;
+  if (!retry) {
+    const recipe = await getFirstVideoRecipe(userId, runId);
+    const failed = recipe ? getModel(recipe.model_id) : null;
+    if (!failed || failed.category !== 'video') return null;
+    if (!(await isFirstGeneration(userId))) return null;
+    const account = await getAccount(userId).catch(() => null);
+    if (!account) return null;
+    const request = {
+      prompt: String(recipe.prompt || ''),
+      image_urls: Array.isArray(recipe.image_urls) ? recipe.image_urls : [],
+      ...(recipe.aspect_ratio ? { aspect_ratio: recipe.aspect_ratio } : {}),
+      ...(typeof recipe.generate_audio === 'boolean' ? { generate_audio: recipe.generate_audio } : {}),
+      ...(typeof recipe.sound === 'boolean' ? { sound: recipe.sound } : {})
+    };
+    if (!request.prompt) return null;
+    // Never more than the user's first try cost (it was refunded), so the retry needs no new consent.
+    const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+    const firstTry = Number(meta.charged_cost ?? meta.charge_cost ?? meta.refund_amount) * 10;
+    if (!(firstTry > 0)) return null;
+    const option = optionsWithinBalance(failed.id, request, Number(account.internal_credits || 0), 4, firstVideoOrder(), true)
+      .find((candidate) => candidate.model_id !== failed.id && candidate.credits <= firstTry);
+    const model = option ? getModel(option.model_id) : null;
+    const endpoint = model ? getRunner(model.id) : '';
+    if (!model || !endpoint) return null;
+    const payload = buildGenerationPayload(model.id, { ...request, ...option.settings }, userId, retryId);
+    try {
+      const { response } = await submitRun({ origin, token, userId, endpoint, model, prompt: request.prompt, usageMode: 'credits', payload, timeoutMs: 15000 });
+      if (!response.ok) return null;
+    } catch (error) {
+      // Still submitting on Hansora's side: the next check finds the new run.
+      if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) return null;
+    }
+    console.warn('hansora_mcp_first_video_retry', JSON.stringify({ runId, from: failed.id, to: model.id }));
+    startedModel = model;
+    retry = await getGeneration(userId, retryId).catch(() => null);
+  } else {
+    if (await refreshFromProvider(userId, [retry], origin).catch(() => false)) {
+      retry = (await getGeneration(userId, retryId).catch(() => null)) || retry;
+    }
+  }
+  const view = retry ? presentGeneration(retry, retryId) : {
+    status: 'processing', media_type: 'video', kind: 'video', model_name: startedModel?.name || '', prompt: presented.prompt
+  };
+  const name = view.model_name || startedModel?.name || 'another model';
+  const note = `${presented.model_name || 'The first model'} had a temporary issue, so this first video is being made with ${name} instead. The first try was refunded.`;
+  return {
+    ...view,
+    run_id: runId,
+    retry_run_id: retryId,
+    meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId },
+    ...(view.status === 'processing' ? {
+      message: note,
+      next_step: `${note} The card shows the new video by itself. If the user asks, tell them this in one short line.`
+    } : {})
+  };
 }
 
 function displayModelName(generation) {
@@ -858,25 +940,19 @@ export function createHansoraServer(ctx) {
         payload.expected_credits = price.displayedCredits;
       }
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
-      const submit = async () => {
-        const reply = await fetch(`${origin}/.netlify/functions/safe-run`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-USER-ID': userId },
-          body: JSON.stringify({
-            target_endpoint: endpoint,
-            model_id: model.id,
-            model_name: model.name,
-            kind: model.category,
-            prompt: normalizedInput.prompt,
-            usage_mode: normalizedInput.usage_mode,
-            payload
-          }),
-          signal: AbortSignal.timeout(SUBMIT_BUDGET_MS)
-        });
-        const text = await reply.text();
-        let body;
-        try { body = JSON.parse(text); } catch { body = { message: text }; }
-        return { response: reply, result: body };
+      const submit = () => submitRun({ origin, token, userId, endpoint, model, prompt: normalizedInput.prompt, usageMode: normalizedInput.usage_mode, payload });
+      // A new user's first video keeps what it was made from, in case the provider fails (firstVideoRetry).
+      const firstVideo = model.category === 'video' && !hasVideoInput && normalizedInput.usage_mode !== 'unlimited'
+        ? isFirstGeneration(userId).catch(() => false) : Promise.resolve(false);
+      const keepRecipe = async () => {
+        if (!(await firstVideo)) return;
+        recordFirstVideoRecipe(userId, runId, model.id, {
+          prompt: String(normalizedInput.prompt || '').slice(0, 5000),
+          image_urls: Array.isArray(storedInput.image_urls) ? storedInput.image_urls.slice(0, 4) : [],
+          ...(storedInput.aspect_ratio ? { aspect_ratio: storedInput.aspect_ratio } : {}),
+          ...(typeof storedInput.generate_audio === 'boolean' ? { generate_audio: storedInput.generate_audio } : {}),
+          ...(typeof storedInput.sound === 'boolean' ? { sound: storedInput.sound } : {})
+        }, waitUntil);
       };
       let submitted;
       try {
@@ -886,6 +962,7 @@ export function createHansoraServer(ctx) {
         // The submission is still running on Hansora's side; answer before ChatGPT gives up. The card and
         // get_generation follow the run by its id, and charging only happens if it really starts.
         console.warn('hansora_mcp_submit_slow', JSON.stringify({ runId, model: model.id }));
+        await keepRecipe();
         return jsonText({
           ...(await batchFields(userId, runId).catch(() => ({}))),
           ok: true, run_id: runId, model_id: model.id, model_name: model.name, media_type: model.category,
@@ -945,6 +1022,7 @@ export function createHansoraServer(ctx) {
         if (fallback) return firstVideoFallbackResult(model, fallback, providerReason || String(reason).slice(0, 200));
         throw new Error(providerReason && providerReason !== reason ? `${reason}: ${providerReason}. Nothing was generated and no credits were used.` : reason);
       }
+      await keepRecipe();
       return jsonText({
         ...(await batchFields(userId, runId)),
         ok: true,
@@ -1056,6 +1134,8 @@ export function createHansoraServer(ctx) {
         generation = (await getGeneration(userId, run_id)) || generation;
       }
       const presented = presentGeneration(generation, run_id, unavailable);
+      const retried = await firstVideoRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
+      if (retried) return jsonText(retried);
       // A refused first video (temporary issues already switch model on their own).
       if (presented.status === 'failed' && presented.failure_kind && presented.failure_kind !== 'temporary') {
         const meta = generation.meta && typeof generation.meta === 'object' ? generation.meta : {};

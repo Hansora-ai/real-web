@@ -19,7 +19,7 @@ async function callTool(name, args, { credits, generations = [], runner = () => 
     const href = String(url);
     const reply = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
     if (href.endsWith('/auth/v1/user')) return reply(200, { id: 'user-1', email: 'user@example.com' });
-    const custom = rest && href.includes('/rest/v1/') ? await rest(href) : undefined;
+    const custom = rest && href.includes('/rest/v1/') ? await rest(href, options) : undefined;
     if (custom) return custom;
     if (href.includes('/rest/v1/profiles')) return reply(200, [{ credits }]);
     if (href.includes('/rest/v1/user_subscriptions')) return reply(200, []);
@@ -783,4 +783,77 @@ test('an iPhone (HEIC) photo attached in ChatGPT is read too, and the video is m
     [eventRow('u', 'create_generation', {}, result).details.aspect_ratio, eventRow('u', 'create_generation', {}, result).details.photo_shape],
     ['9:16', '9:16']
   );
+});
+
+
+test('a new user\'s first video that fails on the provider\'s side is started once on another model, under the same card', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const old = 'user-1-mcp-1793055600192-552a0520';
+  const photo = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/poster.png';
+
+  // 1. Starting a first video keeps its recipe.
+  const saved = [];
+  const started = await callTool('create_generation', { model_id: 'veo31-lite', prompt: 'The poster comes alive', duration: 8, resolution: '720p', image_urls: [photo] }, {
+    credits: 3,
+    rest: (href, options) => {
+      if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
+      return undefined;
+    }
+  });
+  assert.equal(started.result.structuredContent.ok, true);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const recipe = saved.find((row) => row.tool === 'first_video_recipe');
+  assert.ok(recipe, 'recipe saved');
+  assert.equal(recipe.model_id, 'veo31-lite');
+  assert.equal(recipe.details.prompt, 'The poster comes alive');
+  assert.deepEqual(recipe.details.image_urls, [photo]);
+
+  // 2. The video then fails with a provider outage: the next check starts it once on Grok.
+  const failedRow = { id: 'g-old', kind: 'video', provider: 'veo3.1lite', created_at: '2026-10-26T23:00:03Z', result_url: null,
+    meta: { run_id: old, model: 'veo3_lite', status: 'failed', error: 'Internal Error, Please try again later.', charged_cost: 2, refund_amount: 2 } };
+  const world = ({ retryRow = null, firstUser = true, failure = failedRow } = {}) => (href) => {
+    if (href.includes('/rest/v1/chatgpt_events') && href.includes('first_video_recipe')) return reply([{ model_id: 'veo31-lite', details: recipe.details }]);
+    if (href.includes('result_url=not.is.null')) return reply(firstUser ? [] : [{ id: 'earlier' }]);
+    if (href.includes('/rest/v1/user_generations') && href.includes(encodeURIComponent(`${old}-retry`))) return reply(retryRow ? [retryRow] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`)) return reply([failure]);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const first = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world() });
+  assert.equal(first.submitted.length, 1);
+  assert.equal(first.submitted[0].model_id, 'grok-video');
+  assert.equal(first.submitted[0].payload.run_id, `${old}-retry`);
+  assert.equal(first.submitted[0].payload.prompt, 'The poster comes alive');
+  assert.deepEqual(first.submitted[0].payload.image_urls, [photo]);
+  const shown = first.result.structuredContent;
+  assert.equal(shown.run_id, old, 'the card keeps following the same run');
+  assert.equal(shown.status, 'processing');
+  assert.equal(shown.retry_run_id, `${old}-retry`);
+  assert.match(shown.message, /being made with Grok Video instead\. The first try was refunded\./);
+
+  // 3. Later checks follow the new run and never start another one.
+  const retryRow = { id: 'g-new', kind: 'video', provider: 'Grok', created_at: '2026-10-26T23:02:00Z',
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/new.mp4',
+    meta: { run_id: `${old}-retry`, engine: 'grok', status: 'done' } };
+  const later = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world({ retryRow, firstUser: false }) });
+  assert.equal(later.submitted.length, 0);
+  assert.equal(later.result.structuredContent.run_id, old);
+  assert.equal(later.result.structuredContent.status, 'ready');
+  assert.equal(later.result.structuredContent.result_url, retryRow.result_url);
+
+  // 4. No retry for a returning user, for a content refusal, or for a retry that failed itself.
+  const returning = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world({ firstUser: false }) });
+  assert.equal(returning.submitted.length, 0);
+  assert.equal(returning.result.structuredContent.status, 'failed');
+  const blocked = { ...failedRow, meta: { ...failedRow.meta, error: 'Request blocked: The input content was flagged for containing a prominent public figure.' } };
+  const content = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world({ failure: blocked }) });
+  assert.equal(content.submitted.length, 0);
+  assert.equal(content.result.structuredContent.failure_kind, 'content');
+  const retryFailed = { ...failedRow, meta: { ...failedRow.meta, run_id: `${old}-retry` } };
+  // Grok failing first: Veo would cost more than the first try (20 > 18), so nothing is started.
+  const grokFailed = { ...failedRow, provider: 'Grok', meta: { ...failedRow.meta, model: 'grok-imagine/image-to-video', engine: 'grok', charged_cost: 1.8, refund_amount: 1.8 } };
+  const pricier = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('first_video_recipe') ? reply([{ model_id: 'grok-video', details: recipe.details }]) : world({ failure: grokFailed })(href)) });
+  assert.equal(pricier.submitted.length, 0);
+  const twice = await callTool('get_generation', { run_id: `${old}-retry` }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && !href.includes('not.is.null') ? reply([retryFailed]) : world()(href)) });
+  assert.equal(twice.submitted.length, 0);
 });
