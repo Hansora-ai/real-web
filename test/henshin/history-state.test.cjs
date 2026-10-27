@@ -40,3 +40,27 @@ test('technical upload status messages do not replace the Processing card label'
  vm.runInContext("status('Starting your transformation…')",context);
  assert.equal(context.submission,'requesting');assert.equal(element.textContent,'Starting your transformation…');
 });
+function timings({reject=false,consent='accepted'}={}){
+ let now=0;const events=[],timers=new Map(),listeners=new Map();
+ const c=vm.createContext({performance:{now:()=>now},config:{url:'https://example.test',key:'public'},location:{pathname:'/henshin.html'},matchMedia:()=>({matches:false}),localStorage:{getItem:()=>consent},setTimeout:(fn,ms)=>{timers.set(ms,fn);return ms;},clearTimeout:id=>timers.delete(id),window:{addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)},fetch:(_url,options)=>{events.push(JSON.parse(options.body));return reject?Promise.reject(Error('offline')):Promise.resolve({ok:true});}});
+ const node=declarations.find(node=>node.id.name==='submissionTiming');vm.runInContext(source.slice(node.start,node.end),c);
+ const tracker=vm.runInContext("submissionTiming({user:{id:'owner'},access_token:'private-token'},'run-123','lite',14000000)",c);
+ return {tracker,events,timers,listeners,at:value=>{now=value;},details:()=>events.map(e=>JSON.parse(e.element_label))};
+}
+test('submission timing distinguishes preparation, upload, acceptance and long waits',()=>{
+ const s=timings();s.at(1200);s.tracker.next('uploading',{prepared_bytes:13000000});
+ s.at(60000);s.timers.get(60000)();s.at(180000);s.timers.get(180000)();
+ s.at(181000);s.tracker.next('submitting');s.at(182000);s.tracker.finish('accepted',{row_id:'generation'});
+ const details=s.details();assert.equal(details[1].phase,'preparing');assert.equal(details[1].phase_ms,1200);
+ assert.deepEqual(details.filter(e=>e.outcome==='slow').map(e=>[e.threshold_ms,e.phase]),[[60000,'uploading'],[180000,'uploading']]);
+ assert.equal(details.at(-1).elapsed_ms,182000);assert.equal(details.at(-1).phase_ms,1000);assert.equal(details.at(-1).outcome,'accepted');
+ assert.ok(s.events.every(e=>e.event_name==='click'&&e.element_type==='henshin_submission'&&e.element_id==='run-123'));
+ assert.doesNotMatch(JSON.stringify(s.events),/private-token/);assert.equal(s.timers.size,0);assert.equal(s.listeners.size,0);
+ s.tracker.finish('failed');assert.equal(s.events.length,6);
+});
+test('leaving or failing before submission is recorded; telemetry errors never block generation',async()=>{
+ const s=timings({reject:true});s.at(5000);assert.doesNotThrow(()=>s.listeners.get('pagehide')());s.tracker.finish('failed');
+ assert.deepEqual(s.details().map(e=>e.outcome),['started','page_left','failed']);assert.equal(s.timers.size,0);
+ const optedOut=timings({consent:'rejected'});optedOut.tracker.finish('accepted');assert.equal(optedOut.events.length,0);
+ await Promise.resolve();
+});
