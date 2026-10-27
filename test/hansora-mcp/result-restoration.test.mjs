@@ -297,3 +297,16 @@ test('the video upload card reads a Henshin video\'s length and quotes it before
   assert.match(script, /el\('generate'\)\.disabled = audio \|\| priceByLength/);
   assert.match(script, /Please choose a video from ' \+ \(min \|\| 1\) \+ ' to ' \+ \(max \|\| 30\) \+ ' seconds\./);
 });
+
+test('a first video moved to another model after a provider outage keeps the same card and shows the new video', async () => {
+  // The server answers for the original run id: first the retry in progress on Grok, then its result.
+  let step = 0;
+  const retrying = { ...queued(), status: 'processing', model_name: 'Grok Video', retry_run_id: 'run-1-retry', message: 'Veo 3.1 Lite had a temporary issue, so this first video is being made with Grok Video instead. The first try was refunded.' };
+  const card = host({ output: { ...queued(), model_name: 'Veo 3.1 Lite' }, get: () => envelope(step++ === 0 ? retrying : { ...complete('video'), model_name: 'Grok Video', retry_run_id: 'run-1-retry' }) });
+  await flush();
+  assert.equal(card.section(), 'processing');
+  await card.tick(7000);
+  assert.equal(card.section(), 'ready');
+  assert.equal(card.nodes.get('media').children[0].tag, 'video');
+  assert.ok(card.calls.every((call) => call.name === 'get_generation' && call.arguments.run_id === 'run-1'));
+});
