@@ -1,3 +1,4 @@
+import { keepAvatar } from '../../lib/automation/avatars.mjs';
 import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { canAfford, chargeCredits, handleOutOfCredits, automationPricesFor, replyPrice } from '../../lib/automation/billing.mjs';
@@ -51,8 +52,10 @@ export async function handler(event) {
     // Name and photo looked up once a day at most.
     const fresh = Date.parse(known?.profile?.profile_checked_at || '') > Date.now() - 86_400_000;
     const profile = fresh ? null : await getMessengerProfile({ senderId: chatId, pageToken });
+    // Facebook's photo links expire, so Hansora keeps its own copy.
+    const photo = profile?.picture ? await keepAvatar({ url: profile.picture, businessId: account.business_id, channel: 'messenger', customerId: chatId }) : '';
     const customerName = profile?.name || known?.display_name || 'Messenger customer';
-    const contact = await serviceUpsert('automation_contacts', 'business_id,channel_type,external_contact_id', { business_id: account.business_id, display_name: customerName, channel_type: 'messenger', external_contact_id: chatId, last_seen_at: occurredAt, profile: { ...(known?.profile || {}), messenger_psid: chatId, ...(profile ? { name: profile.name, profile_pic: profile.picture, profile_checked_at: new Date().toISOString() } : {}) } });
+    const contact = await serviceUpsert('automation_contacts', 'business_id,channel_type,external_contact_id', { business_id: account.business_id, display_name: customerName, channel_type: 'messenger', external_contact_id: chatId, last_seen_at: occurredAt, profile: { ...(known?.profile || {}), messenger_psid: chatId, ...(profile ? { name: profile.name, profile_pic: photo || known?.profile?.profile_pic || '', profile_checked_at: new Date().toISOString() } : {}) } });
     const shown = parts.text || parts.label || 'Message';
     const conversation = await serviceUpsert('automation_conversations', 'business_id,channel_type,external_thread_id', { business_id: account.business_id, contact_id: contact.id, channel_connection_id: connection?.id || null, channel_type: 'messenger', external_thread_id: chatId, status: 'open', last_message_preview: shown.slice(0, 1000), last_message_at: occurredAt });
 

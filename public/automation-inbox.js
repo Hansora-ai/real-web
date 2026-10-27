@@ -48,6 +48,7 @@
   loading.hidden = true;
   app.hidden = false;
   renderList(); renderConversation();
+  refreshPhotos();
 
   document.querySelector('#inbox-filters').addEventListener('click', event => {
     const button = event.target.closest('button[data-filter]'); if (!button) return;
@@ -339,9 +340,21 @@
     box.hidden = shown.length < 2;
     box.innerHTML = shown.map(([key, label]) => `<button class="${key === activePlatform ? 'active' : ''}" data-platform="${key}" type="button"><i class="ui-platform-icon ${key}">${window.HansoraUI.icon(key)}</i>${label} <span>${counts[key] || 0}</span></button>`).join('');
   }
+  // Instagram photo links expire after a few days: the server keeps Hansora's own copy of the missing ones, and they
+  // appear without reloading. Nothing is asked once every photo is kept.
+  async function refreshPhotos() {
+    if (api.isLocalPreview || !conversations.some(item => item.channelType === 'instagram_dm' && !/\/object\/public\/automation-avatars\//.test(item.avatarUrl))) return;
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-contact-photos', { method:'POST', body:JSON.stringify({ business_id:businessId }) });
+      const photos = response.ok ? (await response.json()).photos || {} : {};
+      let changed = false;
+      for (const item of conversations) if (photos[item.contactId]) { item.avatarUrl = photos[item.contactId]; changed = true; }
+      if (changed) { renderList(); renderCustomer(); }
+    } catch (_) {}
+  }
   function current() { return conversations.find(conversation => conversation.id === selectedId) || conversations[0] || null; }
   async function loadConversations() {
-    const base = 'id,channel_type,status,ai_enabled,intent,summary,last_message_preview,last_message_at,automation_contacts(display_name,primary_phone,primary_email,language,profile)';
+    const base = 'id,contact_id,channel_type,status,ai_enabled,intent,summary,last_message_preview,last_message_at,automation_contacts(display_name,primary_phone,primary_email,language,profile)';
     const query = select => api.db.from('automation_conversations').select(select).eq('business_id',businessId).order('last_message_at',{ascending:false}).limit(100);
     // The stage columns come with SQL 13; until then the inbox works without them.
     let result = await query(`${base},sales_stage,sales_interest,sales_value,sales_currency,sales_updated_at`);
@@ -356,7 +369,7 @@
       const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts || {};
       const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer',tiktok:'TikTok customer'}[row.channel_type] || 'Instagram customer');
       const avatarUrl = /^https:\/\//.test(String(contact.profile?.profile_pic || '')) ? String(contact.profile.profile_pic) : '';
-      return {id:row.id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
+      return {id:row.id,contactId:row.contact_id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
     });
   }
   async function loadMessages(conversation) {

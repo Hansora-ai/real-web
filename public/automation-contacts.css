@@ -7,7 +7,10 @@
 .contacts-row{display:grid;grid-template-columns:minmax(180px,1.3fr) minmax(160px,1fr) minmax(160px,1.2fr) 110px 90px;gap:12px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}
 .contacts-row.head{color:var(--text-3);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .contact-who{display:flex;align-items:center;gap:10px;min-width:0}
-.contact-who img,.contact-who i{flex:none;width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--surface-3);display:grid;place-items:center;font-style:normal;font-weight:600}
+.contact-avatar{position:relative;flex:none;width:34px;height:34px}
+.contact-avatar i,.contact-avatar img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;background:var(--surface-3);display:grid;place-items:center;font-style:normal;font-weight:600}
+.contact-avatar .ui-convo-channel{width:16px;height:16px;border-color:var(--bg)}
+.contact-avatar .ui-convo-channel svg{width:9px;height:9px}
 .contact-who b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .contact-who small{display:block;color:var(--text-3);font-size:11.5px}
 .contact-tags{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
