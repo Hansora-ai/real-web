@@ -237,7 +237,7 @@
   busy=true;setView('history');submission='requesting';submissionId=null;renderResults();update();
   const input=source,refs=images.map(i=>i.file),duration=seconds,quality=resolution,selectedModel=henshinModel,chosenMode=mode,prompt=$('prompt').value,preserve=$('keepAudio').checked;
   try{
-   status(t('Processing request…'));const prepared=await window.HenshinMedia.compress(input,{maxMB:100});
+   status(t('Processing request…'));const prepared=await window.HenshinMedia.compress(input,{maxMB:100,passthrough:selectedModel==='lite'});
    const videoURL=await upload(prepared),imageURLs=[];for(const file of refs) imageURLs.push(await upload(file));
    setView('history');
    const data=await request('run-henshin',{run_id:crypto.randomUUID(),henshin_model:selectedModel,video_url:videoURL,image_urls:imageURLs,keep_audio:preserve,source_video_duration:duration,resolution:quality,mode:chosenMode,prompt,expected_credits:quote(duration,quality,selectedModel).displayedCredits});

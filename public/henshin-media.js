@@ -37,15 +37,20 @@
   });
  }
  function validDuration(d){if(!Number.isFinite(d)||d<=0)throw Error(t('Could not read this video. Try exporting it as MP4 (H.264).'));if(d<4||d>30)throw Error(t('This video is {seconds} seconds. Henshin needs a 4–30 second clip; trim it before uploading.',{seconds:d.toFixed(1)}));return d;}
- async function compress(file,{example=false,maxMB=100}={}){
+ async function compress(file,{example=false,maxMB=100,passthrough=false}={}){
   if(converted.has(file)&&file.size<=maxMB*MB)return file;
   size(file,200,'video');
   return process(async ff=>{
    await ff.writeFile('source',new Uint8Array(await file.arrayBuffer()));
-   await ff.ffprobe(['-v','error','-show_entries','format=duration:stream=codec_type,codec_name,pix_fmt,duration','-of','json','source','-o','probe.json']);
+   await ff.ffprobe(['-v','error','-show_entries','format=duration,format_name:stream=codec_type,codec_name,pix_fmt,duration,width,height,sample_aspect_ratio,r_frame_rate:stream_side_data=rotation','-of','json','source','-o','probe.json']);
    let data;try{data=JSON.parse(new TextDecoder().decode(await ff.readFile('probe.json')));}catch{throw Error(t('Could not read this video. Try exporting it as MP4 (H.264).'));}
    const stream=data.streams?.find(s=>s.codec_type==='video');if(!stream)throw Error(t('This file has no readable video track.'));
    const seconds=validDuration(Number.isFinite(Number(stream.duration))?Number(stream.duration):Number(data.format?.duration));
+   const audioStream=data.streams?.find(s=>s.codec_type==='audio'),ratio=stream.width/stream.height;
+   const [fpsN,fpsD=1]=String(stream.r_frame_rate||'0').split('/').map(Number),fps=fpsN/fpsD;
+   // Lite strips audio and enforces KIE's final byte limit on the server. Send
+   // compatible uploads intact instead of encoding the same frames twice.
+   if(passthrough&&file.size<=maxMB*MB&&/(^|,)(mov|mp4)(,|$)/.test(data.format?.format_name||'')&&stream.codec_name==='h264'&&stream.pix_fmt==='yuv420p'&&Math.min(stream.width,stream.height)>=300&&stream.width*stream.height<=921600&&ratio>=.405&&ratio<=2.45&&[undefined,'1:1','0:1'].includes(stream.sample_aspect_ratio)&&fps>0&&fps<=30&&!stream.side_data_list?.some(s=>Number(s.rotation)%360)&&(!audioStream||audioStream.codec_name==='aac')&&Math.abs(Number(data.format.duration)-seconds)<.1)return file;
    let inputs=['-i','source'],audio='0:a:0?';
    if(stream.codec_name==='av1'){
     const {decodeToH264}=await import('/henshin-native-video.mjs');
