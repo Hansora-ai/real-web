@@ -1,3 +1,4 @@
+import { isKeptAvatar, keepAvatar } from '../../lib/automation/avatars.mjs';
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { canAfford, chargeCredits, handleOutOfCredits, automationPricesFor, replyPrice } from '../../lib/automation/billing.mjs';
@@ -55,7 +56,10 @@ export async function handler(event) {
     const customerName = customerSide.customerName || 'TikTok customer';
     // Keep tags and fields the team added to this contact.
     const knownContact = await first(`/rest/v1/automation_contacts?business_id=eq.${businessId}&channel_type=eq.tiktok&external_contact_id=eq.${encodeURIComponent(customerId)}&select=profile&limit=1`);
-    const contact = await serviceUpsert('automation_contacts', 'business_id,channel_type,external_contact_id', { business_id: businessId, display_name: customerName, channel_type: 'tiktok', external_contact_id: customerId, last_seen_at: new Date(fresh[fresh.length - 1].timestamp).toISOString(), profile: { ...(knownContact?.profile || {}), tiktok_id: customerId, tiktok_conversation_id: conversationId, name: customerName, ...(customerSide.customerPicture ? { profile_pic: customerSide.customerPicture } : {}), profile_checked_at: new Date().toISOString() } });
+    // TikTok's photo links expire, so Hansora keeps its own copy (once per customer).
+    const keptPhoto = isKeptAvatar(knownContact?.profile?.profile_pic) ? knownContact.profile.profile_pic : '';
+    const photo = keptPhoto || (customerSide.customerPicture ? await keepAvatar({ url: customerSide.customerPicture, businessId, channel: 'tiktok', customerId }) : '');
+    const contact = await serviceUpsert('automation_contacts', 'business_id,channel_type,external_contact_id', { business_id: businessId, display_name: customerName, channel_type: 'tiktok', external_contact_id: customerId, last_seen_at: new Date(fresh[fresh.length - 1].timestamp).toISOString(), profile: { ...(knownContact?.profile || {}), tiktok_id: customerId, tiktok_conversation_id: conversationId, name: customerName, ...(photo ? { profile_pic: photo } : {}), profile_checked_at: new Date().toISOString() } });
     const shownOf = item => item.text || (item.type === 'SHARE_POST' && item.postUrl ? `${LABELS.SHARE_POST} ${item.postUrl}` : LABELS[item.type] || 'Message');
     const conversation = await serviceUpsert('automation_conversations', 'business_id,channel_type,external_thread_id', { business_id: businessId, contact_id: contact.id, channel_connection_id: connection?.id || null, channel_type: 'tiktok', external_thread_id: conversationId, status: 'open', last_message_preview: shownOf(fresh[fresh.length - 1]).slice(0, 1000), last_message_at: new Date(fresh[fresh.length - 1].timestamp).toISOString() });
 

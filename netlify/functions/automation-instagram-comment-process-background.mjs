@@ -1,3 +1,4 @@
+import { isKeptAvatar, keepAvatar } from '../../lib/automation/avatars.mjs';
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { automationPricesFor, canAfford, chargeCredits } from '../../lib/automation/billing.mjs';
 import { byPriority, entryIndex, matchesCommentText, pickReplyVariation, preparePrivateReply } from '../../lib/automation/comment-flow.mjs';
@@ -67,8 +68,10 @@ async function runWorkflow({workflow,comment,account,connection,accessToken}){
   // The commenter is the same person as in DMs: one contact and one Inbox chat, so the comment, the private reply
   // and everything after appear together, with their name and photo. Saved tags and fields are kept.
   const known=await first(`/rest/v1/automation_contacts?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&external_contact_id=eq.${encodeURIComponent(comment.senderId)}&select=display_name,profile&limit=1`).catch(()=>null);
-  const lookup=known?.profile?.profile_pic?null:await getInstagramSenderProfile({senderId:comment.senderId,accessToken}).catch(()=>null);
-  const profile={...(known?.profile||{}),instagram_scoped_id:comment.senderId,username:lookup?.username||known?.profile?.username||comment.username||'',latest_media_id:comment.mediaId,...(lookup?{name:lookup.name,profile_pic:lookup.profilePic,profile_checked_at:new Date().toISOString()}:{})};
+  const checkedRecently=Date.parse(known?.profile?.profile_checked_at||'')>Date.now()-86_400_000;
+  const lookup=isKeptAvatar(known?.profile?.profile_pic)||checkedRecently?null:await getInstagramSenderProfile({senderId:comment.senderId,accessToken}).catch(()=>null);
+  const photo=lookup?.profilePic?await keepAvatar({url:lookup.profilePic,businessId:account.business_id,channel:'instagram',customerId:comment.senderId}):'';
+  const profile={...(known?.profile||{}),instagram_scoped_id:comment.senderId,username:lookup?.username||known?.profile?.username||comment.username||'',latest_media_id:comment.mediaId,...(lookup?{name:lookup.name,profile_pic:photo||known?.profile?.profile_pic||'',profile_checked_at:new Date().toISOString()}:{})};
   const dmConnection=await first(`/rest/v1/automation_channel_connections?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&select=id&limit=1`).catch(()=>null);
   const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:lookup?.name||known?.display_name||comment.username||'Instagram customer',channel_type:'instagram_dm',external_contact_id:comment.senderId,last_seen_at:occurredAt,profile});
   const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:dmConnection?.id||connection.id,channel_type:'instagram_dm',external_thread_id:comment.senderId,status:'open',last_message_preview:`💬 ${String(comment.text||'').slice(0,990)}`,last_message_at:occurredAt});

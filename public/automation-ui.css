@@ -367,6 +367,7 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 .ui-convo-channel svg{width:10px;height:10px}
 .ui-convo-channel.instagram,.ui-convo-channel.comment{background:linear-gradient(45deg,#f9a13a,#e1306c 50%,#8a3ab9);color:#fff}
 .ui-convo-channel.whatsapp{background:#1fb35f;color:#fff}
+.ui-convo-channel.messenger{background:#0084ff;color:#fff}.ui-convo-channel.telegram{background:#27a7e7;color:#fff}.ui-convo-channel.tiktok{background:#000;color:#fff}
 .ui-convo-body{display:grid;gap:3px;flex:1;min-width:0}
 .ui-convo-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .ui-convo-top strong{overflow:hidden;font-size:14px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
