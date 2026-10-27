@@ -867,3 +867,20 @@ test('an over-long Seedance prompt comes back to ChatGPT to shorten, before anyt
     assert.match(result.structuredContent.next_step, /Shorten it to under 20000 characters/);
   }
 });
+
+test('Nano Banana 2.1 is in ChatGPT as the top image model, at the website\'s prices and on its runner', async () => {
+  const list = (await callTool('list_models', { category: 'image' }, { credits: 30 })).result.structuredContent.models;
+  assert.equal(list[0].id, 'nano-banana-2-1');
+  assert.equal(list[0].name, 'Nano Banana 2.1');
+  assert.match(list[0].recommendation, /^Default image model/);
+  for (const [resolution, credits] of [['1K', 3], ['2K', 5], ['4K', 7]]) {
+    const price = (await callTool('quote_generation', { model_id: 'nano-banana-2-1', resolution }, { credits: 30 })).result.structuredContent;
+    assert.equal(price.credits, credits, resolution);
+  }
+  assert.equal((await callTool('get_model', { model_id: 'nano-banana-2.1' }, { credits: 30 })).result.structuredContent.id, 'nano-banana-2-1');
+  const photo = 'https://cdn.test/cat.png';
+  const { result, submitted } = await callTool('create_generation', { model_id: 'nano-banana-2-1', prompt: 'The cat as a knight', aspect_ratio: '9:16', resolution: '2K', image_urls: [photo] }, { credits: 30 });
+  assert.equal(result.structuredContent.ok, true);
+  assert.equal(submitted[0].target_endpoint, '/.netlify/functions/run-nano-banana-2-1');
+  assert.deepEqual([submitted[0].payload.urls, submitted[0].payload.size, submitted[0].payload.resolution], [[photo], '9:16', '2K']);
+});
