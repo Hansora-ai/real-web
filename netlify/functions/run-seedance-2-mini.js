@@ -157,6 +157,20 @@ async function getCredits(uid) {
   return Number(Array.isArray(rows) && rows[0] ? rows[0].credits : 0);
 }
 
+const MAX_PROMPT_CHARS = 20000;
+// The website shows `error` as written, so it carries the sentence; error_code is for code.
+function promptTooLong(length) {
+  const message = `Seedance 2.0 Mini accepts prompts up to ${MAX_PROMPT_CHARS.toLocaleString('en-US')} characters; this one has ${Number(length || 0).toLocaleString('en-US')}. Please shorten it and try again. Nothing was charged.`;
+  return {
+    ok: false,
+    error: message,
+    error_code: 'prompt_too_long',
+    message,
+    max_prompt_chars: MAX_PROMPT_CHARS,
+    prompt_characters: length || null
+  };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
@@ -171,6 +185,8 @@ exports.handler = async (event) => {
 
     const prompt = String(body.prompt || '').trim();
     if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
+    // KIE rejects very long prompts only after the request is made; say so before anything starts.
+    if (prompt.length > MAX_PROMPT_CHARS) return json(400, promptTooLong(prompt.length));
 
     const runId = String(body.run_id || `${uid}-${Date.now()}`);
     const existing = await fetchGeneration(uid, runId);
@@ -201,6 +217,8 @@ exports.handler = async (event) => {
     const referenceVideoUrls = Array.isArray(body.reference_video_urls) ? body.reference_video_urls.filter(Boolean).map(String) : [];
     const referenceAudioUrls = Array.isArray(body.reference_audio_urls) ? body.reference_audio_urls.filter(Boolean).map(String) : [];
     const hasFrameMode = !!(firstFrameUrl || lastFrameUrl);
+    // KIE allows web search only for text-to-video ("Web search only can be used in the scene of t2v").
+    const textOnly = !hasFrameMode && !referenceImageUrls.length && !referenceVideoUrls.length && !referenceAudioUrls.length;
     const resolution = ['480p', '720p'].includes(String(body.resolution || '720p')) ? String(body.resolution || '720p') : '720p';
     const input = {
       prompt,
@@ -209,7 +227,7 @@ exports.handler = async (event) => {
       aspect_ratio: String(body.aspect_ratio || '16:9'),
       generate_audio: body.generate_audio !== false,
       return_last_frame: !!body.return_last_frame,
-      web_search: !!(body.enable_web_search || body.web_search),
+      web_search: textOnly && !!(body.enable_web_search || body.web_search),
       nsfw_checker: body.nsfw_checker === undefined ? false : !!body.nsfw_checker,
       ...(firstFrameUrl ? { first_frame_url: firstFrameUrl } : {}),
       ...(lastFrameUrl ? { last_frame_url: lastFrameUrl } : {}),
@@ -230,6 +248,7 @@ exports.handler = async (event) => {
     }
     if (data && data.code && Number(data.code) !== 200) {
       await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data });
+      if (/text length/i.test(String(data.msg || data.message || ''))) return json(400, { ...promptTooLong(prompt.length), details: data });
       return json(422, { ok: false, error: 'kie_create_failed', details: data });
     }
     const taskId = extractTaskId(data);
