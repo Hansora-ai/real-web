@@ -760,3 +760,27 @@ test('Henshin before its video is chosen gets the rate per 10 seconds instead of
   assert.equal(seedance.price_by_video_length, undefined);
   assert.ok(seedance.quote.credits > 0);
 });
+
+test('an iPhone (HEIC) photo attached in ChatGPT is read too, and the video is made tall', async () => {
+  const box = (type, payload) => { const head = Buffer.alloc(8); head.writeUInt32BE(8 + payload.length, 0); head.write(type, 4, 'latin1'); return Buffer.concat([head, payload]); };
+  const ispe = (width, height) => { const body = Buffer.alloc(12); body.writeUInt32BE(width, 4); body.writeUInt32BE(height, 8); return box('ispe', body); };
+  const heic = (boxes) => Buffer.concat([box('ftyp', Buffer.from('heic\0\0\0\0mif1heic', 'latin1')), ...boxes]);
+  const { imageSize } = await import('../../lib/hansora-mcp/image-shape.mjs');
+  // A thumbnail and tiles are smaller than the main picture; irot 90 degrees turns a stored-wide photo upright.
+  assert.deepEqual(imageSize(heic([ispe(320, 240), ispe(1080, 1920), ispe(512, 512)])), { width: 1080, height: 1920 });
+  assert.deepEqual(imageSize(heic([ispe(4032, 3024), box('irot', Buffer.from([1]))])), { width: 3024, height: 4032 });
+
+  const photo = 'https://files.oaiusercontent.test/file-heic';
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'veo31-lite', prompt: 'The cub swims', duration: 8, resolution: '1080p', aspect_ratio: '16:9',
+    image_files: [{ download_url: photo, file_id: 'file-heic', mime_type: 'image/heic' }]
+  }, { credits: 3, files: { [photo]: heic([ispe(4032, 3024), box('irot', Buffer.from([1]))]) } });
+  assert.equal(submitted[0].payload.aspectRatio, '9:16');
+  assert.equal(result.structuredContent.aspect_ratio, '9:16');
+  assert.equal(result.structuredContent.photo_shape, '9:16');
+  const { eventRow } = await import('../../lib/hansora-mcp/events.mjs');
+  assert.deepEqual(
+    [eventRow('u', 'create_generation', {}, result).details.aspect_ratio, eventRow('u', 'create_generation', {}, result).details.photo_shape],
+    ['9:16', '9:16']
+  );
+});

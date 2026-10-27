@@ -841,9 +841,12 @@ export function createHansoraServer(ctx) {
       // and also when ChatGPT sent the opposite of the photo's shape (it often fills in 16:9 on its own). Any
       // other shape, such as 1:1, is kept as asked.
       const askedShape = String(storedInput.aspect_ratio || '').trim();
+      // Logged with the call, so a video in the wrong shape can be traced to a photo Hansora could not read.
+      let photoShapeFound = null;
       if ((!askedShape || askedShape === '16:9' || askedShape === '9:16') && PHOTO_SHAPED_MODELS.has(model.id)) {
         const frame = startingFrame(model.id, storedInput);
         const shape = frame ? await photoShape(frame) : null;
+        if (frame) photoShapeFound = shape || 'unknown';
         if (shape) storedInput.aspect_ratio = shape;
       }
       const runId = `${userId}-mcp-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
@@ -887,7 +890,7 @@ export function createHansoraServer(ctx) {
           ...(await batchFields(userId, runId).catch(() => ({}))),
           ok: true, run_id: runId, model_id: model.id, model_name: model.name, media_type: model.category,
           credits: price ? price.displayedCredits : undefined, status: 'queued', prompt: normalizedInput.prompt,
-          aspect_ratio: normalizedInput.aspect_ratio || null, duration: normalizedInput.duration || null,
+          aspect_ratio: storedInput.aspect_ratio || null, duration: normalizedInput.duration || null,
           resolution: normalizedInput.resolution || normalizedInput.quality || null,
           next_step: `${CARD_FOLLOWS_RUN} Do not start it again.`
         });
@@ -953,7 +956,8 @@ export function createHansoraServer(ctx) {
         ...(price && charged != null && charged !== price.displayedCredits ? { credits_note: `The final price is ${charged} credits${model.id === 'henshin' || model.id === 'henshin-lite' ? ', based on the length of the uploaded video' : charged < price.displayedCredits ? `, lower than the ${price.displayedCredits} quoted` : ''}. Tell the user the final amount.` } : {}),
         status: response.status === 202 ? 'queued' : 'submitted',
         prompt: normalizedInput.prompt,
-        aspect_ratio: normalizedInput.aspect_ratio || null,
+        aspect_ratio: storedInput.aspect_ratio || null,
+        ...(photoShapeFound ? { photo_shape: photoShapeFound } : {}),
         duration: normalizedInput.duration || null,
         resolution: normalizedInput.resolution || normalizedInput.quality || null,
         next_step: CARD_FOLLOWS_RUN,
