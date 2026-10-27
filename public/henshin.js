@@ -82,6 +82,25 @@
  $('henshinModelButton').onclick=()=>{if(!busy)$('henshinModelDialog').showModal();};$('henshinModelClose').onclick=()=>$('henshinModelDialog').close();for(const button of document.querySelectorAll('[data-henshin-model]'))button.onclick=()=>{selectHenshinModel(button.dataset.henshinModel);$('henshinModelDialog').close();};
  function update(){ $('cost').hidden=!seconds; $('cost').textContent=seconds?(i18n?.credits(cost())||`${cost()} credits`):'';$('generate').disabled=busy||sourcePending||imagePending>0||!source||!seconds||(mode!=='edit'&&!images.length)||images.length>imageLimit();$('imagesAddEmpty').querySelector('small').textContent=mode==='edit'?t('Optional · up to {n} reference images',{n:imageLimit()}):t('Up to {n} reference images',{n:imageLimit()}); }
  async function session(){return (await sb.auth.getSession()).data.session;}
+ function submissionTiming(s,runId,model,bytes,started=performance.now()){
+  let phase='preparing',phaseStarted=started,finished=false;
+  // Operational timings share the existing authenticated event store. Never
+  // include prompts, media URLs, filenames or tokens in the recorded details.
+  function report(outcome,extra={}){
+   try{
+    if(localStorage.getItem('hansora.analytics.consent.v1')==='rejected')return;
+    const now=performance.now(),details={outcome,phase,elapsed_ms:Math.round(now-started),phase_ms:Math.round(now-phaseStarted),model,source_bytes:bytes,...extra};
+    void fetch(config.url+'/rest/v1/click_events',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:config.key,Authorization:'Bearer '+s.access_token,Prefer:'return=minimal'},body:JSON.stringify({user_id:s.user.id,event_name:'click',element_type:'henshin_submission',element_id:runId,element_label:JSON.stringify(details),page_path:location.pathname,device_type:matchMedia('(max-width: 900px)').matches?'mobile':'desktop'})}).catch(()=>{});
+   }catch{}
+  }
+  const timers=[60000,180000].map(ms=>setTimeout(()=>{if(!finished)report('slow',{threshold_ms:ms});},ms));
+  const left=()=>{if(!finished)report('page_left');};window.addEventListener('pagehide',left);
+  report('started');
+  return {
+   next(next,extra={}){if(finished)return;report('phase_complete',extra);phase=next;phaseStarted=performance.now();},
+   finish(outcome,extra={}){if(finished)return;finished=true;timers.forEach(clearTimeout);window.removeEventListener('pagehide',left);report(outcome,extra);}
+  };
+ }
  async function request(route,body,method='POST'){
   const s=await session();if(!s) throw Error(t('Sign in first.'));
   const r=await fetch('/.netlify/functions/'+route,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+s.access_token},body:JSON.stringify(body)});
@@ -162,8 +181,9 @@
  function resultState(row){
   const m=row.meta||{},lite=isHenshin(row)&&m.henshin_model==='lite'&&m.audio_strategy!=='original';
   const recovered=lite&&!m.refunded&&['restoring_audio','audio_retry','audio_failed'].includes(m.status)?m.generated_video_url:null;
-  const videoURL=row.result_url||recovered,audioPending=!lite&&isHenshin(row)&&(m.source_audio_url||m.finish_video)&&!m.audio_restored;
-  const failed=/fail|error|reject|cancel/.test(m.status||'')&&!recovered,ready=!!videoURL&&!audioPending&&!failed;
+  const videoURL=row.result_url||recovered,finishRequired=!lite&&isHenshin(row)&&(m.source_audio_url||m.finish_video)&&!m.audio_restored;
+  const audioPending=!!(finishRequired&&(m.generated_video_url||row.result_url));
+  const failed=/fail|error|reject|cancel/.test(m.status||'')&&!recovered,ready=!!videoURL&&!finishRequired&&!failed;
   const stage=/queued/.test(m.status||'')?'queued':!m.task_id||/requesting|uploading|preparing/.test(m.status||'')?'requesting':'generating';
   return {videoURL,ready,failed,audioPending,audioFailed:!lite&&m.status==='audio_failed',stage,label:t(stage==='queued'?'In Queue':stage==='requesting'?'Processing request…':'Generating')};
  }
@@ -233,18 +253,23 @@
  }
  $('generate').onclick=async()=>{
   if(busy||sourcePending||imagePending>0||!source||(mode!=='edit'&&!images.length)||!seconds)return;
+  const clickedAt=performance.now();
   const s=await session();if(!s){status(t('Sign in to generate.'),true);window.HansoraHeader?.openAuth?.();return;}
   busy=true;setView('history');submission='requesting';submissionId=null;renderResults();update();
   const input=source,refs=images.map(i=>i.file),duration=seconds,quality=resolution,selectedModel=henshinModel,chosenMode=mode,prompt=$('prompt').value,preserve=$('keepAudio').checked;
+  const runId=crypto.randomUUID(),timing=submissionTiming(s,runId,selectedModel,input.size,clickedAt);
   try{
-   status(t('Processing request…'));const prepared=await window.HenshinMedia.compress(input,{maxMB:100});
+   status(t('Processing request…'));const prepared=await window.HenshinMedia.compress(input,{maxMB:100,passthrough:selectedModel==='lite'});
+   timing.next('uploading',{prepared_bytes:prepared.size});
    const videoURL=await upload(prepared),imageURLs=[];for(const file of refs) imageURLs.push(await upload(file));
+   timing.next('submitting');
    setView('history');
-   const data=await request('run-henshin',{run_id:crypto.randomUUID(),henshin_model:selectedModel,video_url:videoURL,image_urls:imageURLs,keep_audio:preserve,source_video_duration:duration,resolution:quality,mode:chosenMode,prompt,expected_credits:quote(duration,quality,selectedModel).displayedCredits});
+   const data=await request('run-henshin',{run_id:runId,henshin_model:selectedModel,video_url:videoURL,image_urls:imageURLs,keep_audio:preserve,source_video_duration:duration,resolution:quality,mode:chosenMode,prompt,expected_credits:quote(duration,quality,selectedModel).displayedCredits});
+   timing.finish(data.taskId?'accepted':'confirmation_pending',{row_id:data.row_id||null});
    if(data.credits!==undefined)window.HansoraHeader?.setCredits?.(data.credits);
    submissionId=data.row_id||null;submission=data.taskId?'generating':'requesting';renderResults();
    window.HansoraHeader?.startCreditsPolling?.(90000,1500);status(t(data.taskId?'Generating':'Processing request…'));await refresh();
-  }catch(e){status(t(e.message),true);}finally{busy=false;submission=null;submissionId=null;renderResults();update();}
+  }catch(e){timing.finish('failed');status(t(e.message),true);}finally{busy=false;submission=null;submissionId=null;renderResults();update();}
  };
  async function recreate(item){
   if(busy||sourcePending||imagePending>0)throw Error(t('Wait for the current upload or request to finish.'));
