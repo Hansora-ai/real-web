@@ -41,9 +41,9 @@ function mockServices({credits=100,reject=false}={}){
  }};
 }
 const event=patch=>({httpMethod:'POST',headers:{authorization:'Bearer test'},body:JSON.stringify({...body,...patch})});
-test('Standard Henshin charges verified duration, submits the original source and never extracts audio',async()=>{
+test('Standard Henshin charges verified duration, sends silent footage and saves the original soundtrack',async()=>{
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
- try{const {handler}=require('../../netlify/functions/run-henshin');let result=await handler(event({audio_url:url}));assert.equal(result.statusCode,201);assert.equal(JSON.parse(result.body).debited,8.8);assert.equal(services.state().credits,91.2);assert.equal(services.state().providerInput.duration,-1);assert.equal(services.state().providerInput.omni_reference_task_type,'edit');assert.equal(services.state().providerInput.generate_audio,true);assert.equal(Object.hasOwn(services.state().providerInput,'audio_urls'),false);assert.deepEqual(services.state().record.meta.reference_audio_urls,[]);assert.doesNotMatch(services.state().providerInput.prompt,/@Audio/);assert.equal(services.state().record.meta.source_audio_url,null);assert.equal(services.state().providerInput.video_urls[0],url);assert.equal(services.state().media.size,0);assert.equal(services.state().record.meta.refund_amount,8.8);result=await handler(event());assert.equal(result.statusCode,200);assert.equal(services.state().submits,1);assert.equal(services.state().credits,91.2);}finally{global.fetch=original;}
+ try{const {handler}=require('../../netlify/functions/run-henshin');let result=await handler(event({audio_url:url,generate_audio:true}));assert.equal(result.statusCode,201);assert.equal(JSON.parse(result.body).debited,8.8);assert.equal(services.state().credits,91.2);assert.equal(services.state().providerInput.duration,-1);assert.equal(services.state().providerInput.omni_reference_task_type,'edit');assert.equal(services.state().providerInput.generate_audio,false);assert.equal(Object.hasOwn(services.state().providerInput,'audio_urls'),false);assert.deepEqual(services.state().record.meta.reference_audio_urls,[]);assert.doesNotMatch(services.state().providerInput.prompt,/@Audio/);assert.match(services.state().record.meta.source_audio_url,/source-audio\.m4a$/);assert.match(services.state().providerInput.video_urls[0],/silent-source\.mp4$/);assert.equal(services.state().media.size,2);assert.equal(services.state().record.meta.finish_video,true);assert.equal(services.state().record.meta.generate_audio,false);assert.equal(services.state().record.meta.refund_amount,8.8);result=await handler(event());assert.equal(result.statusCode,200);assert.equal(services.state().submits,1);assert.equal(services.state().credits,91.2);}finally{global.fetch=original;}
 });
 test('Built-in instructions go only to the provider; the saved row keeps just the user text',async()=>{
  for(const [patch,saved] of [[{mode:'swap',prompt:'',keep_audio:true,audio_url:url},'Henshin · Object swap'],[{mode:'edit',prompt:'Make the jacket red.',keep_audio:false,audio_url:url},'Make the jacket red.']]){
@@ -51,10 +51,10 @@ test('Built-in instructions go only to the provider; the saved row keeps just th
   try{const result=await require('../../netlify/functions/run-henshin').handler(event(patch));assert.equal(result.statusCode,201);
    const {record,providerInput,media:objects}=services.state();assert.match(providerInput.prompt,/camera angle, camera position, camera movement/);
    assert.equal(Object.hasOwn(providerInput,'audio_urls'),false);assert.doesNotMatch(providerInput.prompt,/@Audio/);
-   assert.equal(providerInput.generate_audio,true);assert.equal(record.meta.source_audio_url,null);assert.equal(objects.size,0);
+   assert.equal(providerInput.generate_audio,false);if(patch.keep_audio)assert.match(record.meta.source_audio_url,/source-audio\.m4a$/);else assert.equal(record.meta.source_audio_url,null);assert.equal(objects.size,patch.keep_audio?2:1);
    const media=require('../../lib/henshin/server-media.cjs');await media.withCore(async core=>{
-    core.FS.writeFile('provider-video.mp4',fs.readFileSync('test/henshin/fixtures/source.mp4'));
-    assert.deepEqual(media.probe(core,'provider-video.mp4').streams.map(s=>s.codec_type),['video','audio']);
+    core.FS.writeFile('provider-video.mp4',objects.get(providerInput.video_urls[0]));
+    assert.deepEqual(media.probe(core,'provider-video.mp4').streams.map(s=>s.codec_type),['video']);
    });
    assert.equal(record.prompt,saved);assert.equal(record.meta.user_prompt,patch.prompt);assert.doesNotMatch(JSON.stringify(record),/camera angle, camera position/);
   }finally{global.fetch=original;}
@@ -253,7 +253,7 @@ test('Video edit accepts no images without inventing an image reference, includi
   for(const mode of ['motion','swap'])assert.throws(()=>common.validate({...input,mode}),/1–30/);
   const {templateInput}=require('../../lib/henshin/templates.cjs');assert.deepEqual(templateInput(input).reference_image_urls,[]);
   const response=await require('../../netlify/functions/run-henshin').handler(event(input));assert.equal(response.statusCode,201);
-  assert.equal(services.state().providerInput.image_urls,undefined);assert.doesNotMatch(services.state().providerInput.prompt,/@Image|@Audio/);assert.equal(services.state().record.meta.source_audio_url,null);
+  assert.equal(services.state().providerInput.image_urls,undefined);assert.doesNotMatch(services.state().providerInput.prompt,/@Image|@Audio/);assert.match(services.state().record.meta.source_audio_url,/source-audio\.m4a$/);
  }finally{global.fetch=original;}
 });
 test('Library pages return 24 recipes and an explicit next offset, with a separate playback preview',async()=>{
