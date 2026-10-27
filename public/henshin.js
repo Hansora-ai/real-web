@@ -160,7 +160,7 @@
  $('previewDownload').onclick=()=>activePreview&&download(activePreview.video_url,$('previewDownload'));
  for(const [id,kind,label]of [['previewRecreate','recreate',t('Recreate')],['previewDownload','download',t('Download')]]){const b=$(id);decorate(b,kind,label);const span=document.createElement('span');span.textContent=label;b.append(span);}
  function resultState(row){
-  const m=row.meta||{},lite=isHenshin(row)&&m.henshin_model==='lite';
+  const m=row.meta||{},lite=isHenshin(row)&&m.henshin_model==='lite'&&m.audio_strategy!=='original';
   const recovered=lite&&!m.refunded&&['restoring_audio','audio_retry','audio_failed'].includes(m.status)?m.generated_video_url:null;
   const videoURL=row.result_url||recovered,audioPending=!lite&&isHenshin(row)&&(m.source_audio_url||m.finish_video)&&!m.audio_restored;
   const failed=/fail|error|reject|cancel/.test(m.status||'')&&!recovered,ready=!!videoURL&&!audioPending&&!failed;
@@ -237,7 +237,7 @@
   busy=true;setView('history');submission='requesting';submissionId=null;renderResults();update();
   const input=source,refs=images.map(i=>i.file),duration=seconds,quality=resolution,selectedModel=henshinModel,chosenMode=mode,prompt=$('prompt').value,preserve=$('keepAudio').checked;
   try{
-   status(t('Processing request…'));const prepared=await window.HenshinMedia.compress(input,{maxMB:selectedModel==='lite'?10:100});
+   status(t('Processing request…'));const prepared=await window.HenshinMedia.compress(input,{maxMB:100});
    const videoURL=await upload(prepared),imageURLs=[];for(const file of refs) imageURLs.push(await upload(file));
    setView('history');
    const data=await request('run-henshin',{run_id:crypto.randomUUID(),henshin_model:selectedModel,video_url:videoURL,image_urls:imageURLs,keep_audio:preserve,source_video_duration:duration,resolution:quality,mode:chosenMode,prompt,expected_credits:quote(duration,quality,selectedModel).displayedCredits});

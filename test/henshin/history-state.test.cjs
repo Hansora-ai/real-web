@@ -22,6 +22,12 @@ test('real failures and refunds cannot become successful because a URL exists in
  }
  assert.equal(state(row({henshin_model:'standard',status:'audio_failed',generated_video_url:'/finished.mp4'})).audioFailed,true);
 });
+test('new Lite jobs wait for original soundtrack restoration instead of exposing the raw model result',()=>{
+ const pending=state(row({audio_strategy:'original',status:'restoring_audio',finish_video:true,generated_video_url:'/raw.mp4'}));
+ assert.equal(pending.ready,false);assert.equal(pending.failed,false);assert.equal(pending.audioPending,true);
+ const done=state(row({audio_strategy:'original',status:'done',finish_video:true,audio_restored:true},'/final.mp4'));
+ assert.equal(done.ready,true);assert.equal(done.videoURL,'/final.mp4');
+});
 test('technical upload status messages do not replace the Processing card label',()=>{
  const element={classList:{toggle(){}}};context.$=()=>element;context.submission='requesting';
  const node=declarations.find(node=>node.id.name==='status');vm.runInContext(source.slice(node.start,node.end),context);

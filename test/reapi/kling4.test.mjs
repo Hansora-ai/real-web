@@ -48,8 +48,10 @@ before(async()=>{
   if(u.pathname.includes('/auth/'))return json({id:opts.headers.Authorization==='Bearer other'?other:uid});
   if(u.pathname.includes('/storage/')){
    if(opts.method==='POST'){stored.push({url:String(u),bytes:Buffer.from(opts.body)});return json({ok:true});}
-   return new Response(inputFixture);
+   const archived=stored.find(file=>file.url.replace('/object/','/object/public/')===String(u));
+   return new Response(archived?.bytes||inputFixture);
   }
+  if(u.pathname.endsWith('/henshin-finish-background'))return new Response(null,{status:202});
   if(u.pathname.endsWith('/rpc/reapi_generation_transition')){
    try{return json((await db.query('select reapi_generation_transition($1,$2,$3,$4) as result',[body.p_action,body.p_id,body.p_user,body.p_payload])).rows[0].result);}
    catch(e){return json({message:e.message},400);}
@@ -60,7 +62,9 @@ before(async()=>{
     // resolve finishing fields, but cannot alter task, billing or refund data.
     const rows=await db.transaction(async tx=>{
      await tx.exec('set local role service_role');
-     return (await tx.query("update user_generations set result_url=$3,meta=$4 where id=$1 and user_id=$2 and meta->>'status'=$5 and coalesce(meta->>'audio_lease','')=$6 returning *",[u.searchParams.get('id').slice(3),u.searchParams.get('user_id').slice(3),body.result_url,body.meta,u.searchParams.get('meta->>status').slice(3),u.searchParams.get('meta->>audio_lease')==='is.null'?'':u.searchParams.get('meta->>audio_lease').slice(3)])).rows;
+     const filter=key=>u.searchParams.has(key)?u.searchParams.get(key).slice(3):null;
+     const lease=u.searchParams.get('meta->>audio_lease');
+     return (await tx.query("update user_generations set result_url=case when $8 then $3 else result_url end,meta=$4 where id=$1 and ($2::uuid is null or user_id=$2) and ($5::text is null or meta->>'status'=$5) and ($6::text is null or coalesce(meta->>'audio_lease','')=$6) and (not $7 or coalesce(meta->>'audio_restored','false')='false') returning *",[filter('id'),filter('user_id'),body.result_url??null,body.meta,filter('meta->>status'),lease===null?null:lease==='is.null'?'':lease.slice(3),u.searchParams.has('or'),Object.hasOwn(body,'result_url')])).rows;
     });return json(rows);
    }
    assert.ok(!opts.method||opts.method==='GET','New generation metadata must use atomic transitions');
@@ -151,41 +155,47 @@ test('Lite probes real source length and applies the 220-credit rate without cha
  response=await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],keep_audio:true,source_video_duration:5,mode:'motion',expected_credits:110}));
  assert.equal(response.statusCode,201,response.body);assert.equal(await balance(),989);assert.equal(posts[0].input.duration,5);
  assert.ok(posts[0].input.prompt.includes('@video_1'));assert.ok(posts[0].input.prompt.includes('@image_1'));
- assert.equal(posts[0].input.keep_original_sound,true);
- const row=(await saved())[0];assert.equal(row.meta.finish_video,false);assert.equal(row.meta.source_audio_url,null);
- assert.ok(posts[0].input.video_urls[0].endsWith('/verified-source.mp4'));
- assert.ok(stored.length);assert.ok(stored.every(file=>file.url.endsWith('/verified-source.mp4')));
- assert.ok(stored.every(file=>file.bytes.equals(fixture)),'The original video and audio stay intact');
+ assert.equal(posts[0].input.keep_original_sound,false);
+ const row=(await saved())[0];assert.equal(row.meta.finish_video,true);assert.match(row.meta.source_audio_url,/source-audio\.m4a$/);assert.equal(row.meta.audio_strategy,'original');
+ assert.ok(posts[0].input.video_urls[0].endsWith('/silent-source.mp4'));
+ const video=stored.find(file=>file.url.endsWith('/silent-source.mp4'));assert.ok(video.bytes.length<9.5*1024*1024);
+ await require('../../lib/henshin/server-media.cjs').withCore(async core=>{core.FS.writeFile('submitted.mp4',video.bytes);assert.deepEqual(require('../../lib/henshin/server-media.cjs').probe(core,'submitted.mp4').streams.map(s=>s.codec_type),['video']);});
  tasks.get(row.meta.task_id).state='success';tasks.get(row.meta.task_id).resultJson=JSON.stringify({resultUrls:['https://cdn.kie.ai/result.mp4']});
  const completed=JSON.parse((await checker(polling(row))).body);
- assert.ok(completed.result_url);assert.notEqual(completed.meta.status,'restoring_audio');
+ assert.equal(completed.result_url,null);assert.equal(completed.meta.status,'restoring_audio');
 });
-test('Lite passes the native audio choice to Kling without creating a separate soundtrack',async()=>{
+test('Lite with original sound disabled still submits silent footage and saves no soundtrack',async()=>{
  const response=await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],keep_audio:false,source_video_duration:5,mode:'motion',expected_credits:110}));
  assert.equal(response.statusCode,201,response.body);assert.equal(posts[0].input.keep_original_sound,false);
  assert.equal((await saved())[0].meta.source_audio_url,null);
- assert.equal(stored.length,1);assert.ok(stored[0].bytes.equals(fixture));
+ assert.equal(stored.length,1);assert.ok(stored[0].url.endsWith('/silent-source.mp4'));
 });
 test('clients cannot rewrite protected Kling task or refund metadata',async()=>{
  await launch25(event());const row=(await saved())[0];
  await assert.rejects(db.exec(`set role authenticated;update user_generations set meta=meta||'{"refunded":true}' where id='${row.id}'`),/Server-owned/);
  await db.exec('reset role');
 });
-test('fractional Lite sources complete directly without a soundtrack or trim job',async()=>{
+test('fractional Lite sources finish with the original soundtrack through the server worker',async()=>{
  await require('../../lib/henshin/server-media.cjs').withCore(async core=>{
   core.FS.writeFile('source.mp4',fixture);core.reset();assert.equal(core.exec('-i','source.mp4','-t','4.5','-c','copy','fractional.mp4'),0);
   inputFixture=Buffer.from(core.FS.readFile('fractional.mp4'));
  });
  const response=await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],keep_audio:true,source_video_duration:4.5,mode:'motion',expected_credits:110}));
- assert.equal(response.statusCode,201,response.body);const row=(await saved())[0];assert.equal(row.meta.duration,5);assert.equal(row.meta.finish_video,false);
+ assert.equal(response.statusCode,201,response.body);const row=(await saved())[0];assert.equal(row.meta.duration,5);assert.equal(row.meta.finish_video,true);
  tasks.get(row.meta.task_id).state='success';tasks.get(row.meta.task_id).resultJson=JSON.stringify({resultUrls:['https://cdn.kie.ai/result.mp4']});
  const out=JSON.parse((await checker(polling(row))).body);
- assert.ok(out.result_url);assert.equal(out.meta.status,'done');assert.equal(require('../../lib/henshin/jobs.cjs').audioPending(out),false);assert.equal(await balance(),989);
+ assert.equal(out.result_url,null);assert.equal(out.meta.status,'restoring_audio');assert.equal(await balance(),989);
+ const jobs=require('../../lib/henshin/jobs.cjs'),worker=require('../../netlify/functions/henshin-finish-background.js');
+ const finished=await worker.handler({httpMethod:'POST',headers:{'x-henshin-internal':jobs.internalToken()},body:JSON.stringify({id:row.id})});
+ assert.equal(JSON.parse(finished.body).ok,true,finished.body);
+ const final=(await saved())[0];assert.equal(final.meta.status,'done');assert.equal(final.meta.audio_restored,true);assert.equal(await balance(),989);assert.equal(posts.length,1);
+ const bytes=stored.find(file=>file.url.endsWith('/henshin-final.mp4')).bytes;
+ await require('../../lib/henshin/server-media.cjs').withCore(async core=>{core.FS.writeFile('finished.mp4',bytes);const report=require('../../lib/henshin/server-media.cjs').probe(core,'finished.mp4');assert.ok(Math.abs(Number(report.format.duration)-4.5)<.15);assert.ok(report.streams.some(s=>s.codec_type==='audio'));});
 });
 for(const status of ['restoring_audio','audio_retry','audio_failed'])test(`archived Lite results recover from ${status} without another charge or generation`,async()=>{
  await lite(event({henshin_model:'lite',video_url:source,image_urls:[source+'.jpg'],keep_audio:true,source_video_duration:5,mode:'motion',expected_credits:110}));
  const row=(await saved())[0],archived=source.replace('source.mp4',`${uid}/${row.id}/result.mp4`);
- const meta={...row.meta,status,generated_video_url:archived,finish_video:true,source_audio_url:source+'.m4a',audio_error:'Could not process the soundtrack.',audio_lease:'old-worker',audio_lease_until:Date.now()+60000};
+ const meta={...row.meta,audio_strategy:undefined,status,generated_video_url:archived,finish_video:true,source_audio_url:source+'.m4a',audio_error:'Could not process the soundtrack.',audio_lease:'old-worker',audio_lease_until:Date.now()+60000};
  await db.query('update user_generations set meta=$2 where id=$1',[row.id,meta]);
  const responses=await Promise.all([checker(polling(row)),checker(polling(row))]);
  for(const response of responses){const out=JSON.parse(response.body);assert.equal(response.statusCode,200,response.body);assert.equal(out.result_url,archived);assert.equal(out.meta.status,'done');assert.equal(out.failed,false);}
