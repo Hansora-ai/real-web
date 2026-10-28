@@ -884,3 +884,83 @@ test('Nano Banana 2.1 is in ChatGPT as the top image model, at the website\'s pr
   assert.equal(submitted[0].target_endpoint, '/.netlify/functions/run-nano-banana-2-1');
   assert.deepEqual([submitted[0].payload.urls, submitted[0].payload.size, submitted[0].payload.resolution], [[photo], '9:16', '2K']);
 });
+
+test('a Veo video Google could not make the sound for is made with Grok instead, for any user, once', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const old = 'user-1-mcp-1793126174728-d2f6ce69';
+  const prompt = 'A silent listener reaction close-up. No speech or vocal sounds, no music.';
+
+  // A returning user's Veo video keeps its recipe; another model's video does not.
+  const saved = [];
+  const keep = (href, options) => {
+    if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
+    return returningUser(href);
+  };
+  await callTool('create_generation', { model_id: 'veo31-lite', prompt, duration: 8, resolution: '720p' }, { credits: 100, rest: keep });
+  await callTool('create_generation', { model_id: 'grok-video', prompt, duration: 6, resolution: '720p' }, { credits: 100, rest: keep });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const recipes = saved.filter((row) => /recipe/.test(row.tool));
+  assert.deepEqual(recipes.map((row) => [row.tool, row.model_id]), [['video_recipe', 'veo31-lite']]);
+
+  const failed = (error) => ({ id: 'g-old', kind: 'video', provider: 'veo3.1lite', created_at: '2026-10-27T18:36:16Z', result_url: null,
+    meta: { run_id: old, model: 'veo3_lite', status: 'failed', error, charged_cost: 2, refund_amount: 2, refunded: true } });
+  const world = (failure) => (href) => {
+    if (href.includes('/rest/v1/chatgpt_events') && href.includes('recipe')) return reply([{ model_id: 'veo31-lite', details: recipes[0].details }]);
+    if (href.includes('result_url=not.is.null')) return reply([{ id: 'earlier' }]); // a returning, paying user
+    if (href.includes('/rest/v1/user_generations') && href.includes(encodeURIComponent(`${old}-retry`))) return reply([]);
+    if (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`)) return reply([failure]);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const audio = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world(failed('The Google model was unable to generate audio for this request. Please try a different prompt.')) });
+  assert.equal(audio.submitted.length, 1);
+  assert.equal(audio.submitted[0].model_id, 'grok-video');
+  assert.equal(audio.submitted[0].payload.run_id, `${old}-retry`);
+  assert.equal(audio.submitted[0].payload.prompt, prompt);
+  assert.equal(audio.result.structuredContent.run_id, old);
+  assert.equal(audio.result.structuredContent.status, 'processing');
+  assert.match(audio.result.structuredContent.message, /could not make the sound for this video, so it is being made with Grok Video instead\. The first try was refunded\./);
+
+  // Other provider problems for a returning user still go to ChatGPT to offer, not an automatic switch.
+  const other = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world(failed('Internal Error, Please try again later.')) });
+  assert.equal(other.submitted.length, 0);
+  assert.equal(other.result.structuredContent.status, 'failed');
+});
+
+test('names ChatGPT sometimes uses for Kling 3.0 and the voice tool are understood', async () => {
+  assert.equal((await callTool('get_model', { model_id: 'kling-3.0' }, { credits: 30 })).result.structuredContent.id, 'kling30');
+  for (const name of ['elevenlabs-tts', 'eleven_multilingual_v2']) {
+    const price = (await callTool('quote_generation', { model_id: name, character_count: 120 }, { credits: 30 })).result;
+    assert.notEqual(price.isError, true, name);
+  }
+});
+
+test('one user can have at most 50 Wan or Seedance videos running at once, and a provider "too many at once" waits instead of failing', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const running = (count) => (href) => {
+    if (href.includes('meta-%3E%3Eengine=eq.') || href.includes('meta->>engine=eq.')) return reply(Array.from({ length: count }, (_, i) => ({ id: `r${i}` })));
+    return returningUser(href);
+  };
+  const scene = { model_id: 'wan-3', prompt: 'Scene 4: the hero enters the station', duration: 5, resolution: '720p' };
+  const full = await callTool('create_generation', scene, { credits: 1000, rest: running(50) });
+  assert.equal(full.submitted.length, 0);
+  assert.equal(full.result.structuredContent.error, 'too_many_running');
+  assert.equal(full.result.structuredContent.running, 50);
+  assert.match(full.result.structuredContent.next_step, /do not switch model.*one video at a time/s);
+
+  const room = await callTool('create_generation', scene, { credits: 1000, rest: running(49) });
+  assert.equal(room.submitted.length, 1);
+
+  const seedance = await callTool('create_generation', { ...scene, model_id: 'seedance25' }, { credits: 1000, rest: running(50) });
+  assert.equal(seedance.result.structuredContent.error, 'too_many_running');
+
+  const limited = await callTool('create_generation', scene, {
+    credits: 1000, rest: running(0),
+    runner: () => ({ status: 422, body: { ok: false, error: "Concurrent task limit (10) reached for model 'wan3.0-video'" } })
+  });
+  const value = limited.result.structuredContent;
+  assert.equal(value.error, 'too_many_running');
+  assert.equal(value.credits_used, 0);
+  assert.match(value.next_step, /Do not switch model\..*wait about a minute, then call create_generation again with the same settings/);
+  assert.equal('alternative' in value, false);
+});

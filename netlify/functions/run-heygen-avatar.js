@@ -85,17 +85,33 @@ exports.handler = async (event) => {
     if (!claim) return ok({ submitted: true, pending: true, run_id });
     try {
       const callbackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
-      const heygenResult = await submitHeyGen({
-        model,
-        imageUrl,
-        audioUrl,
-        aspectRatio,
-        billableSeconds,
-        run_id,
-        callbackUrl,
-        uid,
-        avatarId: claim.meta.avatar_id || ""
-      });
+      let heygenResult;
+      try {
+        heygenResult = await submitHeyGen({
+          model,
+          imageUrl,
+          audioUrl,
+          aspectRatio,
+          billableSeconds,
+          run_id,
+          callbackUrl,
+          uid,
+          avatarId: claim.meta.avatar_id || ""
+        });
+      } catch (error) {
+        // HeyGen often keeps making the video after a slow reply. Never report that as a failure: the run
+        // stays "processing" and the next status check sends it again with the same Idempotency-Key, which
+        // returns the same video instead of a new one. Nothing is charged until a video id comes back.
+        if (!isSlowReply(error)) throw error;
+        await patchMeta(uid, run_id, { heygen_submit_uncertain: true, heygen_submit_uncertain_at: new Date().toISOString() });
+        return ok({ submitted: true, pending: true, run_id, status: "processing" });
+      }
+
+      // Busy or briefly down: nothing was made, so wait and send it again from the next status check.
+      if (!heygenResult.ok && /^heygen_video_(429|5\d\d)$/.test(String(heygenResult.error || ""))) {
+        await patchMeta(uid, run_id, { heygen_submit_retry: heygenResult.error, heygen_submit_retry_at: new Date().toISOString() });
+        return ok({ submitted: true, pending: true, run_id, status: "processing" });
+      }
 
       if (heygenResult.pending) {
         return ok({ submitted: true, pending: true, run_id, status: "processing" });
@@ -171,6 +187,7 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, billableSe
     return submitAvatarIII({ uid, imageUrl, audioUrl, aspectRatio, billableSeconds, run_id, callbackUrl, avatarId });
   }
   const videoResp = await heygenFetch("/v3/videos", {
+    timeoutMs: VIDEO_CREATE_TIMEOUT_MS,
     method: "POST",
     headers: { "Idempotency-Key": providerKey(uid, run_id, "video") },
     body: JSON.stringify({
@@ -298,9 +315,16 @@ async function releaseSubmission(uid, run_id, token) {
   if (!res.ok) throw new Error("submission_release_failed");
 }
 
-async function heygenFetch(path, options = {}) {
+// HeyGen takes in the photo and audio before it answers a video request, which can take well over 10
+// seconds; the function itself may run for 60.
+const VIDEO_CREATE_TIMEOUT_MS = 40000;
+function isSlowReply(error) {
+  return /abort|timeout|timed out|fetch failed|network|ECONNRESET|socket/i.test(`${error?.name || ""} ${error?.message || ""}`);
+}
+
+async function heygenFetch(path, { timeoutMs = 10000, ...options } = {}) {
   const resp = await fetch(`${HEYGEN_BASE}${path}`, {
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(timeoutMs),
     ...options,
     headers: {
       "x-api-key": HEYGEN_API_KEY,
