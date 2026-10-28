@@ -13,7 +13,7 @@ import { PHOTO_SHAPED_MODELS, VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGen
 import { photoShape } from '../../lib/hansora-mcp/image-shape.mjs';
 import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
-import { recordFirstVideoRecipe, recordToolEvent } from '../../lib/hansora-mcp/events.mjs';
+import { recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
 import { accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
@@ -259,14 +259,19 @@ async function submitRun({ origin, token, userId, endpoint, model, prompt, usage
   return { response: reply, result: body };
 }
 
-// A new user's first video that failed on the provider's side (an outage, not the prompt or photo) is
-// started once more on another model their free credits cover, under a fixed run id so it can never start
-// twice. The card keeps following the original run id and simply shows the new video. Content blocks,
-// unusable inputs, returning users and retries of a retry are left as they are. Null means "no retry".
+// A video that failed on the provider's side (an outage, not the prompt or photo) is started once more on
+// another model, under a fixed run id so it can never start twice: a new user's first video after any such
+// failure, and anyone's Veo video that Google could not make the sound for. The card keeps following the
+// original run id and simply shows the new video. Content blocks, unusable inputs and retries of a retry
+// are left as they are. Null means "no retry".
 const RETRY_SUFFIX = '-retry';
-async function firstVideoRetry({ userId, token, origin, runId, presented, generation }) {
+const VEO_MODELS = new Set(['veo31-lite', 'veo31-fast', 'veo31']);
+const VEO_AUDIO_FAILURE = /unable to generate audio/i;
+async function providerRetry({ userId, token, origin, runId, presented, generation }) {
   if (presented.status !== 'failed' || runId.endsWith(RETRY_SUFFIX)) return null;
   if (!['temporary', 'unknown'].includes(presented.failure_kind)) return null;
+  const failedMeta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+  const audioFailure = VEO_AUDIO_FAILURE.test([failedMeta.error, failedMeta.provider_message, failedMeta.error_summary].map((value) => (typeof value === 'string' ? value : '')).join(' '));
   const retryId = `${runId}${RETRY_SUFFIX}`;
   let retry = await getGeneration(userId, retryId).catch(() => null);
   let startedModel = null;
@@ -274,7 +279,7 @@ async function firstVideoRetry({ userId, token, origin, runId, presented, genera
     const recipe = await getFirstVideoRecipe(userId, runId);
     const failed = recipe ? getModel(recipe.model_id) : null;
     if (!failed || failed.category !== 'video') return null;
-    if (!(await isFirstGeneration(userId))) return null;
+    if (!(audioFailure && VEO_MODELS.has(failed.id)) && !(await isFirstGeneration(userId))) return null;
     const account = await getAccount(userId).catch(() => null);
     if (!account) return null;
     const request = {
@@ -314,7 +319,9 @@ async function firstVideoRetry({ userId, token, origin, runId, presented, genera
     status: 'processing', media_type: 'video', kind: 'video', model_name: startedModel?.name || '', prompt: presented.prompt
   };
   const name = view.model_name || startedModel?.name || 'another model';
-  const note = `${presented.model_name || 'The first model'} had a temporary issue, so this first video is being made with ${name} instead. The first try was refunded.`;
+  const note = audioFailure
+    ? `${presented.model_name || 'Veo'} could not make the sound for this video, so it is being made with ${name} instead. The first try was refunded.`
+    : `${presented.model_name || 'The first model'} had a temporary issue, so this first video is being made with ${name} instead. The first try was refunded.`;
   return {
     ...view,
     run_id: runId,
@@ -941,18 +948,20 @@ export function createHansoraServer(ctx) {
       }
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
       const submit = () => submitRun({ origin, token, userId, endpoint, model, prompt: normalizedInput.prompt, usageMode: normalizedInput.usage_mode, payload });
-      // A new user's first video keeps what it was made from, in case the provider fails (firstVideoRetry).
-      const firstVideo = model.category === 'video' && !hasVideoInput && normalizedInput.usage_mode !== 'unlimited'
-        ? isFirstGeneration(userId).catch(() => false) : Promise.resolve(false);
+      // A new user's first video, and any Veo video, keeps what it was made from in case the provider fails
+      // (providerRetry).
+      const retryable = model.category === 'video' && !hasVideoInput && normalizedInput.usage_mode !== 'unlimited';
+      const firstVideo = retryable ? isFirstGeneration(userId).catch(() => false) : Promise.resolve(false);
       const keepRecipe = async () => {
-        if (!(await firstVideo)) return;
-        recordFirstVideoRecipe(userId, runId, model.id, {
+        const first = await firstVideo;
+        if (!retryable || (!first && !VEO_MODELS.has(model.id))) return;
+        recordVideoRecipe(userId, runId, model.id, {
           prompt: String(normalizedInput.prompt || '').slice(0, 5000),
           image_urls: Array.isArray(storedInput.image_urls) ? storedInput.image_urls.slice(0, 4) : [],
           ...(storedInput.aspect_ratio ? { aspect_ratio: storedInput.aspect_ratio } : {}),
           ...(typeof storedInput.generate_audio === 'boolean' ? { generate_audio: storedInput.generate_audio } : {}),
           ...(typeof storedInput.sound === 'boolean' ? { sound: storedInput.sound } : {})
-        }, waitUntil);
+        }, waitUntil, { first });
       };
       let submitted;
       try {
@@ -1134,7 +1143,7 @@ export function createHansoraServer(ctx) {
         generation = (await getGeneration(userId, run_id)) || generation;
       }
       const presented = presentGeneration(generation, run_id, unavailable);
-      const retried = await firstVideoRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
+      const retried = await providerRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
       if (retried) return jsonText(retried);
       // A refused first video (temporary issues already switch model on their own).
       if (presented.status === 'failed' && presented.failure_kind && presented.failure_kind !== 'temporary') {
