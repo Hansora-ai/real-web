@@ -267,8 +267,15 @@ export default defineAgent({
     });
     // Backup for the caller's side: the final recognised speech, keyed by the
     // same item id so a later conversation item does not save it twice.
+    // Gemini finalises a caller line only when its reply completes, so words
+    // said just before hanging up stay interim. Keep the latest interim line
+    // and save it when the call ends if it was never finalised.
+    let interimCaller = null;
     session.on(voice.AgentSessionEventTypes.UserInputTranscribed, event => {
-      if (!event.isFinal) return;
+      if (!event.isFinal) {
+        if (event.itemId && event.transcript) interimCaller = { id: event.itemId, transcript: event.transcript, createdAt: interimCaller?.id === event.itemId ? interimCaller.createdAt : Date.now() };
+        return;
+      }
       transcriptEvents.user_final++;
       const content = text(event.transcript, 24000);
       if (!content || !event.itemId) return;
@@ -283,6 +290,10 @@ export default defineAgent({
       finalized = true;
       for (const timer of timers) clearTimeout(timer);
       timers.clear();
+      if (interimCaller && !savedTurnIds.has(interimCaller.id)) {
+        const content = text(interimCaller.transcript, 24000);
+        if (content) { transcriptEvents.user_interim_saved = 1; saveTurn({ role: 'user', content, id: interimCaller.id, createdAt: interimCaller.createdAt }); }
+      }
       await writeQueue;
       const endedAt = new Date().toISOString();
       const seconds = billableVoiceSeconds(call.started_at, endedAt, call.connected_at);
