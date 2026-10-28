@@ -1,13 +1,13 @@
 # Sends the phone worker (workers/automation-phone) to LiveKit Cloud.
-# Runs only when started by hand, or when a pushed commit message contains
-# "[deploy phone]", so ordinary pushes never change the live phone line.
+# Runs when phone code changes on main (merging a phone pull request deploys
+# it), or when started by hand. Other branches never change the live line.
 name: Deploy phone agent
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, claude/adoring-edison-9g0825]
-    paths: ['workers/automation-phone/**', 'lib/**']
+    branches: [main]
+    paths: ['workers/automation-phone/**', 'lib/automation/**', '.github/workflows/deploy-phone-agent.yml']
 
 concurrency:
   group: deploy-phone-agent
@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[deploy phone]')
     runs-on: ubuntu-latest
     env:
       LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
