@@ -59,9 +59,12 @@ async function createCallbackRequest({ business, conversation, contact, callerNu
 export default defineAgent({
   entry: async (ctx) => {
     const job = parsePhoneMetadata(ctx.job.metadata);
-    if (job.direction === 'test' && !job.participant_identity) throw new Error('phone_test_identity_missing');
+    // The test phone number dispatches with test_transport 'sip' and no browser identity.
+    const sipTest = job.direction === 'test' && job.test_transport === 'sip';
+    if (job.direction === 'test' && !job.participant_identity && !sipTest) throw new Error('phone_test_identity_missing');
     await ctx.connect();
-    const participant = await ctx.waitForParticipant(job.direction === 'test' ? job.participant_identity : undefined);
+    const participant = await ctx.waitForParticipant(job.direction === 'test' && !sipTest ? job.participant_identity : undefined);
+    if (sipTest && participant.kind !== ParticipantKind.SIP) throw new Error('phone_test_sip_participant_required');
     const descriptor = describePhoneCall({
       jobMetadata: ctx.job.metadata,
       participantMetadata: participant.metadata,
