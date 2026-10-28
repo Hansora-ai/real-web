@@ -10,6 +10,44 @@ import { affordableVoiceSeconds, automationPricesFor, canAfford, chargeCredits, 
 import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, createPhoneMetrics, describePhoneCall, normalizePhoneNumber, parsePhoneMetadata, phoneTestMaxSeconds, phoneTestSettings, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
 import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs, toolInstructions } from '../../../lib/automation/tools.mjs';
 
+// The Google plugin (1.9.1) reports every model-started generation as caller
+// speech. Right after a tool call that interrupts the reply that is running the
+// tool, so its result is dropped; the plugin then holds back the caller's audio
+// until that result arrives, and the call goes silent and deaf. While a tool
+// call is pending, a generation start is the model continuing, not the caller.
+// Real barge-in (Gemini's "interrupted" signal) is left untouched. As a last
+// resort, a tool call still pending after STALE_TOOL_MS stops blocking audio.
+const STALE_TOOL_MS = 12_000;
+function guardToolTurns(model, counts) {
+  const createSession = model.session.bind(model);
+  model.session = (...args) => {
+    const session = createSession(...args);
+    const speechStarted = session.handleInputSpeechStarted.bind(session);
+    const startGeneration = session.startNewGeneration.bind(session);
+    const shouldBlock = session.shouldBlockRealtimeInputForPendingTools.bind(session);
+    let startingGeneration = false;
+    session.startNewGeneration = (...startArgs) => {
+      startingGeneration = true;
+      try { return startGeneration(...startArgs); } finally { startingGeneration = false; }
+    };
+    session.handleInputSpeechStarted = () => {
+      if (startingGeneration && session.pendingToolCallIds?.size > 0) { counts.tool_turns_kept++; return; }
+      return speechStarted();
+    };
+    session.shouldBlockRealtimeInputForPendingTools = () => {
+      if (!shouldBlock()) return false;
+      const now = Date.now();
+      for (const id of [...session.pendingToolCallIds]) {
+        const createdAt = session.toolCallStatuses?.get(id)?.createdAt;
+        if (createdAt && now - createdAt > STALE_TOOL_MS) { session.pendingToolCallIds.delete(id); counts.stale_tool_calls_released++; }
+      }
+      return shouldBlock();
+    };
+    return session;
+  };
+  return model;
+}
+
 function one(value) { return Array.isArray(value) ? value[0] : value; }
 function text(value, max = 500) { return String(value || '').trim().slice(0, max); }
 
@@ -162,15 +200,16 @@ export default defineAgent({
       [toolInstructions(definitions, configs), `Current business date and time: ${businessClock(business.timezone)}.`, liveBrief].filter(Boolean).join('\n\n'),
       settings
     );
+    const toolTurns = { tool_turns_kept: 0, stale_tool_calls_released: 0 };
     const session = new voice.AgentSession({
-      llm: new google.realtime.RealtimeModel({
+      llm: guardToolTurns(new google.realtime.RealtimeModel({
         model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL,
         voice: process.env.GEMINI_PHONE_VOICE || PHONE_VOICE,
         apiKey: process.env.GOOGLE_API_KEY,
         temperature: 0.5,
         inputAudioTranscription: {},
         outputAudioTranscription: {}
-      })
+      }), toolTurns)
     });
     const turns = [];
     const providerMetrics = createPhoneMetrics();
@@ -240,8 +279,8 @@ export default defineAgent({
       const seconds = billableVoiceSeconds(call.started_at, endedAt, call.connected_at);
       const transcript = settings.save_transcripts === false ? '' : renderCallTranscript(turns);
       const metrics = providerMetrics.snapshot();
-      console.log('phone transcript events', { call: call.id, ...transcriptEvents, turns: turns.length });
-      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: isTest ? 0 : seconds, transcript, outcome: { ...call.outcome, duration_seconds: seconds, test: isTest, provider_usage: metrics, transcript_events: transcriptEvents } });
+      console.log('phone transcript events', { call: call.id, ...transcriptEvents, ...toolTurns, turns: turns.length });
+      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: isTest ? 0 : seconds, transcript, outcome: { ...call.outcome, duration_seconds: seconds, test: isTest, provider_usage: metrics, transcript_events: transcriptEvents, tool_turns: toolTurns } });
       await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { status: callStatus === 'transferred' ? 'human_handling' : 'resolved', resolved_at: callStatus === 'transferred' ? null : endedAt, summary: transcript.slice(0, 8000) });
       if (seconds > 0) {
         // Charge once, at the end; if the balance ran short take what is left (never below zero).
