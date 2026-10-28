@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, getFirstVideoRecipe, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -196,6 +196,24 @@ function temporaryIssueResult(model, price, unavailable, reason = '') {
     message: `${model.name} is having a temporary issue right now${reason ? ` (${reason})` : ''}. It wasn't caused by the prompt or image. Nothing was generated and no credits were used.`,
     ...(backup ? { alternative: backup, auto_switch: step.auto } : {}),
     next_step: step ? step.text : 'Tell the user this in their language and offer to try again in about 10 minutes.'
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// reAPI runs a limited number of videos at once for the whole account (10 for Wan 3.0). One user starting a
+// long series could take every slot, so each user may have a few running per engine; the rest wait.
+const RUNNING_ENGINES = Object.freeze({ 'wan-3': 'wan-3', seedance25: 'seedance-2.5', seedance20: 'seedance-2.0' });
+const MAX_RUNNING_PER_USER = 3;
+function busyResult(model, { running = null, provider = false } = {}) {
+  const value = {
+    ok: false, error: 'too_many_running', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
+    ...(running != null ? { running } : {}),
+    message: provider
+      ? `${model.name} is making too many videos at once right now. Nothing was charged.`
+      : `${running} of the user's ${model.name} videos are still being made, and up to ${MAX_RUNNING_PER_USER} can run at once. Nothing was charged.`,
+    next_step: provider
+      ? `Nothing was started or charged. Do not switch model. Tell the user in one short line that ${model.name} is busy for a moment, wait about a minute, then call create_generation again with the same settings.`
+      : `Do not start this one yet and do not switch model. Tell the user in one short line that it will start as soon as one of their videos finishes. When one is done (get_generation), call create_generation again with the same settings, one video at a time.`
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
@@ -925,6 +943,10 @@ export function createHansoraServer(ctx) {
           return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
         }
       }
+      if (RUNNING_ENGINES[model.id] && normalizedInput.usage_mode !== 'unlimited') {
+        const running = await countRunning(userId, RUNNING_ENGINES[model.id]);
+        if (running >= MAX_RUNNING_PER_USER) return busyResult(model, { running });
+      }
       const storedInput = await storeGenerationFiles(input);
       // A tall photo animated at 16:9 gets its top and bottom cut off. Match the photo when no shape was given,
       // and also when ChatGPT sent the opposite of the photo's shape (it often fills in 16:9 on its own). Any
@@ -1025,6 +1047,7 @@ export function createHansoraServer(ctx) {
         // instead of retrying the same request.
         const providerReason = String(result.details?.msg || result.details?.message || '').slice(0, 300);
         const reason = result.message || result.error || `generation_submit_failed_${response.status}`;
+        if (/concurrent task limit|too many (running|concurrent)/i.test(`${reason} ${providerReason}`)) return busyResult(model, { provider: true });
         const submitKind = classifyFailure({ provider_message: providerReason, error: String(reason), error_code: result.details?.code ?? response.status });
         if (submitKind === 'temporary') return temporaryIssueResult(model, price, unavailable, providerReason || String(reason).slice(0, 200));
         const fallback = await firstVideoFallback(userId, model, normalizedInput);

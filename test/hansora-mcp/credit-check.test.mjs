@@ -934,3 +934,33 @@ test('names ChatGPT sometimes uses for Kling 3.0 and the voice tool are understo
     assert.notEqual(price.isError, true, name);
   }
 });
+
+test('one user can have at most 3 Wan or Seedance videos running at once, and a provider "too many at once" waits instead of failing', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const running = (count) => (href) => {
+    if (href.includes('meta-%3E%3Eengine=eq.') || href.includes('meta->>engine=eq.')) return reply(Array.from({ length: count }, (_, i) => ({ id: `r${i}` })));
+    return returningUser(href);
+  };
+  const scene = { model_id: 'wan-3', prompt: 'Scene 4: the hero enters the station', duration: 5, resolution: '720p' };
+  const full = await callTool('create_generation', scene, { credits: 1000, rest: running(3) });
+  assert.equal(full.submitted.length, 0);
+  assert.equal(full.result.structuredContent.error, 'too_many_running');
+  assert.equal(full.result.structuredContent.running, 3);
+  assert.match(full.result.structuredContent.next_step, /do not switch model.*one video at a time/s);
+
+  const room = await callTool('create_generation', scene, { credits: 1000, rest: running(2) });
+  assert.equal(room.submitted.length, 1);
+
+  const seedance = await callTool('create_generation', { ...scene, model_id: 'seedance25' }, { credits: 1000, rest: running(3) });
+  assert.equal(seedance.result.structuredContent.error, 'too_many_running');
+
+  const limited = await callTool('create_generation', scene, {
+    credits: 1000, rest: running(0),
+    runner: () => ({ status: 422, body: { ok: false, error: "Concurrent task limit (10) reached for model 'wan3.0-video'" } })
+  });
+  const value = limited.result.structuredContent;
+  assert.equal(value.error, 'too_many_running');
+  assert.equal(value.credits_used, 0);
+  assert.match(value.next_step, /Do not switch model\..*wait about a minute, then call create_generation again with the same settings/);
+  assert.equal('alternative' in value, false);
+});
