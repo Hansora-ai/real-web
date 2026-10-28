@@ -200,10 +200,10 @@ function temporaryIssueResult(model, price, unavailable, reason = '') {
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
-// reAPI runs a limited number of videos at once for the whole account (10 for Wan 3.0). One user starting a
-// long series could take every slot, so each user may have a few running per engine; the rest wait.
+// reAPI runs a limited number of tasks at once for the whole account (150, shared by images and videos). Each
+// user may have up to 50 running per engine, so no single user or runaway series can take them all.
 const RUNNING_ENGINES = Object.freeze({ 'wan-3': 'wan-3', seedance25: 'seedance-2.5', seedance20: 'seedance-2.0' });
-const MAX_RUNNING_PER_USER = 3;
+const MAX_RUNNING_PER_USER = 50;
 function busyResult(model, { running = null, provider = false } = {}) {
   const value = {
     ok: false, error: 'too_many_running', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
