@@ -2,6 +2,8 @@
 // Polls HeyGen jobs, saves only real video file URLs, and refunds once on failure.
 
 const HEYGEN_API_ENV = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
+const STUCK_SUBMIT_MS = 30 * 60 * 1000;
+const RESEND_AFTER_MS = 90 * 1000;
 const HEYGEN_API_KEY = HEYGEN_API_ENV.value;
 const HEYGEN_BASE = (process.env.HEYGEN_BASE_URL || "https://api.heygen.com").replace(/\/+$/, "");
 
@@ -37,7 +39,23 @@ exports.handler = async (event) => {
       return json(200, { ok: false, failed: true, status: "failed", error: row.meta.error || "heygen_failed", refunded: !!row.meta.refunded });
     }
 
-    if (!ids.taskId && row?.meta?.model === "avatar_iii") {
+    // Avatar IV is sent in one step. If HeyGen answered too slowly (or the step broke off) before returning a
+    // video id, nothing was charged yet. The owner's poll sends it again below with the same Idempotency-Key,
+    // so HeyGen returns the video it is already making rather than a new one; that run is then charged and
+    // finished as usual. Only if no video id comes back within 30 minutes is it closed as failed, uncharged.
+    const stuckAvatarIV = !ids.taskId && row && row.meta?.model !== "avatar_iii" && !row.result_url
+      && String(row.meta?.status || "") === "processing";
+    if (stuckAvatarIV) {
+      const age = Date.now() - Date.parse(row.created_at || "");
+      const charged = row.meta?.charged === true || row.meta?.charged === "true";
+      if (!charged && age > STUCK_SUBMIT_MS) {
+        const error = "This avatar video could not start. Nothing was charged. Please try again.";
+        await patchGeneration(row.id, { meta: { ...row.meta, status: "failed", failed: true, error, error_summary: "heygen_not_started", failed_at: new Date().toISOString() } });
+        return json(200, { ok: false, failed: true, status: "failed", error, refunded: false, charged: false });
+      }
+    }
+
+    if (!ids.taskId && (row?.meta?.model === "avatar_iii" || (stuckAvatarIV && Date.now() - Date.parse(row.created_at || "") > RESEND_AFTER_MS))) {
       // Photo processing is asynchronous. Only the authenticated owner may
       // resume a paid submission; the submitter reuses persisted inputs and
       // serializes repeated polls. Webhooks never initiate new generations.

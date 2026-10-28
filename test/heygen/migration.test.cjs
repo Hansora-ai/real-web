@@ -213,3 +213,46 @@ test('all localized pages send owner authorization when polling async photo crea
     assert.match(source, /startPollResult\(runId, data.taskId \|\| data.video_id \|\| ''/);
   }
 });
+
+test('Avatar IV: a slow HeyGen reply is never shown as a failure, and the next check picks up the same video', async () => {
+  const f = fixture();
+  f.state.submitResponse = () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); };
+  const first = await f.submit('avatar_v');
+  assert.equal(first.submitted, true); assert.equal(first.pending, true); assert.equal(first.status, 'processing');
+  assert.equal(f.row.meta.status, 'processing'); assert.equal(f.debits, 0);
+  // Soon after, the check does not send it again yet.
+  f.row.created_at = new Date(Date.now() - 30 * 1000).toISOString();
+  delete f.state.submitResponse;
+  assert.equal((await f.poll()).status, 'pending');
+  assert.equal(f.calls.filter(c => c.method === 'POST' && c.url.endsWith('/v3/videos')).length, 1);
+  // Later, it sends the same request again; HeyGen answers with its video id and the run is charged once.
+  f.row.created_at = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  await f.poll();
+  const posts = f.calls.filter(c => c.method === 'POST' && c.url.endsWith('/v3/videos'));
+  assert.equal(posts.length, 2);
+  assert.equal(posts[0].headers['Idempotency-Key'], posts[1].headers['Idempotency-Key'], 'same key, so HeyGen returns the same video');
+  assert.equal(f.row.meta.video_id, 'video-fixture'); assert.equal(f.debits, 1);
+  await f.poll(); await f.poll();
+  assert.equal(f.calls.filter(c => c.method === 'POST' && c.url.endsWith('/v3/videos')).length, 2); assert.equal(f.debits, 1);
+});
+
+test('Avatar IV: HeyGen busy or briefly down waits instead of failing', async () => {
+  for (const status of [429, 503]) {
+    const f = fixture();
+    f.state.submitResponse = () => Response.json({ error: { message: 'busy' } }, { status });
+    const result = await f.submit('avatar_v');
+    assert.equal(result.submitted, true, String(status)); assert.equal(result.pending, true);
+    assert.equal(f.row.meta.status, 'processing'); assert.equal(f.debits, 0);
+  }
+});
+
+test('Avatar IV: a run with no video id after 30 minutes is closed as failed and never charged', async () => {
+  const f = fixture();
+  f.state.submitResponse = () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); };
+  await f.submit('avatar_v');
+  f.row.created_at = new Date(Date.now() - 31 * 60 * 1000).toISOString();
+  const result = await f.poll();
+  assert.equal(result.status, 'failed'); assert.equal(result.charged, false);
+  assert.match(result.error, /Nothing was charged/);
+  assert.equal(f.debits, 0); assert.equal(f.refunds, 0);
+});

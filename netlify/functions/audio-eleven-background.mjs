@@ -78,7 +78,13 @@ export default async (req) => {
 
     await markReady(uid, run_id, { kind, provider:providerTitle(kind), cost, resultUrl, request:stripLargeFields(request) });
   } catch (error) {
-    const reason = messageOf(error);
+    // ElevenLabs' own account quota ("This request exceeds your quota of ... You have N credits remaining")
+    // reads to users as if their Hansora balance were empty. Show a plain service message instead and log
+    // the original for the owner.
+    const providerReason = messageOf(error);
+    const quota = /exceeds your quota|quota_exceeded/i.test(providerReason);
+    if (quota) console.error("hansora_elevenlabs_quota", JSON.stringify({ run_id, reason:providerReason.slice(0, 240) }));
+    const reason = quota ? VOICE_SERVICE_BUSY : providerReason;
     const failure = { ok:false, error:reason };
     try {
       if (uid && run_id) {
@@ -100,6 +106,7 @@ export default async (req) => {
 
 function normalizeKind(k){ const s=String(k||"").toLowerCase().replace(/_/g,"-"); return s === "voice-changer" ? "voice-change" : s; }
 function providerTitle(kind){ return kind === "isolation" ? "Voice Isolation" : kind === "voice-change" ? "Voice Changer" : "Text to Dialogue"; }
+const VOICE_SERVICE_BUSY = "The voice service is temporarily unavailable. Nothing was charged. Please try again later.";
 function messageOf(error){ return error && error.message ? error.message : String(error); }
 function sb(){ return { apikey:SERVICE_KEY, Authorization:`Bearer ${SERVICE_KEY}` }; }
 function normalizeUrl(u){ try { return new URL(String(u || "")).href; } catch { return ""; } }
