@@ -242,6 +242,10 @@ export default defineAgent({
     // session hands over so the call record shows where the text is lost.
     const transcriptEvents = { items: 0, items_without_text: 0, user_final: 0, user_final_saved: 0 };
     const savedTurnIds = new Set();
+    // A caller line is finalised only after the reply to it has started, so it
+    // is stamped with when its words first arrived; otherwise the inbox shows
+    // it after the answer.
+    const callerHeardAt = new Map();
     function saveTurn({ role, content, id, createdAt, interrupted = false }) {
       if (!content || savedTurnIds.has(id)) return;
       savedTurnIds.add(id);
@@ -274,7 +278,7 @@ export default defineAgent({
       transcriptEvents.items++;
       const content = text(event.item.textContent, 24000);
       if (!content) { transcriptEvents.items_without_text++; return; }
-      saveTurn({ role, content, id: event.item.id, createdAt: event.item.createdAt, interrupted: event.item.interrupted });
+      saveTurn({ role, content, id: event.item.id, createdAt: (role === 'user' && callerHeardAt.get(event.item.id)) || event.item.createdAt, interrupted: event.item.interrupted });
     });
     // Backup for the caller's side: the final recognised speech, keyed by the
     // same item id so a later conversation item does not save it twice.
@@ -284,14 +288,15 @@ export default defineAgent({
     let interimCaller = null;
     session.on(voice.AgentSessionEventTypes.UserInputTranscribed, event => {
       if (!event.isFinal) {
-        if (event.itemId && event.transcript) interimCaller = { id: event.itemId, transcript: event.transcript, createdAt: interimCaller?.id === event.itemId ? interimCaller.createdAt : Date.now() };
+        if (event.itemId && !callerHeardAt.has(event.itemId)) callerHeardAt.set(event.itemId, Date.now());
+        if (event.itemId && event.transcript) interimCaller = { id: event.itemId, transcript: event.transcript, createdAt: callerHeardAt.get(event.itemId) };
         return;
       }
       transcriptEvents.user_final++;
       const content = text(event.transcript, 24000);
       if (!content || !event.itemId) return;
       transcriptEvents.user_final_saved++;
-      saveTurn({ role: 'user', content, id: event.itemId, createdAt: event.createdAt });
+      saveTurn({ role: 'user', content, id: event.itemId, createdAt: callerHeardAt.get(event.itemId) ?? event.createdAt });
     });
     session.on(voice.AgentSessionEventTypes.Error, event => { if (callStatus !== 'transferred') callStatus = 'failed'; console.error('phone session error', { error: event.error?.message || String(event.error) }); });
 
@@ -308,7 +313,7 @@ export default defineAgent({
       await writeQueue;
       const endedAt = new Date().toISOString();
       const seconds = billableVoiceSeconds(call.started_at, endedAt, call.connected_at);
-      const transcript = settings.save_transcripts === false ? '' : renderCallTranscript(turns);
+      const transcript = settings.save_transcripts === false ? '' : renderCallTranscript([...turns].sort((a, b) => a.at.localeCompare(b.at)));
       const metrics = providerMetrics.snapshot();
       console.log('phone transcript events', { call: call.id, ...transcriptEvents, ...toolTurns, turns: turns.length });
       await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: isTest ? 0 : seconds, transcript, outcome: { ...call.outcome, duration_seconds: seconds, test: isTest, provider_usage: metrics, transcript_events: transcriptEvents, tool_turns: toolTurns } });
