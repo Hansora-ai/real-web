@@ -1,10 +1,6 @@
-import { NativePhoneTestSession } from './native-test.mjs';
-import { naturalPhoneInstructions, naturalPhoneTools, phoneCaptionConfig } from '../../../lib/automation/phone-natural-instructions.mjs';
-import { END_CALL_DEFINITION } from '../../../lib/automation/phone-call-diagnostic.mjs';
-import { phoneCatalogBrief } from '../../../lib/automation/phone-catalog.mjs';
-import { phoneTurnPolicy } from '../../../lib/automation/phone-turns.mjs';
 import { fileURLToPath } from 'node:url';
 import { cli, defineAgent, llm, ServerOptions, tool, voice } from '@livekit/agents';
+import * as google from '@livekit/agents-plugin-google';
 import { ParticipantKind } from '@livekit/rtc-node';
 import { LiveKitAPI } from 'livekit-server-sdk';
 import { buildAutomationInstructions, firstMessageFor } from '../../../lib/automation/instructions.mjs';
@@ -63,11 +59,9 @@ async function createCallbackRequest({ business, conversation, contact, callerNu
 export default defineAgent({
   entry: async (ctx) => {
     const job = parsePhoneMetadata(ctx.job.metadata);
-    const sipTest = job.direction === 'test' && job.test_transport === 'sip';
-    if (job.direction === 'test' && !job.participant_identity && !sipTest) throw new Error('phone_test_identity_missing');
+    if (job.direction === 'test' && !job.participant_identity) throw new Error('phone_test_identity_missing');
     await ctx.connect();
-    const participant = await ctx.waitForParticipant(job.direction === 'test' && !sipTest ? job.participant_identity : undefined);
-    if (sipTest && participant.kind !== ParticipantKind.SIP) throw new Error('phone_test_sip_participant_required');
+    const participant = await ctx.waitForParticipant(job.direction === 'test' ? job.participant_identity : undefined);
     const descriptor = describePhoneCall({
       jobMetadata: ctx.job.metadata,
       participantMetadata: participant.metadata,
@@ -123,8 +117,7 @@ export default defineAgent({
     if (outOfCredits && !isTest) await handleOutOfCredits({ businessId: business.id, conversationId: conversation.id, businessName: business.name, channel: 'Phone', customer: descriptor.callerNumber || 'Caller', notifyOwner });
 
     const configs = await loadToolConfigs(business.id);
-    const definitions = naturalPhoneTools(buildToolDefinitions({ tools: configs }).filter(definition => definition.name !== 'send_product_photos'));
-    definitions.push(END_CALL_DEFINITION);
+    const definitions = buildToolDefinitions({ tools: configs });
     const runTool = createToolRunner(
       { businessId: business.id, conversationId: conversation.id, contactId: contact.id, channel: 'phone', contact: { name: contact.display_name, phone: descriptor.callerNumber }, dryRun: isTest },
       { notifyOwner: async payload => payload.event === 'handoff_requested' ? { delayed_for_phone_transfer:true } : notifyOwner(payload) }
@@ -138,7 +131,6 @@ export default defineAgent({
         : definition.description,
       parameters: definition.parameters,
       execute: async (args, runContext) => {
-        if (definition.name === 'end_call') return {ok:true};
         const result = await runTool(definition.name, args);
         if (definition.name !== 'handoff_to_human' || !result.ok || isTest) return result;
         const transferNumber = normalizePhoneNumber(settings.transfer_number);
@@ -162,28 +154,20 @@ export default defineAgent({
     // Same as the chats: the AI knows the business's current date and time and, when bookings or deliveries are
     // on, the live free times and places at the start of the call (it still checks with the tools before confirming).
     const liveBrief = await runTool.liveBrief?.().catch(error => { console.error('phone live brief failed', { message: error?.message }); return ''; }) || '';
-    const catalogBrief = definitions.some(item => item.name === 'search_products') ? await phoneCatalogBrief(business.id) : '';
-    const instructions = naturalPhoneInstructions({ business, agent, knowledge, clock: businessClock(business.timezone), liveBrief, catalogBrief });
-    const session = new NativePhoneTestSession({
-      nativeVoice: true,
-      nativeSyntheticCaptions: isTest && job.synthetic_probe === true && participant.identity.startsWith('address-synthetic-') && ctx.room.name.startsWith('hansora-private-address-'),
-      nativeEvents: voice.AgentSessionEventTypes,
-      nativeOptions: {
-        apiKey: process.env.GOOGLE_API_KEY,
+    const instructions = voiceInstructions(
+      buildAutomationInstructions({ business, agent, knowledge }),
+      [toolInstructions(definitions, configs), `Current business date and time: ${businessClock(business.timezone)}.`, liveBrief].filter(Boolean).join('\n\n'),
+      settings
+    );
+    const session = new voice.AgentSession({
+      llm: new google.realtime.RealtimeModel({
         model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL,
         voice: process.env.GEMINI_PHONE_VOICE || PHONE_VOICE,
-        instructions,
-        diagnosticOwner: {businessId:business.id,ownerUserId:business.owner_user_id},
-        inputAudioTranscription: phoneCaptionConfig(agent),
-        realtimeInputConfig: phoneTurnPolicy('realtime').realtimeInputConfig,
-        definitions,
-        createConversationItem: settings.save_transcripts === false ? undefined : value => llm.ChatMessage.create(value),
-        execute: async (name, args, context) => {
-          const index = definitions.findIndex(item => item.name === name);
-          return index < 0 ? {ok:false,error:'unknown_tool'} : liveTools[index].execute(args, context);
-        },
-        endCall: async () => { await livekitApi.room.deleteRoom(ctx.room.name); ctx.shutdown?.('conversation_finished'); }
-      }
+        apiKey: process.env.GOOGLE_API_KEY,
+        temperature: 0.5,
+        inputAudioTranscription: {},
+        outputAudioTranscription: {}
+      })
     });
     const turns = [];
     const providerMetrics = createPhoneMetrics();
@@ -196,7 +180,6 @@ export default defineAgent({
       if (!(event.item instanceof llm.ChatMessage)) return;
       const role = event.item.role;
       if (role !== 'user' && role !== 'assistant') return;
-      if (settings.save_transcripts === false) return;
       const content = text(event.item.textContent, 24000);
       if (!content) return;
       const turn = { role, text: content, at: new Date(event.item.createdAt || Date.now()).toISOString(), id: event.item.id };
@@ -215,7 +198,7 @@ export default defineAgent({
           billable: false,
           provider: 'livekit',
           model: role === 'assistant' ? (process.env.GEMINI_PHONE_MODEL || PHONE_MODEL) : null,
-          metadata: { call_id: call.id, transcription_source:'gemini_live', interrupted: Boolean(event.item.interrupted), direction: descriptor.direction },
+          metadata: { call_id: call.id, interrupted: Boolean(event.item.interrupted), direction: descriptor.direction },
           occurred_at: turn.at
         }, { ignoreDuplicates: true });
         await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: content.slice(0, 1000), last_message_at: turn.at });
@@ -234,7 +217,7 @@ export default defineAgent({
       const seconds = billableVoiceSeconds(call.started_at, endedAt, call.connected_at);
       const transcript = settings.save_transcripts === false ? '' : renderCallTranscript(turns);
       const metrics = providerMetrics.snapshot();
-      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: isTest ? 0 : seconds, transcript, outcome: { ...call.outcome, voice_health: session.snapshot(), duration_seconds: seconds, test: isTest, provider_usage: metrics } });
+      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: isTest ? 0 : seconds, transcript, outcome: { ...call.outcome, duration_seconds: seconds, test: isTest, provider_usage: metrics } });
       await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { status: callStatus === 'transferred' ? 'human_handling' : 'resolved', resolved_at: callStatus === 'transferred' ? null : endedAt, summary: transcript.slice(0, 8000) });
       if (seconds > 0) {
         // Charge once, at the end; if the balance ran short take what is left (never below zero).
@@ -264,7 +247,7 @@ export default defineAgent({
       room: ctx.room,
       agent: voice.Agent.create({ instructions, tools: liveTools }),
       inputOptions: { participantIdentity: participant.identity, closeOnDisconnect: true },
-      record: { audio: false, transcript: false, traces: false, logs: false, redaction: true }
+      record: { audio: false, transcript: settings.save_transcripts !== false, traces: true, logs: true }
     });
     const hangUp = async () => { try { await livekitApi.room.deleteRoom(ctx.room.name); } finally { ctx.shutdown?.(isTest ? 'test_limit_reached' : 'out_of_credits'); } };
     if (outOfCredits) {
