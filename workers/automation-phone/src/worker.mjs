@@ -48,6 +48,15 @@ function guardToolTurns(model, counts) {
   return model;
 }
 
+// Saved caller lines come from Gemini's separate transcription, which guessed
+// Armenian on phone audio as German or Spanish. Hint the employee's languages.
+// This changes only the written transcript, not what the model hears.
+function transcriptionLanguages(agent) {
+  const configured = agent.supported_languages?.length ? agent.supported_languages : [agent.primary_language].filter(Boolean);
+  const languageCodes = [...new Set(configured.flatMap(code => { try { return Intl.getCanonicalLocales(code); } catch { return []; } }))];
+  return languageCodes.length ? { languageCodes } : {};
+}
+
 function one(value) { return Array.isArray(value) ? value[0] : value; }
 function text(value, max = 500) { return String(value || '').trim().slice(0, max); }
 
@@ -207,7 +216,7 @@ export default defineAgent({
         voice: process.env.GEMINI_PHONE_VOICE || PHONE_VOICE,
         apiKey: process.env.GOOGLE_API_KEY,
         temperature: 0.5,
-        inputAudioTranscription: {},
+        inputAudioTranscription: transcriptionLanguages(agent),
         outputAudioTranscription: {}
       }), toolTurns)
     });
