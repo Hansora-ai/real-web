@@ -4,6 +4,9 @@ import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 import { EventEmitter } from 'node:events';
 import * as phone from '../../lib/automation/phone.mjs';
+import {naturalPhoneInstructions,naturalPhoneTools,phoneCaptionConfig} from '../../lib/automation/phone-natural-instructions.mjs';
+import {END_CALL_DEFINITION} from '../../lib/automation/phone-call-diagnostic.mjs';
+import {phoneTurnPolicy} from '../../lib/automation/phone-turns.mjs';
 
 const source = (await readFile(new URL('../../workers/automation-phone/src/worker.mjs', import.meta.url),'utf8'))
   .replace(/^import .*;\n/gm,'').replace('export default defineAgent(', 'globalThis.definition = defineAgent(').replace('import.meta.url', "'file:///worker.mjs'");
@@ -14,12 +17,13 @@ function fixture(owner = 'new-owner') {
   const inserts = [], updates = [], timeouts = [], sessions = [];
   let toolContext;
   class Session extends EventEmitter {
-    constructor() { super(); sessions.push(this); }
+    constructor(config) { super(); this.config=config; sessions.push(this); }
+    snapshot(){return {};}
     async start(options) { this.options = options; }
     generateReply() {}
   }
   const sandbox = {
-    ...phone, console, process:{env:{}}, Date, setTimeout:(fn,ms) => {const timer={fn,ms};timeouts.push(timer);return timer;}, clearTimeout:timer => {timer.cleared=true;},
+    ...phone, naturalPhoneInstructions,naturalPhoneTools,phoneCaptionConfig,END_CALL_DEFINITION,phoneTurnPolicy,phoneCatalogBrief:async()=>'',NativePhoneTestSession:Session, console, process:{env:{}}, Date, setTimeout:(fn,ms) => {const timer={fn,ms};timeouts.push(timer);return timer;}, clearTimeout:timer => {timer.cleared=true;},
     fileURLToPath:value=>value, cli:{runApp(){}}, ServerOptions:class {}, defineAgent:value=>value,
     llm:{ChatMessage:class {}}, tool:value=>value, voice:{AgentSession:Session,Agent:{create:value=>value},AgentSessionEventTypes:{MetricsCollected:'metrics',ConversationItemAdded:'message',Error:'error',Close:'close'}},
     google:{realtime:{RealtimeModel:class {}}}, ParticipantKind:{SIP:3}, LiveKitAPI:class {room={deleteRoom:async()=>{}};},
@@ -44,6 +48,12 @@ test('zero-credit browser tests stay free, simulate actions, log tokens and enfo
   await f.entry();
   const session = f.sessions[0];
   assert.equal(f.toolContext.dryRun,true);
+  assert.equal(session.config.nativeVoice,true);
+  assert.equal(session.config.nativeOptions.voice,'Leda');
+  assert.equal(session.config.nativeOptions.model,'gemini-3.8-live');
+  assert.ok(session.config.nativeOptions.definitions.some(item=>item.name==='end_call'));
+  assert.ok(!session.config.nativeOptions.definitions.some(item=>item.name==='send_product_photos'));
+  assert.doesNotMatch(session.config.nativeOptions.instructions,/Final check before every|letter.by.letter spelling tool/);
   assert.equal(session.options.record.audio,false);
   assert.equal(session.options.inputOptions.participantIdentity,'caller');
   assert.ok(f.timeouts.some(timer=>timer.ms===300000));
