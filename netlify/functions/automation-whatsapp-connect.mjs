@@ -34,6 +34,13 @@ export async function handler(event){
       await subscribeWhatsAppApp({wabaId,accessToken});
       const oldResources=rows(await supabaseRequest(`/rest/v1/automation_provider_resources?business_id=eq.${business.id}&provider=eq.meta&resource_type=eq.whatsapp_account&status=in.(active,pending)&select=id,provider_resource_id`));
       for(const old of oldResources)if(old.provider_resource_id!==phoneNumberId)await serviceUpdate('automation_provider_resources',`id=eq.${old.id}`,{status:'revoked',updated_at:new Date().toISOString()});
+      // A number answers for one AI employee only: connected elsewhere before (often Meta's test number), it is moved
+      // here, or messages would keep going to the old AI employee with its old token.
+      const elsewhere=rows(await supabaseRequest(`/rest/v1/automation_provider_resources?provider=eq.meta&resource_type=eq.whatsapp_account&provider_resource_id=eq.${phoneNumberId}&business_id=neq.${business.id}&status=in.(active,pending)&select=id,business_id`));
+      for(const old of elsewhere){
+        await serviceUpdate('automation_provider_resources',`id=eq.${old.id}`,{status:'revoked',updated_at:new Date().toISOString()});
+        await serviceUpdate('automation_channel_connections',`business_id=eq.${old.business_id}&channel_type=eq.whatsapp`,{status:'not_connected',connected_account_label:null,connected_at:null,updated_at:new Date().toISOString()});
+      }
       const expiresAt=token.expiresIn?new Date(Date.now()+token.expiresIn*1000).toISOString():null;
       resource=await serviceUpsert('automation_provider_resources','business_id,provider,resource_type,provider_resource_id',{business_id:business.id,provider:'meta',resource_type:'whatsapp_account',provider_resource_id:phoneNumberId,status:'pending',safe_config:{waba_id:wabaId,coexistence,display_phone_number:phone.displayPhoneNumber,verified_name:phone.verifiedName,quality_rating:phone.qualityRating,verification_status:phone.verificationStatus,platform_type:phone.platformType,token_expires_at:expiresAt},last_synced_at:new Date().toISOString()});
       if(!resource)throw new Error('whatsapp_resource_not_saved');

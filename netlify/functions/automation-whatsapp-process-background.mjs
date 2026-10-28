@@ -27,7 +27,7 @@ export async function handler(event){
     // Independent database steps run together: every request to the database adds waiting time.
     const [,account]=await Promise.all([
       serviceUpdate('automation_webhook_events',`id=eq.${webhook.id}`,{status:'processing',attempt_count:Number(webhook.attempt_count||0)+1,last_error:null}),
-      first(`/rest/v1/automation_provider_resources?provider=eq.meta&resource_type=eq.whatsapp_account&provider_resource_id=eq.${encodeURIComponent(message.phoneNumberId)}&status=eq.active&select=*&limit=1`)
+      first(`/rest/v1/automation_provider_resources?provider=eq.meta&resource_type=eq.whatsapp_account&provider_resource_id=eq.${encodeURIComponent(message.phoneNumberId)}&status=eq.active&select=*&order=updated_at.desc&limit=1`)
     ]);if(!account)throw new Error('whatsapp_account_not_connected');
     const [connection,credential]=await Promise.all([
       first(`/rest/v1/automation_channel_connections?business_id=eq.${account.business_id}&channel_type=eq.whatsapp&status=eq.connected&select=*&limit=1`),
