@@ -30,7 +30,7 @@ export async function handler(event){
 // The owner replied from the WhatsApp Business app on their phone (coexistence): show it in the inbox as the
 // team's message and pause the AI in that chat so they don't both answer.
 async function saveOwnerPhoneMessage(echo){
-  const account=await first(`/rest/v1/automation_provider_resources?provider=eq.meta&resource_type=eq.whatsapp_account&provider_resource_id=eq.${encodeURIComponent(echo.phoneNumberId)}&status=eq.active&select=id,business_id&limit=1`);
+  const account=await first(`/rest/v1/automation_provider_resources?provider=eq.meta&resource_type=eq.whatsapp_account&provider_resource_id=eq.${encodeURIComponent(echo.phoneNumberId)}&status=eq.active&select=id,business_id&order=updated_at.desc&limit=1`);
   if(!account)return;
   const connection=await first(`/rest/v1/automation_channel_connections?business_id=eq.${account.business_id}&channel_type=eq.whatsapp&select=id&limit=1`);
   const sentAt=new Date(Number(echo.timestamp)||Date.now()).toISOString();
