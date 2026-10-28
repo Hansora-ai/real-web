@@ -75,11 +75,12 @@ async function loadBusinessById(businessId) {
   return first(`/rest/v1/automation_businesses?id=eq.${encodeURIComponent(businessId)}&select=${encodeURIComponent(select)}&limit=1`);
 }
 
+// Inbound calls are routed only by the server-assigned number pool. Owners can
+// write automation_provider_resources, so it must never decide routing.
 async function loadBusinessByNumber(calledNumber) {
   if (!calledNumber) return null;
-  let resource = await first(`/rest/v1/automation_provider_resources?provider=eq.livekit&resource_type=eq.phone_number&provider_resource_id=eq.${encodeURIComponent(calledNumber)}&status=eq.active&select=business_id&limit=1`);
-  if (!resource) resource = await first(`/rest/v1/automation_provider_resources?provider=eq.livekit&resource_type=eq.phone_number&safe_config-%3E%3Ee164=eq.${encodeURIComponent(calledNumber)}&status=eq.active&select=business_id&limit=1`);
-  return resource ? loadBusinessById(resource.business_id) : null;
+  const number = await first(`/rest/v1/automation_phone_numbers?e164=eq.${encodeURIComponent(calledNumber)}&status=eq.assigned&select=business_id&limit=1`);
+  return number?.business_id ? loadBusinessById(number.business_id) : null;
 }
 
 function phoneSettings(business) {
