@@ -176,20 +176,21 @@ export default defineAgent({
     session.on(voice.AgentSessionEventTypes.MetricsCollected, event => providerMetrics.collect(event.metrics));
     let writeQueue = Promise.resolve();
     const enqueue = task => { writeQueue = writeQueue.then(task).catch(error => console.error('phone transcript write failed', { message: error?.message })); };
-    session.on(voice.AgentSessionEventTypes.ConversationItemAdded, event => {
-      if (!(event.item instanceof llm.ChatMessage)) return;
-      const role = event.item.role;
-      if (role !== 'user' && role !== 'assistant') return;
-      const content = text(event.item.textContent, 24000);
-      if (!content) return;
-      const turn = { role, text: content, at: new Date(event.item.createdAt || Date.now()).toISOString(), id: event.item.id };
+    // Transcripts went missing from 7 October with no error. Count what the
+    // session hands over so the call record shows where the text is lost.
+    const transcriptEvents = { items: 0, items_without_text: 0, user_final: 0, user_final_saved: 0 };
+    const savedTurnIds = new Set();
+    function saveTurn({ role, content, id, createdAt, interrupted = false }) {
+      if (!content || savedTurnIds.has(id)) return;
+      savedTurnIds.add(id);
+      const turn = { role, text: content, at: new Date(createdAt || Date.now()).toISOString(), id };
       turns.push(turn);
       if (settings.save_transcripts === false) return;
       enqueue(async () => {
         await serviceInsert('automation_messages', {
           business_id: business.id,
           conversation_id: conversation.id,
-          idempotency_key: `livekit:${descriptor.providerCallId}:${event.item.id}`,
+          idempotency_key: `livekit:${descriptor.providerCallId}:${id}`,
           direction: role === 'user' ? 'inbound' : 'outbound',
           sender_type: role === 'user' ? 'customer' : 'ai',
           content_type: 'text',
@@ -198,11 +199,30 @@ export default defineAgent({
           billable: false,
           provider: 'livekit',
           model: role === 'assistant' ? (process.env.GEMINI_PHONE_MODEL || PHONE_MODEL) : null,
-          metadata: { call_id: call.id, interrupted: Boolean(event.item.interrupted), direction: descriptor.direction },
+          metadata: { call_id: call.id, interrupted: Boolean(interrupted), direction: descriptor.direction },
           occurred_at: turn.at
         }, { ignoreDuplicates: true });
         await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: content.slice(0, 1000), last_message_at: turn.at });
       });
+    }
+    session.on(voice.AgentSessionEventTypes.ConversationItemAdded, event => {
+      if (!(event.item instanceof llm.ChatMessage)) return;
+      const role = event.item.role;
+      if (role !== 'user' && role !== 'assistant') return;
+      transcriptEvents.items++;
+      const content = text(event.item.textContent, 24000);
+      if (!content) { transcriptEvents.items_without_text++; return; }
+      saveTurn({ role, content, id: event.item.id, createdAt: event.item.createdAt, interrupted: event.item.interrupted });
+    });
+    // Backup for the caller's side: the final recognised speech, keyed by the
+    // same item id so a later conversation item does not save it twice.
+    session.on(voice.AgentSessionEventTypes.UserInputTranscribed, event => {
+      if (!event.isFinal) return;
+      transcriptEvents.user_final++;
+      const content = text(event.transcript, 24000);
+      if (!content || !event.itemId) return;
+      transcriptEvents.user_final_saved++;
+      saveTurn({ role: 'user', content, id: event.itemId, createdAt: event.createdAt });
     });
     session.on(voice.AgentSessionEventTypes.Error, event => { if (callStatus !== 'transferred') callStatus = 'failed'; console.error('phone session error', { error: event.error?.message || String(event.error) }); });
 
@@ -217,7 +237,8 @@ export default defineAgent({
       const seconds = billableVoiceSeconds(call.started_at, endedAt, call.connected_at);
       const transcript = settings.save_transcripts === false ? '' : renderCallTranscript(turns);
       const metrics = providerMetrics.snapshot();
-      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: isTest ? 0 : seconds, transcript, outcome: { ...call.outcome, duration_seconds: seconds, test: isTest, provider_usage: metrics } });
+      console.log('phone transcript events', { call: call.id, ...transcriptEvents, turns: turns.length });
+      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: isTest ? 0 : seconds, transcript, outcome: { ...call.outcome, duration_seconds: seconds, test: isTest, provider_usage: metrics, transcript_events: transcriptEvents } });
       await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { status: callStatus === 'transferred' ? 'human_handling' : 'resolved', resolved_at: callStatus === 'transferred' ? null : endedAt, summary: transcript.slice(0, 8000) });
       if (seconds > 0) {
         // Charge once, at the end; if the balance ran short take what is left (never below zero).
