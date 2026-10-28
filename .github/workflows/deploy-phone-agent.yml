@@ -49,6 +49,8 @@ jobs:
           cp -r workers/automation-phone/src "$RUNNER_TEMP/phone/workers/automation-phone/src"
           [ -d workers/automation-phone/test ] && cp -r workers/automation-phone/test "$RUNNER_TEMP/phone/workers/automation-phone/test" || true
           cp workers/automation-phone/Dockerfile "$RUNNER_TEMP/phone/Dockerfile"
+          # LiveKit recognises an agent project by a package.json at the upload root.
+          cp workers/automation-phone/package.json workers/automation-phone/package-lock.json "$RUNNER_TEMP/phone/"
           printf '[project]\n  subdomain = "%s"\n\n[agent]\n  id = "%s"\n' "$subdomain" "$AGENT_ID" > "$RUNNER_TEMP/phone/livekit.toml"
 
       - name: Deploy
