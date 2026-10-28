@@ -60,6 +60,13 @@ function transcriptionLanguages(agent) {
   return languageCodes.length ? { languageCodes } : {};
 }
 
+// Product results say how many photos a product has; on a call that only
+// leads the assistant to offer photos it cannot show.
+function withoutPhotoCounts(result) {
+  if (!Array.isArray(result?.products)) return result;
+  return { ...result, products: result.products.map(product => { const { photos, ...rest } = product || {}; return rest; }) };
+}
+
 function one(value) { return Array.isArray(value) ? value[0] : value; }
 function text(value, max = 500) { return String(value || '').trim().slice(0, max); }
 
@@ -170,7 +177,8 @@ export default defineAgent({
     if (outOfCredits && !isTest) await handleOutOfCredits({ businessId: business.id, conversationId: conversation.id, businessName: business.name, channel: 'Phone', customer: descriptor.callerNumber || 'Caller', notifyOwner });
 
     const configs = await loadToolConfigs(business.id);
-    const definitions = buildToolDefinitions({ tools: configs });
+    // A phone call cannot show photos, so the photo tool (and its instructions) is left out.
+    const definitions = buildToolDefinitions({ tools: configs }).filter(definition => definition.name !== 'send_product_photos');
     const runTool = createToolRunner(
       { businessId: business.id, conversationId: conversation.id, contactId: contact.id, channel: 'phone', contact: { name: contact.display_name, phone: descriptor.callerNumber }, dryRun: isTest },
       { notifyOwner: async payload => payload.event === 'handoff_requested' ? { delayed_for_phone_transfer:true } : notifyOwner(payload) }
@@ -184,7 +192,7 @@ export default defineAgent({
         : definition.description,
       parameters: definition.parameters,
       execute: async (args, runContext) => {
-        const result = await runTool(definition.name, args);
+        const result = withoutPhotoCounts(await runTool(definition.name, args));
         if (definition.name !== 'handoff_to_human' || !result.ok || isTest) return result;
         const transferNumber = normalizePhoneNumber(settings.transfer_number);
         if (!transferNumber || participant.kind !== ParticipantKind.SIP) {
@@ -208,7 +216,7 @@ export default defineAgent({
     // on, the live free times and places at the start of the call (it still checks with the tools before confirming).
     const liveBrief = await runTool.liveBrief?.().catch(error => { console.error('phone live brief failed', { message: error?.message }); return ''; }) || '';
     const instructions = voiceInstructions(
-      buildAutomationInstructions({ business, agent, knowledge }),
+      buildAutomationInstructions({ business, agent, knowledge, channel: 'phone' }),
       [toolInstructions(definitions, configs), `Current business date and time: ${businessClock(business.timezone)}.`, liveBrief].filter(Boolean).join('\n\n'),
       settings
     );
