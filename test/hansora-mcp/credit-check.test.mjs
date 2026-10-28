@@ -926,3 +926,11 @@ test('a Veo video Google could not make the sound for is made with Grok instead,
   assert.equal(other.submitted.length, 0);
   assert.equal(other.result.structuredContent.status, 'failed');
 });
+
+test('names ChatGPT sometimes uses for Kling 3.0 and the voice tool are understood', async () => {
+  assert.equal((await callTool('get_model', { model_id: 'kling-3.0' }, { credits: 30 })).result.structuredContent.id, 'kling30');
+  for (const name of ['elevenlabs-tts', 'eleven_multilingual_v2']) {
+    const price = (await callTool('quote_generation', { model_id: name, character_count: 120 }, { credits: 30 })).result;
+    assert.notEqual(price.isError, true, name);
+  }
+});
