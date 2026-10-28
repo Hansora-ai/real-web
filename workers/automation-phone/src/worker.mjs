@@ -19,9 +19,12 @@ import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs,
 // resort, a tool call still pending after STALE_TOOL_MS stops blocking audio.
 const STALE_TOOL_MS = 12_000;
 function guardToolTurns(model, counts) {
+  if (typeof model?.session !== 'function') return model;
   const createSession = model.session.bind(model);
   model.session = (...args) => {
     const session = createSession(...args);
+    // These are plugin internals; if a plugin update renames them, run unguarded rather than fail the call.
+    if (!['handleInputSpeechStarted', 'startNewGeneration', 'shouldBlockRealtimeInputForPendingTools'].every(name => typeof session?.[name] === 'function')) return session;
     const speechStarted = session.handleInputSpeechStarted.bind(session);
     const startGeneration = session.startNewGeneration.bind(session);
     const shouldBlock = session.shouldBlockRealtimeInputForPendingTools.bind(session);
