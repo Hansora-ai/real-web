@@ -1,0 +1,29 @@
+# Prints the phone agent's recent LiveKit Cloud logs. Read-only: it changes
+# nothing on LiveKit. Start it by hand when a call misbehaves.
+name: Phone agent logs
+
+on:
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: How long to collect logs (seconds)
+        default: '40'
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    env:
+      LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+      LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+      LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+      AGENT_ID: CA_yH5CZHNwc2MB
+    steps:
+      - name: Install LiveKit CLI
+        run: curl -sSL https://get.livekit.io/cli | bash
+
+      - name: Status
+        run: lk agent status --id "$AGENT_ID" --url "$LIVEKIT_URL" --api-key "$LIVEKIT_API_KEY" --api-secret "$LIVEKIT_API_SECRET"
+
+      # The log stream follows new lines, so it is cut off after the chosen time.
+      - name: Logs
+        run: timeout "${{ inputs.seconds || '40' }}" lk agent logs --id "$AGENT_ID" --url "$LIVEKIT_URL" --api-key "$LIVEKIT_API_KEY" --api-secret "$LIVEKIT_API_SECRET" || true
