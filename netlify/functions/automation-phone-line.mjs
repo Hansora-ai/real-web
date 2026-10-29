@@ -63,12 +63,13 @@ export async function handler(event) {
       const assign = async () => { const result = await supabaseRequest('/rest/v1/rpc/automation_assign_phone_number', { method: 'POST', body: { p_business: businessId, p_country: country } }); return Array.isArray(result) ? result[0] : result; };
       let number = await assign();
       const providers = numberProviders().filter(provider => provider.countries.includes(country));
+      const failures = [];
       if (!number?.e164 && providers.length) {
         // Buying costs Hansora money every month, so only for an owner with credits.
         const profile = await first(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(user.id)}&select=credits&limit=1`);
         if (!(Number(profile?.credits) > 0)) return json(402, { error: 'credits_required' });
         for (const provider of providers) {
-          const bought = await provider.buy(country).catch(error => { console.error('phone number purchase failed', { provider: provider.name, message: error?.message, code: error?.code }); return null; });
+          const bought = await provider.buy(country).catch(error => { console.error('phone number purchase failed', { provider: provider.name, message: error?.message, code: error?.code }); failures.push(`${provider.name}: ${error?.message || 'failed'}`); return null; });
           if (!bought) continue;
           // A number LiveKit does not accept would ring into nothing, so it is kept out of use until fixed by hand.
           const accepted = await acceptOnLiveKitTrunk(bought.e164, { trunkId: provider.trunkId }).then(() => true, error => { console.error('livekit trunk update failed', { message: error?.message }); return false; });
@@ -78,7 +79,7 @@ export async function handler(event) {
           break;
         }
       }
-      if (!number?.e164) return json(409, { error: 'no_number_available' });
+      if (!number?.e164) return json(409, { error: 'no_number_available', ...(failures.length ? { detail: failures.join('; ').slice(0, 300) } : {}) });
       await serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone`, { status: 'connected', provider: number.provider || 'phone', connected_account_label: number.e164, connected_at: new Date().toISOString(), last_error_code: null });
       return json(200, { number: publicNumber(number) });
     }

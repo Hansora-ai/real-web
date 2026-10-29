@@ -27,7 +27,6 @@
   } else return fail('Open phone setup from your AI employee workspace.');
   // Owners type their country; names in their own language and in English both match.
   const englishName = code => { try { return new Intl.DisplayNames(['en'], { type:'region' }).of(code) || code; } catch (_) { return code; } };
-  $('#line-where-list').innerHTML = ALL_COUNTRIES.map(code => countryName(code)).sort((a, b) => a.localeCompare(b)).map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
   const countryFor = text => { const value = String(text || '').trim().toLowerCase(); return value ? ALL_COUNTRIES.find(code => [countryName(code), englishName(code), code].some(item => item.toLowerCase() === value)) || '' : ''; };
   applySaved(saved);
   $('#line-where').value = line.where ? countryName(line.where) : '';
@@ -40,9 +39,46 @@
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   $('#phone-line').addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
   $('#phone-live').addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
-  const pickCountry = () => { const code = countryFor($('#line-where').value); if (code === line.where) return; line.where = code; renderLine(); if (code) { $('#line-where').value = countryName(code); recordCountry(); } };
-  $('#line-where').addEventListener('input', pickCountry);
-  $('#line-where').addEventListener('change', pickCountry);
+  // A full-width list under the field: matches by name (own language or English) as the owner types.
+  const SORTED_COUNTRIES = ALL_COUNTRIES.slice().sort((a, b) => countryName(a).localeCompare(countryName(b)));
+  let menuIndex = 0;
+  function chooseCountry(code) {
+    closeMenu(); $('#line-where').value = code ? countryName(code) : '';
+    if (code === line.where) return;
+    line.where = code; renderLine(); if (step === 4) render(); if (code) recordCountry();
+  }
+  function menuMatches() {
+    const text = $('#line-where').value.trim().toLowerCase();
+    if (!text || countryFor(text) === line.where && line.where) return SORTED_COUNTRIES;
+    const starts = [], contains = [];
+    for (const code of SORTED_COUNTRIES) {
+      const names = [countryName(code), englishName(code)].map(item => item.toLowerCase());
+      if (names.some(item => item.startsWith(text)) || code.toLowerCase() === text) starts.push(code);
+      else if (names.some(item => item.includes(text))) contains.push(code);
+    }
+    return [...starts, ...contains];
+  }
+  function openMenu() {
+    const matches = menuMatches(); const menu = $('#line-where-menu');
+    menuIndex = Math.min(menuIndex, Math.max(matches.length - 1, 0));
+    menu.innerHTML = matches.length
+      ? matches.map((code, index) => `<div role="option" data-code="${code}" aria-selected="${index === menuIndex}" style="padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px;${index === menuIndex ? 'background:var(--surface-2);' : ''}">${escapeHtml(countryName(code))}</div>`).join('')
+      : '<div style="padding:10px 12px;color:var(--text-3);font-size:14px">No country found</div>';
+    menu.hidden = false; $('#line-where').setAttribute('aria-expanded', 'true');
+    menu.querySelector('[aria-selected="true"]')?.scrollIntoView({ block:'nearest' });
+  }
+  function closeMenu() { $('#line-where-menu').hidden = true; $('#line-where').setAttribute('aria-expanded', 'false'); }
+  $('#line-where').addEventListener('focus', () => { menuIndex = Math.max(SORTED_COUNTRIES.indexOf(line.where), 0); openMenu(); });
+  $('#line-where').addEventListener('input', () => { menuIndex = 0; openMenu(); });
+  $('#line-where').addEventListener('keydown', event => {
+    const matches = menuMatches();
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); menuIndex = (menuIndex + (event.key === 'ArrowDown' ? 1 : -1) + matches.length) % Math.max(matches.length, 1); openMenu(); }
+    else if (event.key === 'Enter') { event.preventDefault(); if (matches[menuIndex]) chooseCountry(matches[menuIndex]); }
+    else if (event.key === 'Escape') closeMenu();
+  });
+  // mousedown runs before the field loses focus, so the click always lands.
+  $('#line-where-menu').addEventListener('mousedown', event => { const item = event.target.closest('[data-code]'); if (item) { event.preventDefault(); chooseCountry(item.dataset.code); $('#line-where').blur(); } });
+  $('#line-where').addEventListener('blur', () => setTimeout(() => { closeMenu(); const code = countryFor($('#line-where').value); if (code) chooseCountry(code); else $('#line-where').value = line.where ? countryName(line.where) : ''; }, 120));
   // Saved right away, so Hansora sees which countries owners want even if they leave.
   function recordCountry() {
     if (!api.isLocalPreview && line.where) api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action:'pick', country:line.where }) }).catch(() => {});
@@ -53,8 +89,11 @@
     if (step === 1 && mode() === 'forward' && !/^\+?[\d\s()-]{8,20}$/.test($('#phone-number').value.trim())) { showError('Enter the business number to forward.'); return; }
     $('#phone-error').hidden = true;
     if (step < 4) { step++; render(); return; }
+    // Where a number can be had, saving also gets it, so one click makes the line live.
+    if (canGetNumber()) { $('#phone-next').dataset.country = line.where; await lineAction('activate', $('#phone-next')); return; }
     await save();
   });
+  function canGetNumber() { return line.loaded && !line.error && !line.number && Boolean(line.where) && line.countries.some(item => item.country === line.where); }
   if (api.isLocalPreview) $('#test-call').addEventListener('click', event => previewCall(event.currentTarget));
   else window.HansoraVoiceTest.mount({
     api, businessId, getSettings:collect,
@@ -82,7 +121,7 @@
     document.querySelectorAll('.ui-stepper li').forEach(item => { const n = Number(item.dataset.step); item.classList.toggle('active', n === step); item.classList.toggle('done', n < step); });
     $('.ui-stepper').style.setProperty('--progress-num', String((step - 1) / 3));
     $('#phone-previous').hidden = step === 1;
-    $('#phone-next').textContent = step === 4 ? 'Save phone setup' : 'Continue';
+    $('#phone-next').textContent = step === 4 ? (canGetNumber() ? `Save and get my ${countryName(line.where)} number` : 'Save phone setup') : 'Continue';
     // A new Hansora number belongs to the AI alone, so it answers every call; the choice only matters when forwarding.
     $('#answer-mode-field').hidden = mode() !== 'forward';
     if (step === 4) renderReview();
@@ -106,8 +145,8 @@
       if (result.error) { showError(api.displayError(result.error)); return false; }
     }
     setState(true);
-    if (!quiet) ui.toast(line?.number ? `Saved. Your AI employee answers calls to ${line.number.e164}.` : 'Saved. Not live yet: get your number in step 1.');
-    if (step === 4) renderReview();
+    if (!quiet) ui.toast(line?.number ? `Saved. Your AI employee answers calls to ${line.number.e164}.` : 'Saved. Not live yet: finish the step below.');
+    if (step === 4) render();
     return true;
   }
   function setState(saved) { const badge = $('#phone-state'); const live = Boolean(line?.number); badge.textContent = live ? `Live · ${line.number.e164}` : saved ? 'Saved · waiting for line' : 'Not set up'; badge.classList.toggle('amber', saved && !live); badge.classList.toggle('green', live); }
@@ -121,7 +160,7 @@
       if (!response.ok) throw new Error(payload.error || 'phone_line_unavailable');
       line = { ...line, number:payload.number || null, countries:payload.countries || [], requested:payload.requested || [], loaded:true, error:false };
     } catch (_) { line = { ...line, number:null, countries:[], loaded:true, error:true }; }
-    renderLine(); setState(Boolean(saved.saved_at));
+    renderLine(); setState(Boolean(saved.saved_at)); if (step === 4) render();
     if (!line.number && !line.error) recordCountry();
   }
   function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
@@ -177,12 +216,12 @@
     try {
       const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action, country:button.dataset.country }) });
       const payload = await response.json().catch(() => ({}));
-      if (action === 'notify' && response.ok) { line.requested = [...(line.requested || []), button.dataset.country]; ui.toast('Thanks! We’ll email you when it’s ready.'); renderLine(); if (step === 4) renderReview(); return; }
-      if (!response.ok) throw new Error({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.');
+      if (action === 'notify' && response.ok) { line.requested = [...(line.requested || []), button.dataset.country]; ui.toast('Thanks! We’ll email you when it’s ready.'); renderLine(); if (step === 4) render(); return; }
+      if (!response.ok) throw new Error(({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.') + (payload.detail ? ` (${payload.detail})` : ''));
       line.number = payload.number || null;
       if (action === 'activate') { await save({ quiet:true }); ui.toast(`Your number is ${line.number.e164}.`); }
       else { await loadLine(); ui.toast('Phone line turned off.'); }
-      renderLine(); setState(true); if (step === 4) renderReview();
+      renderLine(); setState(true); if (step === 4) render();
     } catch (error) { showError(error.message); }
     finally { button.disabled = false; }
   }
