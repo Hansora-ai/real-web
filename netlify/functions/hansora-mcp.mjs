@@ -279,9 +279,10 @@ async function submitRun({ origin, token, userId, endpoint, model, prompt, usage
 
 // A video that failed on the provider's side (an outage, not the prompt or photo) is started once more on
 // another model, under a fixed run id so it can never start twice: a new user's first video after any such
-// failure, and anyone's Veo video that Google could not make the sound for. The card keeps following the
-// original run id and simply shows the new video. Content blocks, unusable inputs and retries of a retry
-// are left as they are. Null means "no retry".
+// failure, and anyone's Veo video after a temporary Google problem ("Internal Error", or Veo could not make
+// the sound). A video is better than none, so this holds for every language. The card keeps following the
+// original run id, shows the new video and says which model made it. Content blocks, unusable inputs and
+// retries of a retry are left as they are. Null means "no retry".
 const RETRY_SUFFIX = '-retry';
 const VEO_MODELS = new Set(['veo31-lite', 'veo31-fast', 'veo31']);
 const VEO_AUDIO_FAILURE = /unable to generate audio/i;
@@ -297,7 +298,8 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
     const recipe = await getFirstVideoRecipe(userId, runId);
     const failed = recipe ? getModel(recipe.model_id) : null;
     if (!failed || failed.category !== 'video') return null;
-    if (!(audioFailure && VEO_MODELS.has(failed.id)) && !(await isFirstGeneration(userId))) return null;
+    const veoOutage = VEO_MODELS.has(failed.id) && presented.failure_kind === 'temporary';
+    if (!veoOutage && !(await isFirstGeneration(userId))) return null;
     const account = await getAccount(userId).catch(() => null);
     if (!account) return null;
     const request = {
@@ -336,20 +338,37 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
   const view = retry ? presentGeneration(retry, retryId) : {
     status: 'processing', media_type: 'video', kind: 'video', model_name: startedModel?.name || '', prompt: presented.prompt
   };
-  const name = view.model_name || startedModel?.name || 'another model';
-  const note = audioFailure
-    ? `${presented.model_name || 'Veo'} could not make the sound for this video, so it is being made with ${name} instead. The first try was refunded.`
-    : `${presented.model_name || 'The first model'} had a temporary issue, so this first video is being made with ${name} instead. The first try was refunded.`;
+  const retryMeta = retry?.meta && typeof retry.meta === 'object' ? retry.meta : {};
+  const credits = Number(retryMeta.charged_cost ?? retryMeta.charge_cost ?? retryMeta.refund_amount) * 10;
+  const failedName = getModel(modelIdOf(generation))?.name || presented.model_name || 'The first model';
+  const note = switchNote({
+    from: failedName,
+    to: view.model_name || startedModel?.name || 'another model',
+    credits: credits > 0 ? Number(credits.toFixed(2)) : null,
+    reason: audioFailure ? 'audio' : 'outage'
+  });
   return {
     ...view,
     run_id: runId,
     retry_run_id: retryId,
+    switch_note: note,
     meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId },
     ...(view.status === 'processing' ? {
       message: note,
-      next_step: `${note} The card shows the new video by itself. If the user asks, tell them this in one short line.`
+      next_step: `${note} The card shows this and the new video by itself. In your next reply, tell the user this in one short line.`
     } : {})
   };
+}
+
+// What the user reads when a video was made with another model than the one they asked for.
+function switchNote({ from, to, credits, reason }) {
+  const cause = reason === 'audio' ? `${from} could not make the sound`
+    : reason === 'resting' ? `${from} is having a temporary issue on the provider's side right now`
+      : `${from} had a temporary issue on the provider's side`;
+  const sentences = [`${cause}, so this video was made with ${to} instead.`];
+  if (credits != null) sentences.push(`You were charged the ${to} price (${credits} credits).`);
+  if (reason !== 'resting') sentences.push(`The ${from} try was refunded.`);
+  return sentences.join(' ');
 }
 
 function displayModelName(generation) {

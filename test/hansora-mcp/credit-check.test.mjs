@@ -829,7 +829,8 @@ test('a new user\'s first video that fails on the provider\'s side is started on
   assert.equal(shown.run_id, old, 'the card keeps following the same run');
   assert.equal(shown.status, 'processing');
   assert.equal(shown.retry_run_id, `${old}-retry`);
-  assert.match(shown.message, /being made with Grok Video instead\. The first try was refunded\./);
+  assert.equal(shown.message, "Veo 3.1 Lite had a temporary issue on the provider's side, so this video was made with Grok Video instead. The Veo 3.1 Lite try was refunded.");
+  assert.equal(shown.switch_note, shown.message);
 
   // 3. Later checks follow the new run and never start another one.
   const retryRow = { id: 'g-new', kind: 'video', provider: 'Grok', created_at: '2026-10-26T23:02:00Z',
@@ -841,8 +842,10 @@ test('a new user\'s first video that fails on the provider\'s side is started on
   assert.equal(later.result.structuredContent.status, 'ready');
   assert.equal(later.result.structuredContent.result_url, retryRow.result_url);
 
-  // 4. No retry for a returning user, for a content refusal, or for a retry that failed itself.
-  const returning = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world({ firstUser: false }) });
+  // 4. No retry for a returning user on another model than Veo, for a content refusal, or for a retry that
+  // failed itself.
+  const klingFailed = { ...failedRow, provider: 'Kling-5s', meta: { ...failedRow.meta, model: 'kling/v2-5-turbo-image-to-video-pro' } };
+  const returning = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('first_video_recipe') ? reply([{ model_id: 'kling25', details: recipe.details }]) : world({ firstUser: false, failure: klingFailed })(href)) });
   assert.equal(returning.submitted.length, 0);
   assert.equal(returning.result.structuredContent.status, 'failed');
   const blocked = { ...failedRow, meta: { ...failedRow.meta, error: 'Request blocked: The input content was flagged for containing a prominent public figure.' } };
@@ -919,12 +922,18 @@ test('a Veo video Google could not make the sound for is made with Grok instead,
   assert.equal(audio.submitted[0].payload.prompt, prompt);
   assert.equal(audio.result.structuredContent.run_id, old);
   assert.equal(audio.result.structuredContent.status, 'processing');
-  assert.match(audio.result.structuredContent.message, /could not make the sound for this video, so it is being made with Grok Video instead\. The first try was refunded\./);
+  assert.equal(audio.result.structuredContent.message, 'Veo 3.1 Lite could not make the sound, so this video was made with Grok Video instead. The Veo 3.1 Lite try was refunded.');
 
-  // Other provider problems for a returning user still go to ChatGPT to offer, not an automatic switch.
-  const other = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world(failed('Internal Error, Please try again later.')) });
-  assert.equal(other.submitted.length, 0);
-  assert.equal(other.result.structuredContent.status, 'failed');
+  // A Veo "Internal Error" also goes to Grok for a returning user: a video is better than none.
+  const outage = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world(failed('Internal Error, Please try again later.')) });
+  assert.equal(outage.submitted.length, 1);
+  assert.equal(outage.submitted[0].model_id, 'grok-video');
+  assert.match(outage.result.structuredContent.switch_note, /^Veo 3\.1 Lite had a temporary issue on the provider's side, so this video was made with Grok Video instead\./);
+
+  // A refusal Google gives for the photo is not an outage, so a returning user's video is not switched.
+  const refused = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world(failed('public error unsafe image upload.')) });
+  assert.equal(refused.submitted.length, 0);
+  assert.equal(refused.result.structuredContent.status, 'failed');
 });
 
 test('names ChatGPT sometimes uses for Kling 3.0 and the voice tool are understood', async () => {
