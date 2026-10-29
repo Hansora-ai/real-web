@@ -29,7 +29,7 @@ async function page(inline = false) {
     async disconnect(){this.events.disconnected?.();}
   }
   const api={isLocalPreview:false,requireUser:async()=>({id:'new-user'}),
-    db:{from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null}),update(){throw Error('A test must not save number setup');}})},
+    db:{from:()=>({select(){return this;},eq(){return this;},order(){return this;},limit:async()=>({data:[]}),maybeSingle:async()=>({data:null}),update(){throw Error('A test must not save number setup');}})},
     authenticatedFetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return{ok:true,json:async()=>({url:'wss://voice.test',token:'test-token',max_seconds:300})};},displayError:error=>error.message};
   const sandbox={window:{addEventListener(){},HansoraAutomation:api,HansoraUI:{toast(){}},LivekitClient:{Room,Track:{Kind:{Audio:'audio'}},RoomEvent:{TrackSubscribed:'track',ParticipantAttributesChanged:'attributes',TrackUnsubscribed:'untrack',TranscriptionReceived:'transcript',Disconnected:'disconnected',MediaDevicesError:'devices',AudioPlaybackStatusChanged:'playback'}}},
     document:{querySelector:element,querySelectorAll:selector=>selector==='.phone-step'?steps:selector==='.ui-stepper li'?tabs:[],body:{appendChild(){}}},
