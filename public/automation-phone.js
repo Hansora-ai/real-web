@@ -56,9 +56,9 @@
   });
 
   function mode() { return document.querySelector('input[name="number-mode"]:checked').value; }
-  function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; renderLine(); }
+  function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = mode() !== 'forward'; renderLine(); }
   function collect() {
-    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:'Leda', voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:document.querySelector('input[name="answer-mode"]:checked').value, transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined };
+    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:'Leda', voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined };
   }
   function applySaved(data) {
     if (data.number_mode) document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
@@ -77,12 +77,20 @@
     $('.ui-stepper').style.setProperty('--progress-num', String((step - 1) / 3));
     $('#phone-previous').hidden = step === 1;
     $('#phone-next').textContent = step === 4 ? 'Save phone setup' : 'Continue';
+    // A new Hansora number belongs to the AI alone, so it answers every call; the choice only matters when forwarding.
+    $('#answer-mode-field').hidden = mode() !== 'forward';
     if (step === 4) renderReview();
   }
   function renderReview() {
     const data = collect();
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
-    $('#phone-review').innerHTML = [['Number', line?.number ? line.number.e164 : (data.number_mode === 'new' ? 'New phone number' : `Forward ${data.forward_number}`)], ['Voice', 'Leda'], ['Answers', answer], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+    const number = line?.number ? line.number.e164 : 'Not set up yet';
+    $('#phone-review').innerHTML = [['Number', number], ['Voice', 'Leda'], ['Answers', answer], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+    // Tells the owner plainly whether real calls are answered yet, and what is left to do.
+    $('#phone-live').innerHTML = line?.number
+      ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${escapeHtml(line.number.e164)}</strong>.${data.number_mode === 'forward' ? ' Make sure forwarding is on (step 1), then call your business number from another phone to check.' : ' Call it from any phone to check.'}</div>`
+      : `<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> Real phone calls are not answered until you get your number in step 1. The test above already works.<div><button class="ui-btn ghost" type="button" id="phone-go-number" style="border:1px solid var(--border);margin-top:10px">Go to step 1</button></div></div>`;
+    $('#phone-go-number')?.addEventListener('click', () => { step = 1; render(); });
   }
   async function save({ quiet = false } = {}) {
     const data = { ...collect(), saved_at:new Date().toISOString() };
@@ -92,7 +100,8 @@
       if (result.error) { showError(api.displayError(result.error)); return false; }
     }
     setState(true);
-    if (!quiet) ui.toast('Phone setup saved. It goes live when the phone line is connected.');
+    if (!quiet) ui.toast(line?.number ? `Saved. Your AI employee answers calls to ${line.number.e164}.` : 'Saved. Not live yet: get your number in step 1.');
+    if (step === 4) renderReview();
     return true;
   }
   function setState(saved) { const badge = $('#phone-state'); const live = Boolean(line?.number); badge.textContent = live ? `Live · ${line.number.e164}` : saved ? 'Saved · waiting for line' : 'Not set up'; badge.classList.toggle('amber', saved && !live); badge.classList.toggle('green', live); }
@@ -123,7 +132,7 @@
     newOption.disabled = !canBuy;
     newOption.closest('.ui-option').style.opacity = canBuy ? '' : '.45';
     newOption.closest('.ui-option').querySelector('small').textContent = canBuy ? 'We assign it when you go live' : `Not available in ${countryName(where)} yet`;
-    if (!canBuy && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; }
+    if (!canBuy && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
     $('#line-where').disabled = Boolean(number);
     if (!number) {
       if (!where) { box.innerHTML = '<p class="ui-hint">Choose where your business is to see your phone options.</p>'; return; }
@@ -153,7 +162,7 @@
   async function lineAction(action, button) {
     if (action === 'release' && !confirm('Turn off the phone line? Calls to this number will no longer be answered, and the number may be given to another business.')) return;
     // A number abroad only makes sense with forwarding: local customers keep calling the business number.
-    if (button.dataset.forward) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; }
+    if (button.dataset.forward) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
     button.disabled = true; $('#phone-error').hidden = true;
     try {
       const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action, country:button.dataset.country }) });

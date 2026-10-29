@@ -45,8 +45,8 @@
         </div>
         <div class="ui-step phone-step" data-phone-step="3" hidden>
           <div class="ui-step-head"><h2>When it answers</h2><p>Bookings, orders and handoff rules come from Business tools.</p></div>
-          <div class="ui-segmented" style="margin-bottom:18px"><label><input type="radio" name="answer-mode" value="always" checked><span>Every call</span></label><label><input type="radio" name="answer-mode" value="no_answer"><span>If I don't answer or I'm busy</span></label></div>
-          <div class="ui-field"><label class="ui-label" for="transfer-number">Transfer to a person <span class="ui-faint">· optional</span></label><input class="ui-input" id="transfer-number" type="tel" placeholder="+1 555 010 0001"><span class="ui-hint">When a caller asks for a person. If nobody answers, the AI takes a callback request and notifies you.</span></div>
+          <div class="ui-segmented" id="answer-mode-field" style="margin-bottom:18px"><label><input type="radio" name="answer-mode" value="always" checked><span>Every call</span></label><label><input type="radio" name="answer-mode" value="no_answer"><span>If I don't answer or I'm busy</span></label></div>
+          <div class="ui-field"><label class="ui-label" for="transfer-number">Transfer to a person <span class="ui-faint">· optional</span></label><input class="ui-input" id="transfer-number" type="tel" placeholder="+1 555 010 0001"><span class="ui-hint">When a caller asks for a person. If nobody answers, the AI takes a callback request and notifies you. Works on real phone calls, not in the browser test.</span></div>
           <div class="ui-setting" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px"><span><strong>Save call transcripts</strong><small>Shown in the inbox next to messages</small></span><input class="ui-switch" id="save-transcripts" type="checkbox" checked></div>
         </div>
         <div class="ui-step phone-step" data-phone-step="4" hidden>
@@ -58,6 +58,7 @@
             <button class="ui-btn secondary" id="enable-call-audio" type="button" hidden>Enable audio</button>
           </div>
           <div class="ui-transcript" id="phone-transcript"></div>
+          <div id="phone-live" style="margin-top:16px"></div>
           <div class="ui-review" id="phone-review" style="margin-top:16px"></div>
         </div>
         <footer class="ui-card-foot setup-actions"><button class="ui-btn ghost" id="phone-previous" type="button" hidden>Back</button><span class="ui-save-state" id="phone-save-state">Settings save as you go</span><button class="ui-btn primary" id="phone-next" type="button">Continue</button></footer>
