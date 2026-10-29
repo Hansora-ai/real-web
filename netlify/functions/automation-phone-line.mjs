@@ -1,12 +1,20 @@
 import { authenticateRequest, isUuid } from '../../lib/sales-agent/auth.mjs';
 import { first, rows, serviceInsert, serviceUpdate, supabaseRequest } from '../../lib/automation/db.mjs';
 import { acceptOnLiveKitTrunk, buyTelnyxNumber, telnyxConfigured } from '../../lib/automation/telnyx.mjs';
+import { buyTwilioNumber, twilioConfigured } from '../../lib/automation/twilio.mjs';
 
 const HEADERS = {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'GET, POST, OPTIONS'};
 const json = (statusCode, body) => ({ statusCode, headers: HEADERS, body: JSON.stringify(body) });
 const publicNumber = row => row?.e164 ? { e164: row.e164, country: row.country, assigned_at: row.assigned_at } : null;
-// Countries where a number may be bought from Telnyx on demand (no paperwork needed there).
-const buyableCountries = () => telnyxConfigured() ? String(process.env.TELNYX_COUNTRIES || 'US,CA').split(',').map(code => code.trim().toUpperCase()).filter(code => /^[A-Z]{2}$/.test(code)) : [];
+// Providers that can buy a number on demand, in order of preference, each with
+// the countries it is allowed to buy in (no paperwork needed there) and the
+// LiveKit inbound trunk its calls arrive on.
+const countryList = value => String(value || '').split(',').map(code => code.trim().toUpperCase()).filter(code => /^[A-Z]{2}$/.test(code));
+const numberProviders = () => [
+  twilioConfigured() && { name: 'twilio', countries: countryList(process.env.TWILIO_COUNTRIES || 'US,CA'), buy: buyTwilioNumber, trunkId: String(process.env.LIVEKIT_TWILIO_TRUNK_ID).trim() },
+  telnyxConfigured() && { name: 'telnyx', countries: countryList(process.env.TELNYX_COUNTRIES || 'US,CA'), buy: buyTelnyxNumber, trunkId: String(process.env.LIVEKIT_TELNYX_TRUNK_ID).trim() }
+].filter(Boolean);
+const buyableCountries = () => [...new Set(numberProviders().flatMap(provider => provider.countries))];
 
 // The owner's phone line: which Hansora number the business has, which countries
 // still have free numbers, and turning the line on (assign) or off (release).
@@ -40,17 +48,20 @@ export async function handler(event) {
       if (!/^[A-Z]{2}$/.test(country)) return json(400, { error: 'invalid_country' });
       const assign = async () => { const result = await supabaseRequest('/rest/v1/rpc/automation_assign_phone_number', { method: 'POST', body: { p_business: businessId, p_country: country } }); return Array.isArray(result) ? result[0] : result; };
       let number = await assign();
-      if (!number?.e164 && buyableCountries().includes(country)) {
+      const providers = numberProviders().filter(provider => provider.countries.includes(country));
+      if (!number?.e164 && providers.length) {
         // Buying costs Hansora money every month, so only for an owner with credits.
         const profile = await first(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(user.id)}&select=credits&limit=1`);
         if (!(Number(profile?.credits) > 0)) return json(402, { error: 'credits_required' });
-        const bought = await buyTelnyxNumber(country);
-        if (bought) {
+        for (const provider of providers) {
+          const bought = await provider.buy(country).catch(error => { console.error('phone number purchase failed', { provider: provider.name, message: error?.message, code: error?.code }); return null; });
+          if (!bought) continue;
           // A number LiveKit does not accept would ring into nothing, so it is kept out of use until fixed by hand.
-          const accepted = await acceptOnLiveKitTrunk(bought.e164).then(() => true, error => { console.error('livekit trunk update failed', { message: error?.message }); return false; });
-          await serviceInsert('automation_phone_numbers', { e164: bought.e164, country, provider: 'telnyx', provider_number_id: bought.providerNumberId, status: accepted ? 'available' : 'disabled', label: accepted ? null : 'Not on the LiveKit trunk yet' }, { ignoreDuplicates: true });
+          const accepted = await acceptOnLiveKitTrunk(bought.e164, { trunkId: provider.trunkId }).then(() => true, error => { console.error('livekit trunk update failed', { message: error?.message }); return false; });
+          await serviceInsert('automation_phone_numbers', { e164: bought.e164, country, provider: provider.name, provider_number_id: bought.providerNumberId, status: accepted ? 'available' : 'disabled', label: accepted ? null : 'Not on the LiveKit trunk yet' }, { ignoreDuplicates: true });
           if (!accepted) return json(503, { error: 'phone_line_setup_failed' });
           number = await assign();
+          break;
         }
       }
       if (!number?.e164) return json(409, { error: 'no_number_available' });
