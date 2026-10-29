@@ -25,7 +25,9 @@
     if (result.error) return fail(api.displayError(result.error));
     saved = result.data?.settings || {};
   } else return fail('Open phone setup from your AI employee workspace.');
+  $('#line-where').insertAdjacentHTML('beforeend', ALL_COUNTRIES.map(code => [code, countryName(code)]).sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => `<option value="${code}">${escapeHtml(name)}</option>`).join(''));
   applySaved(saved);
+  $('#line-where').value = line.where;
   $('#phone-loading').hidden = true; $('#phone-app').hidden = false;
   render();
   loadLine();
@@ -34,7 +36,11 @@
   document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', syncForward));
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   $('#phone-line').addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
-  $('#phone-line').addEventListener('change', event => { if (event.target.id === 'line-where') { line.where = event.target.value; renderLine(); } });
+  $('#line-where').addEventListener('change', event => { line.where = event.target.value; renderLine(); recordCountry(); });
+  // Saved right away, so Hansora sees which countries owners want even if they leave.
+  function recordCountry() {
+    if (!api.isLocalPreview && line.where) api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action:'pick', country:line.where }) }).catch(() => {});
+  }
   document.querySelectorAll('.ui-stepper li').forEach(item => item.addEventListener('click', () => { const target = Number(item.dataset.step); if (target < step) { step = target; render(); } }));
   $('#phone-previous').addEventListener('click', () => { if (step > 1) { step--; render(); } });
   $('#phone-next').addEventListener('click', async () => {
@@ -101,21 +107,28 @@
       line = { ...line, number:payload.number || null, countries:payload.countries || [], requested:payload.requested || [], loaded:true, error:false };
     } catch (_) { line = { ...line, number:null, countries:[], loaded:true, error:true }; }
     renderLine(); setState(Boolean(saved.saved_at));
+    if (!line.number && !line.error) recordCountry();
   }
   function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
   function renderLine() {
     const box = $('#phone-line'); if (!box || !line.loaded) return;
     if (line.error) { box.innerHTML = '<p class="ui-hint">Phone numbers could not be loaded. Refresh the page to try again.</p>'; return; }
     const number = line.number;
+    const ready = new Set(line.countries.map(item => item.country));
+    const where = line.where;
+    const name = escapeHtml(countryName(where));
+    // A new number is only offered where Hansora has local numbers; elsewhere the owner forwards.
+    const newOption = document.querySelector('input[name="number-mode"][value="new"]');
+    const canBuy = Boolean(number) || !where || ready.has(where);
+    newOption.disabled = !canBuy;
+    newOption.closest('.ui-option').style.opacity = canBuy ? '' : '.45';
+    newOption.closest('.ui-option').querySelector('small').textContent = canBuy ? 'We assign it when you go live' : `Not available in ${countryName(where)} yet`;
+    if (!canBuy && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; }
+    $('#line-where').disabled = Boolean(number);
     if (!number) {
-      const ready = new Set(line.countries.map(item => item.country));
-      const browserCountry = (navigator.language || '').split('-')[1]?.toUpperCase();
-      const where = line.where = line.where || (ALL_COUNTRIES.includes(browserCountry) ? browserCountry : [...ready][0] || 'US');
-      const options = ALL_COUNTRIES.map(code => [code, countryName(code)]).sort((a, b) => a[1].localeCompare(b[1]));
-      const picker = `<label class="ui-label" for="line-where">Where is your business?</label><select class="ui-input" id="line-where">${options.map(([code, name]) => `<option value="${code}"${code === where ? ' selected' : ''}>${escapeHtml(name)}</option>`).join('')}</select>`;
-      const name = escapeHtml(countryName(where));
+      if (!where) { box.innerHTML = '<p class="ui-hint">Choose where your business is to see your phone options.</p>'; return; }
       if (ready.has(where)) {
-        box.innerHTML = `${picker}<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px"><button class="ui-btn primary" type="button" data-line-action="activate" data-country="${where}">Get my ${name} number</button></div><span class="ui-hint">${mode() === 'forward' ? 'A local number: forward your business number to it at local rates. Calls are answered as soon as forwarding is on.' : 'Customers call this number. Calls are answered right away.'}</span>`;
+        box.innerHTML = `<button class="ui-btn primary" type="button" data-line-action="activate" data-country="${where}">Get my ${name} number</button><span class="ui-hint">${mode() === 'forward' ? 'A local number: forward your business number to it at local rates. Calls are answered as soon as forwarding is on.' : 'Customers call this number. Calls are answered right away.'}</span>`;
         return;
       }
       // No local numbers here yet: the owner can still forward to a number abroad, at their operator's price.
@@ -126,8 +139,8 @@
         : (line.requested || []).includes(where) ? `<p class="ui-hint">We’ll email you${email} when ${name} numbers are ready.</p>`
           : `<button class="ui-btn primary" type="button" data-line-action="notify" data-country="${where}">Notify me when ${name} numbers are ready</button><span class="ui-hint">We’ll email you${email}.</span>`;
       const status = COMING_SOON.has(where) ? `<strong>Local numbers in ${name} are coming soon.</strong>` : `<strong>Local numbers in ${name} are not available yet.</strong>`;
-      const abroad = fallback ? `<div style="margin-top:16px"><strong>Optional: start now with forwarding</strong><p class="ui-hint" style="margin:4px 0 8px">Forward your business phone to a ${escapeHtml(countryName(fallback))} number. <strong>Your phone operator charges you for forwarding calls abroad</strong>, usually at the price of a call to that country. Check the price with your operator first.</p><button class="ui-btn ghost" type="button" data-line-action="activate" data-country="${fallback}" data-forward="1">Use a ${escapeHtml(countryName(fallback))} number with forwarding</button></div>` : '<p class="ui-hint">Your settings are saved, and you can test your AI employee in step 4.</p>';
-      box.innerHTML = `${picker}<p class="ui-hint" style="margin-top:12px">${status}</p>${notify}${abroad}`;
+      const abroad = fallback ? `<div style="margin-top:16px"><strong>${notify ? 'Or start now' : 'Start now'} with forwarding</strong><p class="ui-hint" style="margin:4px 0 8px">Forward your business phone to a ${escapeHtml(countryName(fallback))} number. <strong>Your phone operator charges you for forwarding calls abroad</strong>, usually at the price of a call to that country. Check the price with your operator first.</p><button class="ui-btn ${notify ? 'ghost' : 'primary'}" type="button" data-line-action="activate" data-country="${fallback}" data-forward="1" style="border:1px solid var(--border)">Use a ${escapeHtml(countryName(fallback))} number with forwarding</button></div>` : '<p class="ui-hint">Your settings are saved, and you can test your AI employee in step 4.</p>';
+      box.innerHTML = `<p class="ui-hint" style="margin-top:0">${status}</p>${notify}${abroad}`;
       return;
     }
     const dial = escapeHtml(number.e164);
@@ -135,7 +148,7 @@
       ? [['When you don’t answer, are busy or unreachable', `**004*${dial}#`]]
       : [['All calls', `**21*${dial}#`]];
     const forward = mode() === 'forward' ? `<div style="margin-top:14px"><strong>Turn on forwarding</strong><p class="ui-hint" style="margin:4px 0 8px">On the phone with your business number, dial this code and press call:</p>${codes.map(([label, code]) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:15px;user-select:all">${code}</code></div>`).join('')}<span class="ui-hint">Works on most mobile operators. To stop forwarding, dial <code>##002#</code>. Then call your business number from another phone to check.${line.where && line.where !== number.country ? ' This number is in another country, so your operator charges you for each forwarded call.' : ''}</span></div>` : '';
-    box.innerHTML = `<div class="ui-setting" style="padding:0"><span><strong>Your Hansora number</strong><small>${escapeHtml(countryName(number.country))} · your AI employee answers calls to it</small></span><strong style="font-size:18px;user-select:all">${dial}</strong></div>${forward}<button class="ui-btn ghost" type="button" data-line-action="release" style="margin-top:14px">Turn off phone line</button>`;
+    box.innerHTML = `<div class="ui-setting" style="padding:0"><span><strong>Your Hansora number</strong><small>${escapeHtml(countryName(number.country))} · your AI employee answers calls to it</small></span><strong style="font-size:18px;user-select:all">${dial}</strong></div>${forward}<button class="ui-btn ghost" type="button" data-line-action="release" style="margin-top:14px;border:1px solid var(--border)">Turn off phone line</button>`;
   }
   async function lineAction(action, button) {
     if (action === 'release' && !confirm('Turn off the phone line? Calls to this number will no longer be answered, and the number may be given to another business.')) return;

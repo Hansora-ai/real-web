@@ -38,15 +38,21 @@ export async function handler(event) {
       const counts = free.reduce((all, row) => ({ ...all, [row.country]: (all[row.country] || 0) + 1 }), {});
       for (const country of buyableCountries()) counts[country] = counts[country] || 0;
       const countries = Object.entries(counts).map(([country, available]) => ({ country, available }));
-      const requested = rows(await supabaseRequest(`/rest/v1/automation_phone_country_requests?user_id=eq.${encodeURIComponent(user.id)}&select=country&limit=300`).catch(() => [])).map(row => row.country);
+      const requested = rows(await supabaseRequest(`/rest/v1/automation_phone_country_requests?user_id=eq.${encodeURIComponent(user.id)}&wants_email=is.true&select=country&limit=300`).catch(() => [])).map(row => row.country);
       return json(200, { number: publicNumber(await assigned()), countries, requested });
     }
 
-    if (body.action === 'notify') {
+    // "pick" records that the owner looked at a country; "notify" also asks to be emailed when it opens.
+    if (body.action === 'pick' || body.action === 'notify') {
       const country = String(body.country || '').toUpperCase();
       if (!/^[A-Z]{2}$/.test(country)) return json(400, { error: 'invalid_country' });
-      await supabaseRequest('/rest/v1/automation_phone_country_requests?on_conflict=user_id,country', { method: 'POST', body: { user_id: user.id, email: user.email, business_id: businessId, country }, prefer: 'resolution=ignore-duplicates,return=representation' });
-      return json(200, { requested: country, email: user.email });
+      const notify = body.action === 'notify';
+      await supabaseRequest('/rest/v1/automation_phone_country_requests?on_conflict=user_id,country', {
+        method: 'POST',
+        body: { user_id: user.id, email: user.email, business_id: businessId, country, ...(notify ? { wants_email: true } : {}) },
+        prefer: `resolution=${notify ? 'merge' : 'ignore'}-duplicates,return=representation`
+      });
+      return json(200, { country, wants_email: notify });
     }
 
     if (body.action === 'activate') {
