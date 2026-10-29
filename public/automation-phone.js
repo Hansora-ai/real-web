@@ -14,7 +14,11 @@
 
 
   let saved = {};
-  let line = { number:null, countries:[], loaded:false };
+  let line = { number:null, countries:[], loaded:false, where:'' };
+  // Every country an owner can pick. Countries where local numbers are being
+  // prepared (paperwork or a local operator) are marked as coming soon.
+  const ALL_COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
+  const COMING_SOON = new Set('AM RU GB BR CH CZ DO EE HK ID IT KR LT LV NZ PL RO SE SG SI SK TH TR ZA'.split(' '));
   if (api.isLocalPreview) { try { saved = JSON.parse(localStorage.getItem(STORAGE) || '{}'); } catch (_) {} }
   else if (/^[0-9a-f-]{36}$/i.test(businessId)) {
     const result = await api.db.from('automation_channel_connections').select('status,settings').eq('business_id', businessId).eq('channel_type', 'phone').maybeSingle();
@@ -30,6 +34,7 @@
   document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', syncForward));
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   $('#phone-line').addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
+  $('#phone-line').addEventListener('change', event => { if (event.target.id === 'line-where') { line.where = event.target.value; renderLine(); } });
   document.querySelectorAll('.ui-stepper li').forEach(item => item.addEventListener('click', () => { const target = Number(item.dataset.step); if (target < step) { step = target; render(); } }));
   $('#phone-previous').addEventListener('click', () => { if (step > 1) { step--; render(); } });
   $('#phone-next').addEventListener('click', async () => {
@@ -47,11 +52,12 @@
   function mode() { return document.querySelector('input[name="number-mode"]:checked').value; }
   function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; renderLine(); }
   function collect() {
-    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:'Leda', voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:document.querySelector('input[name="answer-mode"]:checked').value, transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked };
+    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:'Leda', voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:document.querySelector('input[name="answer-mode"]:checked').value, transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined };
   }
   function applySaved(data) {
     if (data.number_mode) document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
     if (data.forward_number) $('#phone-number').value = data.forward_number;
+    if (ALL_COUNTRIES.includes(data.country)) line.where = data.country;
     if (data.greeting) $('#phone-greeting').value = data.greeting;
     if (data.answer_mode) { const input = document.querySelector(`input[name="answer-mode"][value="${data.answer_mode}"]`); if (input) input.checked = true; }
     if (data.transfer_number) $('#transfer-number').value = data.transfer_number;
@@ -87,13 +93,13 @@
 
   // The business's Hansora number. Assigned and released only by the server.
   async function loadLine() {
-    if (api.isLocalPreview) { line.loaded = true; return renderLine(); }
+    if (api.isLocalPreview) { line.loaded = true; line.countries = [{ country:'US', available:1 }, { country:'CA', available:1 }]; return renderLine(); }
     try {
       const response = await api.authenticatedFetch(`/.netlify/functions/automation-phone-line?business_id=${encodeURIComponent(businessId)}`);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'phone_line_unavailable');
-      line = { number:payload.number || null, countries:payload.countries || [], loaded:true };
-    } catch (_) { line = { number:null, countries:[], loaded:true, error:true }; }
+      line = { ...line, number:payload.number || null, countries:payload.countries || [], loaded:true, error:false };
+    } catch (_) { line = { ...line, number:null, countries:[], loaded:true, error:true }; }
     renderLine(); setState(Boolean(saved.saved_at));
   }
   function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
@@ -102,22 +108,37 @@
     if (line.error) { box.innerHTML = '<p class="ui-hint">Phone numbers could not be loaded. Refresh the page to try again.</p>'; return; }
     const number = line.number;
     if (!number) {
-      if (!line.countries.length) { box.innerHTML = '<p class="ui-hint"><strong>No phone numbers are available yet.</strong> We add numbers country by country. Your settings are saved, and you can test your AI employee in step 4.</p>'; return; }
-      box.innerHTML = `<label class="ui-label" for="line-country">Your Hansora number</label><div style="display:flex;gap:10px;flex-wrap:wrap"><select class="ui-input" id="line-country" style="flex:1;min-width:180px">${line.countries.map(item => `<option value="${escapeHtml(item.country)}">${escapeHtml(countryName(item.country))}</option>`).join('')}</select><button class="ui-btn primary" type="button" data-line-action="activate">Get my number</button></div><span class="ui-hint">${mode() === 'forward' ? 'You forward your business number to it. Calls are answered as soon as forwarding is on.' : 'Customers call this number. Calls are answered right away.'}</span>`;
+      const ready = new Set(line.countries.map(item => item.country));
+      const browserCountry = (navigator.language || '').split('-')[1]?.toUpperCase();
+      const where = line.where = line.where || (ALL_COUNTRIES.includes(browserCountry) ? browserCountry : [...ready][0] || 'US');
+      const options = ALL_COUNTRIES.map(code => [code, countryName(code)]).sort((a, b) => a[1].localeCompare(b[1]));
+      const picker = `<label class="ui-label" for="line-where">Where is your business?</label><select class="ui-input" id="line-where">${options.map(([code, name]) => `<option value="${code}"${code === where ? ' selected' : ''}>${escapeHtml(name)}</option>`).join('')}</select>`;
+      const name = escapeHtml(countryName(where));
+      if (ready.has(where)) {
+        box.innerHTML = `${picker}<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px"><button class="ui-btn primary" type="button" data-line-action="activate" data-country="${where}">Get my ${name} number</button></div><span class="ui-hint">${mode() === 'forward' ? 'A local number: forward your business number to it at local rates. Calls are answered as soon as forwarding is on.' : 'Customers call this number. Calls are answered right away.'}</span>`;
+        return;
+      }
+      // No local numbers here yet: the owner can still forward to a number abroad, at their operator's price.
+      const fallback = ['US', 'CA'].find(code => ready.has(code));
+      const status = COMING_SOON.has(where) ? `<strong>Local numbers in ${name} are coming soon.</strong>` : `<strong>Local numbers in ${name} are not available yet.</strong>`;
+      const abroad = fallback ? ` Until then, you can forward your business phone to a ${escapeHtml(countryName(fallback))} number. <strong>Your phone operator charges you for forwarding calls abroad</strong>, usually at the price of a call to that country. Check the price with your operator first.` : ' Your settings are saved, and you can test your AI employee in step 4.';
+      box.innerHTML = `${picker}<p class="ui-hint" style="margin-top:12px">${status}${abroad}</p>${fallback ? `<button class="ui-btn ghost" type="button" data-line-action="activate" data-country="${fallback}" data-forward="1">Use a ${escapeHtml(countryName(fallback))} number with forwarding</button>` : ''}`;
       return;
     }
     const dial = escapeHtml(number.e164);
     const codes = document.querySelector('input[name="answer-mode"]:checked')?.value === 'no_answer'
       ? [['When you don’t answer, are busy or unreachable', `**004*${dial}#`]]
       : [['All calls', `**21*${dial}#`]];
-    const forward = mode() === 'forward' ? `<div style="margin-top:14px"><strong>Turn on forwarding</strong><p class="ui-hint" style="margin:4px 0 8px">On the phone with your business number, dial this code and press call:</p>${codes.map(([label, code]) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:15px;user-select:all">${code}</code></div>`).join('')}<span class="ui-hint">Works on most mobile operators. To stop forwarding, dial <code>##002#</code>. Then call your business number from another phone to check.</span></div>` : '';
+    const forward = mode() === 'forward' ? `<div style="margin-top:14px"><strong>Turn on forwarding</strong><p class="ui-hint" style="margin:4px 0 8px">On the phone with your business number, dial this code and press call:</p>${codes.map(([label, code]) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:15px;user-select:all">${code}</code></div>`).join('')}<span class="ui-hint">Works on most mobile operators. To stop forwarding, dial <code>##002#</code>. Then call your business number from another phone to check.${line.where && line.where !== number.country ? ' This number is in another country, so your operator charges you for each forwarded call.' : ''}</span></div>` : '';
     box.innerHTML = `<div class="ui-setting" style="padding:0"><span><strong>Your Hansora number</strong><small>${escapeHtml(countryName(number.country))} · your AI employee answers calls to it</small></span><strong style="font-size:18px;user-select:all">${dial}</strong></div>${forward}<button class="ui-btn ghost" type="button" data-line-action="release" style="margin-top:14px">Turn off phone line</button>`;
   }
   async function lineAction(action, button) {
     if (action === 'release' && !confirm('Turn off the phone line? Calls to this number will no longer be answered, and the number may be given to another business.')) return;
+    // A number abroad only makes sense with forwarding: local customers keep calling the business number.
+    if (button.dataset.forward) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; }
     button.disabled = true; $('#phone-error').hidden = true;
     try {
-      const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action, country:$('#line-country')?.value }) });
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action, country:button.dataset.country }) });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.');
       line.number = payload.number || null;
