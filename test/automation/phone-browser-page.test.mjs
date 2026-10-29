@@ -13,7 +13,7 @@ async function page(inline = false) {
       const classes=new Set();
       nodes.set(selector,{hidden:false,value:'',checked:true,textContent:'',innerHTML:'',dataset:{},style:{setProperty(){}},listeners:{},
         classList:{add(...values){values.forEach(value=>classes.add(value));},remove(...values){values.forEach(value=>classes.delete(value));},toggle(value,on){on?classes.add(value):classes.delete(value);},contains:value=>classes.has(value)},
-        addEventListener(name,fn){this.listeners[name]=fn;},remove(){},scrollHeight:0});
+        addEventListener(name,fn){this.listeners[name]=fn;},remove(){},insertAdjacentHTML(){},closest(){return this;},querySelector(){return this;},scrollHeight:0});
     }
     return nodes.get(selector);
   }

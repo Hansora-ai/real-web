@@ -30,6 +30,7 @@
       <section class="ui-card">
         <div class="ui-step phone-step" data-phone-step="1">
           <div class="ui-step-head"><h2>How customers reach you</h2><p>Pick one. You can change it later.</p></div>
+          <div class="ui-field" style="margin-bottom:18px"><label class="ui-label" for="line-where">Where is your business?</label><select class="ui-input" id="line-where"><option value="">Choose your country</option></select></div>
           <div class="ui-options">
             <label class="ui-option"><input type="radio" name="number-mode" value="new" checked><span class="ui-option-mark" data-icon="sparkle"></span><span class="ui-option-text"><strong>Get a new phone number</strong><small>We assign it when you go live</small></span><span class="ui-option-radio"></span></label>
             <label class="ui-option"><input type="radio" name="number-mode" value="forward"><span class="ui-option-mark" data-icon="phone"></span><span class="ui-option-text"><strong>Forward your existing number</strong><small>Customers keep calling the number they know</small></span><span class="ui-option-radio"></span></label>
@@ -61,7 +62,7 @@
         </div>
         <footer class="ui-card-foot setup-actions"><button class="ui-btn ghost" id="phone-previous" type="button" hidden>Back</button><span class="ui-save-state" id="phone-save-state">Settings save as you go</span><button class="ui-btn primary" id="phone-next" type="button">Continue</button></footer>
       </section>
-      <section class="ui-card" id="phone-calls" style="margin-top:18px"><div class="ui-step-head"><h2>Recent calls</h2><p>Every call with its transcript. Full conversations are also in the Inbox.</p></div><div id="phone-calls-list"></div></section>
+      <section class="ui-card" id="phone-calls" style="margin-top:18px"><div class="ui-step"><div class="ui-step-head"><h2>Recent calls</h2><p>Every call with its transcript. Full conversations are also in the Inbox.</p></div><div id="phone-calls-list"></div></div></section>
       <p class="ui-hint" style="margin-top:14px;text-align:center"><a class="ui-link" id="phone-tools-link" href="automation-tools.html">Bookings, orders and handoff rules →</a> · Billed per connected minute, shown in Usage.</p>
     </div>
   </main>
