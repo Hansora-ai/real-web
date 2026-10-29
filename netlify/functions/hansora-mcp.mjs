@@ -13,6 +13,7 @@ import { PHOTO_SHAPED_MODELS, VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGen
 import { photoShape } from '../../lib/hansora-mcp/image-shape.mjs';
 import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
+import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
 import { accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
@@ -358,6 +359,21 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
       next_step: `${note} The card shows this and the new video by itself. In your next reply, tell the user this in one short line.`
     } : {})
   };
+}
+
+// While Veo rests (see veo-rest.mjs), a ChatGPT Veo request is made with Grok, 6 seconds at 720p (18 credits,
+// never more than Veo), with the same prompt, photo and shape. Requests Grok cannot take as they are (a
+// source video, more than one photo, a last frame, a prompt over its 5,000 characters) still go to Veo.
+async function veoRestSwitch(input) {
+  const model = getModel(input.model_id);
+  if (!model || !VEO_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
+  const files = normalizeGenerationFiles(input);
+  const photos = (files.image_urls || []).length + (input.first_frame_url ? 1 : 0);
+  if (files.video_urls?.length || input.source_video_url || input.last_frame_url || photos > 1) return null;
+  if (String(input.prompt || '').length > 5000) return null;
+  if (!(await veoResting().catch(() => false))) return null;
+  const { quality: _quality, ...rest } = input;
+  return { from: model.name, input: { ...rest, model_id: 'grok-video', duration: 6, resolution: '720p' } };
 }
 
 // What the user reads when a video was made with another model than the one they asked for.
@@ -933,8 +949,14 @@ export function createHansoraServer(ctx) {
       ...generationToolMeta('Starting Hansora generation…', 'Hansora generation started'),
       'openai/fileParams': OPENAI_FILE_PARAMS
     }
-  }, async (input) => {
+  }, async (requested) => {
     try {
+      const resting = await veoRestSwitch(requested);
+      const input = resting ? resting.input : requested;
+      // Said in the card and by ChatGPT, so nobody is misled about which model made the video.
+      const restingNote = (credits) => (resting ? switchNote({ from: resting.from, to: 'Grok Video', credits: credits ?? null, reason: 'resting' }) : '');
+      const restingFields = (credits) => (resting ? { switched_from: resting.from, switch_note: restingNote(credits) } : {});
+      const restingStep = (credits) => (resting ? `${restingNote(credits)} Tell the user this in one short line, without asking anything. ` : '');
       const model = getModel(input.model_id);
       const endpoint = getRunner(input.model_id);
       if (!model) throw new Error('unsupported_model');
@@ -1019,7 +1041,8 @@ export function createHansoraServer(ctx) {
           credits: price ? price.displayedCredits : undefined, status: 'queued', prompt: normalizedInput.prompt,
           aspect_ratio: storedInput.aspect_ratio || null, duration: normalizedInput.duration || null,
           resolution: normalizedInput.resolution || normalizedInput.quality || null,
-          next_step: `${CARD_FOLLOWS_RUN} Do not start it again.`
+          ...restingFields(price ? price.displayedCredits : null),
+          next_step: `${restingStep(price ? price.displayedCredits : null)}${CARD_FOLLOWS_RUN} Do not start it again.`
         });
       }
       let { response, result } = submitted;
@@ -1089,7 +1112,8 @@ export function createHansoraServer(ctx) {
         ...(photoShapeFound ? { photo_shape: photoShapeFound } : {}),
         duration: normalizedInput.duration || null,
         resolution: normalizedInput.resolution || normalizedInput.quality || null,
-        next_step: CARD_FOLLOWS_RUN,
+        ...restingFields(charged),
+        next_step: `${restingStep(charged)}${CARD_FOLLOWS_RUN}`,
         provider: result
       });
     } catch (error) {

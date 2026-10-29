@@ -973,3 +973,53 @@ test('one user can have at most 50 Wan or Seedance videos running at once, and a
   assert.match(value.next_step, /Do not switch model\..*wait about a minute, then call create_generation again with the same settings/);
   assert.equal('alternative' in value, false);
 });
+
+test('Veo rests after two Internal Errors in a row: new ChatGPT Veo videos are made with Grok, and the user is told', async () => {
+  const { veoRestingFromRuns, resetVeoRestCache } = await import('../../lib/hansora-mcp/veo-rest.mjs');
+  const at = (minutes) => new Date(Date.now() - minutes * 60 * 1000).toISOString();
+  const outage = (minutes) => ({ created_at: at(minutes), result_url: null, status: 'failed', error: 'Internal Error, Please try again later.' });
+  const done = (minutes) => ({ created_at: at(minutes), result_url: 'https://cdn.test/v.mp4', status: 'done', error: null });
+  const blocked = (minutes) => ({ created_at: at(minutes), result_url: null, status: 'failed', error: 'Request blocked: prominent public figure' });
+  const pending = (minutes) => ({ created_at: at(minutes), result_url: null, status: 'processing', error: null });
+  assert.equal(veoRestingFromRuns([outage(1), outage(3)]), true);
+  assert.equal(veoRestingFromRuns([pending(0), outage(2), blocked(3), outage(5)]), true, 'refusals and running videos do not count');
+  assert.equal(veoRestingFromRuns([outage(1)]), false, 'one random failure is not an outage');
+  assert.equal(veoRestingFromRuns([done(1), outage(3), outage(4)]), false, 'a Veo success ends the rest');
+  assert.equal(veoRestingFromRuns([outage(1), done(2)]), false);
+  assert.equal(veoRestingFromRuns([]), false);
+
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const veoRuns = (rows) => (href) => {
+    if (href.includes('/rest/v1/user_generations') && href.includes('provider=in.')) return reply(rows);
+    return returningUser(href);
+  };
+  const photo = 'https://cdn.test/portrait.png';
+  const files = { [photo]: Buffer.alloc(8) };
+  const request = { model_id: 'veo31-lite', prompt: 'She smiles and waves', duration: 8, resolution: '1080p', image_urls: [photo] };
+
+  resetVeoRestCache();
+  const switched = await callTool('create_generation', request, { credits: 100, rest: veoRuns([outage(1), outage(4)]), files });
+  assert.equal(switched.submitted.length, 1);
+  assert.equal(switched.submitted[0].model_id, 'grok-video');
+  assert.equal(switched.submitted[0].payload.duration, 6);
+  assert.equal(switched.submitted[0].payload.resolution, '720p');
+  assert.equal(switched.submitted[0].payload.prompt, 'She smiles and waves');
+  assert.deepEqual(switched.submitted[0].payload.image_urls, [photo]);
+  const value = switched.result.structuredContent;
+  assert.equal(value.model_name, 'Grok Video');
+  assert.equal(value.switched_from, 'Veo 3.1 Lite');
+  assert.equal(value.switch_note, "Veo 3.1 Lite is having a temporary issue on the provider's side right now, so this video was made with Grok Video instead. You were charged the Grok Video price (18 credits).");
+  assert.match(value.next_step, /Tell the user this in one short line, without asking anything\./);
+
+  // Two photos are more than Grok takes, so that request still goes to Veo.
+  resetVeoRestCache();
+  const twoPhotos = await callTool('create_generation', { ...request, image_urls: [photo, 'https://cdn.test/second.png'] }, { credits: 100, rest: veoRuns([outage(1), outage(4)]), files });
+  assert.equal(twoPhotos.submitted[0].model_id, 'veo31-lite');
+
+  // No outage: Veo as asked, and no notice.
+  resetVeoRestCache();
+  const normal = await callTool('create_generation', request, { credits: 100, rest: veoRuns([outage(1), done(3)]), files });
+  assert.equal(normal.submitted[0].model_id, 'veo31-lite');
+  assert.equal('switch_note' in normal.result.structuredContent, false);
+  resetVeoRestCache();
+});
