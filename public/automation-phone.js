@@ -34,7 +34,11 @@
   document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', syncForward));
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   $('#phone-line').addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
-  $('#phone-line').addEventListener('change', event => { if (event.target.id === 'line-where') { line.where = event.target.value; renderLine(); } });
+  $('#phone-line').addEventListener('change', event => { if (event.target.id === 'line-where') { line.where = event.target.value; renderLine(); recordCountry(); } });
+  // Saved right away, so Hansora sees which countries owners want even if they leave.
+  function recordCountry() {
+    if (!api.isLocalPreview && line.where) api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action:'pick', country:line.where }) }).catch(() => {});
+  }
   document.querySelectorAll('.ui-stepper li').forEach(item => item.addEventListener('click', () => { const target = Number(item.dataset.step); if (target < step) { step = target; render(); } }));
   $('#phone-previous').addEventListener('click', () => { if (step > 1) { step--; render(); } });
   $('#phone-next').addEventListener('click', async () => {
@@ -101,6 +105,7 @@
       line = { ...line, number:payload.number || null, countries:payload.countries || [], requested:payload.requested || [], loaded:true, error:false };
     } catch (_) { line = { ...line, number:null, countries:[], loaded:true, error:true }; }
     renderLine(); setState(Boolean(saved.saved_at));
+    if (!line.number && !line.error) recordCountry();
   }
   function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
   function renderLine() {
