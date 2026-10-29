@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -374,6 +374,37 @@ async function veoRestSwitch(input) {
   if (!(await veoResting().catch(() => false))) return null;
   const { quality: _quality, ...rest } = input;
   return { from: model.name, input: { ...rest, model_id: 'grok-video', duration: 6, resolution: '720p' } };
+}
+
+// A new user's first video should be Grok (6 s, 720p, 18 credits): the cheapest good first video, and the one
+// buyers liked most. ChatGPT sends simple clips to Veo, which the free credits also cover, so a first video
+// sent to Veo comes back once with "use Grok". Veo stays right when the user themselves asked for more than 6
+// seconds or for speech in a language other than English or Chinese: ChatGPT then sends Veo again, and a
+// recent steer (this one, or the free-credit switch) lets it through, so it never loops.
+const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'switched_to_affordable'];
+async function firstVideoOnGrok(userId, input, balanceInternal) {
+  const model = getModel(input.model_id);
+  if (!model || !VEO_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
+  const files = normalizeGenerationFiles(input);
+  const photos = (files.image_urls || []).length + (input.first_frame_url ? 1 : 0);
+  if (files.video_urls?.length || input.source_video_url || input.last_frame_url || photos > 1) return null;
+  if (String(input.prompt || '').length > 5000) return null;
+  const grok = quote('grok-video', { duration: 6, resolution: '720p' });
+  if (Number(balanceInternal) < grok.internalCredits) return null;
+  if (!(await isFirstGeneration(userId))) return null;
+  if (await hadRecentOutcome(userId, FIRST_VIDEO_STEERED, new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
+  const value = {
+    ok: false, error: 'first_video_on_grok', generated: false, credits_used: 0,
+    model_id: model.id, model_name: model.name,
+    next_option: { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: grok.displayedCredits },
+    next_step: [
+      `Nothing was generated or charged. This is the user's first video, so do not ask anything:`,
+      `call create_generation right now with model_id grok-video, duration 6, resolution 720p, keeping the same prompt, photo and aspect_ratio.`,
+      `Exception: only if the user themselves asked for a video longer than 6 seconds, or people in it must speak a language other than English or Chinese, call create_generation again exactly as before with ${model.id}.`,
+      `When it starts, tell the user in one short, friendly line which model is making their first video and its credits.`
+    ].join(' ')
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
 // What the user reads when a video was made with another model than the one they asked for.
@@ -982,6 +1013,10 @@ export function createHansoraServer(ctx) {
         const account = await getAccount(userId).catch(() => null);
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
           return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
+        }
+        if (account) {
+          const steer = await firstVideoOnGrok(userId, normalizedInput, account.internal_credits);
+          if (steer) return steer;
         }
       }
       if (RUNNING_ENGINES[model.id] && normalizedInput.usage_mode !== 'unlimited') {
