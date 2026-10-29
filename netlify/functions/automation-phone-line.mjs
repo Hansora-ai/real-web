@@ -1,6 +1,6 @@
 import { authenticateRequest, isUuid } from '../../lib/sales-agent/auth.mjs';
 import { first, rows, serviceInsert, serviceUpdate, supabaseRequest } from '../../lib/automation/db.mjs';
-import { buyTelnyxNumber, telnyxConfigured } from '../../lib/automation/telnyx.mjs';
+import { acceptOnLiveKitTrunk, buyTelnyxNumber, telnyxConfigured } from '../../lib/automation/telnyx.mjs';
 
 const HEADERS = {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'GET, POST, OPTIONS'};
 const json = (statusCode, body) => ({ statusCode, headers: HEADERS, body: JSON.stringify(body) });
@@ -46,7 +46,10 @@ export async function handler(event) {
         if (!(Number(profile?.credits) > 0)) return json(402, { error: 'credits_required' });
         const bought = await buyTelnyxNumber(country);
         if (bought) {
-          await serviceInsert('automation_phone_numbers', { e164: bought.e164, country, provider: 'telnyx', provider_number_id: bought.providerNumberId, status: 'available' }, { ignoreDuplicates: true });
+          // A number LiveKit does not accept would ring into nothing, so it is kept out of use until fixed by hand.
+          const accepted = await acceptOnLiveKitTrunk(bought.e164).then(() => true, error => { console.error('livekit trunk update failed', { message: error?.message }); return false; });
+          await serviceInsert('automation_phone_numbers', { e164: bought.e164, country, provider: 'telnyx', provider_number_id: bought.providerNumberId, status: accepted ? 'available' : 'disabled', label: accepted ? null : 'Not on the LiveKit trunk yet' }, { ignoreDuplicates: true });
+          if (!accepted) return json(503, { error: 'phone_line_setup_failed' });
           number = await assign();
         }
       }

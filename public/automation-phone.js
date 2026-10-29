@@ -119,7 +119,7 @@
     try {
       const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action, country:$('#line-country')?.value }) });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.' }[payload.error] || 'The phone line could not be changed. Please try again.');
+      if (!response.ok) throw new Error({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.');
       line.number = payload.number || null;
       if (action === 'activate') { await save({ quiet:true }); ui.toast(`Your number is ${line.number.e164}.`); }
       else { await loadLine(); ui.toast('Phone line turned off.'); }
