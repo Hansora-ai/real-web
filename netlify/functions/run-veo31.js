@@ -21,6 +21,9 @@ exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return ok({});
   if (event.httpMethod !== "POST") return err(405, "Use POST");
 
+  // Set once the "pending" row exists and cleared once KIE gives a task: if KIE refuses the job (or the call
+  // throws) in between, the row is marked failed instead of staying "pending" with nothing behind it.
+  let failPlaceholder = null;
   try {
     const headers = lowerKeys(event.headers || {});
     const isJson = (headers["content-type"] || "").includes("application/json");
@@ -103,6 +106,8 @@ exports.handler = async (event) => {
       } catch (e) {
         console.warn("[run-veo3] placeholder write failed:", e);
       }
+      const placeholderMeta = { run_id, status: "pending", aspect_ratio: aspectRatio, quality, duration: 8, model, charge_cost: chargeCost, refund_amount: chargeCost, subscription_unlimited: unlimitedBySubscription };
+      failPlaceholder = (errorSummary, details = {}) => markPlaceholderFailed(uid, run_id, { ...placeholderMeta, ...details, error_summary: errorSummary });
     }
 
     
@@ -160,11 +165,14 @@ if (imageUrls.length) {
 
     // Guard: if KIE didn't accept or no taskId, report as not submitted
     if (!resp.ok) {
+      if (failPlaceholder) await failPlaceholder(kieErrorSummary(data, resp.status) || `kie_${resp.status}`, { provider_http_status: resp.status, provider_response: data });
       return ok({ submitted:false, error:`kie_${resp.status}`, data });
     }
     if (!taskId) {
+      if (failPlaceholder) await failPlaceholder(kieErrorSummary(data) || "missing_taskId", { provider_response: data });
       return ok({ submitted:false, error:'missing_taskId', data });
     }
+    failPlaceholder = null;
 
     // Persist taskId into meta for easier tracing
     try {
@@ -218,6 +226,7 @@ if (imageUrls.length) {
 
     return ok({ ok:true, submitted: true, run_id, taskId, status: resp.status, data, debited: chargeCost, credits: charge.debit?.credits, already_charged: !!charge.already, subscription_unlimited: unlimitedBySubscription });
   } catch (e) {
+    if (failPlaceholder) await failPlaceholder(String(e?.message || e)).catch(() => {});
     return ok({ submitted:false, error:String(e) });
   }
 };
@@ -337,6 +346,24 @@ async function debitCredits(uid, cost){
     if (!r1.ok) return { ok:false, error:"profile_update_failed", status:r1.status };
     return { ok:true, credits:newCredits };
   }catch(e){ return { ok:false, error:"server_exception", details:String(e && e.message || e) }; }
+}
+
+// KIE refused the job, so nothing runs and nothing was charged: the row says so (refund needs charged, so none
+// is due). A row that already has a task is left alone.
+async function markPlaceholderFailed(uid, run_id, meta){
+  const row = await findUserGeneration(uid, run_id);
+  if (!row || row.meta?.task_id || row.meta?.taskId || String(row.meta?.charged || "") === "true") return false;
+  return patchUserGenerationMetaById(row.id, { ...meta, status: "failed", failed: true, failed_at: new Date().toISOString() });
+}
+
+// What the user may read. A refusal about our own KIE balance must not read like the user is out of credits.
+function kieErrorSummary(data, status){
+  const msg = data && (data.msg || data.message || data.error);
+  const text = typeof msg === "string" ? msg.trim().slice(0, 300) : "";
+  if (Number(status) === 402 || Number(data?.code) === 402 || /credit|balance|insufficient|quota/i.test(text)) {
+    return "Provider temporarily unavailable. Nothing was charged.";
+  }
+  return text;
 }
 
 async function patchUserGenerationMetaById(id, meta){

@@ -5,31 +5,73 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>Connect Hansora AI</title>
+  <link rel="icon" href="/favicon.png">
   <style>
-    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 0,rgba(124,92,255,.22),transparent 38%),radial-gradient(circle at 100% 100%,rgba(27,188,255,.16),transparent 40%),#080a10;color:#f6f7fb}
-    .card{width:min(100%,520px);padding:32px;border:1px solid rgba(255,255,255,.12);border-radius:24px;background:rgba(14,17,25,.94);box-shadow:0 24px 80px rgba(0,0,0,.45)}
-    .brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.03em}.logo{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#8b5cf6,#24c7ff);font-size:22px}
-    h1{margin:28px 0 10px;font-size:30px;line-height:1.1}p{color:#aeb4c4;line-height:1.6}.client{color:#fff;font-weight:700}.permissions{margin:22px 0;padding:0;list-style:none;display:grid;gap:12px}.permissions li{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.035)}.tick{color:#4ade80;font-weight:900}.actions{display:grid;grid-template-columns:1fr 1.35fr;gap:12px;margin-top:26px}button{border:0;border-radius:14px;padding:14px 18px;font:inherit;font-weight:800;cursor:pointer}.deny{background:#212530;color:#dce0ea}.approve{background:linear-gradient(110deg,#7657f6,#20bdf5);color:white}.status{min-height:24px;margin:16px 0 0;color:#ff9a9a;font-size:14px}.fine{margin-top:20px;font-size:12px;color:#7f8798}@media(max-width:520px){.card{padding:24px}.actions{grid-template-columns:1fr}h1{font-size:26px}}
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--line:rgba(255,255,255,.1);--muted:#a3aabb;--accent:#38c8f8;--accent2:#8b7cf6}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px 16px;color:#f6f7fb;background:#07090f;overflow-x:hidden}
+    body::before{content:"";position:fixed;inset:-20%;z-index:-1;background:radial-gradient(40% 35% at 25% 10%,rgba(56,200,248,.18),transparent 70%),radial-gradient(40% 35% at 80% 90%,rgba(139,124,246,.2),transparent 70%)}
+    .card{width:min(100%,460px);padding:36px 32px 28px;border:1px solid var(--line);border-radius:28px;background:linear-gradient(180deg,rgba(20,24,35,.96),rgba(12,14,21,.96));box-shadow:0 30px 90px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);text-align:center}
+    .pair{display:flex;align-items:center;justify-content:center;gap:0;margin:4px auto 26px}
+    .tile{position:relative;display:grid;place-items:center;width:76px;height:76px;border-radius:22px;flex:none;box-shadow:0 12px 34px rgba(0,0,0,.45)}
+    .tile.hansora{background:#0d1220;border:1px solid rgba(56,200,248,.35)}
+    .tile.hansora img{width:52px;height:52px}
+    .tile.client{background:#fff;color:#0d0d0d;border:1px solid rgba(255,255,255,.4)}
+    .tile.client.claude{background:#d97757;color:#fff}
+    .tile.client.generic{background:linear-gradient(135deg,#232838,#151926);color:#dfe4f0;border-color:var(--line)}
+    .tile svg{width:44px;height:44px;fill:currentColor}
+    .link{position:relative;width:96px;height:76px;display:grid;place-items:center}
+    .link::before{content:"";position:absolute;left:6px;right:6px;top:50%;height:2px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,var(--accent) 0 6px,transparent 6px 12px);background-size:24px 2px;opacity:.75;animation:flow 1s linear infinite}
+    .badge{position:relative;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#0f1422;border:1px solid rgba(56,200,248,.5);color:var(--accent);box-shadow:0 0 0 6px rgba(56,200,248,.08)}
+    .badge svg{width:16px;height:16px}
+    @keyframes flow{to{background-position:24px 0}}
+    h1{margin:0 0 8px;font-size:24px;line-height:1.25;letter-spacing:-.01em}
+    .sub{margin:0 auto;max-width:340px;color:var(--muted);font-size:15px;line-height:1.55}
+    .account{display:inline-flex;align-items:center;gap:8px;margin:18px auto 0;padding:7px 8px 7px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.03);font-size:13px;color:#cfd4e0;max-width:100%}
+    .account[hidden]{display:none}
+    .account span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .account button{padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.07);color:#e5e9f2;font-size:12px;font-weight:700}
+    .permissions{margin:24px 0 0;padding:0;list-style:none;display:grid;gap:2px;text-align:left;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.025);overflow:hidden}
+    .permissions li{display:flex;gap:14px;align-items:center;padding:14px 16px;font-size:14px;line-height:1.45;color:#dde2ec}
+    .permissions li+li{border-top:1px solid rgba(255,255,255,.06)}
+    .ico{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:10px;background:rgba(56,200,248,.1);color:var(--accent)}
+    .ico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    #requestedScopes{margin:12px 0 0;font-size:12px;color:#7f8798}
+    .actions{display:grid;grid-template-columns:1fr 1.5fr;gap:10px;margin-top:24px}
+    button{border:0;border-radius:14px;padding:14px 18px;font:inherit;font-weight:800;cursor:pointer;transition:transform .15s,filter .15s,opacity .15s}
+    button:hover:not(:disabled){filter:brightness(1.1)} button:active:not(:disabled){transform:translateY(1px)} button:disabled{opacity:.6;cursor:default}
+    .deny{background:#1c2130;color:#dce0ea;border:1px solid var(--line)}
+    .approve{background:linear-gradient(110deg,var(--accent2),var(--accent));color:#fff;box-shadow:0 10px 30px rgba(56,200,248,.25)}
+    .status{min-height:20px;margin:14px 0 0;color:#ff9a9a;font-size:14px}
+    .status.busy{color:var(--muted)}
+    .fine{margin:8px 0 0;font-size:12px;line-height:1.55;color:#7f8798}
+    .fine a{color:#aab2c3}
+    @media (prefers-reduced-motion:reduce){.link::before{animation:none}}
+    @media(max-width:420px){.card{padding:28px 20px 22px;border-radius:24px}.tile{width:64px;height:64px;border-radius:19px}.tile.hansora img{width:44px;height:44px}.tile svg{width:36px;height:36px}.link{width:70px}h1{font-size:21px}.actions{grid-template-columns:1fr}.actions .approve{order:-1}}
   </style>
 </head>
 <body>
   <main class="card">
-    <div class="brand"><span class="logo">H</span><span>HANSORA AI</span></div>
-    <h1>Connect your Hansora account</h1>
-    <p><span class="client" id="clientName">An AI assistant</span> is requesting access to Hansora.</p>
-    <p id="requestedScopes" hidden></p>
+    <div class="pair" aria-hidden="true">
+      <div class="tile client generic" id="clientLogo"><svg viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9z"/></svg></div>
+      <div class="link"><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg></span></div>
+      <div class="tile hansora"><img src="/hansora-logo.png" alt=""></div>
+    </div>
+    <h1><span id="clientName">An AI assistant</span> wants to connect to your Hansora account</h1>
+    <p class="sub">Create images, videos and audio with Hansora right inside your chat.</p>
+    <div class="account" id="account" hidden><span id="accountEmail"></span><button type="button" id="switchAccount">Switch</button></div>
     <ul class="permissions">
-      <li><span class="tick">✓</span><span>See Hansora's complete image, video, and audio catalog.</span></li>
-      <li><span class="tick">✓</span><span>Create images, videos, speech, and music using your Hansora account and credit balance.</span></li>
-      <li><span class="tick">✓</span><span>Check your balance and your own recent generations.</span></li>
+      <li><span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span>See Hansora's complete image, video, and audio catalog.</span></li>
+      <li><span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.5l-1.8-5L5 9.7l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></span><span>Create images, videos, speech, and music using your Hansora account and credit balance.</span></li>
+      <li><span class="ico"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg></span><span>Check your balance and your own recent generations.</span></li>
     </ul>
+    <p id="requestedScopes" hidden></p>
     <div class="actions">
       <button class="deny" id="deny" type="button">Cancel</button>
       <button class="approve" id="approve" type="button">Connect Hansora</button>
     </div>
     <p class="status" id="status" role="alert"></p>
-    <p class="fine">The assistant cannot see your password. Every generation uses Hansora's existing safety and billing checks.</p>
+    <p class="fine">The assistant never sees your password. Every generation uses Hansora's safety and billing checks. <a href="/termsofuse.html" target="_blank" rel="noopener">Terms</a> · <a href="/policy.html" target="_blank" rel="noopener">Privacy</a></p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -42,10 +84,29 @@
     const denyButton = document.getElementById('deny');
     const authorizationId = new URLSearchParams(location.search).get('authorization_id') || '';
 
+    // Logo of the assistant asking to connect, matched by its registered name.
+    const CLIENT_LOGOS = [
+      { test: /chatgpt|openai/i, cls: 'openai', path: 'M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z' },
+      { test: /claude|anthropic/i, cls: 'claude', path: 'm4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z' }
+    ];
+    function showClientLogo(name) {
+      const logo = CLIENT_LOGOS.find((entry) => entry.test.test(name));
+      if (!logo) return;
+      const tile = document.getElementById('clientLogo');
+      tile.className = `tile client ${logo.cls}`;
+      tile.innerHTML = `<svg viewBox="0 0 24 24"><path d="${logo.path}"/></svg>`;
+    }
+
     function fail(message) {
+      statusEl.classList.remove('busy');
       statusEl.textContent = message;
       approveButton.disabled = false;
       denyButton.disabled = false;
+    }
+
+    function busy(message) {
+      statusEl.classList.add('busy');
+      statusEl.textContent = message;
     }
 
     function redirectToLogin() {
@@ -57,11 +118,18 @@
       if (!authorizationId) return fail('This connection request is missing its authorization ID. Please start again from your AI assistant.');
       const { data: sessionData } = await sb.auth.getSession();
       if (!sessionData || !sessionData.session) return redirectToLogin();
+      const email = sessionData.session.user && sessionData.session.user.email;
+      if (email) {
+        document.getElementById('accountEmail').textContent = `Signed in as ${email}`;
+        document.getElementById('account').hidden = false;
+      }
       const { data, error } = await sb.auth.oauth.getAuthorizationDetails(authorizationId);
       if (error) return fail(error.message || 'This connection request could not be loaded.');
       if (data && data.redirect_url) return location.replace(data.redirect_url);
       const client = data && (data.client || data.oauth_client);
-      document.getElementById('clientName').textContent = (client && (client.name || client.client_name)) || 'An AI assistant';
+      const clientName = (client && (client.name || client.client_name)) || 'An AI assistant';
+      document.getElementById('clientName').textContent = clientName;
+      showClientLogo(clientName);
       const scopes = String((data && data.scope) || '').split(/\s+/).filter(Boolean);
       if (scopes.length) {
         const scopeEl = document.getElementById('requestedScopes');
@@ -70,10 +138,15 @@
       }
     }
 
+    document.getElementById('switchAccount').addEventListener('click', async () => {
+      await sb.auth.signOut().catch(() => {});
+      redirectToLogin();
+    });
+
     approveButton.addEventListener('click', async () => {
       approveButton.disabled = true;
       denyButton.disabled = true;
-      statusEl.textContent = 'Connecting…';
+      busy('Connecting…');
       const { data, error } = await sb.auth.oauth.approveAuthorization(authorizationId);
       if (error) return fail(error.message || 'Hansora could not approve this connection.');
       if (!data || !data.redirect_url) return fail('The assistant did not provide a return address.');
@@ -83,7 +156,7 @@
     denyButton.addEventListener('click', async () => {
       approveButton.disabled = true;
       denyButton.disabled = true;
-      statusEl.textContent = 'Cancelling…';
+      busy('Cancelling…');
       const { data, error } = await sb.auth.oauth.denyAuthorization(authorizationId);
       if (error) return fail(error.message || 'Hansora could not cancel this connection.');
       if (!data || !data.redirect_url) return fail('The assistant did not provide a return address.');
