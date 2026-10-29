@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -13,8 +13,9 @@ import { PHOTO_SHAPED_MODELS, VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGen
 import { photoShape } from '../../lib/hansora-mcp/image-shape.mjs';
 import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
+import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
-import { accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -218,6 +219,17 @@ function busyResult(model, { running = null, provider = false } = {}) {
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
+// Henshin Lite and Kling 4.0 run on a provider that takes source videos up to 10 MB. The website shrinks videos
+// in the browser first; a video sent through ChatGPT arrives at its full size.
+function videoTooLargeResult(model) {
+  const value = {
+    ok: false, error: 'video_too_large', generated: false, credits_used: 0, model_id: model.id, model_name: model.name, max_video_mb: 10,
+    message: `${model.name} takes videos up to 10 MB, and this one is larger. Nothing was charged.`,
+    next_step: `Nothing was generated or charged. Tell the user in one short line that ${model.name} takes videos up to 10 MB and theirs is larger. Offer two ways on: send a shorter or smaller clip (only the part that matters, or exported at 720p), or use ${model.id === 'henshin-lite' ? 'Henshin, the stronger version, which takes videos up to 100 MB' : 'Seedance 2.5, which takes reference videos up to 200 MB'}; get its price from quote_generation and start only after they choose.`
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
 // Hansora's own safety check refused the prompt before anything ran. Every model gets the same check,
 // so ChatGPT must not try another one; it offers a clean version of the idea instead.
 const NO_MODEL_WILL = 'Hansora does not create sexual or NSFW content with any model, so trying another model will not help.';
@@ -279,9 +291,10 @@ async function submitRun({ origin, token, userId, endpoint, model, prompt, usage
 
 // A video that failed on the provider's side (an outage, not the prompt or photo) is started once more on
 // another model, under a fixed run id so it can never start twice: a new user's first video after any such
-// failure, and anyone's Veo video that Google could not make the sound for. The card keeps following the
-// original run id and simply shows the new video. Content blocks, unusable inputs and retries of a retry
-// are left as they are. Null means "no retry".
+// failure, and anyone's Veo video after a temporary Google problem ("Internal Error", or Veo could not make
+// the sound). A video is better than none, so this holds for every language. The card keeps following the
+// original run id, shows the new video and says which model made it. Content blocks, unusable inputs and
+// retries of a retry are left as they are. Null means "no retry".
 const RETRY_SUFFIX = '-retry';
 const VEO_MODELS = new Set(['veo31-lite', 'veo31-fast', 'veo31']);
 const VEO_AUDIO_FAILURE = /unable to generate audio/i;
@@ -297,7 +310,8 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
     const recipe = await getFirstVideoRecipe(userId, runId);
     const failed = recipe ? getModel(recipe.model_id) : null;
     if (!failed || failed.category !== 'video') return null;
-    if (!(audioFailure && VEO_MODELS.has(failed.id)) && !(await isFirstGeneration(userId))) return null;
+    const veoOutage = VEO_MODELS.has(failed.id) && presented.failure_kind === 'temporary';
+    if (!veoOutage && !(await isFirstGeneration(userId))) return null;
     const account = await getAccount(userId).catch(() => null);
     if (!account) return null;
     const request = {
@@ -336,20 +350,84 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
   const view = retry ? presentGeneration(retry, retryId) : {
     status: 'processing', media_type: 'video', kind: 'video', model_name: startedModel?.name || '', prompt: presented.prompt
   };
-  const name = view.model_name || startedModel?.name || 'another model';
-  const note = audioFailure
-    ? `${presented.model_name || 'Veo'} could not make the sound for this video, so it is being made with ${name} instead. The first try was refunded.`
-    : `${presented.model_name || 'The first model'} had a temporary issue, so this first video is being made with ${name} instead. The first try was refunded.`;
+  const retryMeta = retry?.meta && typeof retry.meta === 'object' ? retry.meta : {};
+  const credits = Number(retryMeta.charged_cost ?? retryMeta.charge_cost ?? retryMeta.refund_amount) * 10;
+  const failedName = getModel(modelIdOf(generation))?.name || presented.model_name || 'The first model';
+  const note = switchNote({
+    from: failedName,
+    to: view.model_name || startedModel?.name || 'another model',
+    credits: credits > 0 ? Number(credits.toFixed(2)) : null,
+    reason: audioFailure ? 'audio' : 'outage'
+  });
   return {
     ...view,
     run_id: runId,
     retry_run_id: retryId,
+    switch_note: note,
     meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId },
     ...(view.status === 'processing' ? {
       message: note,
-      next_step: `${note} The card shows the new video by itself. If the user asks, tell them this in one short line.`
+      next_step: `${note} The card shows this and the new video by itself. In your next reply, tell the user this in one short line.`
     } : {})
   };
+}
+
+// While Veo rests (see veo-rest.mjs), a ChatGPT Veo request is made with Grok, 6 seconds at 720p (18 credits,
+// never more than Veo), with the same prompt, photo and shape. Requests Grok cannot take as they are (a
+// source video, more than one photo, a last frame, a prompt over its 5,000 characters) still go to Veo.
+async function veoRestSwitch(input) {
+  const model = getModel(input.model_id);
+  if (!model || !VEO_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
+  const files = normalizeGenerationFiles(input);
+  const photos = (files.image_urls || []).length + (input.first_frame_url ? 1 : 0);
+  if (files.video_urls?.length || input.source_video_url || input.last_frame_url || photos > 1) return null;
+  if (String(input.prompt || '').length > 5000) return null;
+  if (!(await veoResting().catch(() => false))) return null;
+  const { quality: _quality, ...rest } = input;
+  return { from: model.name, input: { ...rest, model_id: 'grok-video', duration: 6, resolution: '720p' } };
+}
+
+// A new user's first video should be Grok (6 s, 720p, 18 credits): the cheapest good first video, and the one
+// buyers liked most. ChatGPT sends simple clips to Veo, which the free credits also cover, so a first video
+// sent to Veo comes back once with "use Grok". Veo stays right when the user themselves asked for more than 6
+// seconds or for speech in a language other than English or Chinese: ChatGPT then sends Veo again, and a
+// recent steer (this one, or the free-credit switch) lets it through, so it never loops.
+const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'switched_to_affordable'];
+async function firstVideoOnGrok(userId, input, balanceInternal) {
+  const model = getModel(input.model_id);
+  if (!model || !VEO_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
+  const files = normalizeGenerationFiles(input);
+  const photos = (files.image_urls || []).length + (input.first_frame_url ? 1 : 0);
+  if (files.video_urls?.length || input.source_video_url || input.last_frame_url || photos > 1) return null;
+  if (String(input.prompt || '').length > 5000) return null;
+  const grok = quote('grok-video', { duration: 6, resolution: '720p' });
+  if (Number(balanceInternal) < grok.internalCredits) return null;
+  if (!(await isFirstGeneration(userId))) return null;
+  if (await hadRecentOutcome(userId, FIRST_VIDEO_STEERED, new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
+  const value = {
+    ok: false, error: 'first_video_on_grok', generated: false, credits_used: 0,
+    model_id: model.id, model_name: model.name,
+    next_option: { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: grok.displayedCredits },
+    next_step: [
+      `Nothing was generated or charged. This is the user's first video, so do not ask anything:`,
+      `call create_generation right now with model_id grok-video, duration 6, resolution 720p, keeping the same prompt, photo and aspect_ratio.`,
+      `Exception: only if the user themselves asked for a video longer than 6 seconds, or people in it must speak a language other than English or Chinese, call create_generation again exactly as before with ${model.id}.`,
+      `When it starts, tell the user in one short, friendly line which model is making their first video and its credits.`,
+      photos ? NEW_SCENE_FIRST_VIDEO : ''
+    ].filter(Boolean).join(' ')
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// What the user reads when a video was made with another model than the one they asked for.
+function switchNote({ from, to, credits, reason }) {
+  const cause = reason === 'audio' ? `${from} could not make the sound`
+    : reason === 'resting' ? `${from} is having a temporary issue on the provider's side right now`
+      : `${from} had a temporary issue on the provider's side`;
+  const sentences = [`${cause}, so this video was made with ${to} instead.`];
+  if (credits != null) sentences.push(`You were charged the ${to} price (${credits} credits).`);
+  if (reason !== 'resting') sentences.push(`The ${from} try was refunded.`);
+  return sentences.join(' ');
 }
 
 function displayModelName(generation) {
@@ -914,8 +992,14 @@ export function createHansoraServer(ctx) {
       ...generationToolMeta('Starting Hansora generation…', 'Hansora generation started'),
       'openai/fileParams': OPENAI_FILE_PARAMS
     }
-  }, async (input) => {
+  }, async (requested) => {
     try {
+      const resting = await veoRestSwitch(requested);
+      const input = resting ? resting.input : requested;
+      // Said in the card and by ChatGPT, so nobody is misled about which model made the video.
+      const restingNote = (credits) => (resting ? switchNote({ from: resting.from, to: 'Grok Video', credits: credits ?? null, reason: 'resting' }) : '');
+      const restingFields = (credits) => (resting ? { switched_from: resting.from, switch_note: restingNote(credits) } : {});
+      const restingStep = (credits) => (resting ? `${restingNote(credits)} Tell the user this in one short line, without asking anything. ` : '');
       const model = getModel(input.model_id);
       const endpoint = getRunner(input.model_id);
       if (!model) throw new Error('unsupported_model');
@@ -941,6 +1025,10 @@ export function createHansoraServer(ctx) {
         const account = await getAccount(userId).catch(() => null);
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
           return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
+        }
+        if (account) {
+          const steer = await firstVideoOnGrok(userId, normalizedInput, account.internal_credits);
+          if (steer) return steer;
         }
       }
       if (RUNNING_ENGINES[model.id] && normalizedInput.usage_mode !== 'unlimited') {
@@ -1000,7 +1088,8 @@ export function createHansoraServer(ctx) {
           credits: price ? price.displayedCredits : undefined, status: 'queued', prompt: normalizedInput.prompt,
           aspect_ratio: storedInput.aspect_ratio || null, duration: normalizedInput.duration || null,
           resolution: normalizedInput.resolution || normalizedInput.quality || null,
-          next_step: `${CARD_FOLLOWS_RUN} Do not start it again.`
+          ...restingFields(price ? price.displayedCredits : null),
+          next_step: `${restingStep(price ? price.displayedCredits : null)}${CARD_FOLLOWS_RUN} Do not start it again.`
         });
       }
       let { response, result } = submitted;
@@ -1048,6 +1137,7 @@ export function createHansoraServer(ctx) {
         const providerReason = String(result.details?.msg || result.details?.message || '').slice(0, 300);
         const reason = result.message || result.error || `generation_submit_failed_${response.status}`;
         if (/concurrent task limit|too many (running|concurrent)/i.test(`${reason} ${providerReason}`)) return busyResult(model, { provider: true });
+        if (/media exceeds 10 ?MB/i.test(`${reason} ${providerReason}`)) return videoTooLargeResult(model);
         const submitKind = classifyFailure({ provider_message: providerReason, error: String(reason), error_code: result.details?.code ?? response.status });
         if (submitKind === 'temporary') return temporaryIssueResult(model, price, unavailable, providerReason || String(reason).slice(0, 200));
         const fallback = await firstVideoFallback(userId, model, normalizedInput);
@@ -1070,7 +1160,8 @@ export function createHansoraServer(ctx) {
         ...(photoShapeFound ? { photo_shape: photoShapeFound } : {}),
         duration: normalizedInput.duration || null,
         resolution: normalizedInput.resolution || normalizedInput.quality || null,
-        next_step: CARD_FOLLOWS_RUN,
+        ...restingFields(charged),
+        next_step: `${restingStep(charged)}${CARD_FOLLOWS_RUN}`,
         provider: result
       });
     } catch (error) {
