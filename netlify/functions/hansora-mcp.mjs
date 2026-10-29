@@ -15,7 +15,7 @@ import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } f
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
-import { accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -401,8 +401,9 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
       `Nothing was generated or charged. This is the user's first video, so do not ask anything:`,
       `call create_generation right now with model_id grok-video, duration 6, resolution 720p, keeping the same prompt, photo and aspect_ratio.`,
       `Exception: only if the user themselves asked for a video longer than 6 seconds, or people in it must speak a language other than English or Chinese, call create_generation again exactly as before with ${model.id}.`,
-      `When it starts, tell the user in one short, friendly line which model is making their first video and its credits.`
-    ].join(' ')
+      `When it starts, tell the user in one short, friendly line which model is making their first video and its credits.`,
+      photos ? NEW_SCENE_FIRST_VIDEO : ''
+    ].filter(Boolean).join(' ')
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }

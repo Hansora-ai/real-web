@@ -1050,3 +1050,19 @@ test('a new user\'s first video sent to Veo is made with Grok, unless ChatGPT th
   const twoPhotos = await callTool('create_generation', { ...request, image_urls: ['https://cdn.test/a.png', 'https://cdn.test/b.png'] }, { credits: 3, files: { 'https://cdn.test/a.png': Buffer.alloc(8), 'https://cdn.test/b.png': Buffer.alloc(8) } });
   assert.equal(twoPhotos.submitted[0].model_id, 'veo31-lite');
 });
+
+test('a new user\'s first video from a photo explains how to put the person into a new scene within the free credits', async () => {
+  const photo = 'https://cdn.test/me.png';
+  const files = { [photo]: Buffer.alloc(8) };
+  const scene = 'Me in a tuxedo receiving the Ballon d\'Or trophy on stage';
+  const viaSwitch = (await callTool('create_generation', { model_id: 'seedance25', prompt: scene, duration: 10, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
+  const viaSteer = (await callTool('create_generation', { model_id: 'veo31-lite', prompt: scene, duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
+  for (const value of [viaSwitch, viaSteer]) {
+    assert.match(value.next_step, /If the user's photo is a person or object to put into a new scene .*call create_generation with model_id nano-banana-2-1, resolution 1K, the user's photo and a prompt describing that scene \(3 credits\)\. When the picture is ready \(get_generation\), call create_generation with model_id grok-video, duration 6, resolution 720p, that picture as the photo/);
+  }
+  // Without a photo there is nothing to place, so no such instruction.
+  const noPhoto = (await callTool('create_generation', { model_id: 'seedance25', prompt: 'A knight at sunset', duration: 10, resolution: '720p' }, { credits: 3 })).result.structuredContent;
+  assert.doesNotMatch(noPhoto.next_step, /new scene/);
+  const list = await callTool('list_models', { category: 'video' }, { credits: 30 });
+  assert.match(list.result.structuredContent.video_selection_guide, /A new user's first video that puts the person or object from their photo into a new scene: first make the scene as a picture with Nano Banana 2\.1/);
+});
