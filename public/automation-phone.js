@@ -98,7 +98,7 @@
       const response = await api.authenticatedFetch(`/.netlify/functions/automation-phone-line?business_id=${encodeURIComponent(businessId)}`);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'phone_line_unavailable');
-      line = { ...line, number:payload.number || null, countries:payload.countries || [], loaded:true, error:false };
+      line = { ...line, number:payload.number || null, countries:payload.countries || [], requested:payload.requested || [], loaded:true, error:false };
     } catch (_) { line = { ...line, number:null, countries:[], loaded:true, error:true }; }
     renderLine(); setState(Boolean(saved.saved_at));
   }
@@ -120,9 +120,14 @@
       }
       // No local numbers here yet: the owner can still forward to a number abroad, at their operator's price.
       const fallback = ['US', 'CA'].find(code => ready.has(code));
+      // Coming-soon countries collect owners to email when the country opens.
+      const email = user?.email ? ` at <strong>${escapeHtml(user.email)}</strong>` : '';
+      const notify = !COMING_SOON.has(where) ? ''
+        : (line.requested || []).includes(where) ? `<p class="ui-hint">We’ll email you${email} when ${name} numbers are ready.</p>`
+          : `<button class="ui-btn primary" type="button" data-line-action="notify" data-country="${where}">Notify me when ${name} numbers are ready</button><span class="ui-hint">We’ll email you${email}.</span>`;
       const status = COMING_SOON.has(where) ? `<strong>Local numbers in ${name} are coming soon.</strong>` : `<strong>Local numbers in ${name} are not available yet.</strong>`;
-      const abroad = fallback ? ` Until then, you can forward your business phone to a ${escapeHtml(countryName(fallback))} number. <strong>Your phone operator charges you for forwarding calls abroad</strong>, usually at the price of a call to that country. Check the price with your operator first.` : ' Your settings are saved, and you can test your AI employee in step 4.';
-      box.innerHTML = `${picker}<p class="ui-hint" style="margin-top:12px">${status}${abroad}</p>${fallback ? `<button class="ui-btn ghost" type="button" data-line-action="activate" data-country="${fallback}" data-forward="1">Use a ${escapeHtml(countryName(fallback))} number with forwarding</button>` : ''}`;
+      const abroad = fallback ? `<div style="margin-top:16px"><strong>Optional: start now with forwarding</strong><p class="ui-hint" style="margin:4px 0 8px">Forward your business phone to a ${escapeHtml(countryName(fallback))} number. <strong>Your phone operator charges you for forwarding calls abroad</strong>, usually at the price of a call to that country. Check the price with your operator first.</p><button class="ui-btn ghost" type="button" data-line-action="activate" data-country="${fallback}" data-forward="1">Use a ${escapeHtml(countryName(fallback))} number with forwarding</button></div>` : '<p class="ui-hint">Your settings are saved, and you can test your AI employee in step 4.</p>';
+      box.innerHTML = `${picker}<p class="ui-hint" style="margin-top:12px">${status}</p>${notify}${abroad}`;
       return;
     }
     const dial = escapeHtml(number.e164);
@@ -140,6 +145,7 @@
     try {
       const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-line', { method:'POST', body:JSON.stringify({ business_id:businessId, action, country:button.dataset.country }) });
       const payload = await response.json().catch(() => ({}));
+      if (action === 'notify' && response.ok) { line.requested = [...(line.requested || []), button.dataset.country]; ui.toast('Thanks! We’ll email you when it’s ready.'); renderLine(); return; }
       if (!response.ok) throw new Error({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.');
       line.number = payload.number || null;
       if (action === 'activate') { await save({ quiet:true }); ui.toast(`Your number is ${line.number.e164}.`); }
