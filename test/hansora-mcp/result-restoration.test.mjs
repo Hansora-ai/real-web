@@ -310,3 +310,21 @@ test('a first video moved to another model after a provider outage keeps the sam
   assert.equal(card.nodes.get('media').children[0].tag, 'video');
   assert.ok(card.calls.every((call) => call.name === 'get_generation' && call.arguments.run_id === 'run-1'));
 });
+
+test('the card says when a video was made with another model, while it is made and once it is ready', async () => {
+  const note = "Veo 3.1 Lite had a temporary issue on the provider's side, so this video was made with Grok Video instead.";
+  let ready = false;
+  const card = host({ output: { ...queued(), model_name: 'Grok Video', switch_note: note }, get: () => envelope(ready ? { ...complete('video'), model_name: 'Grok Video', switch_note: note } : { ...queued(), switch_note: note }) });
+  await flush();
+  assert.equal(card.section(), 'processing');
+  assert.equal(card.nodes.get('processingNote').textContent, note);
+  assert.equal(card.nodes.get('processingNote').classList.contains('hidden'), false);
+  ready = true; await card.tick(7000);
+  assert.equal(card.section(), 'ready');
+  assert.equal(card.nodes.get('readyNote').textContent, note);
+  assert.equal(card.nodes.get('readyNote').classList.contains('hidden'), false);
+  // A normal result shows no note.
+  const plain = host({ output: complete('video'), get: () => envelope(complete('video')) });
+  await flush();
+  assert.equal(plain.nodes.get('readyNote').classList.contains('hidden'), true);
+});
