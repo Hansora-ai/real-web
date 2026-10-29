@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261027">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="vendor/livekit-client.umd.js"></script><script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-voice-test.js?v=20261005-isolation"></script><script defer src="automation-phone.js?v=20261028-line"></script>
+  <script defer src="vendor/livekit-client.umd.js"></script><script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-voice-test.js?v=20261005-isolation"></script><script defer src="automation-phone.js?v=20261029-country"></script>
 </head>
 <body class="ui" data-automation-page="phone">
   <div data-automation-header></div>
@@ -30,7 +30,7 @@
       <section class="ui-card">
         <div class="ui-step phone-step" data-phone-step="1">
           <div class="ui-step-head"><h2>How customers reach you</h2><p>Pick one. You can change it later.</p></div>
-          <div class="ui-field" style="margin-bottom:18px"><label class="ui-label" for="line-where">Where is your business?</label><select class="ui-input" id="line-where"><option value="">Choose your country</option></select></div>
+          <div class="ui-field" style="margin-bottom:18px"><label class="ui-label" for="line-where">Where is your business?</label><input class="ui-input" id="line-where" list="line-where-list" placeholder="Type your country" autocomplete="off"><datalist id="line-where-list"></datalist></div>
           <div class="ui-options">
             <label class="ui-option"><input type="radio" name="number-mode" value="new" checked><span class="ui-option-mark" data-icon="sparkle"></span><span class="ui-option-text"><strong>Get a new phone number</strong><small>We assign it when you go live</small></span><span class="ui-option-radio"></span></label>
             <label class="ui-option"><input type="radio" name="number-mode" value="forward"><span class="ui-option-mark" data-icon="phone"></span><span class="ui-option-text"><strong>Forward your existing number</strong><small>Customers keep calling the number they know</small></span><span class="ui-option-radio"></span></label>
