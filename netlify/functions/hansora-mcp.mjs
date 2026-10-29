@@ -219,6 +219,17 @@ function busyResult(model, { running = null, provider = false } = {}) {
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
+// Henshin Lite and Kling 4.0 run on a provider that takes source videos up to 10 MB. The website shrinks videos
+// in the browser first; a video sent through ChatGPT arrives at its full size.
+function videoTooLargeResult(model) {
+  const value = {
+    ok: false, error: 'video_too_large', generated: false, credits_used: 0, model_id: model.id, model_name: model.name, max_video_mb: 10,
+    message: `${model.name} takes videos up to 10 MB, and this one is larger. Nothing was charged.`,
+    next_step: `Nothing was generated or charged. Tell the user in one short line that ${model.name} takes videos up to 10 MB and theirs is larger. Offer two ways on: send a shorter or smaller clip (only the part that matters, or exported at 720p), or use ${model.id === 'henshin-lite' ? 'Henshin, the stronger version, which takes videos up to 100 MB' : 'Seedance 2.5, which takes reference videos up to 200 MB'}; get its price from quote_generation and start only after they choose.`
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
 // Hansora's own safety check refused the prompt before anything ran. Every model gets the same check,
 // so ChatGPT must not try another one; it offers a clean version of the idea instead.
 const NO_MODEL_WILL = 'Hansora does not create sexual or NSFW content with any model, so trying another model will not help.';
@@ -1126,6 +1137,7 @@ export function createHansoraServer(ctx) {
         const providerReason = String(result.details?.msg || result.details?.message || '').slice(0, 300);
         const reason = result.message || result.error || `generation_submit_failed_${response.status}`;
         if (/concurrent task limit|too many (running|concurrent)/i.test(`${reason} ${providerReason}`)) return busyResult(model, { provider: true });
+        if (/media exceeds 10 ?MB/i.test(`${reason} ${providerReason}`)) return videoTooLargeResult(model);
         const submitKind = classifyFailure({ provider_message: providerReason, error: String(reason), error_code: result.details?.code ?? response.status });
         if (submitKind === 'temporary') return temporaryIssueResult(model, price, unavailable, providerReason || String(reason).slice(0, 200));
         const fallback = await firstVideoFallback(userId, model, normalizedInput);

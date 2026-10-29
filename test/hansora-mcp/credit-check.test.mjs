@@ -1066,3 +1066,18 @@ test('a new user\'s first video from a photo explains how to put the person into
   const list = await callTool('list_models', { category: 'video' }, { credits: 30 });
   assert.match(list.result.structuredContent.video_selection_guide, /A new user's first video that puts the person or object from their photo into a new scene: first make the scene as a picture with Nano Banana 2\.1/);
 });
+
+test('a ChatGPT video over 10 MB for Henshin Lite or Kling 4.0 gets a clear way on instead of a raw error', async () => {
+  const video = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/big.mp4';
+  for (const [modelId, alternative] of [['henshin-lite', /Henshin, the stronger version, which takes videos up to 100 MB/], ['kling40', /Seedance 2\.5, which takes reference videos up to 200 MB/]]) {
+    const { result } = await callTool('create_generation', { model_id: modelId, prompt: 'Put me in this dance', duration: 10, resolution: '720p', video_urls: [video], image_urls: ['https://cdn.test/me.png'] }, {
+      credits: 1000, rest: returningUser, runner: () => ({ status: 400, body: { ok: false, error: 'Media exceeds 10 MB.' } })
+    });
+    const value = result.structuredContent;
+    assert.equal(value.error, 'video_too_large', modelId);
+    assert.equal(value.credits_used, 0);
+    assert.match(value.next_step, /send a shorter or smaller clip/);
+    assert.match(value.next_step, alternative);
+    assert.match(value.next_step, /start only after they choose/);
+  }
+});
