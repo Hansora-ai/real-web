@@ -114,7 +114,7 @@
     if (btnLogout) {
       btnLogout.addEventListener('click', async () => {
         try {
-          await sb.auth.signOut();
+          await sb.auth.signOut({ scope: 'local' });
         } catch (e) {
           console.warn('HSHeader logout failed', e);
         } finally {

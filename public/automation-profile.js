@@ -90,7 +90,7 @@
   });
 
   $('#profile-logout').addEventListener('click', async () => {
-    try { await sb?.auth.signOut(); } catch (_) {}
+    try { await sb?.auth.signOut({ scope: 'local' }); } catch (_) {}
     try { localStorage.setItem('hansora.header.loggedIn', '0'); } catch (_) {}
     location.href = 'automation.html';
   });

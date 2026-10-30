@@ -5360,7 +5360,7 @@ async function __mjFetchNbCheck(params){
 
     document.getElementById('btnLogout')?.addEventListener('click', async () => {
       try {
-        await supabaseClient.auth.signOut();
+        await supabaseClient.auth.signOut({ scope: 'local' });
         currentUser = null;
         currentCredits = 0;
         const navUser = document.getElementById('navUser');

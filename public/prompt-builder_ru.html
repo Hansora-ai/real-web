@@ -633,7 +633,7 @@
       const logoutBtn = event.target.closest ? event.target.closest('#btnLogout') : null;
       if (logoutBtn) {
         try {
-          await supabaseClient.auth.signOut();
+          await supabaseClient.auth.signOut({ scope: 'local' });
           currentUser = null;
           currentCredits = 0;
           setCreditsEverywhere(0);

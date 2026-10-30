@@ -4792,7 +4792,7 @@
 
     if (btnLogout) {
       btnLogout.addEventListener('click', async function () {
-        if (sb) await sb.auth.signOut();
+        if (sb) await sb.auth.signOut({ scope: 'local' });
         window.location.replace(localizedHref('/index.html'));
       });
     }

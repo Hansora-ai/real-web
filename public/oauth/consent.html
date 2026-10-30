@@ -139,7 +139,8 @@
     }
 
     document.getElementById('switchAccount').addEventListener('click', async () => {
-      await sb.auth.signOut().catch(() => {});
+      // Only this browser: a global sign-out would also end the user's connected assistants.
+      await sb.auth.signOut({ scope: 'local' }).catch(() => {});
       redirectToLogin();
     });
 
