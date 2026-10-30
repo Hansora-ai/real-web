@@ -153,7 +153,8 @@ test('a new user\'s 10-second request still starts on Grok; ChatGPT uses Veo 3.1
   assert.deepEqual(value.options_within_balance[1].settings, { duration: 8, resolution: '720p' });
   assert.equal(value.options_within_balance[1].credits, 20);
   assert.match(value.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
-  assert.match(value.next_step, /use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if the user themselves asked for a video longer than 6 seconds/);
+  assert.match(value.next_step, /If the user themselves asked for 7 or 8 seconds, use duration 8 instead \(24 credits\)/);
+  assert.match(value.next_step, /use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if people in the video must speak a language other than English \(Chinese included\)/);
 });
 
 test('if the first video is refused by its model, the next model in line is started without a question', async () => {
@@ -223,11 +224,13 @@ test('a new user\'s first video starts on Grok; Veo 3.1 Lite 720p only when the 
   const short = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true }).structuredContent;
   assert.deepEqual(short.options_within_balance[0], { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18, same_model: false });
   assert.match(short.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
-  assert.match(short.next_step, /Exception: use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if the user themselves asked for a video longer than 6 seconds, or if people in the video must speak a language other than English or Chinese\. A length you picked yourself does not count\. In that case name Veo 3\.1 Lite and its credits in your line\./);
+  assert.match(short.next_step, /Exception: use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if people in the video must speak a language other than English \(Chinese included\)\. A language you picked yourself does not count\. In that case name Veo 3\.1 Lite and its credits in your line\./);
+  assert.match(short.next_step, /If the user themselves asked for 7 or 8 seconds, use duration 8 instead \(24 credits\); a length you picked yourself does not count\./);
+  assert.doesNotMatch(short.next_step, /longer than 6 seconds/);
   const long = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 10 }, firstGeneration: true }).structuredContent;
   assert.equal(long.options_within_balance[0].model_id, 'grok-video');
   assert.match(long.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
-  assert.match(long.next_step, /only if the user themselves asked for a video longer than 6 seconds/);
+  assert.match(long.next_step, /use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if people in the video must speak a language other than English \(Chinese included\)/);
   // A returning user's choices are not reordered for the first video.
   const returning = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 } }).structuredContent;
   assert.equal(returning.options_within_balance[0].model_id, 'veo31-lite');
@@ -364,7 +367,8 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /only Veo 3\.1 Lite \(8 seconds\), Gemini Omni Flash and Gemini Omni \(up to 10 seconds\) can speak it/);
   assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
   assert.match(guide, /not from how long or detailed your own prompt is/);
-  assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - A new user's first video \(no video yet\): Grok Video, 6 seconds, 720p\. Use Veo 3\.1 Lite only if the user asked for 7 or 8 seconds or for speech in a language other than English or Chinese\.\n   - Up to 8 seconds: Veo 3\.1 Lite, 1080p\.\n   - 9 to 10 seconds: Gemini Omni Flash, 1080p\..*\n   - 11 to 30 seconds: Wan 3\.0, 720p\./);
+  assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - A new user's first video \(no video yet\): Grok Video, 720p, 6 seconds, or 8 seconds if the user asked for 7 or 8 seconds\. Use Veo 3\.1 Lite \(8 seconds, 720p\) only if people in the video must speak a language other than English \(Chinese included\)\./);
+  assert.match(guide, /7\. The user's photo with big changes .*Grok Video and Veo 3\.1 Lite use a photo only as the first frame, so with them \(always for a new user's first video\) first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\).*Start the video as soon as the picture is ready \(get_generation\), without asking.*Models that take reference images \(Seedance 2\.5, Kling 4\.0, Wan 3\.0, Gemini Omni Flash, Gemini Omni\) get the photo as the character reference instead, with no picture step\./);
   assert.match(guide, /If you are not sure, treat it as complex/);
   // One short question with plain choices, so users who know no model names can pick. The model of
   // the user's last video comes first, so "ok" keeps the price they already know.
@@ -1035,7 +1039,8 @@ test('a new user\'s first video sent to Veo is made with Grok, unless ChatGPT th
   assert.equal(value.credits_used, 0);
   assert.deepEqual(value.next_option, { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18 });
   assert.match(value.next_step, /do not ask anything: call create_generation right now with model_id grok-video, duration 6, resolution 720p/);
-  assert.match(value.next_step, /only if the user themselves asked for a video longer than 6 seconds, or people in it must speak a language other than English or Chinese, call create_generation again exactly as before with veo31-lite/);
+  assert.match(value.next_step, /If the user themselves asked for 7 or 8 seconds, use duration 8 instead \(24 credits\)/);
+  assert.match(value.next_step, /only if people in the video must speak a language other than English \(Chinese included\), call create_generation again exactly as before with veo31-lite/);
   const { eventRow } = await import('../../lib/hansora-mcp/events.mjs');
   assert.equal(eventRow('u', 'create_generation', request, steered.result).outcome, 'first_video_on_grok');
 
@@ -1058,13 +1063,13 @@ test('a new user\'s first video from a photo explains how to put the person into
   const viaSwitch = (await callTool('create_generation', { model_id: 'seedance25', prompt: scene, duration: 10, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
   const viaSteer = (await callTool('create_generation', { model_id: 'veo31-lite', prompt: scene, duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
   for (const value of [viaSwitch, viaSteer]) {
-    assert.match(value.next_step, /If the user's photo is a person or object to put into a new scene .*call create_generation with model_id nano-banana-2-1, resolution 1K, the user's photo and a prompt describing that scene \(3 credits\)\. When the picture is ready \(get_generation\), call create_generation with model_id grok-video, duration 6, resolution 720p, that picture as the photo/);
+    assert.match(value.next_step, /If the user wants their photo changed \(a new outfit, place, atmosphere or style, or added people or things\), not just animated as it is, do this instead: first call create_generation with model_id nano-banana-2-1, resolution 1K, the user's photo and a prompt describing the changed picture \(3 credits\)\. When the picture is ready \(get_generation\), call create_generation with the video model and settings above, that picture as the photo and a prompt for the motion, without asking\./);
   }
   // Without a photo there is nothing to place, so no such instruction.
   const noPhoto = (await callTool('create_generation', { model_id: 'seedance25', prompt: 'A knight at sunset', duration: 10, resolution: '720p' }, { credits: 3 })).result.structuredContent;
-  assert.doesNotMatch(noPhoto.next_step, /new scene/);
+  assert.doesNotMatch(noPhoto.next_step, /nano-banana-2-1/);
   const list = await callTool('list_models', { category: 'video' }, { credits: 30 });
-  assert.match(list.result.structuredContent.video_selection_guide, /A new user's first video that puts the person or object from their photo into a new scene: first make the scene as a picture with Nano Banana 2\.1/);
+  assert.match(list.result.structuredContent.video_selection_guide, /first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\) from the user's photo, then animate that picture with the video model/);
 });
 
 test('a ChatGPT video over 10 MB for Henshin Lite or Kling 4.0 gets a clear way on instead of a raw error', async () => {
