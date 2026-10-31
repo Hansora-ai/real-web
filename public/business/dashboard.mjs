@@ -231,9 +231,15 @@ function issuesBanner() {
 function overview() {
   const d = state.data,
     s = d.summary;
-  return `<div class="metrics">${metric(s.unconverted_payments ? "Sales subtotal" : "Sales revenue", usd(s.sales_micro), `${num(s.payments)} payments${s.unconverted_payments ? " · " + num(s.unconverted_payments) + " not in USD subtotal" : " · tax excluded"}`, "sales", true)}${metric("Registrations", num(s.registrations), "Registered accounts in this period", "registrations")}${metric("Known API costs", usd(s.cost_micro + s.internal_cost_micro), `${s.unpriced_jobs + s.internal_unpriced ? num(s.unpriced_jobs + s.internal_unpriced) + " jobs unpriced" : "Rate-based estimate"}`, "cost")}${metric("Estimated profit", "Needs reconciliation", "Open the calculation to see what’s missing", "profit", false, true)}</div>
+  return `<div class="metrics">${metric(s.unconverted_volume_payments ? "Payment volume · USD subtotal" : "Payment volume", usd(s.gross_volume_micro), `${num(s.payments)} payments · tax included${s.unconverted_volume_payments ? " · " + num(s.unconverted_volume_payments) + " awaiting USD totals" : ""}`, "sales", true)}${metric("Registrations", num(s.registrations), "Registered accounts in this period", "registrations")}${metric("Known API costs", usd(s.cost_micro + s.internal_cost_micro), `${s.unpriced_jobs + s.internal_unpriced ? num(s.unpriced_jobs + s.internal_unpriced) + " jobs unpriced" : "Rate-based estimate"}`, "cost")}${metric("Estimated profit", "Needs reconciliation", "Open the calculation to see what’s missing", "profit", false, true)}</div>
 +<div class="support-strip"><button data-action="buyers">${icon("customers")}<span><strong>${num(s.buyers)}</strong>paying customers</span></button><button data-action="used-buyers">${icon("wallet")}<span><strong>${num(s.used_buyers)}</strong>buyers used credits</span></button><button data-action="nonbuyer">${icon("spark")}<span><strong>${usd(s.nonbuyer_cost_micro)}</strong>nonbuyer usage cost*</span></button><button data-action="errors">${icon("alert")}<span><strong>${num(s.failed)} <small class="quiet">${pct(s.failure_rate)}</small></strong>failed generations</span></button></div>
-+${issuesBanner()}<div class="grid-2"><article class="panel">${head("Money in. Generation costs out.", "Daily totals for your selected period.")}<div class="chart-legend"><span><i></i>Sales revenue</span><span><i class="spent"></i>Known API cost</span></div><div class="chart-wrap">${chart()}</div></article><article class="panel">${head("What stays", "Cash view · includes expenses paid in this period")}<div class="flow">${flow("Sales excluding tax", usd(s.sales_micro))}${flow("Recorded refunds", "− " + usd(s.refunds_micro))}${flow("Estimated payment fees", "− " + usd(s.fees_micro))}${flow("Known customer API costs", "− " + usd(s.cost_micro))}${flow("Known internal API costs", "− " + usd(s.internal_cost_micro))}${flow("Expenses paid / scheduled", "− " + cents(s.expense_cash_cents))}${flow("After known costs", usd(s.cash_after_known_costs_micro), "total")}${flow("Incomplete cash-flow estimate", "Not final profit", "sub")}</div><div class="info-note">Unused credits can create future costs. Unconfirmed costs and refunds are not silently treated as zero. <button class="action-link" data-action="profit">See the calculation ↗</button></div></article></div>
++<article class="panel payment-reconciliation">${head("Payments by provider", "Successful payments · each processor shown separately")}${table(
+    ["Processor", "Payments", "Payment volume · tax included", "Coverage"],
+    d.payment_providers.map(
+      (p) =>
+        `<tr><td class="model-name">${esc(p.provider === "dodopayments" ? "Dodo Payments" : p.provider === "yoomoney" ? "YooMoney" : p.provider)}</td><td>${num(p.payments)}</td><td>${p.payments === p.unconverted ? "Awaiting USD conversion" : usd(p.known_volume_micro) + (p.unconverted ? " · partial" : "")}</td><td>${num(p.report_backed)} report-backed${p.unconverted ? ` · ${num(p.unconverted)} unconverted` : ""}</td></tr>`,
+    ),
+  )}<p class="table-note">Volume includes tax; revenue below excludes tax. Processor reports provide historical USD equivalents. Foreign-currency tax uses the report’s implied FX rate; payment fees remain estimates. Missing conversions are shown separately.</p></article>${issuesBanner()}<div class="grid-2"><article class="panel">${head("Money in. Generation costs out.", "Daily totals for your selected period.")}<div class="chart-legend"><span><i></i>Sales revenue</span><span><i class="spent"></i>Known API cost</span></div><div class="chart-wrap">${chart()}</div></article><article class="panel">${head("What stays", "Cash view · includes expenses paid in this period")}<div class="flow">${flow("Sales excluding tax", usd(s.sales_micro))}${flow("Recorded refunds", "− " + usd(s.refunds_micro))}${flow("Estimated payment fees", "− " + usd(s.fees_micro))}${flow("Known customer API costs", "− " + usd(s.cost_micro))}${flow("Known internal API costs", "− " + usd(s.internal_cost_micro))}${flow("Expenses paid / scheduled", "− " + cents(s.expense_cash_cents))}${flow("After known costs", usd(s.cash_after_known_costs_micro), "total")}${flow("Incomplete cash-flow estimate", "Not final profit", "sub")}</div><div class="info-note">Unused credits can create future costs. Unconfirmed costs and refunds are not silently treated as zero. <button class="action-link" data-action="profit">See the calculation ↗</button></div></article></div>
 +<div class="bottom-grid"><article class="panel">${head("Customer credits still held", "Current wallet balances · across all recorded buyers", '<a class="text-link" href="#customers">View customers ↗</a>')}<div class="panel-body"><div class="large-inline">${num(s.buyer_balance)}<small>credits</small></div><p class="source-note">Includes purchased, gift and trial credits. Purchased-package bounds: ${creditRange(s.package_balance_lower, s.package_balance_upper)} credits. Includes package bonuses.</p><p class="source-note">Future cost scenario: <strong>${reserveRange(s)}</strong> at the selected period’s known usage mix. Future model choices may change this.</p><div class="split-stats"><div><b>${num(s.credits_debited)}</b>Credits debited this period</div><div><b>${num(s.credits_refunded)}</b>Credits refunded</div></div></div></article><article class="panel">${head("Your other expenses", "Expenses allocated to this reporting period", '<a class="text-link" href="#expenses">Manage expenses ↗</a>')}<div class="panel-body"><div class="large-inline">${cents(s.expense_allocated_cents)}<small>for this period</small></div><p class="source-note">${s.expense_projected_cents ? cents(s.expense_projected_cents) + " is scheduled recurring expense." : "One-time expenses and covered periods are calculated separately from payment dates."}</p><button class="button primary" data-action="add-expense">+ Add an expense</button></div></article></div>`.replace(
     /^\+/gm,
     "",
@@ -527,10 +533,10 @@ function explain(action) {
     html =
       `<p class="detail-description">${esc(d.methodology.sales)} Payment fees remain estimates until reconciled with Dodo statements. Refunds are attached to purchase cohorts; their actual cash refund dates are not reconstructed.</p>` +
       table(
-        ["Date", "Currency / amount", "Known sales", "Fee estimate"],
+        ["Date", "Processor", "Payment volume", "Revenue excl. tax", "Source"],
         d.payments.map(
           (p) =>
-            `<tr><td>${esc(p.day)}</td><td>${esc(p.money.currency)}</td><td>${p.money.known ? usd(p.money.revenue_micro) : '<span class="text-amber">Unconverted</span>'}</td><td>${p.money.known ? usd(p.money.fee_micro) : "—"}</td></tr>`,
+            `<tr><td>${esc(p.day)}</td><td>${esc(p.provider)}</td><td>${p.money.known ? usd(p.money.gross_micro) : `<span class="text-amber">${esc(p.money.currency)} · unconverted</span>`}</td><td>${p.money.known ? usd(p.money.revenue_micro) : "—"}</td><td>${p.money.report_backed ? "Dodo report" : p.money.known ? "Webhook / configured FX" : "Incomplete"}${p.money.tax_fx_allocated ? " · tax FX allocated" : ""}</td></tr>`,
         ),
       );
   } else if (action === "profit") {
@@ -841,7 +847,25 @@ $("#export").onclick = () => {
         `${state.range.start} through ${state.range.end}`,
       ],
       ["Metric", "USD / count"],
+      ["Payment volume incl. tax · known USD", s.gross_volume_micro / 1e6],
       ["Sales excluding tax", s.sales_micro / 1e6],
+      ["Payments outside USD subtotal", s.unconverted_payments],
+      [],
+      [
+        "Processor",
+        "Successful payments",
+        "Known volume USD",
+        "Unconverted",
+        "Report-backed",
+      ],
+      ...d.payment_providers.map((p) => [
+        p.provider,
+        p.payments,
+        p.known_volume_micro / 1e6,
+        p.unconverted,
+        p.report_backed,
+      ]),
+      [],
       ["Payment fees ESTIMATE", s.fees_micro / 1e6],
       ["Known API costs", s.cost_micro / 1e6],
       ["Unpriced jobs", s.unpriced_jobs],

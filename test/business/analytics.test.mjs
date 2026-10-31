@@ -171,3 +171,110 @@ test("zero-decimal settlement currencies are not divided by a fictitious 100", (
   });
   assert.equal(paymentMoney(p, { JPY: 0.006 }).revenue_micro, 9000000);
 });
+
+test("processor report restores foreign payment volume without a guessed FX rate", () => {
+  const r = paymentMoney(
+    pay({
+      currency: "EUR",
+      financial: {
+        settlement_amount: 2162,
+        settlement_currency: "EUR",
+        settlement_tax: 375,
+        report_gross_usd_cents: 2419,
+        report_settlement_amount: 21.62,
+        report_settlement_tax: 3.75,
+        report_settlement_currency: "EUR",
+      },
+    }),
+  );
+  assert.equal(r.known, true);
+  assert.equal(r.gross_micro, 24190000);
+  assert.equal(r.report_backed, true);
+  assert.equal(r.tax_fx_allocated, true);
+  assert.equal(r.revenue_micro, Math.round(24.19 * (1 - 3.75 / 21.62) * 1e6));
+});
+test("missing report tax preserves exact gross volume but does not invent net revenue", () => {
+  const r = paymentMoney(
+    pay({
+      currency: "EUR",
+      financial: {
+        settlement_amount: 8898,
+        settlement_currency: "EUR",
+        settlement_tax: null,
+        report_gross_usd_cents: 9999,
+        report_settlement_amount: 88.98,
+        report_settlement_tax: null,
+        report_settlement_currency: "EUR",
+      },
+    }),
+  );
+  assert.equal(r.known, false);
+  assert.equal(r.gross_micro, 99990000);
+  assert.equal(r.report_backed, true);
+});
+test("payment provider counts and volume are separate from tax-exclusive revenue", () => {
+  const r = buildDashboard(
+    snap({
+      payments: [
+        pay({
+          financial: {
+            settlement_amount: 1200,
+            settlement_currency: "USD",
+            settlement_tax: 200,
+          },
+        }),
+        pay({
+          id: 2,
+          transaction_id: "y1",
+          provider: "yoomoney",
+          currency: "USD",
+          amount_cents: 990,
+          financial: {},
+        }),
+        pay({
+          id: 3,
+          transaction_id: "y2",
+          provider: "yoomoney",
+          currency: "RUB",
+          amount_cents: 100000,
+          financial: {},
+        }),
+      ],
+    }),
+    range,
+  );
+  assert.equal(r.summary.payments, 3);
+  assert.equal(r.summary.gross_volume_micro, 21900000);
+  assert.equal(r.summary.sales_micro, 10000000);
+  assert.equal(r.summary.unconverted_volume_payments, 1);
+  assert.equal(r.summary.unconverted_payments, 2);
+  assert.deepEqual(
+    r.payment_providers.map((p) => [
+      p.provider,
+      p.payments,
+      p.known_volume_micro,
+      p.unconverted,
+    ]),
+    [
+      ["dodopayments", 1, 12000000, 0],
+      ["yoomoney", 2, 9900000, 1],
+    ],
+  );
+});
+test("new processor report takes precedence over stale webhook settlement values", () => {
+  const r = paymentMoney(
+    pay({
+      financial: {
+        settlement_amount: 11000,
+        settlement_currency: "USD",
+        settlement_tax: 1000,
+        report_gross_usd_cents: 9999,
+        report_settlement_amount: 99.99,
+        report_settlement_tax: 0,
+        report_settlement_currency: "USD",
+      },
+    }),
+  );
+  assert.equal(r.gross_micro, 99990000);
+  assert.equal(r.revenue_micro, 99990000);
+});
