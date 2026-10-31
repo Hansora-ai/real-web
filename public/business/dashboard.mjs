@@ -248,6 +248,8 @@ function activity() {
   const tabs = `<div class="tabs">${[
     ["models", "Models & usage"],
     ["errors", "Failed generations"],
+    ["purchase", "Before purchase"],
+    ["ratings", "Ratings & comments"],
     ["sources", "Sources"],
   ]
     .map(
@@ -255,6 +257,67 @@ function activity() {
         `<button class="${state.activity === id ? "active" : ""}" data-tab="${id}">${name}${id === "errors" ? ` · ${num(s.failed)}` : ""}</button>`,
     )
     .join("")}</div>`;
+  if (state.activity === "purchase") {
+    const b = d.before_purchase;
+    return (
+      tabs +
+      `<div class="metrics">${metric("First-time buyers", num(b.buyers), "First recorded purchase in this period")}${metric("Generated before buying", num(b.with_success), "At least one confirmed successful generation")}${metric("No generation recorded", num(b.no_history), "Within retained generation history")}${metric("Failed attempts only", num(b.failed_only), "No successful or pending attempt recorded")}</div>
+    <article class="panel">${head("What happened before the first purchase?", "Each buyer appears once, grouped by their last successful model before buying.")}${table(
+      [
+        "Last successful model / activity",
+        "Buyers",
+        "Share of first-time buyers",
+      ],
+      b.groups.map(
+        (r) =>
+          `<tr><td class="model-name">${esc(r.name)}</td><td>${num(r.buyers)}</td><td>${pct(b.buyers ? r.buyers / b.buyers : 0)}</td></tr>`,
+      ),
+      b.available
+        ? "No first-time buyers in this period."
+        : "Purchase history has not loaded.",
+    )}<p class="table-note">This shows recorded behavior, not proof that a model caused a purchase. ${b.history_start ? `Retained generation history starts ${esc(yerevanDay(b.history_start))}. ` : ""}Deleted or unrecorded generations cannot be recovered. Internal accounts are excluded.</p></article>
+    <article class="panel">${head("Every model tried before buying", "Includes all retained attempts before the first purchase, even before your selected start date.")}${table(
+      ["Model", "Buyers who tried it", "Attempts", "Successful", "Failed"],
+      b.models.map(
+        (r) =>
+          `<tr><td class="model-name">${esc(r.name)}</td><td>${num(r.buyers)}</td><td>${num(r.attempts)}</td><td>${num(r.successful)}</td><td>${num(r.failed)}</td></tr>`,
+      ),
+    )}<p class="table-note">A buyer can try several models, so buyer counts in this table overlap. Purchases refer to the connected payment records; missing payment channels may affect first-purchase dates.</p></article>`
+    );
+  }
+  if (state.activity === "ratings") {
+    const f = d.feedback;
+    const rows = f.ratings.filter(
+      (r) =>
+        (!state.ratingFilter ||
+          state.ratingFilter === "all" ||
+          Number(r.rating) === Number(state.ratingFilter)) &&
+        `${r.provider} ${r.model} ${(r.reasons || []).join(" ")} ${r.comment || ""}`
+          .toLowerCase()
+          .includes(state.search.toLowerCase()),
+    );
+    return (
+      tabs +
+      `<div class="metrics">${metric("Ratings", num(f.total), "Latest saved vote per generation")}${metric("Liked", num(f.likes), "Thumbs up")}${metric("Disliked", num(f.dislikes), "Thumbs down")}${metric("Like rate", f.like_rate === null ? "—" : pct(f.like_rate), `${num(f.comments)} written comments · rated results only`)}</div>
+    <article class="panel">${head("Feedback by model", "Your customers’ saved votes, with internal accounts excluded.")}${table(
+      ["Model", "Likes", "Dislikes", "Like rate"],
+      f.models.map(
+        (r) =>
+          `<tr><td class="model-name">${esc(r.name)}</td><td>${num(r.likes)}</td><td>${num(r.dislikes)}</td><td>${pct(r.likes / (r.likes + r.dislikes))}</td></tr>`,
+      ),
+      f.available ? "No ratings in this period." : "Ratings have not loaded.",
+    )}</article>
+    <article class="panel">${head("What customers said", "Search models, reasons and comments.")}<div class="table-tools"><input id="table-search" aria-label="Search ratings" placeholder="Search comments or model…" value="${esc(state.search)}"><select id="rating-filter" aria-label="Rating filter"><option value="all">All ratings</option><option value="1" ${state.ratingFilter === "1" ? "selected" : ""}>Likes</option><option value="-1" ${state.ratingFilter === "-1" ? "selected" : ""}>Dislikes</option></select></div>${table(
+      ["Updated", "Model", "Rating", "Reasons & comment"],
+      rows
+        .slice(0, 200)
+        .map(
+          (r) =>
+            `<tr><td>${esc(yerevanDay(r.updated_at || r.created_at))}</td><td class="wrap-cell"><div class="model-name">${esc(r.provider || r.model || "Unknown model")}</div><div class="provider">${esc(r.model)}</div></td><td><span class="data-chip ${Number(r.rating) === -1 ? "amber" : ""}">${Number(r.rating) === 1 ? "👍 Liked" : "👎 Disliked"}</span></td><td class="wrap-cell"><div class="provider">${esc((r.reasons || []).map((v) => String(v).replaceAll("_", " ")).join(" · "))}</div><div class="feedback-comment">${esc(r.comment || "No written comment")}</div></td></tr>`,
+        ),
+    )}<p class="table-note">${num(rows.length)} matching ratings${rows.length > 200 ? " · first 200 shown; export includes all" : ""}. Dates use the latest vote update. Changing a vote replaces the previous vote; this is not a historical vote log. Only submitted ratings are represented.</p></article>`
+    );
+  }
   if (state.activity === "errors") {
     const categories = [...new Set(d.errors.map((e) => e.category))];
     const filtered = d.errors.filter(
@@ -602,6 +665,10 @@ $("#page").addEventListener("input", (e) => {
   }
 });
 $("#page").addEventListener("change", (e) => {
+  if (e.target.id === "rating-filter") {
+    state.ratingFilter = e.target.value;
+    render();
+  }
   if (e.target.id === "error-category") {
     state.errorCategory = e.target.value;
     render();
@@ -817,6 +884,23 @@ $("#export").onclick = () => {
         e.starts_on,
         e.ends_on,
         e.recurrence,
+      ]),
+      [],
+      ["Before first purchase", "Buyers", "Share"],
+      ...d.before_purchase.groups.map((r) => [
+        r.name,
+        r.buyers,
+        d.before_purchase.buyers ? r.buyers / d.before_purchase.buyers : 0,
+      ]),
+      [],
+      ["Rating updated", "Model", "Provider", "Vote", "Reasons", "Comment"],
+      ...d.feedback.ratings.map((r) => [
+        r.updated_at || r.created_at,
+        r.model,
+        r.provider,
+        Number(r.rating) === 1 ? "Liked" : "Disliked",
+        (r.reasons || []).join("; "),
+        r.comment,
       ]),
       [],
       ["Error groups", "Model", "Count", "Affected users", "Normalized sample"],

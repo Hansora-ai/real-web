@@ -93,6 +93,26 @@ begin
         (select count(*) from pay where uid=p.user_id) payments
       from public.profiles p where exists(select 1 from pay where uid=p.user_id)
     ) x),'[]'::jsonb),
+    'generation_history_start',(select min(created_at) from public.user_generations where coalesce(provider,'') not ilike '%template%'),
+    'purchase_journeys',coalesce((select jsonb_agg(jsonb_build_object(
+      'user_id',b.uid,'first_purchase',b.first_purchase,
+      'generations',coalesce((select jsonb_agg(jsonb_build_object(
+        'id',g.id,'run_id',g.meta->>'run_id','created_at',g.created_at,'provider',g.provider,
+        'model',coalesce(g.meta->>'model_id',g.meta->>'engine',g.meta->>'model',g.provider),
+        'status',coalesce(g.meta->>'status',case when g.result_url is not null then 'done' else 'unknown' end)
+      )) from (select distinct on(coalesce(nullif(meta->>'run_id',''),id::text)) id,meta,created_at,provider,result_url
+        from public.user_generations where user_id=b.uid and created_at<b.first_purchase
+        and coalesce(provider,'') not ilike '%template%'
+        order by coalesce(nullif(meta->>'run_id',''),id::text),created_at desc,id) g),'[]'::jsonb)
+    )) from (select uid,min(paid_at) first_purchase from pay where uid is not null group by uid
+      having min(paid_at)>=lo and min(paid_at)<hi) b),'[]'::jsonb),
+    'ratings',coalesce((select jsonb_agg(jsonb_build_object(
+      'run_id',r.run_id,'user_id',r.user_id,'provider',coalesce(g.provider,r.provider),
+      'model',coalesce(g.meta->>'model_id',g.meta->>'engine',g.meta->>'model',r.model,r.provider),
+      'rating',r.rating,'reasons',r.reasons,'comment',r.comment,
+      'created_at',r.created_at,'updated_at',r.updated_at
+    )) from public.generation_ratings r left join public.user_generations g on g.id=r.generation_id and g.user_id=r.user_id
+      where coalesce(r.updated_at,r.created_at)>=lo and coalesce(r.updated_at,r.created_at)<hi),'[]'::jsonb),
     'generations',coalesce((select jsonb_agg(jsonb_build_object(
       'id',g.id,'user_id',g.user_id,'created_at',g.created_at,'provider',g.provider,'kind',g.kind,
       'model',coalesce(g.meta->>'model',g.meta->>'model_id',g.provider),
