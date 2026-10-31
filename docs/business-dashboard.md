@@ -17,7 +17,7 @@ The application requires only the site's existing `SUPABASE_URL` and `SUPABASE_S
 - Customers: current wallets, purchases through the report end, period usage, and purchased-package balance bounds.
 - Expenses: add/edit/archive/restore one-off and recurring expenses, payment dates, coverage periods, notes, and currency conversion settings.
 
-All reporting dates use Asia/Yerevan. Available presets are today, yesterday, seven days, current month, six calendar months and current year; custom ranges support up to 367 inclusive days.
+All reporting dates use UTC to match Dodo’s reporting day. Available presets are today, yesterday, seven days, current month, six calendar months and current year; custom ranges support up to 367 inclusive days.
 
 ## Accounting definitions and limits
 
@@ -54,7 +54,7 @@ The local migration-history check could not connect because this checkout has no
 
 ### Before purchase and generation feedback
 
-Activity → Before purchase selects customers whose first recorded successful payment falls in the reporting period (Asia/Yerevan). It reads all retained generation history before that payment, including dates before the reporting window, deduplicating run IDs. Each buyer is grouped once by the last successful model, no retained generation, failed attempts only, or other unresolved attempts. The second model table overlaps when a buyer tried multiple models. Internal owner/employee accounts are excluded. Payment channels missing from the connected payments table and deleted generations remain coverage limits. Status is the current saved generation status; historical completion times are not available, so a job submitted before purchase may have finished later. This is descriptive buyer behavior, not causal attribution or a conversion-rate denominator.
+Activity → Before purchase selects customers whose first recorded successful payment falls in the reporting period (UTC). It reads all retained generation history before that payment, including dates before the reporting window, deduplicating run IDs. Each buyer is grouped once by the last successful model, no retained generation, failed attempts only, or other unresolved attempts. The second model table overlaps when a buyer tried multiple models. Internal owner/employee accounts are excluded. Payment channels missing from the connected payments table and deleted generations remain coverage limits. Status is the current saved generation status; historical completion times are not available, so a job submitted before purchase may have finished later. This is descriptive buyer behavior, not causal attribution or a conversion-rate denominator.
 
 Activity → Ratings & comments reads `generation_ratings`, with per-model likes/dislikes, like rate, reasons and searchable comments. It preserves ratings whose source generation has been deleted. The selected date refers to the latest saved vote update, not an immutable historical vote log. There is one current vote per run; internal accounts are excluded. Comments are HTML-escaped and CSV exports protect formula-leading values. Financial calculations are unchanged by these additions.
 

@@ -1,6 +1,6 @@
 import {
   dateRange,
-  todayYerevan,
+  todayUTC,
   dayNumber,
   dateString,
   validateExpense,
@@ -56,12 +56,12 @@ const num = (n) =>
   cents = (n) => usd(n * 10000),
   pct = (n) => `${((n || 0) * 100).toFixed(1)}%`;
 const dateFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Yerevan",
+  timeZone: "UTC",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
 });
-const yerevanDay = (v) => dateFormatter.format(new Date(v));
+const reportDay = (v) => dateFormatter.format(new Date(v));
 const creditRange = (a, b) =>
   Math.abs((a || 0) - (b || 0)) < 0.0001 ? num(a) : `${num(a)}–${num(b)}`;
 const reserveRange = (s) =>
@@ -168,7 +168,7 @@ async function load() {
     state.tablePage = 0;
     render();
     $("#updated-label").textContent =
-      `Updated ${new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Yerevan", hour: "2-digit", minute: "2-digit" }).format(new Date(data.generated_at))} · Armenia time`;
+      `Updated ${new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" }).format(new Date(data.generated_at))} · Dodo time (UTC)`;
     $("#connection-state").textContent = localPreview
       ? "Local private preview"
       : "Verified owner";
@@ -281,7 +281,7 @@ function activity() {
       b.available
         ? "No first-time buyers in this period."
         : "Purchase history has not loaded.",
-    )}<p class="table-note">This shows recorded behavior, not proof that a model caused a purchase. ${b.history_start ? `Retained generation history starts ${esc(yerevanDay(b.history_start))}. ` : ""}Deleted or unrecorded generations cannot be recovered. Internal accounts are excluded.</p></article>
+    )}<p class="table-note">This shows recorded behavior, not proof that a model caused a purchase. ${b.history_start ? `Retained generation history starts ${esc(reportDay(b.history_start))}. ` : ""}Deleted or unrecorded generations cannot be recovered. Internal accounts are excluded.</p></article>
     <article class="panel">${head("Every model tried before buying", "Includes all retained attempts before the first purchase, even before your selected start date.")}${table(
       ["Model", "Buyers who tried it", "Attempts", "Successful", "Failed"],
       b.models.map(
@@ -319,7 +319,7 @@ function activity() {
         .slice(0, 200)
         .map(
           (r) =>
-            `<tr><td>${esc(yerevanDay(r.updated_at || r.created_at))}</td><td class="wrap-cell"><div class="model-name">${esc(r.provider || r.model || "Unknown model")}</div><div class="provider">${esc(r.model)}</div></td><td><span class="data-chip ${Number(r.rating) === -1 ? "amber" : ""}">${Number(r.rating) === 1 ? "👍 Liked" : "👎 Disliked"}</span></td><td class="wrap-cell"><div class="provider">${esc((r.reasons || []).map((v) => String(v).replaceAll("_", " ")).join(" · "))}</div><div class="feedback-comment">${esc(r.comment || "No written comment")}</div></td></tr>`,
+            `<tr><td>${esc(reportDay(r.updated_at || r.created_at))}</td><td class="wrap-cell"><div class="model-name">${esc(r.provider || r.model || "Unknown model")}</div><div class="provider">${esc(r.model)}</div></td><td><span class="data-chip ${Number(r.rating) === -1 ? "amber" : ""}">${Number(r.rating) === 1 ? "👍 Liked" : "👎 Disliked"}</span></td><td class="wrap-cell"><div class="provider">${esc((r.reasons || []).map((v) => String(v).replaceAll("_", " ")).join(" · "))}</div><div class="feedback-comment">${esc(r.comment || "No written comment")}</div></td></tr>`,
         ),
     )}<p class="table-note">${num(rows.length)} matching ratings${rows.length > 200 ? " · first 200 shown; export includes all" : ""}. Dates use the latest vote update. Changing a vote replaces the previous vote; this is not a historical vote log. Only submitted ratings are represented.</p></article>`
     );
@@ -345,7 +345,7 @@ function activity() {
         ],
         filtered.map(
           (e) =>
-            `<tr data-error="${d.errors.indexOf(e)}" tabindex="0"><td class="wrap-cell"><span class="data-chip amber">${esc(e.category)}</span><div class="model-name" style="margin-top:7px">${esc(e.provider)}</div><div class="provider">${esc(e.message)}</div></td><td>${num(e.count)}</td><td>${num(e.users)}</td><td>${esc(yerevanDay(e.first))}<div class="date-line">${esc(yerevanDay(e.last))}</div></td><td>${num(e.credits_refunded)}</td></tr>`,
+            `<tr data-error="${d.errors.indexOf(e)}" tabindex="0"><td class="wrap-cell"><span class="data-chip amber">${esc(e.category)}</span><div class="model-name" style="margin-top:7px">${esc(e.provider)}</div><div class="provider">${esc(e.message)}</div></td><td>${num(e.count)}</td><td>${num(e.users)}</td><td>${esc(reportDay(e.first))}<div class="date-line">${esc(reportDay(e.last))}</div></td><td>${num(e.credits_refunded)}</td></tr>`,
         ),
       )}<p class="table-note">Recovered retries: historical retry links are incomplete. A later similar success is not counted as a confirmed recovery. ${s.failed_unpriced ? num(s.failed_unpriced) + " failed jobs also have unconfirmed provider cost." : ""}</p></article>`
     );
@@ -473,7 +473,7 @@ function openExpense(id) {
   f.reset();
   const e = state.data.expenses.find((e) => e.id === id);
   $("#expense-title").textContent = e ? "Edit expense" : "Add an expense";
-  const today = todayYerevan();
+  const today = todayUTC();
   const defaults = e
     ? { ...e, amount: (e.amount_cents / 100).toFixed(2) }
     : {
@@ -509,7 +509,7 @@ function rateRow(r = {}) {
     )
     .join(
       "",
-    )}</select></label><label>Effective from<input data-rate="from" type="date" value="${esc(r.from || todayYerevan())}"></label></div><label>Through <small>(optional)</small><input data-rate="to" type="date" value="${esc(r.to || "")}"></label></div>`;
+    )}</select></label><label>Effective from<input data-rate="from" type="date" value="${esc(r.from || todayUTC())}"></label></div><label>Through <small>(optional)</small><input data-rate="to" type="date" value="${esc(r.to || "")}"></label></div>`;
 }
 function openSettings() {
   if (state.loading) return;
@@ -563,7 +563,7 @@ function explain(action) {
   } else if (action === "registrations") {
     title = "Registrations";
     html =
-      `<p class="detail-description">Registered profiles created during the selected dates, using Armenia time. Your owner and confirmed employee accounts are excluded.</p>` +
+      `<p class="detail-description">Registered profiles created during the selected dates, using Dodo time (UTC). Your owner and confirmed employee accounts are excluded.</p>` +
       table(
         ["Day", "New registrations"],
         d.daily.map(

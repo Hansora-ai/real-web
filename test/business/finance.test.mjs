@@ -7,6 +7,7 @@ import {
   validateExpense,
   dayNumber,
   dateRange,
+  todayUTC,
   groupError,
 } from "../../public/business/finance.mjs";
 const expense = (overrides) =>
@@ -204,4 +205,13 @@ test("trial grants can never make purchased-package bounds exceed credits actual
   );
   assert.equal(r.lower, 3100);
   assert.equal(r.upper, 3100);
+});
+
+test("today and month roll over at Dodo UTC midnight, regardless of the device timezone", () => {
+  assert.equal(todayUTC(new Date("2026-10-31T23:30:00Z")), "2026-10-31");
+  assert.equal(todayUTC(new Date("2026-11-01T00:00:00Z")), "2026-11-01");
+  assert.deepEqual(
+    dateRange("month", todayUTC(new Date("2026-10-31T21:00:00Z"))),
+    { start: "2026-10-01", end: "2026-10-31" },
+  );
 });
