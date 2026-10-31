@@ -4,7 +4,7 @@ import {
   json,
   OWNER_ID,
 } from "../../lib/business/access.mjs";
-import { buildDashboard } from "../../lib/business/analytics.mjs";
+import { buildProfit } from "../../lib/business/profit.mjs";
 import { validateExpense, dayNumber } from "../../public/business/finance.mjs";
 const uuid = (value) =>
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(
@@ -30,7 +30,7 @@ export async function handler(event) {
         method: "POST",
         body: JSON.stringify({ p_start: start, p_end: end }),
       });
-      return json(200, buildDashboard(snapshot, { start, end }));
+      return json(200, buildProfit(snapshot, { start, end }));
     }
     if ((event.body || "").length > 50000)
       return json(413, { error: "Request is too large." });
@@ -86,7 +86,12 @@ export async function handler(event) {
     if (body.action === "save_settings") {
       const settings = body.settings || {},
         fx = {},
-        rates = [];
+        rates = [],
+        fees = {};
+      const yoomoneyPct = Number(settings.fees?.yoomoney_pct ?? 0);
+      if (!Number.isFinite(yoomoneyPct) || yoomoneyPct < 0 || yoomoneyPct > 50)
+        return json(400, { error: "Enter a YooMoney fee between 0 and 50%." });
+      fees.yoomoney_pct = yoomoneyPct;
       for (const [currency, value] of Object.entries(settings.fx || {})) {
         if (
           !/^[A-Z]{3}$/.test(currency) ||
@@ -97,9 +102,9 @@ export async function handler(event) {
           return json(400, { error: "Enter valid USD conversion rates." });
         fx[currency] = Number(value);
       }
-      if (!Array.isArray(settings.rates) || settings.rates.length > 150)
+      if (!Array.isArray(settings.rates ?? []) || (settings.rates ?? []).length > 150)
         return json(400, { error: "Use up to 150 provider rate rules." });
-      for (const r of settings.rates) {
+      for (const r of settings.rates ?? []) {
         if (
           typeof r.model !== "string" ||
           !r.model.trim() ||
@@ -130,7 +135,7 @@ export async function handler(event) {
         headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({
           owner_user_id: OWNER_ID,
-          settings: { fx, rates },
+          settings: { fx, rates, fees },
           updated_at: new Date().toISOString(),
         }),
       });

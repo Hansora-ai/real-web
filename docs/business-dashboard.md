@@ -2,6 +2,21 @@
 
 `/business.html` is a new, isolated owner dashboard. No public navigation, model prices, generation flow or locale pages change.
 
+## Profit page (November 2026)
+
+The page answers one question per period (today, yesterday, 2 days, 7 days, 30 days, this month, last month or custom): how much Hansora made.
+
+- **Money in**: Dodo payments minus tax, refunds and Dodo's standard fee (4% + 1.5% outside the US + $0.40 per payment), plus YooMoney at the owner's RUB→USD rate and fee (Settings).
+- **Provider costs**: `lib/business/costs.mjs` prices every successful generation from the owner's margin sheet, with Seedance 2.5 at $1.19 / $2.67 / $6.43 and Wan 3.0 at $0.29 / $0.58 / $1.16 per 10 s (480p / 720p / 1080p). Recorded settings give the exact cost; runs that saved only the credits charged use that model's provider cost per credit. Failed runs cost nothing. Costs are split into free users, buyers and the owner's own runs.
+- **Expenses**: monthly / yearly / one-off bills spread over the days they cover.
+- **Net profit** = Money in − Provider costs − Expenses, per day and in total.
+- **Credits**: sold, used by buyers and free users, and bought credits buyers still hold now with what they paid for them (free credits are spent first, then the oldest pack), plus the provider cost to serve them at the period's real cost per buyer credit.
+- **People and buyers**: sign-ups, people who generated, new and repeat buyers, and for each new buyer the last thing they made before paying.
+
+Code: `lib/business/profit.mjs` (calculations), `public/business/profit.mjs` / `profit.css` (page). Tests: `test/business/profit.test.mjs`.
+
+The sections below describe the earlier audit-style version; its payment math (`paymentMoney`) and storage are reused.
+
 ## Access and deployment
 
 The frontend uses the existing Supabase project and Hansora login. Every report and expense/settings write goes through `business-dashboard`, which calls live `/auth/v1/user` and verifies the fixed owner UUID. Client user IDs and editable metadata never authorize requests. No service key is sent to the browser, no wildcard CORS is returned, and financial responses are `private, no-store`. Sign-out clears the rendered report.
