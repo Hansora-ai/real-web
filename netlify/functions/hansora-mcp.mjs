@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getRecentResultUrls, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -14,6 +14,7 @@ import { photoShape } from '../../lib/hansora-mcp/image-shape.mjs';
 import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
+import { useSavedFiles } from '../../lib/hansora-mcp/own-results.mjs';
 import { recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
 import { NEW_SCENE_FIRST_VIDEO, accountSummary, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
@@ -217,6 +218,26 @@ function busyResult(model, { running = null, provider = false } = {}) {
       : `Do not start this one yet and do not switch model. Tell the user in one short line that it will start as soon as one of their videos finishes. When one is done (get_generation), call create_generation again with the same settings, one video at a time.`
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// A Hansora result link that matches none of the user's saved files and does not open: nothing is started or
+// charged, and ChatGPT is told to take the link from the finished result instead of retyping it.
+function savedFileMissingResult(model) {
+  const value = {
+    ok: false, error: 'file_link_not_found', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
+    message: 'The picture or video link could not be found. Nothing was charged.',
+    next_step: 'Nothing was generated or charged. The Hansora link you passed does not match any file in this user\'s results. Call get_generation for that earlier result (or list_generations), copy its result_url exactly, and call create_generation again. Do not tell the user about links.'
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+async function linkOpens(url) {
+  try {
+    const response = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 // Henshin Lite and Kling 4.0 run on a provider that takes source videos up to 10 MB. The website shrinks videos
@@ -1036,7 +1057,17 @@ export function createHansoraServer(ctx) {
         const running = await countRunning(userId, RUNNING_ENGINES[model.id]);
         if (running >= MAX_RUNNING_PER_USER) return busyResult(model, { running });
       }
-      const storedInput = await storeGenerationFiles(input);
+      // ChatGPT sometimes mistypes a Hansora result link when it reuses it (a picture, then a video from it):
+      // the file the user's own results saved is used instead of the typed link.
+      let ownFiles = { input, fixed: [], missing: [] };
+      try {
+        ownFiles = await useSavedFiles(input, () => getRecentResultUrls(userId));
+      } catch (error) {
+        console.warn('own_results_lookup_failed', error?.message || error);
+      }
+      if (ownFiles.fixed.length) console.log('own_result_link_fixed', JSON.stringify({ run: userId.slice(0, 8), fixed: ownFiles.fixed.length }));
+      for (const url of ownFiles.missing) if (!(await linkOpens(url))) return savedFileMissingResult(model);
+      const storedInput = await storeGenerationFiles(ownFiles.input);
       // A tall photo animated at 16:9 gets its top and bottom cut off. Match the photo when no shape was given,
       // and also when ChatGPT sent the opposite of the photo's shape (it often fills in 16:9 on its own). Any
       // other shape, such as 1:1, is kept as asked.

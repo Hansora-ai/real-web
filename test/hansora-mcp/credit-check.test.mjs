@@ -1095,3 +1095,23 @@ test('a ChatGPT video over 10 MB for Henshin Lite or Kling 4.0 gets a clear way 
     assert.match(value.next_step, /start only after they choose/);
   }
 });
+
+test('a mistyped Hansora picture link is replaced by the saved picture before the video starts', async () => {
+  const base = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/';
+  const real = `${base}e2099428-36e4-4c4a-a42c-b1a8bb698d8a/2f89142f-99d4-8112-b105-b02b9cd39b23.png`;
+  const typed = `${base}e2099428-36e4-4c4a-a42c-b1a8bb698a/2f89142f-99d4-8112-b105-b02b9cd39b23.png`;
+  const saved = (href) => (href.includes('select=result_url,meta->result_urls')
+    ? new Response(JSON.stringify([{ result_url: real }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    : returningUser(href));
+  const fixed = await callTool('create_generation', { model_id: 'grok-video', prompt: 'animate', duration: 6, resolution: '720p', aspect_ratio: '9:16', image_urls: [typed] }, { credits: 300, rest: saved });
+  assert.equal(fixed.submitted.length, 1);
+  const sent = JSON.stringify(fixed.submitted[0]);
+  assert.ok(sent.includes(real), 'the saved picture is sent');
+  assert.ok(!sent.includes(typed), 'the mistyped link is never sent');
+
+  const unknown = `${base}aaaaaaaa-0000-4000-8000-000000000000/ffffffff-0000-4000-8000-000000000000.png`;
+  const missing = await callTool('create_generation', { model_id: 'grok-video', prompt: 'animate', duration: 6, resolution: '720p', aspect_ratio: '9:16', image_urls: [unknown] }, { credits: 300, rest: saved });
+  assert.equal(missing.submitted.length, 0, 'nothing starts or is charged');
+  assert.equal(missing.result.structuredContent.error, 'file_link_not_found');
+  assert.match(missing.result.structuredContent.next_step, /copy its result_url exactly/);
+});
