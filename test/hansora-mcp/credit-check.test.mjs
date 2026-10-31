@@ -329,7 +329,7 @@ test('a provider refusal reaches ChatGPT with its reason, both at submit and on 
   const row = { id: 'r', provider: 'Kling-5s', kind: 'video', prompt: 'x', result_url: null, created_at: new Date().toISOString(),
     meta: { run_id: 'u-mcp-7', status: 'failed', error_summary: 'provider_rejected', provider_message: 'Image not allowed' } };
   const status = await callTool('get_generation', { run_id: 'u-mcp-7' }, { credits: 30, generations: [row] });
-  assert.match(status.result.structuredContent.message, /^Kling 2\.5 Turbo can't create this content \(Image not allowed\)\. No credits were used\./);
+  assert.match(status.result.structuredContent.message, /^Kling 2\.5 Turbo's safety filter blocked this\. No credits were used\. You can try again, change the image or prompt, or try Veo 3\.1 Lite/);
 });
 
 test('a run stuck on processing is checked with KIE, so a failed Veo job stops spinning', async () => {
@@ -438,10 +438,19 @@ test('failures are explained by kind: temporary issues switch to another model, 
   const invalid = await ask(row({ source: 'reapi', engine: 'wan-3', error: 'Invalid Wan 3.0 video duration.' }, 'Wan 3.0'));
   assert.equal(invalid.failure_kind, 'input');
 
-  const policy = await ask(row({ model: 'veo3_lite', error: 'Your prompt was flagged by the content policy', charged: 'true', refunded: true, refunded_cost: 2 }));
+  // A strict filter (not sexual content, minors, real people or violence): the user picks one of three choices.
+  const policy = await ask(row({ model: 'veo3_lite', error: 'Request blocked: The input content was flagged by safety filters for involving restricted third-party content.', charged: 'true', refunded: true, refunded_cost: 2 }));
   assert.equal(policy.failure_kind, 'content');
-  assert.equal('alternative' in policy, false);
-  assert.match(policy.next_step, /do not switch to another model to get around the refusal/);
+  assert.equal(policy.failure_title, "Veo 3.1 Lite's safety filter blocked this");
+  assert.equal(policy.alternative.model_id, 'grok-video');
+  assert.match(policy.message, /^Veo 3\.1 Lite's safety filter blocked this\. Your 20 credits were refunded\. You can try again, change the image or prompt, or try Grok Video \(18 credits\), which is less strict\.$/);
+  assert.match(policy.next_step, /ask one question with these choices: try again with Veo 3\.1 Lite, change the image or prompt, or try Grok Video \(18 credits\), which is less strict\. If people in the video must speak a language other than English, add that Grok Video speaks it with some mistakes\. Start nothing until they choose\./);
+  for (const error of ['Request blocked: The input content was flagged for containing a prominent public figure.', 'Sexual content detected', 'Content involving a minor is not allowed']) {
+    const hard = await ask(row({ model: 'veo3_lite', error, charged: 'true', refunded: true, refunded_cost: 2 }));
+    assert.equal(hard.failure_kind, 'content', error);
+    assert.equal('alternative' in hard, false, error);
+    assert.match(hard.next_step, /do not switch to another model to get around the refusal/, error);
+  }
 
   const file = await ask(row({ engine: 'kling25', error_summary: 'provider_rejected', provider_message: 'image_input file type not supported', refund_skipped_reason: 'not_charged' }, 'Kling-5s'));
   assert.equal(file.failure_kind, 'input');
