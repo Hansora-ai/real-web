@@ -5,297 +5,133 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
     <meta name="referrer" content="no-referrer" />
-    <title>Hansora · Business</title>
-    <link rel="stylesheet" href="/business/dashboard.css" />
+    <title>Hansora · Profit</title>
+    <link rel="icon" href="/favicon.png" />
+    <link rel="stylesheet" href="/business/profit.css" />
   </head>
   <body>
-    <aside class="sidebar">
-      <a class="brand" href="#overview"
-        ><span class="brand-icon">H</span>hansora<span class="brand-dot"
-          >.</span
-        ></a
-      >
-      <div class="workspace">
-        <span class="workspace-avatar">H</span>
-        <div>
-          <strong>Business workspace</strong
-          ><small>Only you. The whole picture.</small>
-        </div>
-        <span data-icon="lock"></span>
+    <header class="top">
+      <div class="brand"><img src="/hansora-logo.png" alt="" /><span>Hansora <b>Profit</b></span></div>
+      <div class="top-actions">
+        <button class="ghost" id="refresh" type="button" title="Refresh">↻</button>
+        <button class="ghost" id="signout" type="button">Sign out</button>
       </div>
-      <div class="nav-label">YOUR BUSINESS</div>
-      <nav aria-label="Main navigation">
-        <a href="#overview" data-page="overview"
-          ><span data-icon="overview"></span>Overview</a
-        ><a href="#activity" data-page="activity"
-          ><span data-icon="models"></span>Activity</a
-        ><a href="#customers" data-page="customers"
-          ><span data-icon="customers"></span>Customers & credits</a
-        ><a href="#expenses" data-page="expenses"
-          ><span data-icon="wallet"></span>Expenses</a
-        >
-      </nav>
-      <button class="settings-button" id="settings-button">
-        <span data-icon="settings"></span>Rates & calculations
-      </button>
-      <div class="sidebar-note">
-        <span class="status-dot"></span>Clear numbers. Better decisions.
-        <p>Private Hansora workspace</p>
-      </div>
-      <div class="owner">
-        <span class="owner-avatar">HV</span>
-        <div>
-          <strong>Owner access</strong
-          ><small id="connection-state">Sign-in required</small>
-        </div>
-        <button
-          class="icon-button"
-          id="signout"
-          title="Sign out"
-          aria-label="Sign out"
-        >
-          <span data-icon="logout"></span>
-        </button>
-      </div>
-    </aside>
-    <main>
-      <header>
-        <div class="breadcrumb">
-          Workspace <span>/</span><b id="breadcrumb">Overview</b>
-        </div>
-        <div class="header-right">
-          <span class="private-pill"
-            ><span data-icon="lock"></span>Owner only</span
-          ><button
-            id="mobile-settings"
-            class="icon-button mobile-label"
-            aria-label="Rates and calculations"
-          >
-            <span data-icon="settings"></span></button
-          ><span class="header-avatar">H</span>
-        </div>
-      </header>
-      <div class="preview-banner" id="preview-notice" hidden></div>
-      <div class="content">
-        <div class="page-heading">
-          <div>
-            <div class="eyebrow">HANSORA BUSINESS</div>
-            <h1 id="page-title">A little clarity. Every day.</h1>
-            <p id="page-subtitle">Your sales, your spending, and what stays.</p>
-          </div>
-          <div class="toolbar">
-            <label class="date-control"
-              ><span data-icon="calendar"></span
-              ><select id="period" aria-label="Reporting period">
-                <option value="today">Today</option>
-                <option value="yesterday">Yesterday</option>
-                <option value="week" selected>Last 7 days</option>
-                <option value="month">This month</option>
-                <option value="half">Last 6 months</option>
-                <option value="year">This year</option>
-                <option value="custom">Custom dates</option>
-              </select></label
-            ><button id="refresh" class="button subtle" title="Refresh data">
-              <span data-icon="refresh"></span>Refresh</button
-            ><button id="export" class="button subtle">
-              <span data-icon="download"></span>Export
-            </button>
-          </div>
-        </div>
-        <form id="custom-dates" class="custom-dates" hidden>
-          <label>From<input id="range-start" type="date" required /></label
-          ><label>Through<input id="range-end" type="date" required /></label
-          ><button class="button primary">Apply dates</button>
-        </form>
-        <div class="period-note">
-          <span id="period-label">Loading your workspace…</span
-          ><span id="updated-label">Dodo time (UTC) · USD</span>
-        </div>
-        <div id="message" role="status" hidden></div>
-        <section id="page" aria-live="polite">
-          <div class="skeleton-grid">
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
-        </section>
-        <footer>
-          Private workspace<span>·</span>Actual records and estimates are
-          labelled separately.
-        </footer>
-      </div>
+    </header>
+
+    <nav class="ranges" aria-label="Period">
+      <button data-range="today">Today</button>
+      <button data-range="yesterday">Yesterday</button>
+      <button data-range="2d">2 days</button>
+      <button data-range="7d">7 days</button>
+      <button data-range="30d">30 days</button>
+      <button data-range="month">This month</button>
+      <button data-range="lastmonth">Last month</button>
+      <span class="custom"><input type="date" id="from" aria-label="From" /> – <input type="date" id="to" aria-label="To" /><button id="apply" type="button">Show</button></span>
+    </nav>
+    <p class="period" id="period"></p>
+    <p class="status" id="status" role="status"></p>
+
+    <main id="page" hidden>
+      <section class="hero">
+        <article class="tile profit" id="tile-profit"></article>
+        <article class="tile" id="tile-in"></article>
+        <article class="tile" id="tile-cost"></article>
+        <article class="tile" id="tile-exp"></article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Every day</h2><div class="legend"><i class="l-in"></i>Money in <i class="l-cost"></i>Costs <i class="l-profit"></i>Profit</div></div>
+        <div id="chart" class="chart"></div>
+        <div class="table-wrap"><table id="days"></table></div>
+      </section>
+
+      <section class="grid2">
+        <article class="panel">
+          <h2>Credits</h2>
+          <p class="hint">Bought credits buyers haven't used yet are money you received for work not done yet.</p>
+          <div class="kv" id="credits"></div>
+        </article>
+        <article class="panel">
+          <h2>People</h2>
+          <div class="kv" id="people"></div>
+        </article>
+      </section>
+
+      <section class="grid2">
+        <article class="panel">
+          <h2>What they did right before buying</h2>
+          <p class="hint">New buyers in this period, by the last thing they made before paying.</p>
+          <div id="lastmodels" class="bars"></div>
+        </article>
+        <article class="panel">
+          <h2>Where the cost goes</h2>
+          <div class="table-wrap"><table id="models"></table></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>New buyers</h2>
+        <div class="table-wrap"><table id="journeys"></table></div>
+      </section>
+
+      <section class="panel">
+        <h2>Sales</h2>
+        <div class="table-wrap"><table id="sales"></table></div>
+      </section>
+
+      <section class="panel">
+        <h2>Unused credits by buyer <small>(right now)</small></h2>
+        <div class="table-wrap"><table id="buyers"></table></div>
+      </section>
+
+      <section class="grid2">
+        <article class="panel">
+          <h2>Expenses</h2>
+          <p class="hint">Monthly bills are spread over the days of the month, so each day carries its share.</p>
+          <div class="table-wrap"><table id="expenses"></table></div>
+          <form id="expense-form" class="form">
+            <input id="e-name" placeholder="Name, e.g. Supabase" required maxlength="140" />
+            <input id="e-amount" placeholder="Amount" inputmode="decimal" required />
+            <select id="e-currency"><option>USD</option><option>RUB</option><option>EUR</option><option>AMD</option></select>
+            <select id="e-recurrence"><option value="monthly">Every month</option><option value="none">One time</option><option value="yearly">Every year</option></select>
+            <label>From <input type="date" id="e-start" required /></label>
+            <button type="submit">Add expense</button>
+            <p class="form-msg" id="e-msg"></p>
+          </form>
+        </article>
+        <article class="panel">
+          <h2>Settings</h2>
+          <form id="settings-form" class="form">
+            <label>1 RUB = <input id="s-rub" inputmode="decimal" placeholder="0.0125" /> USD</label>
+            <label>YooMoney fee <input id="s-ymfee" inputmode="decimal" placeholder="0" /> %</label>
+            <button type="submit">Save</button>
+            <p class="form-msg" id="s-msg"></p>
+          </form>
+          <h3>How it's counted</h3>
+          <ul class="notes">
+            <li><b>Money in</b> = what Dodo and YooMoney received, minus tax, refunds and fees. Dodo's fee is its standard 4% + 1.5% (outside US) + $0.40 per payment.</li>
+            <li><b>Provider costs</b> = the price of every successful generation from your price sheet (failed ones cost nothing). Your own and test generations are included.</li>
+            <li><b>Profit</b> = Money in − Provider costs − Expenses.</li>
+            <li>Days are UTC days, the same as Dodo.</li>
+            <li id="quality-note"></li>
+          </ul>
+        </article>
+      </section>
     </main>
-    <dialog id="login-dialog">
+
+    <dialog id="login">
       <form id="login-form">
-        <span class="eyebrow">YOUR PRIVATE WORKSPACE</span>
-        <h2>Welcome back.</h2>
-        <p>Sign in with your Hansora owner account.</p>
-        <label
-          >Email<input
-            id="login-email"
-            type="email"
-            autocomplete="username"
-            required /></label
-        ><label
-          >Password<input
-            id="login-password"
-            type="password"
-            autocomplete="current-password"
-            required
-        /></label>
-        <p id="login-error" role="alert"></p>
-        <button class="button primary" id="login-submit">Sign in</button
-        ><button type="button" class="button subtle" id="google-login">
-          Continue with Google
-        </button>
+        <h2>Sign in</h2>
+        <p class="hint">Owner account only.</p>
+        <input id="login-email" type="email" placeholder="Email" autocomplete="username" required />
+        <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" required />
+        <button type="submit">Sign in</button>
+        <button type="button" class="ghost" id="google">Continue with Google</button>
+        <p class="form-msg" id="login-msg"></p>
       </form>
     </dialog>
-    <dialog id="expense-dialog">
-      <form id="expense-form">
-        <div class="dialog-title">
-          <div>
-            <span class="eyebrow">KEEP EVERY COST IN VIEW</span>
-            <h2 id="expense-title">Add an expense</h2>
-          </div>
-          <button
-            type="button"
-            class="icon-button"
-            data-close
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-        <input type="hidden" name="id" /><label
-          >Name<input
-            name="name"
-            maxlength="140"
-            placeholder="e.g. Blogger Anna, AI subscription"
-            required
-        /></label>
-        <div class="form-row">
-          <label
-            >Amount<input
-              name="amount"
-              inputmode="decimal"
-              placeholder="200.00"
-              required /></label
-          ><label
-            >Currency<input
-              name="currency"
-              value="USD"
-              maxlength="3"
-              pattern="[A-Za-z]{3}"
-              required
-          /></label>
-        </div>
-        <div class="form-row">
-          <label
-            >Category<select name="category">
-              <option value="advertising">Advertising / blogger</option>
-              <option value="software">Software / AI tool</option>
-              <option value="hosting">Hosting</option>
-              <option value="contractor">Contractor</option>
-              <option value="other">Other</option>
-            </select></label
-          ><label>Paid on<input name="paid_on" type="date" required /></label>
-        </div>
-        <label
-          >Repeats<select name="recurrence">
-            <option value="none">One-time expense</option>
-            <option value="monthly">Every month</option>
-            <option value="yearly">Every year</option>
-          </select></label
-        >
-        <div class="form-row">
-          <label
-            >Period starts<input name="starts_on" type="date" required /></label
-          ><label
-            >Period ends<input name="ends_on" type="date" required
-          /></label>
-        </div>
-        <label id="repeat-until-label" hidden
-          >Repeat until <small>(optional)</small
-          ><input name="repeat_until" type="date" /></label
-        ><label
-          >Note <small>(optional)</small
-          ><textarea
-            name="note"
-            maxlength="1000"
-            rows="2"
-            placeholder="What was this expense for?"
-          ></textarea>
-        </label>
-        <div class="info-note form-note" id="allocation-hint">
-          The expense is spread across covered days. Edits revise the entire
-          schedule; for a new recurring price, end this schedule and add a new
-          one.
-        </div>
-        <p class="form-error" id="expense-error" role="alert"></p>
-        <button type="submit" class="button primary" id="save-expense">
-          Save expense
-        </button>
-      </form>
-    </dialog>
-    <dialog id="settings-dialog">
-      <form id="settings-form">
-        <div class="dialog-title">
-          <div>
-            <span class="eyebrow">THE NUMBERS BEHIND THE NUMBERS</span>
-            <h2>Rates & calculations</h2>
-          </div>
-          <button
-            class="icon-button"
-            type="button"
-            data-close
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-        <p>
-          Currency conversions and provider rates are explicit estimates. They
-          never change customer prices.
-        </p>
-        <h3>Currency → USD</h3>
-        <p>
-          Enter USD for one unit of currency. Blank entries remain unconverted.
-          These planning rates apply to the selected report; historical FX is
-          not inferred.
-        </p>
-        <div id="fx-fields"></div>
-        <button type="button" id="add-fx" class="button subtle">
-          + Add currency
-        </button>
-        <h3>Provider rate overrides</h3>
-        <p>
-          Exact model ID, optional resolution and an effective date. Newest
-          matching rule wins. Unknown failures are not assumed free.
-        </p>
-        <div id="rate-fields"></div>
-        <button type="button" id="add-rate" class="button subtle">
-          + Add provider rate
-        </button>
-        <p class="form-error" id="settings-error" role="alert"></p>
-        <button class="button primary" id="save-settings">
-          Save calculations
-        </button>
-      </form>
-    </dialog>
-    <dialog id="detail-dialog">
-      <div class="dialog-title">
-        <h2 id="detail-title">Details</h2>
-        <button type="button" class="icon-button" data-close aria-label="Close">
-          ×
-        </button>
-      </div>
-      <div id="detail-content"></div>
-    </dialog>
-    <script
-      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"
-      defer
-    ></script>
-    <script type="module" src="/business/dashboard.mjs"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js" defer></script>
+    <script type="module" src="/business/profit.mjs"></script>
   </body>
 </html>

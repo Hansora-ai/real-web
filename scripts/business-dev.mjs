@@ -3,7 +3,7 @@
 import http from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, extname } from "node:path";
-import { buildDashboard } from "../lib/business/analytics.mjs";
+import { buildProfit } from "../lib/business/profit.mjs";
 import { validateExpense, dayNumber } from "../public/business/finance.mjs";
 const root = resolve("public"),
   store = "/tmp/hansora-business-preview/snapshot.json";
@@ -89,7 +89,7 @@ const server = http.createServer(async (req, res) => {
               ),
             };
           });
-        return send(res, 200, buildDashboard(selected, { start, end }));
+        return send(res, 200, buildProfit(selected, { start, end }));
       }
       if (req.method !== "POST")
         return send(res, 405, { error: "Method not allowed." });

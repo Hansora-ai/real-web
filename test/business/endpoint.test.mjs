@@ -59,7 +59,7 @@ test("valid owner receives private aggregates through the service-only RPC", asy
   assert.equal(result.statusCode, 200);
   assert.equal(calls.length, 2);
   assert.match(calls[1].url, /rpc\/business_dashboard_snapshot$/);
-  assert.equal(JSON.parse(result.body).summary.successful, 0);
+  assert.equal(JSON.parse(result.body).totals.profit, 0);
   assert.ok(!result.body.includes("server-secret"));
 });
 test("invalid ranges fail before any financial query", async () => {
