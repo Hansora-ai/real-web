@@ -1710,3 +1710,7 @@ button:disabled {
   overflow-wrap: anywhere;
   line-height: 1.5;
 }
+
+.payment-reconciliation {
+  margin-bottom: 24px;
+}
