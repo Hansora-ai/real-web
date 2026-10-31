@@ -278,3 +278,42 @@ test("new processor report takes precedence over stale webhook settlement values
   assert.equal(r.gross_micro, 99990000);
   assert.equal(r.revenue_micro, 99990000);
 });
+
+test("UTC payment days match Dodo and exclude late-evening purchases from the next UTC day", () => {
+  const payments = [
+    pay({
+      id: 1,
+      transaction_id: "late",
+      uid: "late",
+      paid_at: "2026-10-30T21:30:00Z",
+    }),
+    pay({
+      id: 2,
+      transaction_id: "midnight",
+      uid: "midnight",
+      paid_at: "2026-10-31T00:00:00Z",
+    }),
+    pay({
+      id: 3,
+      transaction_id: "end",
+      uid: "end",
+      paid_at: "2026-10-31T23:59:59Z",
+    }),
+    pay({
+      id: 4,
+      transaction_id: "next",
+      uid: "next",
+      paid_at: "2026-11-01T00:00:00Z",
+    }),
+  ];
+  const d = buildDashboard(snap({ payments, generations: [] }), {
+    start: "2026-10-31",
+    end: "2026-10-31",
+  });
+  assert.equal(d.summary.payments, 2);
+  assert.deepEqual(
+    d.payments.map((p) => p.transaction_id),
+    ["midnight", "end"],
+  );
+  assert.equal(d.summary.repeat_buyers, 0);
+});

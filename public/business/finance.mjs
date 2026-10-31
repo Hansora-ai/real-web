@@ -13,14 +13,14 @@ export function dayNumber(value) {
 }
 export const dateString = (day) =>
   new Date(day * DAY).toISOString().slice(0, 10);
-export const todayYerevan = (now = new Date()) =>
+export const todayUTC = (now = new Date()) =>
   new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Yerevan",
+    timeZone: "UTC",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(now);
-export function dateRange(preset, today = todayYerevan()) {
+export function dateRange(preset, today = todayUTC()) {
   const end = dayNumber(today),
     d = new Date(`${today}T00:00:00Z`);
   const monthStart = `${today.slice(0, 7)}-01`;

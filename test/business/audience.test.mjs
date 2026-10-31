@@ -103,7 +103,7 @@ test("ratings use latest saved vote update, exclude internal accounts, and inclu
   assert.equal(f.comments, 1);
   assert.equal(f.ratings[0].comment, "<script>test</script>");
 });
-test("Armenia midnight determines cohort inclusion; missing data is distinguishable from zero", () => {
+test("UTC midnight determines cohort inclusion; missing data is distinguishable from zero", () => {
   const b = buildAudience(
     {
       purchase_journeys: [
@@ -115,6 +115,7 @@ test("Armenia midnight determines cohort inclusion; missing data is distinguisha
     range,
   );
   assert.equal(b.before_purchase.buyers, 1);
+  assert.equal(b.before_purchase.journeys[0].user_id, "no");
   assert.equal(b.feedback.like_rate, null);
   assert.equal(b.feedback.available, true);
   assert.equal(buildAudience({}, range).feedback.available, false);
