@@ -343,6 +343,9 @@ export default defineAgent({
     ctx.addShutdownCallback(finalize);
     session.once(voice.AgentSessionEventTypes.Close, () => { finalize().catch(error => console.error('phone finalize failed', { message: error?.message })).finally(() => ctx.shutdown?.('call_ended')); });
 
+    // The greeting comes first: until it has played, line noise or an early "hello" must not
+    // reach the model, which would answer that instead of greeting (and could skip the greeting).
+    if (!outOfCredits) session.input?.setAudioEnabled?.(false);
     await session.start({
       room: ctx.room,
       agent: voice.Agent.create({ instructions, tools: liveTools }),
@@ -366,7 +369,10 @@ export default defineAgent({
       later(() => hangUp().catch(error => console.error('phone hangup failed', { message: error?.message })), maxSeconds * 1000);
     }
     const greeting = text(settings.greeting, 300) || firstMessageFor({ business, agent });
-    session.generateReply({ instructions: `Say this opening sentence exactly, then wait for the caller: ${greeting}` });
+    const opening = session.generateReply({ instructions: `Say this opening sentence exactly, then wait for the caller: ${greeting}` });
+    // Listen once the greeting has played (or after 15 s at most, so a stalled greeting never leaves the call deaf).
+    const listen = () => session.input?.setAudioEnabled?.(true);
+    Promise.race([opening?.waitForPlayout?.() ?? Promise.resolve(), new Promise(resolve => later(resolve, 15000))]).then(listen, listen);
   }
 });
 
