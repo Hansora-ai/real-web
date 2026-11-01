@@ -1115,3 +1115,10 @@ test('a mistyped Hansora picture link is replaced by the saved picture before th
   assert.equal(missing.result.structuredContent.error, 'file_link_not_found');
   assert.match(missing.result.structuredContent.next_step, /copy its result_url exactly/);
 });
+
+test('model names ChatGPT writes its own way still find the model', async () => {
+  const { getModel } = await import('../../lib/hansora-mcp/registry.mjs');
+  for (const [name, id] of [['kling-4', 'kling40'], ['seedance-2-5', 'seedance25'], ['veo3.1lite', 'veo31-lite'], ['elevenlabs_tts_multilingual_v2', 'voice'], ['Nano Banana 2.1', 'nano-banana-2-1'], ['wan 3', 'wan-3']])
+    assert.equal(getModel(name)?.id, id, name);
+  assert.equal(getModel('made-up-model'), null);
+});
