@@ -95,6 +95,8 @@ test("UTC days like Dodo, the owner's own purchases and the measured cost per cr
   const r = buildProfit(snapshot, { start: "2026-11-02", end: "2026-11-02" });
   const t = r.totals;
   assert.equal(t.payments, 3, "2 Nov (UTC): the early payment, the owner's own and the completed one, not the 23:34 one of 1 Nov");
+  assert.equal(t.payments_dodo, 3); assert.equal(t.payments_yoomoney, 0);
+  close(t.net_dodo, t.net, "all of it came through Dodo");
   close(t.gross, 19.99 + 9.99 + 10.5, "gross as in Dodo");
   // 20 Wan runs × 100 credits = 2,000 credits for $11.60 → $0.0058 a credit.
   close(t.cost_per_credit, 0.0058, "measured cost per credit");
