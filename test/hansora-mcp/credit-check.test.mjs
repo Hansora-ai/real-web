@@ -375,7 +375,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /4\. Complex: first call get_account to see the balance and last_video \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with these options/);
   assert.match(guide, /If the balance covers none of the options, do not ask and do not show their prices/);
   assert.match(guide, /   - Same quality as your last video: .*it always comes first and is the default\.\n   - Our best, cinema quality: Seedance 2\.5, 720p\n   - High quality, lower price: Kling 4\.0, 720p\n   - Good quality, budget: Wan 3\.0, 720p\n/);
-  assert.match(guide, /list it only once, first, as "Same quality as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, add \(recommended\) to Seedance 2\.5\./);
+  assert.match(guide, /list it only once, first, as "Same quality as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, list Kling 4\.0 first as "Recommended: great quality, smooth motion", then Seedance 2\.5, then Wan 3\.0\./);
   assert.match(guide, /1080p \(sharpest, only when the user asks for 1080p or the best possible quality; never pick it on your own\)/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
@@ -567,7 +567,7 @@ test('Henshin never asks about price: it starts and reports what the uploaded vi
 
 test('a sexual request is refused once, with no model switching, and ChatGPT offers a clean version', async () => {
   const { result, submitted } = await callTool('create_generation', { model_id: 'grok-video', prompt: 'she will suck me off', duration: 6 }, {
-    credits: 30, runner: () => ({ status: 422, body: { ok: false, code: 'CONTENT_POLICY_BLOCKED', category: 'nsfw_sexual_content', message: 'blocked' } })
+    credits: 30, rest: returningUser, runner: () => ({ status: 422, body: { ok: false, code: 'CONTENT_POLICY_BLOCKED', category: 'nsfw_sexual_content', message: 'blocked' } })
   });
   assert.equal(submitted.length, 1);
   const value = result.structuredContent;
@@ -643,7 +643,7 @@ test('when the database stays down, the user gets a calm message instead of a ra
 
 test('a slow submission answers in time with the run id instead of letting ChatGPT show server error', async () => {
   const { result } = await callTool('create_generation', { model_id: 'grok-video', prompt: 'waves at sunset', duration: 6 }, {
-    credits: 30, runner: () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); }
+    credits: 30, rest: returningUser, runner: () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); }
   });
   assert.equal(result.isError, undefined);
   assert.equal(result.structuredContent.status, 'queued');
@@ -1233,7 +1233,7 @@ test('a video from a picture Hansora made that the video model refuses is tried 
 test('a video is not started while the user\'s ChatGPT picture is still being made, so it is made from the picture', async () => {
   const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
   const pictureRun = 'user-1-mcp-1793328296061-9f44ffd5';
-  const pictures = (rows) => (href) => (href.includes('/rest/v1/user_generations') && href.includes('kind=eq.image') ? reply(rows) : undefined);
+  const pictures = (rows) => (href) => (href.includes('/rest/v1/user_generations') && href.includes('kind=eq.image') ? reply(rows) : returningUser(href));
 
   const waiting = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The four friends press the buttons', duration: 6, resolution: '720p' }, { credits: 100, rest: pictures([{ run_id: pictureRun, status: 'processing' }]) });
   assert.equal(waiting.submitted.length, 0);
@@ -1247,4 +1247,31 @@ test('a video is not started while the user\'s ChatGPT picture is still being ma
   assert.equal(failed.submitted.length, 1);
   const picture = await callTool('create_generation', { model_id: 'nano-banana-2-1', prompt: 'A second picture', resolution: '1K' }, { credits: 100, rest: pictures([{ run_id: pictureRun, status: 'processing' }]) });
   assert.equal(picture.submitted.length, 1);
+});
+
+test('a user who bought credits and has no video yet is asked once, in plain words, instead of getting a cheap model', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const noVideo = (href) => (href.includes('/rest/v1/user_generations') ? reply([]) : undefined);
+  for (const model_id of ['grok-video', 'veo31-lite']) {
+    const asked = await callTool('create_generation', { model_id, prompt: 'The van drives along the square', duration: model_id === 'veo31-lite' ? 8 : 6, resolution: '720p' }, { credits: 1050, rest: noVideo });
+    assert.equal(asked.submitted.length, 0, model_id);
+    const value = asked.result.structuredContent;
+    assert.equal(value.error, 'first_paid_video_choice', model_id);
+    assert.deepEqual(value.options.map((option) => option.model_id), ['kling40', 'seedance25', 'wan-3']);
+    assert.match(value.next_step, /^Nothing was generated or charged\. This user bought credits and this is their first video/);
+    assert.match(value.next_step, /Recommended: great quality, smooth motion \(Kling 4\.0, \d+ credits\); Best, cinema quality \(Seedance 2\.5, \d+ credits\); Budget: good quality, cheapest \(Wan 3\.0, \d+ credits\)\./);
+  }
+  // Asked once: sent again (the user chose it), it starts.
+  const again = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The van drives along the square', duration: 6, resolution: '720p' }, {
+    credits: 1050, rest: (href) => (href.includes('/rest/v1/chatgpt_events') && href.includes('first_paid_video_choice') ? reply([{ id: 'asked' }]) : noVideo(href))
+  });
+  assert.equal(again.submitted.length, 1);
+  assert.equal(again.submitted[0].model_id, 'grok-video');
+  // The strong models start right away; a user with a video, or on free credits, is not asked.
+  const kling = await callTool('create_generation', { model_id: 'kling40', prompt: 'The van drives along the square', duration: 10, resolution: '720p' }, { credits: 1050, rest: noVideo });
+  assert.equal(kling.submitted.length, 1);
+  const returning = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The van drives along the square', duration: 6, resolution: '720p' }, { credits: 1050, rest: returningUser });
+  assert.equal(returning.submitted.length, 1);
+  const free = await callTool('create_generation', { model_id: 'veo31-lite', prompt: 'The van drives along the square', duration: 8, resolution: '720p' }, { credits: 3, rest: noVideo });
+  assert.equal(free.result.structuredContent.error, 'first_video_on_grok');
 });

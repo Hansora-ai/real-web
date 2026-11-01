@@ -478,6 +478,51 @@ async function veoRestSwitch(input) {
 // than English: ChatGPT then sends Veo again, and a recent steer (this one, or the free-credit switch) lets it
 // through, so it never loops.
 const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'switched_to_affordable'];
+
+// A user who bought credits (more than the 30 free credits) and has no video yet is not given a cheap model
+// on their first paid video: ChatGPT asks one plain question (recommended Kling 4.0, best Seedance 2.5, budget
+// Wan 3.0) instead. Asked once: if ChatGPT sends the same request again (the user chose it, or people must
+// speak a language other than English), it goes through.
+const FREE_CREDITS_INTERNAL = 3;
+const CHEAP_FIRST_MODELS = new Set(['grok-video', ...VEO_MODELS, 'gemini-omni-video', 'gemini-omni-flash-1-1']);
+const PAID_FIRST_CHOICES = [
+  { model_id: 'kling40', label: 'Recommended: great quality, smooth motion' },
+  { model_id: 'seedance25', label: 'Best, cinema quality' },
+  { model_id: 'wan-3', label: 'Budget: good quality, cheapest' }
+];
+async function firstPaidVideoChoice(userId, model, input, balanceInternal) {
+  if (!model || !CHEAP_FIRST_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
+  if (!(Number(balanceInternal) > FREE_CREDITS_INTERNAL)) return null;
+  if (input.source_video_url || input.video_urls?.length) return null;
+  if (await hadRecentOutcome(userId, ['first_paid_video_choice'], new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
+  let lastVideo;
+  try { lastVideo = await getLastVideo(userId); } catch { return null; }
+  if (lastVideo) return null;
+  const seconds = Number(input.duration) || 10;
+  const options = PAID_FIRST_CHOICES.map((choice) => {
+    const option = getModel(choice.model_id);
+    if (!option) return null;
+    let price = null;
+    for (const duration of [seconds, 10]) {
+      try { price = quote(option.id, { duration, resolution: '720p' }); break; } catch { price = null; }
+    }
+    if (!price || price.internalCredits > Number(balanceInternal)) return null;
+    return { model_id: option.id, model_name: option.name, label: choice.label, settings: { duration: price.settings?.duration ?? seconds, resolution: '720p' }, credits: price.displayedCredits };
+  }).filter(Boolean);
+  if (!options.length) return null;
+  const value = {
+    ok: false, error: 'first_paid_video_choice', generated: false, credits_used: 0,
+    model_id: model.id, model_name: model.name, options,
+    next_step: [
+      'Nothing was generated or charged. This user bought credits and this is their first video, so ask before making it: one short question, in plain words and in their language, with these choices and prices:',
+      options.map((option) => `${option.label} (${option.model_name}, ${option.credits} credits)`).join('; ') + '.',
+      'Add that they can just say "go" for the recommended one. Do not explain models or resolutions.',
+      `When they answer, call create_generation with the chosen model at 720p, keeping the same prompt, photos, aspect_ratio and length; "ok", "go" or "you choose" means the first choice. These models take the user's photo as the reference, so no picture step is needed.`,
+      `Only if the user named ${model.name} themselves, or people in the video must speak a language other than English (Chinese included), call create_generation again exactly as before instead of asking.`
+    ].join(' ')
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
 async function firstVideoOnGrok(userId, input, balanceInternal) {
   const model = getModel(input.model_id);
   if (!model || !VEO_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
@@ -487,6 +532,8 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
   if (String(input.prompt || '').length > 5000) return null;
   const grok = quote('grok-video', { duration: 6, resolution: '720p' });
   if (Number(balanceInternal) < grok.internalCredits) return null;
+  // Grok first is for free credits. A user who bought credits is asked instead (firstPaidVideoChoice).
+  if (Number(balanceInternal) > FREE_CREDITS_INTERNAL) return null;
   if (!(await isFirstGeneration(userId))) return null;
   if (await hadRecentOutcome(userId, FIRST_VIDEO_STEERED, new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
   // Right after this user's Grok video failed, Grok is not the better first video: let Veo through.
@@ -1123,6 +1170,8 @@ export function createHansoraServer(ctx) {
           return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
         }
         if (account) {
+          const choice = await firstPaidVideoChoice(userId, model, normalizedInput, account.internal_credits);
+          if (choice) return choice;
           const steer = await firstVideoOnGrok(userId, normalizedInput, account.internal_credits);
           if (steer) return steer;
         }
