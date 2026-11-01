@@ -128,3 +128,31 @@ test("a buyer who spends on a thin-margin model lowers the profit of the day the
   close(b.earned, 2514 * (paid / 5100) - (5.8 + 12.86), "profit from the credits they used");
   close(b.expected, 510 * (paid / 5100 - perCredit), "expected profit on the credits left");
 });
+
+test("euro and pound Dodo payments count at Dodo's dollar value (pack price + tax), and an empty tax is no tax", () => {
+  // Real October payments: €21.62 incl. €3.75 tax for the $19.99 pack is $24.19 in Dodo; £8.95 incl. £1.49 tax
+  // for $9.99 is $11.99; €88.98 with an empty tax for $99.99 is $99.99; a $9.99 with an empty tax is $9.99.
+  const pay = (credits, amount, tax, currency, country = "LT") => ({ provider: "dodopayments", status: "succeeded", credits, currency, amount_cents: amount,
+    financial: { settlement_amount: amount, settlement_tax: tax, settlement_currency: currency, card_issuing_country: country } });
+  close(paymentUsd(pay(200, 2162, 375, "EUR")).gross, 24.19, "EUR 19.99 pack");
+  close(paymentUsd(pay(200, 2162, 375, "EUR")).tax, 4.20, "its tax in dollars");
+  close(paymentUsd(pay(90, 895, 149, "GBP", "GB")).gross, 11.99, "GBP 9.99 pack");
+  close(paymentUsd(pay(1100, 8898, null, "EUR")).gross, 99.99, "EUR 99.99 pack, empty tax");
+  const usd = paymentUsd(pay(90, 999, null, "USD", "US"));
+  assert.equal(usd.known, true, "a dollar payment with an empty tax still counts");
+  close(usd.gross, 9.99, "USD 9.99");
+});
+
+test("YooMoney: its own paid and received rubles at the day's rate, the real fee, even for rows saved as USD 9.90", () => {
+  // Real October row: saved as "USD 990", but YooMoney's record says the buyer paid 750 ₽ and Hansora got 727.50 ₽.
+  const row = { provider: "yoomoney", status: "succeeded", credits: 100, currency: "USD", amount_cents: 990, paid_at: "2026-10-23T22:46:11Z",
+    yoomoney: { paid: "750.00", received: "727.50" } };
+  const u = paymentUsd(row, { rubRates: { "2026-10-23": 0.0123 } });
+  assert.equal(u.currency, "RUB");
+  close(u.gross, 750 * 0.0123, "what the buyer paid");
+  close(u.fees, 22.5 * 0.0123, "YooMoney kept 3%");
+  close(u.net, 727.5 * 0.0123, "what Hansora received");
+  // No rate for that day: another day's rate of the period is used rather than leaving the payment out.
+  close(paymentUsd(row, { rubRates: { "2026-10-24": 0.0125 } }).net, 727.5 * 0.0125, "the period's rate");
+  assert.equal(paymentUsd(row, {}).known, false, "no rate at all: reported, not guessed");
+});

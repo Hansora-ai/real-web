@@ -104,14 +104,14 @@
         <article class="panel">
           <h2>Settings</h2>
           <form id="settings-form" class="form">
-            <label>1 RUB = <input id="s-rub" inputmode="decimal" placeholder="0.0125" /> USD</label>
-            <label>YooMoney fee <input id="s-ymfee" inputmode="decimal" placeholder="0" /> %</label>
+            <label>1 RUB = <input id="s-rub" inputmode="decimal" placeholder="automatic" /> USD</label>
+            <p class="form-msg">YooMoney: rubles are converted automatically at each day's official rate, and its real fee (what the buyer paid − what you received) is used. Type a rate only to override it.</p>
             <button type="submit">Save</button>
             <p class="form-msg" id="s-msg"></p>
           </form>
           <h3>How it's counted</h3>
           <ul class="notes">
-            <li><b>Money in</b> = what Dodo and YooMoney received, minus tax, refunds and fees. Dodo's fee is its standard 4% + 1.5% (outside US) + $0.40 per payment.</li>
+            <li><b>Money in</b> = what Dodo and YooMoney received, minus tax, refunds and fees. Dodo's fee is its standard 4% + 1.5% (outside US) + $0.40 per payment; YooMoney's is the real fee it kept (about 3%), converted at that day's ruble rate.</li>
             <li><b>Credits sold cost</b> = credits sold that day × what one credit costs on average (measured from buyers' generations of the last 30 days), counted on the day of the sale.</li>
             <li><b>Real-use correction</b> = on the days buyers generate: the average cost of the credits they used minus what those generations really cost. Negative when they use thin-margin models (e.g. Seedance 2.5 1080p), positive for cheap ones (Wan, Grok). When a buyer has used everything, their profit is exactly what they paid minus what they really cost.</li>
             <li><b>Free users</b> and <b>your own use</b> = the real provider cost of their generations that day.</li>
