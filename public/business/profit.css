@@ -103,3 +103,7 @@ dialog h2 { margin: 0; }
   .custom input[type="date"] { flex: 1 1 0; width: auto; }
   td, th { padding: 8px 8px; }
 }
+
+.warning { background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.4); color: #fecaca; border-radius: 12px; padding: 10px 14px; margin: 0 0 12px; font-size: 14px; }
+.muted { color: var(--muted); }
+.tile .line small { color: var(--muted); }

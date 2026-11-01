@@ -70,7 +70,12 @@ function tile(el, label, value, cls, lines) {
 function render(d) {
   const t = d.totals;
   const days = d.days.length;
-  $("#period").textContent = days === 1 ? shortDay(d.range.start) : `${shortDay(d.range.start)} – ${shortDay(d.range.end)} · ${days} days`;
+  $("#period").textContent = `${days === 1 ? shortDay(d.range.start) : `${shortDay(d.range.start)} – ${shortDay(d.range.end)} · ${days} days`} · Armenia time`;
+  const warn = $("#warning");
+  warn.hidden = !d.quality.unconverted_payments.length;
+  warn.innerHTML = d.quality.needs_rub_rate
+    ? `${d.quality.unconverted_payments.length} YooMoney payment(s) are not counted yet. Set the RUB → USD rate in Settings at the bottom.`
+    : `${d.quality.unconverted_payments.length} payment(s) could not be converted to USD and are not counted.`;
   tile($("#tile-profit"), "Net profit", usd(t.profit), tone(t.profit), [
     t.margin != null ? `${t.margin}% of money in` : "No sales in this period",
     days > 1 ? `${usd(t.profit / days)} a day on average` : "",
@@ -79,16 +84,17 @@ function render(d) {
     `${int(t.payments)} payment${t.payments === 1 ? "" : "s"} · ${usd(t.gross)} paid`,
     `− tax ${usd(t.tax)} − fees ${usd(t.fees)}${t.refunds ? ` − refunds ${usd(t.refunds)}` : ""}`,
   ]);
-  tile($("#tile-cost"), "Provider costs", usd(t.cost), "", [
-    `Free users ${usd(t.cost_free)} · Buyers ${usd(t.cost_buyers)}`,
-    `Your own use ${usd(t.cost_internal)}`,
+  tile($("#tile-cost"), "Costs", usd(t.cost_of_sold - t.correction + t.cost_free + t.cost_internal), "", [
+    `Credits sold ${usd(t.cost_of_sold)} <small>(${int(t.credits_sold)} × $${t.cost_per_credit.toFixed(4)})</small>`,
+    `Free users ${usd(t.cost_free)} · Your own use ${usd(t.cost_internal)}`,
+    `Real-use correction <b class="${tone(t.correction)}">${usd(t.correction, true)}</b>`,
   ]);
   tile($("#tile-exp"), "Expenses", usd(t.expenses), "", [`${d.expenses.length} active · spread per day`]);
 
   chart(d.days);
-  table($("#days"), ["Day", "Money in", "Provider costs", "of it free users", "Expenses", "Profit", "Sign-ups", "Buyers"],
-    [...d.days].reverse().map((r) => [shortDay(r.day), usd(r.net), usd(r.cost), usd(r.cost_free), usd(r.expenses), `<b class="${tone(r.profit)}">${usd(r.profit)}</b>`, int(r.signups), `${int(r.new_buyers)} new${r.repeat_buyers ? ` · ${r.repeat_buyers} again` : ""}`]),
-    ["Total", usd(t.net), usd(t.cost), usd(t.cost_free), usd(t.expenses), `<b class="${tone(t.profit)}">${usd(t.profit)}</b>`, int(t.signups), `${int(t.new_buyers)} new${t.repeat_buyers ? ` · ${t.repeat_buyers} again` : ""}`]);
+  const row = (r) => [usd(r.net), usd(r.cost_of_sold), `<span class="${tone(r.correction)}">${usd(r.correction, true)}</span>`, usd(r.cost_free), usd(r.cost_internal), usd(r.expenses), `<b class="${tone(r.profit)}">${usd(r.profit)}</b>`, `<span class="muted">${usd(r.cost)}</span>`, int(r.signups), `${int(r.new_buyers)} new${r.repeat_buyers ? ` · ${r.repeat_buyers} again` : ""}`];
+  table($("#days"), ["Day", "Money in", "Credits sold cost", "Real-use correction", "Free users", "Own use", "Expenses", "Profit", "Provider spending", "Sign-ups", "Buyers"],
+    [...d.days].reverse().map((r) => [shortDay(r.day), ...row(r)]), ["Total", ...row(t)]);
 
   const reserve = t.reserve_for_unused_now;
   kv($("#credits"), [
@@ -96,7 +102,7 @@ function render(d) {
     ["Used by buyers", `${int(t.credits_used_buyers)}`],
     ["Used by free users", `${int(t.credits_used_free)}`],
     ["Not used yet by buyers (now)", `${int(t.unused_credits_now)} credits · ${usd(t.unused_value_now)} paid for them`],
-    ["Cost to serve them", reserve != null ? `about ${usd(reserve)} <small>(at this period's real cost per buyer credit)</small>` : "—"],
+    ["Cost to serve them", `about ${usd(reserve)} <small>(at $${t.cost_per_credit.toFixed(4)} a credit)</small>`],
     ["Free users ate", t.net > 0 ? `${usd(t.cost_free)} · ${Math.round((t.cost_free / t.net) * 100)}% of money in` : usd(t.cost_free)],
   ]);
   kv($("#people"), [
@@ -118,15 +124,15 @@ function render(d) {
     d.journeys.map((j) => [when(j.first_purchase), esc(j.email || j.user_id.slice(0, 8)), esc(j.last_model), int(j.generations), int(j.failed), j.hours_to_buy == null ? "—" : j.hours_to_buy < 1 ? `${Math.round(j.hours_to_buy * 60)} min` : j.hours_to_buy < 48 ? `${Math.round(j.hours_to_buy)} h` : `${Math.round(j.hours_to_buy / 24)} days`]));
   table($("#sales"), ["When", "Buyer", "Via", "Credits", "Paid", "Tax", "Fee", "Money in"],
     d.sales.map((s) => [when(s.paid_at), esc(s.email || s.user_id?.slice(0, 8)), s.provider, int(s.credits), usd(s.gross), usd(s.tax), usd(s.fees), `<b>${usd(s.net)}</b>`]));
-  table($("#buyers"), ["Buyer", "Bought", "Paid (net)", "Balance", "Unused bought credits", "Worth"],
-    d.buyers.filter((b) => b.unused > 0).slice(0, 30).map((b) => [esc(b.email || b.user_id.slice(0, 8)), int(b.bought), usd(b.paid), int(b.balance), int(b.unused), usd(b.unused_value)]));
+  table($("#buyers"), ["Buyer", "Paid (net)", "Credits bought", "Used", "Real cost of use", "Profit so far", "Unused", "Expected on unused", "Total profit", "Margin"],
+    [...d.buyers].sort((a, b) => b.paid - a.paid).slice(0, 40).map((b) => [esc(b.email || b.user_id.slice(0, 8)), usd(b.paid), int(b.bought), int(b.used_credits), usd(b.used_cost),
+      `<span class="${tone(b.earned)}">${usd(b.earned)}</span>`, int(b.unused), usd(b.expected), `<b class="${tone(b.profit)}">${usd(b.profit)}</b>`, b.margin == null ? "—" : `${b.margin}%`]));
   table($("#expenses"), ["Name", "Amount", "Repeats", "Since", ""],
     d.expenses.map((e) => [esc(e.name), `${e.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })} ${esc(e.currency)}`, { none: "Once", monthly: "Monthly", yearly: "Yearly" }[e.recurrence] || e.recurrence, shortDay(e.starts_on), `<button class="link" data-archive="${esc(e.id)}">Remove</button>`]));
 
   $("#s-rub").value = d.settings.fx?.RUB ?? "";
   $("#s-ymfee").value = d.settings.fees?.yoomoney_pct ?? "";
   const q = d.quality, notes = [];
-  if (q.needs_rub_rate) notes.push(`<b class="down">${q.unconverted_payments.length} YooMoney payment(s) aren't counted yet: set the RUB rate above.</b>`);
   if (q.estimated_runs) notes.push(`${int(q.estimated_runs)} of ${int(q.runs)} generations didn't save their settings, so their cost is the credits charged × that model's cost per credit from the price sheet.`);
   if (q.unknown_cost_runs) notes.push(`${int(q.unknown_cost_runs)} generations have no price (unknown model, no credits charged).`);
   $("#quality-note").innerHTML = notes.join(" ") || "All generations were priced from their recorded settings.";
@@ -142,12 +148,13 @@ function table(el, head, rows, foot) {
 // Bars for money in and costs (provider + expenses) per day, with a profit line.
 function chart(days) {
   const w = 720, h = 220, pad = 30, n = days.length;
-  const vals = days.flatMap((d) => [d.net, d.cost + d.expenses, d.profit]);
+  const vals = days.flatMap((d) => [d.net, d.cost_of_sold + d.cost_free + d.cost_internal + d.expenses, d.profit]);
   const top = Math.max(1, ...vals), bottom = Math.min(0, ...vals);
   const y = (v) => pad + ((top - v) / (top - bottom)) * (h - pad * 2);
   const slot = (w - pad * 2) / n, bw = Math.max(2, Math.min(22, slot * 0.36));
   const x = (i) => pad + slot * i + slot / 2;
-  const bars = days.map((d, i) => `<rect class="b-in" x="${x(i) - bw - 1}" y="${y(Math.max(0, d.net))}" width="${bw}" height="${Math.abs(y(0) - y(d.net))}"><title>${shortDay(d.day)} · in ${usd(d.net)}</title></rect><rect class="b-cost" x="${x(i) + 1}" y="${y(d.cost + d.expenses)}" width="${bw}" height="${Math.abs(y(0) - y(d.cost + d.expenses))}"><title>${shortDay(d.day)} · costs ${usd(d.cost + d.expenses)}</title></rect>`).join("");
+  const costs = (d) => d.cost_of_sold + d.cost_free + d.cost_internal + d.expenses;
+  const bars = days.map((d, i) => `<rect class="b-in" x="${x(i) - bw - 1}" y="${y(Math.max(0, d.net))}" width="${bw}" height="${Math.abs(y(0) - y(d.net))}"><title>${shortDay(d.day)} · in ${usd(d.net)}</title></rect><rect class="b-cost" x="${x(i) + 1}" y="${y(costs(d))}" width="${bw}" height="${Math.abs(y(0) - y(costs(d)))}"><title>${shortDay(d.day)} · costs ${usd(costs(d))}</title></rect>`).join("");
   const line = days.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.profit).toFixed(1)}`).join(" ");
   const dots = days.map((d, i) => `<circle class="${d.profit < 0 ? "dot-down" : "dot"}" cx="${x(i)}" cy="${y(d.profit)}" r="${n > 40 ? 1.5 : 3}"><title>${shortDay(d.day)} · profit ${usd(d.profit)}</title></circle>`).join("");
   const every = Math.ceil(n / 8);
