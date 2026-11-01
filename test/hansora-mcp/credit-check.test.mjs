@@ -912,7 +912,7 @@ test('a Veo video Google could not make the sound for is made with Grok instead,
   const old = 'user-1-mcp-1793126174728-d2f6ce69';
   const prompt = 'A silent listener reaction close-up. No speech or vocal sounds, no music.';
 
-  // A returning user's Veo video keeps its recipe; another model's video does not.
+  // A returning user's Veo and Grok videos keep their recipe.
   const saved = [];
   const keep = (href, options) => {
     if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
@@ -922,7 +922,7 @@ test('a Veo video Google could not make the sound for is made with Grok instead,
   await callTool('create_generation', { model_id: 'grok-video', prompt, duration: 6, resolution: '720p' }, { credits: 100, rest: keep });
   await new Promise((resolve) => setTimeout(resolve, 20));
   const recipes = saved.filter((row) => /recipe/.test(row.tool));
-  assert.deepEqual(recipes.map((row) => [row.tool, row.model_id]), [['video_recipe', 'veo31-lite']]);
+  assert.deepEqual(recipes.map((row) => [row.tool, row.model_id]), [['video_recipe', 'veo31-lite'], ['video_recipe', 'grok-video']]);
 
   const failed = (error) => ({ id: 'g-old', kind: 'video', provider: 'veo3.1lite', created_at: '2026-10-27T18:36:16Z', result_url: null,
     meta: { run_id: old, model: 'veo3_lite', status: 'failed', error, charged_cost: 2, refund_amount: 2, refunded: true } });
@@ -1141,4 +1141,91 @@ test('the last video ChatGPT keeps using ignores a video Hansora remade after a 
   assert.match(asked, /or=\(meta->>run_id\.is\.null,meta->>run_id\.not\.like\.\*-retry\)/);
   const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
   assert.match(VIDEO_SELECTION_GUIDE, /does not change the model in use: the next videos use the model the user had before/);
+});
+
+test('a video from a picture Hansora made that the video model refuses is tried once on the other model, then the user is told and gets the picture', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const old = 'user-1-mcp-1793529277293-5bf9776c';
+  const picture = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/2b767f9d.png';
+  const prompt = 'The boy juggles the ball, then two footballers greet him.';
+
+  // 1. The picture is the first frame: the recipe keeps it and knows Hansora made it.
+  const saved = [];
+  const created = await callTool('create_generation', { model_id: 'veo31-lite', prompt, duration: 8, resolution: '720p', first_frame_url: picture }, {
+    credits: 100, veoChosen: true,
+    rest: (href, options) => {
+      if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
+      if (href.includes('result_url=not.is.null')) return reply([{ id: 'the-picture', result_url: picture }]);
+      return undefined;
+    }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const recipe = saved.find((row) => /recipe/.test(row.tool));
+  assert.ok(recipe, `recipe saved ${JSON.stringify(created.result.structuredContent).slice(0, 400)}`);
+  assert.equal(recipe.details.first_frame_url, picture);
+  assert.equal(recipe.details.from_picture, true);
+
+  const refused = (error, extra = {}) => ({ id: 'g-old', kind: 'video', provider: 'veo3.1lite', created_at: '2026-11-01T10:34:40Z', result_url: null,
+    meta: { run_id: old, model: 'veo3_lite', status: 'failed', error, charged_cost: 2, refund_amount: 2, refunded: true, ...extra } });
+  const world = ({ failure, retryRow = null, details = recipe.details, modelId = 'veo31-lite' }) => (href) => {
+    if (href.includes('/rest/v1/chatgpt_events') && href.includes('recipe')) return reply([{ model_id: modelId, details }]);
+    if (href.includes('result_url=not.is.null')) return reply([{ id: 'the-picture' }]);
+    if (href.includes('/rest/v1/user_generations') && href.includes(encodeURIComponent(`${old}-retry`))) return reply(retryRow ? [retryRow] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`)) return reply([failure]);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const publicFigure = refused('Request blocked: The input content was flagged for containing a prominent public figure.');
+
+  // 2. Veo refuses it: started once on Grok, with the picture as the first frame, under the same card.
+  const first = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure }) });
+  assert.equal(first.submitted.length, 1);
+  assert.equal(first.submitted[0].model_id, 'grok-video');
+  assert.equal(first.submitted[0].payload.run_id, `${old}-retry`);
+  assert.match(JSON.stringify(first.submitted[0].payload), new RegExp(picture.replace(/[.]/g, '\\.')));
+  assert.equal(first.result.structuredContent.run_id, old);
+  assert.match(first.result.structuredContent.switch_note, /^Veo 3\.1 Lite refused to animate the picture, so this video was made with Grok Video instead\./);
+
+  // 3. Grok makes it: the video is shown.
+  const made = { id: 'g-new', kind: 'video', provider: 'Grok', created_at: '2026-11-01T10:37:00Z',
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/new.mp4',
+    meta: { run_id: `${old}-retry`, engine: 'grok', status: 'done' } };
+  const ok = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure, retryRow: made }) });
+  assert.equal(ok.submitted.length, 0);
+  assert.equal(ok.result.structuredContent.status, 'ready');
+
+  // 4. Grok refuses it too: the user is told plainly and gets the picture.
+  const grokRefused = { id: 'g-new', kind: 'video', provider: 'Grok', created_at: '2026-11-01T10:37:00Z', result_url: null,
+    meta: { run_id: `${old}-retry`, engine: 'grok', status: 'failed', error: 'Content flagged by moderation', charged_cost: 1.8, refund_amount: 1.8, refunded: true } };
+  const both = (await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure, retryRow: grokRefused }) })).result.structuredContent;
+  assert.equal(both.status, 'failed');
+  assert.equal(both.run_id, old);
+  assert.equal(both.picture_url, picture);
+  assert.equal(both.card_message, 'I made the picture first so I could animate it, but Veo 3.1 Lite and Grok Video both refused to turn it into a video. Here is the picture. The video\'s credits were refunded.');
+  assert.ok(both.next_step.includes(picture));
+
+  // 5. Grok fails for another reason: said as it is.
+  const grokBroke = { ...grokRefused, meta: { ...grokRefused.meta, error: 'Internal Error, Please try again later.' } };
+  const broke = (await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure, retryRow: grokBroke }) })).result.structuredContent;
+  assert.match(broke.card_message, /Veo 3\.1 Lite refused to turn it into a video and Grok Video couldn't make it either\./);
+
+  // 6. Grok refuses first: Veo 3.1 Lite (20 credits) is tried.
+  const grokFirst = refused('Content flagged by moderation', { model: 'grok-imagine/image-to-video', engine: 'grok', charged_cost: 1.8, refund_amount: 1.8 });
+  const toVeo = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: { ...grokFirst, provider: 'Grok' }, modelId: 'grok-video' }) });
+  assert.equal(toVeo.submitted.length, 1);
+  assert.equal(toVeo.submitted[0].model_id, 'veo31-lite');
+
+  // 7. Not enough credits for the other model: the picture message straight away, nothing started.
+  const poor = (await callTool('get_generation', { run_id: old }, { credits: 0, rest: world({ failure: publicFigure }) }));
+  assert.equal(poor.submitted.length, 0);
+  assert.match(poor.result.structuredContent.card_message, /^I made the picture first so I could animate it, but Veo 3\.1 Lite refused to turn it into a video\./);
+
+  // 8. Never retried: sexual content or minors, or a photo the user sent (not a Hansora picture).
+  const sexual = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: refused('Flagged: sexual content') }) });
+  assert.equal(sexual.submitted.length, 0);
+  assert.equal(sexual.result.structuredContent.picture_url, undefined);
+  const ownPhoto = { ...recipe.details, from_picture: undefined, first_frame_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/me.jpg' };
+  const photo = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure, details: ownPhoto }) });
+  assert.equal(photo.submitted.length, 0);
+  assert.equal(photo.result.structuredContent.failure_kind, 'content');
 });

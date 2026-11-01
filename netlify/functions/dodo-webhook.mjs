@@ -9,6 +9,7 @@
 
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
+import { notifySale } from "../../lib/business/sale-alert.mjs";
 
 import { AUTOMATION_PLANS } from "../../lib/automation/billing.mjs";
 
@@ -396,6 +397,7 @@ export async function handler(event) {
         }
         credited = true;
       }
+      await notifySale({ uid, transactionId: transaction_id, provider: "dodo", amountCents: amount_cents, currency, credits }, { supabaseUrl: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_ROLE_KEY });
     }
 
     // Send on every successful Dodo delivery. Meta safely deduplicates retries using event_id.
@@ -578,6 +580,7 @@ async function handleSubscriptionWebhook({
     });
     credited = creditResult.credited;
     creditReason = creditResult.reason;
+    if (credited) await notifySale({ uid, transactionId: monthlyTransactionId, provider: "dodo", amountCents: amount_cents, currency, credits: monthly_credits, plan: true }, { supabaseUrl: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_ROLE_KEY });
     purchaseAttribution = await attributePurchaseToChat({
       supabaseUrl: SUPABASE_URL,
       serviceKey: SUPABASE_SERVICE_ROLE_KEY,

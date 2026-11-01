@@ -316,55 +316,99 @@ async function submitRun({ origin, token, userId, endpoint, model, prompt, usage
 // the sound). A video is better than none, so this holds for every language. The card keeps following the
 // original run id, shows the new video and says which model made it. Content blocks, unusable inputs and
 // retries of a retry are left as they are. Null means "no retry".
+//
+// A video made from a picture Hansora made first (the "picture first" step) that the video model refuses is
+// also made once with the other model (Veo 3.1 Lite and Grok Video cover each other), unless the refusal is
+// about sexual content or minors. If that is refused too, the user is told plainly that the picture was made
+// to be animated and the video model refused it, so they don't think they got a picture instead of a video.
 const RETRY_SUFFIX = '-retry';
 const VEO_MODELS = new Set(['veo31-lite', 'veo31-fast', 'veo31']);
+const RECIPE_MODELS = new Set([...VEO_MODELS, 'grok-video']);
 const VEO_AUDIO_FAILURE = /unable to generate audio/i;
+const NEVER_RETRY_CONTENT = /sexual|nsfw|nud|porn|explicit|minor|child|underage/i;
+const failureText = (meta) => [meta.error, meta.provider_message, meta.error_summary].map((value) => (typeof value === 'string' ? value : '')).join(' ');
+
+// A picture Hansora made for this user (its saved copy), as opposed to a photo the user sent.
+function isOwnPicture(url, userId) {
+  return typeof url === 'string' && Boolean(userId) && url.includes(`/generation-history/${userId}/`);
+}
+
+function pictureRefusedView({ view, runId, retryId, firstName, retryName, retryRefused = true, picture }) {
+  const who = !retryName ? `${firstName} refused to turn it into a video`
+    : retryRefused ? `${firstName} and ${retryName} both refused to turn it into a video`
+      : `${firstName} refused to turn it into a video and ${retryName} couldn't make it either`;
+  const message = `I made the picture first so I could animate it, but ${who}. Here is the picture. The video's credits were refunded.`;
+  return {
+    ...view,
+    run_id: runId,
+    ...(retryId ? { retry_run_id: retryId } : {}),
+    status: 'failed',
+    failure_kind: 'content',
+    failure_title: 'The video model refused this picture',
+    card_message: message,
+    message,
+    error: message,
+    picture_url: picture,
+    meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId, status: 'failed', error: message, fail_reason: message },
+    next_step: `Tell the user in one or two short lines, in their language: ${message.replace('Here is the picture.', 'so they get the picture.')} Give them the picture link, copied character for character: ${picture} . Then offer to change the idea (for example the people or characters in it) and try again. Start nothing until they answer.`
+  };
+}
+
 async function providerRetry({ userId, token, origin, runId, presented, generation }) {
   if (presented.status !== 'failed' || runId.endsWith(RETRY_SUFFIX)) return null;
-  if (!['temporary', 'unknown'].includes(presented.failure_kind)) return null;
   const failedMeta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
-  const audioFailure = VEO_AUDIO_FAILURE.test([failedMeta.error, failedMeta.provider_message, failedMeta.error_summary].map((value) => (typeof value === 'string' ? value : '')).join(' '));
+  const contentRefusal = presented.failure_kind === 'content' && !NEVER_RETRY_CONTENT.test(failureText(failedMeta));
+  if (!['temporary', 'unknown'].includes(presented.failure_kind) && !contentRefusal) return null;
+  const audioFailure = VEO_AUDIO_FAILURE.test(failureText(failedMeta));
   const retryId = `${runId}${RETRY_SUFFIX}`;
+  const recipe = await getFirstVideoRecipe(userId, runId);
+  const picture = recipe?.from_picture ? String(recipe.first_frame_url || (Array.isArray(recipe.image_urls) ? recipe.image_urls[0] : '') || '') : '';
+  if (contentRefusal && !picture) return null;
+  const firstName = getModel(modelIdOf(generation))?.name || presented.model_name || 'The video model';
   let retry = await getGeneration(userId, retryId).catch(() => null);
   let startedModel = null;
   if (!retry) {
-    const recipe = await getFirstVideoRecipe(userId, runId);
     const failed = recipe ? getModel(recipe.model_id) : null;
     if (!failed || failed.category !== 'video') return null;
     const veoOutage = VEO_MODELS.has(failed.id) && presented.failure_kind === 'temporary';
     // Grok's temporary failures ("Playground task failed") are remade with Veo 3.1 Lite for anyone.
     const grokOutage = failed.id === 'grok-video' && presented.failure_kind === 'temporary';
-    if (!veoOutage && !grokOutage && !(await isFirstGeneration(userId))) return null;
+    const refusedTarget = contentRefusal ? (failed.id === 'grok-video' ? 'veo31-lite' : 'grok-video') : '';
+    const refusedOnly = () => (contentRefusal ? pictureRefusedView({ view: presented, runId, firstName, picture }) : null);
+    if (!veoOutage && !grokOutage && !refusedTarget && !(await isFirstGeneration(userId))) return null;
     const account = await getAccount(userId).catch(() => null);
-    if (!account) return null;
+    if (!account) return refusedOnly();
     const request = {
       prompt: String(recipe.prompt || ''),
       image_urls: Array.isArray(recipe.image_urls) ? recipe.image_urls : [],
+      ...(recipe.first_frame_url ? { first_frame_url: recipe.first_frame_url } : {}),
+      ...(recipe.last_frame_url ? { last_frame_url: recipe.last_frame_url } : {}),
       ...(recipe.aspect_ratio ? { aspect_ratio: recipe.aspect_ratio } : {}),
       ...(typeof recipe.generate_audio === 'boolean' ? { generate_audio: recipe.generate_audio } : {}),
       ...(typeof recipe.sound === 'boolean' ? { sound: recipe.sound } : {})
     };
-    if (!request.prompt) return null;
+    if (!request.prompt) return refusedOnly();
     // Never more than the user's first try cost (it was refunded), so the retry needs no new consent. The one
     // exception is Grok → Veo 3.1 Lite at Veo's own price (20 credits for 8 s at 720p), as the owner decided.
     const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
     const firstTry = Number(meta.charged_cost ?? meta.charge_cost ?? meta.refund_amount) * 10;
-    if (!(firstTry > 0)) return null;
+    if (!(firstTry > 0)) return refusedOnly();
     const option = optionsWithinBalance(failed.id, request, Number(account.internal_credits || 0), 4, firstVideoOrder(), true)
       .find((candidate) => candidate.model_id !== failed.id
-        && (candidate.credits <= firstTry || (grokOutage && candidate.model_id === 'veo31-lite')));
+        && (!refusedTarget || candidate.model_id === refusedTarget)
+        && (candidate.credits <= firstTry || ((grokOutage || refusedTarget === 'veo31-lite') && candidate.model_id === 'veo31-lite')));
     const model = option ? getModel(option.model_id) : null;
     const endpoint = model ? getRunner(model.id) : '';
-    if (!model || !endpoint) return null;
+    if (!model || !endpoint) return refusedOnly();
     const payload = buildGenerationPayload(model.id, { ...request, ...option.settings }, userId, retryId);
     try {
       const { response } = await submitRun({ origin, token, userId, endpoint, model, prompt: request.prompt, usageMode: 'credits', payload, timeoutMs: 15000 });
-      if (!response.ok) return null;
+      if (!response.ok) return refusedOnly();
     } catch (error) {
       // Still submitting on Hansora's side: the next check finds the new run.
-      if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) return null;
+      if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) return refusedOnly();
     }
-    console.warn('hansora_mcp_first_video_retry', JSON.stringify({ runId, from: failed.id, to: model.id }));
+    console.warn('hansora_mcp_first_video_retry', JSON.stringify({ runId, from: failed.id, to: model.id, refused: Boolean(refusedTarget) }));
     startedModel = model;
     retry = await getGeneration(userId, retryId).catch(() => null);
   } else {
@@ -377,12 +421,17 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
   };
   const retryMeta = retry?.meta && typeof retry.meta === 'object' ? retry.meta : {};
   const credits = Number(retryMeta.charged_cost ?? retryMeta.charge_cost ?? retryMeta.refund_amount) * 10;
-  const failedName = getModel(modelIdOf(generation))?.name || presented.model_name || 'The first model';
+  const failedName = firstName;
+  const retryName = view.model_name || startedModel?.name || 'another model';
+  // The picture's video was refused by both models: say so and hand over the picture.
+  if (picture && view.status === 'failed' && contentRefusal) {
+    return pictureRefusedView({ view, runId, retryId, firstName: failedName, retryName, retryRefused: view.failure_kind === 'content', picture });
+  }
   const note = switchNote({
     from: failedName,
-    to: view.model_name || startedModel?.name || 'another model',
+    to: retryName,
     credits: credits > 0 ? Number(credits.toFixed(2)) : null,
-    reason: audioFailure ? 'audio' : 'outage'
+    reason: audioFailure ? 'audio' : contentRefusal ? 'refused' : 'outage'
   });
   return {
     ...view,
@@ -450,6 +499,7 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
 // What the user reads when a video was made with another model than the one they asked for.
 function switchNote({ from, to, credits, reason }) {
   const cause = reason === 'audio' ? `${from} could not make the sound`
+    : reason === 'refused' ? `${from} refused to animate the picture`
     : reason === 'resting' ? `${from} is having a temporary issue on the provider's side right now`
       : `${from} had a temporary issue on the provider's side`;
   const sentences = [`${cause}, so this video was made with ${to} instead.`];
@@ -1096,16 +1146,20 @@ export function createHansoraServer(ctx) {
       }
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
       const submit = () => submitRun({ origin, token, userId, endpoint, model, prompt: normalizedInput.prompt, usageMode: normalizedInput.usage_mode, payload });
-      // A new user's first video, and any Veo video, keeps what it was made from in case the provider fails
-      // (providerRetry).
+      // A new user's first video, and any Veo or Grok video, keeps what it was made from in case the provider
+      // fails or refuses (providerRetry).
       const retryable = model.category === 'video' && !hasVideoInput && normalizedInput.usage_mode !== 'unlimited';
       const firstVideo = retryable ? isFirstGeneration(userId).catch(() => false) : Promise.resolve(false);
+      const startFrame = String(storedInput.first_frame_url || '') || startingFrame(model.id, storedInput);
       const keepRecipe = async () => {
         const first = await firstVideo;
-        if (!retryable || (!first && !VEO_MODELS.has(model.id))) return;
+        if (!retryable || (!first && !RECIPE_MODELS.has(model.id))) return;
         recordVideoRecipe(userId, runId, model.id, {
           prompt: String(normalizedInput.prompt || '').slice(0, 5000),
           image_urls: Array.isArray(storedInput.image_urls) ? storedInput.image_urls.slice(0, 4) : [],
+          ...(storedInput.first_frame_url ? { first_frame_url: String(storedInput.first_frame_url) } : {}),
+          ...(storedInput.last_frame_url ? { last_frame_url: String(storedInput.last_frame_url) } : {}),
+          ...(isOwnPicture(startFrame, userId) ? { from_picture: true } : {}),
           ...(storedInput.aspect_ratio ? { aspect_ratio: storedInput.aspect_ratio } : {}),
           ...(typeof storedInput.generate_audio === 'boolean' ? { generate_audio: storedInput.generate_audio } : {}),
           ...(typeof storedInput.sound === 'boolean' ? { sound: storedInput.sound } : {})
