@@ -45,14 +45,14 @@ export async function handler(event) {
         return json(400, {
           error: "Choose a valid date range of up to 367 days.",
         });
-      // Days are Armenia days (UTC+4): the period starts at 20:00 UTC the day before. The cost of one credit is
-      // measured over the 30 days before the end, so those generations are read too.
-      const from = dateString(Math.min(dayNumber(start) - 1, dayNumber(end) - 30));
+      // Days are UTC days, like Dodo's "Today" figures and payment list. The cost of one credit is measured over
+      // the 30 days before the end, so those generations are read too.
+      const from = dateString(Math.min(dayNumber(start), dayNumber(end) - 30));
       const snapshot = await database(auth, "rpc/business_dashboard_snapshot", {
         method: "POST",
         body: JSON.stringify({ p_start: from, p_end: end }),
       });
-      const lo = `${dateString(dayNumber(start) - 1)}T20:00:00Z`, hi = `${end}T20:00:00Z`;
+      const lo = `${start}T00:00:00Z`, hi = `${dateString(dayNumber(end) + 1)}T00:00:00Z`;
       const signups = await database(auth, `profiles?select=a&a=gte.${lo}&a=lt.${hi}&user_id=not.in.(${INTERNAL_IDS.join(",")})&limit=50000`).catch(() => null);
       if (Array.isArray(signups)) snapshot.signup_times = signups.map((r) => r.a).filter(Boolean);
       await completeFromDodo(snapshot, lo, hi);

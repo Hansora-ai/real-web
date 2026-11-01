@@ -70,7 +70,7 @@ function tile(el, label, value, cls, lines) {
 function render(d) {
   const t = d.totals;
   const days = d.days.length;
-  $("#period").textContent = `${days === 1 ? shortDay(d.range.start) : `${shortDay(d.range.start)} – ${shortDay(d.range.end)} · ${days} days`} · Armenia time`;
+  $("#period").textContent = `${days === 1 ? shortDay(d.range.start) : `${shortDay(d.range.start)} – ${shortDay(d.range.end)} · ${days} days`} · UTC days, like Dodo`;
   const warn = $("#warning");
   warn.hidden = !d.quality.unconverted_payments.length;
   warn.innerHTML = d.quality.needs_rub_rate
