@@ -4,12 +4,31 @@ import {
   json,
   OWNER_ID,
 } from "../../lib/business/access.mjs";
-import { buildProfit } from "../../lib/business/profit.mjs";
-import { validateExpense, dayNumber } from "../../public/business/finance.mjs";
+import { buildProfit, paymentUsd } from "../../lib/business/profit.mjs";
+import { INTERNAL_IDS } from "../../lib/business/access.mjs";
+import { validateExpense, dayNumber, dateString } from "../../public/business/finance.mjs";
 const uuid = (value) =>
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(
     value || "",
   );
+// Payments our webhook saved without settlement or tax would be left out; Dodo's own record fills them in.
+async function completeFromDodo(snapshot, lo, hi) {
+  const key = process.env.DODO_PAYMENTS_API_KEY;
+  if (!key) return;
+  const base = String(process.env.DODO_PAYMENTS_BASE_URL || "https://live.dodopayments.com").replace(/\/+$/, "");
+  const missing = (snapshot.payments || []).filter((p) => p.provider === "dodopayments" && p.transaction_id
+    && p.paid_at >= lo && p.paid_at < hi && !paymentUsd(p, snapshot.settings || {}).known).slice(0, 40);
+  await Promise.all(missing.map(async (p) => {
+    try {
+      const response = await fetch(`${base}/payments/${encodeURIComponent(p.transaction_id)}`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (response.ok) p.dodo = await response.json();
+    } catch {}
+  }));
+}
+
 export async function handler(event) {
   try {
     if (!["GET", "POST"].includes(event.httpMethod))
@@ -26,10 +45,17 @@ export async function handler(event) {
         return json(400, {
           error: "Choose a valid date range of up to 367 days.",
         });
+      // Days are Armenia days (UTC+4): the period starts at 20:00 UTC the day before. The cost of one credit is
+      // measured over the 30 days before the end, so those generations are read too.
+      const from = dateString(Math.min(dayNumber(start) - 1, dayNumber(end) - 30));
       const snapshot = await database(auth, "rpc/business_dashboard_snapshot", {
         method: "POST",
-        body: JSON.stringify({ p_start: start, p_end: end }),
+        body: JSON.stringify({ p_start: from, p_end: end }),
       });
+      const lo = `${dateString(dayNumber(start) - 1)}T20:00:00Z`, hi = `${end}T20:00:00Z`;
+      const signups = await database(auth, `profiles?select=a&a=gte.${lo}&a=lt.${hi}&user_id=not.in.(${INTERNAL_IDS.join(",")})&limit=50000`).catch(() => null);
+      if (Array.isArray(signups)) snapshot.signup_times = signups.map((r) => r.a).filter(Boolean);
+      await completeFromDodo(snapshot, lo, hi);
       return json(200, buildProfit(snapshot, { start, end }));
     }
     if ((event.body || "").length > 50000)

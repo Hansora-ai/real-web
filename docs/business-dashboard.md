@@ -9,7 +9,8 @@ The page answers one question per period (today, yesterday, 2 days, 7 days, 30 d
 - **Money in**: Dodo payments minus tax, refunds and Dodo's standard fee (4% + 1.5% outside the US + $0.40 per payment), plus YooMoney at the owner's RUB→USD rate and fee (Settings).
 - **Provider costs**: `lib/business/costs.mjs` prices every successful generation from the owner's margin sheet, with Seedance 2.5 at $1.19 / $2.67 / $6.43 and Wan 3.0 at $0.29 / $0.58 / $1.16 per 10 s (480p / 720p / 1080p). Recorded settings give the exact cost; runs that saved only the credits charged use that model's provider cost per credit. Failed runs cost nothing. Costs are split into free users, buyers and the owner's own runs.
 - **Expenses**: monthly / yearly / one-off bills spread over the days they cover.
-- **Net profit** = Money in − Provider costs − Expenses, per day and in total.
+- **Net profit** follows the sale: Money in − cost of the credits sold (credits sold × what one credit really costs, measured from buyers' generations of the last 30 days) − free users' generations − the owner's own runs − expenses. Buyers using credits later is not a cost again. Actual provider spending per day is shown for reference.
+- Days are Armenia days (UTC+4), like the owner's Dodo dashboard. Payments the webhook saved without settlement or tax are completed from Dodo's API; the owner's own purchases count as money, not as credits sold.
 - **Credits**: sold, used by buyers and free users, and bought credits buyers still hold now with what they paid for them (free credits are spent first, then the oldest pack), plus the provider cost to serve them at the period's real cost per buyer credit.
 - **People and buyers**: sign-ups, people who generated, new and repeat buyers, and for each new buyer the last thing they made before paying.
 

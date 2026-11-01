@@ -61,11 +61,41 @@ test("a day's profit, free-user cost, unused credits and what new buyers did bef
   close(t.cost_buyers, 0.58, "buyer: Wan after buying");
   close(t.cost_internal, 1.19, "owner's own Seedance run");
   close(t.expenses, 1, "$30 a month is $1 a day in November");
-  close(t.profit, t.net - (0.15 + 0.135 + 0.58 + 1.19) - 1, "profit");
+  // Profit follows the sale: 900 credits sold × cost per credit (too few buyer credits used to measure, so the
+  // standard $0.0068), minus free users, the owner's own runs and the day's expenses. The buyer's Wan run is not
+  // a cost again.
+  close(t.cost_of_sold, 900 * 0.0068, "cost of the credits sold");
+  close(t.profit, t.net - 900 * 0.0068 - (0.15 + 0.135) - 1.19 - 1, "profit");
   assert.equal(t.signups, 7); assert.equal(t.generators, 2); assert.equal(t.generations, 4); assert.equal(t.failed, 1);
   assert.equal(t.new_buyers, 1); assert.equal(t.credits_sold, 900); assert.equal(t.credits_used_buyers, 100);
   assert.equal(t.unused_credits_now, 800, "800 of the 900 bought credits are still unused");
   close(t.unused_value_now, (800 * (9.99 - (9.99 * 0.04 + 0.4))) / 900, "unused credits are worth what the buyer paid for them");
   assert.deepEqual(r.last_models, [{ model: "Grok Video", count: 1 }]);
   assert.equal(r.journeys[0].hours_to_buy, 1);
+});
+
+test("Armenia days, the owner's own purchases and the measured cost per credit", () => {
+  const buyer = "33333333-3333-4333-8333-333333333333";
+  const usd = (cents) => ({ settlement_amount: cents, settlement_currency: "USD", settlement_tax: 0, card_issuing_country: "US" });
+  const snapshot = {
+    payments: [
+      // 21:30 UTC on 1 Nov is 01:30 on 2 Nov in Armenia.
+      { id: 1, transaction_id: "late", uid: buyer, credits: 200, status: "succeeded", provider: "dodopayments", paid_at: "2026-11-01T21:30:00Z", currency: "USD", amount_cents: 1999, financial: usd(1999) },
+      { id: 2, transaction_id: "own", uid: OWNER_ID, credits: 90, status: "succeeded", provider: "dodopayments", paid_at: "2026-11-02T08:00:00Z", currency: "USD", amount_cents: 999, financial: usd(999) },
+      // Saved without settlement or tax: completed from Dodo's own record.
+      { id: 3, transaction_id: "bare", uid: buyer, credits: 90, status: "succeeded", provider: "dodopayments", paid_at: "2026-11-02T09:00:00Z", currency: "EUR", amount_cents: 900, financial: {},
+        dodo: { total_amount: 900, currency: "EUR", tax: 0, settlement_amount: 1050, settlement_currency: "USD", settlement_tax: 0, card_issuing_country: "US" } },
+    ],
+    generations: Array.from({ length: 20 }, (_, i) => ({ user_id: buyer, created_at: "2026-11-01T22:00:00Z", provider: "Wan 3.0", model: "wan3.0-video", resolution: "720p", duration: 10, input_seconds: 0, status: "done", charged_cost: 10, run_id: `r${i}` })),
+    buyers: [{ user_id: buyer, credits: 0 }], purchase_journeys: [], expenses: [], settings: {},
+  };
+  const r = buildProfit(snapshot, { start: "2026-11-02", end: "2026-11-02" });
+  const t = r.totals;
+  assert.equal(t.payments, 3, "the late payment, the owner's own and the completed one all count on 2 Nov");
+  close(t.gross, 19.99 + 9.99 + 10.5, "gross as in Dodo");
+  // 20 Wan runs × 100 credits = 2,000 credits for $11.60 → $0.0058 a credit.
+  close(t.cost_per_credit, 0.0058, "measured cost per credit");
+  close(t.cost_of_sold, (2000 + 900) * 0.0058, "cost of the credits sold (the owner's own purchase is not counted twice)");
+  close(t.cost_buyers, 11.6, "provider spending is still shown");
+  assert.equal(t.new_buyers + t.repeat_buyers, 2, "the owner's own purchase is not a customer");
 });
