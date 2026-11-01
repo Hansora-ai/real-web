@@ -128,3 +128,17 @@ test("a buyer who spends on a thin-margin model lowers the profit of the day the
   close(b.earned, 2514 * (paid / 5100) - (5.8 + 12.86), "profit from the credits they used");
   close(b.expected, 510 * (paid / 5100 - perCredit), "expected profit on the credits left");
 });
+
+test("euro and pound Dodo payments count at Dodo's dollar value (pack price + tax), and an empty tax is no tax", () => {
+  // Real October payments: €21.62 incl. €3.75 tax for the $19.99 pack is $24.19 in Dodo; £8.95 incl. £1.49 tax
+  // for $9.99 is $11.99; €88.98 with an empty tax for $99.99 is $99.99; a $9.99 with an empty tax is $9.99.
+  const pay = (credits, amount, tax, currency, country = "LT") => ({ provider: "dodopayments", status: "succeeded", credits, currency, amount_cents: amount,
+    financial: { settlement_amount: amount, settlement_tax: tax, settlement_currency: currency, card_issuing_country: country } });
+  close(paymentUsd(pay(200, 2162, 375, "EUR")).gross, 24.19, "EUR 19.99 pack");
+  close(paymentUsd(pay(200, 2162, 375, "EUR")).tax, 4.20, "its tax in dollars");
+  close(paymentUsd(pay(90, 895, 149, "GBP", "GB")).gross, 11.99, "GBP 9.99 pack");
+  close(paymentUsd(pay(1100, 8898, null, "EUR")).gross, 99.99, "EUR 99.99 pack, empty tax");
+  const usd = paymentUsd(pay(90, 999, null, "USD", "US"));
+  assert.equal(usd.known, true, "a dollar payment with an empty tax still counts");
+  close(usd.gross, 9.99, "USD 9.99");
+});
