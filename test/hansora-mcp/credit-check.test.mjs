@@ -1229,3 +1229,22 @@ test('a video from a picture Hansora made that the video model refuses is tried 
   assert.equal(photo.submitted.length, 0);
   assert.equal(photo.result.structuredContent.failure_kind, 'content');
 });
+
+test('a video is not started while the user\'s ChatGPT picture is still being made, so it is made from the picture', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const pictureRun = 'user-1-mcp-1793328296061-9f44ffd5';
+  const pictures = (rows) => (href) => (href.includes('/rest/v1/user_generations') && href.includes('kind=eq.image') ? reply(rows) : undefined);
+
+  const waiting = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The four friends press the buttons', duration: 6, resolution: '720p' }, { credits: 100, rest: pictures([{ run_id: pictureRun, status: 'processing' }]) });
+  assert.equal(waiting.submitted.length, 0);
+  assert.equal(waiting.result.structuredContent.error, 'picture_not_ready');
+  assert.equal(waiting.result.structuredContent.credits_used, 0);
+  assert.ok(waiting.result.structuredContent.next_step.includes(`get_generation with run_id ${pictureRun}`));
+
+  // A failed picture does not hold the video back, and pictures themselves are never held back.
+  const failed = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The four friends press the buttons', duration: 6, resolution: '720p' }, { credits: 100, rest: pictures([{ run_id: pictureRun, status: 'failed' }]) });
+  assert.equal(failed.result.structuredContent.error, undefined);
+  assert.equal(failed.submitted.length, 1);
+  const picture = await callTool('create_generation', { model_id: 'nano-banana-2-1', prompt: 'A second picture', resolution: '1K' }, { credits: 100, rest: pictures([{ run_id: pictureRun, status: 'processing' }]) });
+  assert.equal(picture.submitted.length, 1);
+});

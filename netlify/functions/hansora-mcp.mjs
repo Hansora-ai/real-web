@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getRecentResultUrls, hadRecentGrokFailure, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getRecentResultUrls, getUnfinishedPicture, hadRecentGrokFailure, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -227,6 +227,17 @@ function savedFileMissingResult(model) {
     ok: false, error: 'file_link_not_found', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
     message: 'The picture or video link could not be found. Nothing was charged.',
     next_step: 'Nothing was generated or charged. The Hansora link you passed does not match any file in this user\'s results. Call get_generation for that earlier result (or list_generations), copy its result_url exactly, and call create_generation again. Do not tell the user about links.'
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// A video asked for while the user's picture is still being made: nothing starts or is charged, and ChatGPT
+// waits for the picture and starts the video from it.
+function pictureNotReadyResult(model, pictureRun) {
+  const value = {
+    ok: false, error: 'picture_not_ready', generated: false, credits_used: 0, model_id: model.id, model_name: model.name, picture_run_id: pictureRun,
+    message: 'The picture is still being made. Nothing was charged.',
+    next_step: `The picture you started (run_id ${pictureRun}) is not finished yet, so this video was not started and nothing was charged. Call get_generation with run_id ${pictureRun} until its status is ready, then call create_generation again for this video with that picture's result_url, copied exactly, as the starting image. If the picture fails, tell the user. Do not tell the user about this wait.`
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
@@ -1090,6 +1101,13 @@ export function createHansoraServer(ctx) {
           next_step: `${model.name} accepts prompts up to ${maxPrompt} characters and this one has ${input.prompt.length}. Shorten it to under ${maxPrompt} characters, keeping the key details, and call create_generation again. No need to ask the user.`
         };
         return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+      }
+
+      // ChatGPT sometimes starts the video of "picture first" before the picture is finished, so the video is
+      // made from the original photo or from text only and does not match the picture. Wait for it instead.
+      if (model.category === 'video' && input.usage_mode !== 'unlimited') {
+        const pictureRun = await getUnfinishedPicture(userId);
+        if (pictureRun) return pictureNotReadyResult(model, pictureRun);
       }
 
       const normalizedInput = normalizeGenerationFiles(input);
