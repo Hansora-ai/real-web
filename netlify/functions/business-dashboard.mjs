@@ -29,6 +29,41 @@ async function completeFromDodo(snapshot, lo, hi) {
   }));
 }
 
+// The official ruble → dollar rate of a day, from public daily rates (no key needed); remembered while warm.
+const rubRates = new Map();
+async function rubToUsd(date) {
+  if (rubRates.has(date)) return rubRates.get(date);
+  const get = async (url, pick) => {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      if (!response.ok) return null;
+      const rate = Number(pick(await response.json()));
+      return rate > 0 && rate < 1 ? rate : null;
+    } catch {
+      return null;
+    }
+  };
+  const [y, m, d] = date.split("-");
+  const rate = (await get(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/rub.json`, (j) => j?.rub?.usd))
+    || (await get(`https://${date}.currency-api.pages.dev/v1/currencies/rub.json`, (j) => j?.rub?.usd))
+    || (await get(`https://www.cbr-xml-daily.ru/archive/${y}/${m}/${d}/daily_json.js`, (j) => j?.Valute?.USD && j.Valute.USD.Nominal / j.Valute.USD.Value))
+    || (await get("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/rub.json", (j) => j?.rub?.usd));
+  if (rate) rubRates.set(date, rate);
+  return rate;
+}
+
+// YooMoney's own amounts (what the buyer paid and what Hansora received) and the day's ruble rate.
+async function completeYooMoney(auth, snapshot, lo, hi) {
+  const ours = (snapshot.payments || []).filter((p) => p.provider === "yoomoney" && p.paid_at >= lo && p.paid_at < hi);
+  if (!ours.length) return;
+  const rows = await database(auth, `payments?provider=eq.yoomoney&paid_at=gte.${lo}&paid_at=lt.${hi}&select=transaction_id,received:payload->>amount,paid:payload->>withdraw_amount&limit=2000`).catch(() => []);
+  const byId = new Map((Array.isArray(rows) ? rows : []).map((r) => [r.transaction_id, r]));
+  for (const p of ours) if (byId.has(p.transaction_id)) p.yoomoney = byId.get(p.transaction_id);
+  const dates = [...new Set(ours.map((p) => new Date(p.paid_at).toISOString().slice(0, 10)))].slice(0, 62);
+  const found = await Promise.all(dates.map(async (date) => [date, await rubToUsd(date)]));
+  snapshot.rub_usd = Object.fromEntries(found.filter(([, rate]) => rate));
+}
+
 export async function handler(event) {
   try {
     if (!["GET", "POST"].includes(event.httpMethod))
@@ -56,6 +91,7 @@ export async function handler(event) {
       const signups = await database(auth, `profiles?select=a&a=gte.${lo}&a=lt.${hi}&user_id=not.in.(${INTERNAL_IDS.join(",")})&limit=50000`).catch(() => null);
       if (Array.isArray(signups)) snapshot.signup_times = signups.map((r) => r.a).filter(Boolean);
       await completeFromDodo(snapshot, lo, hi);
+      await completeYooMoney(auth, snapshot, lo, hi);
       return json(200, buildProfit(snapshot, { start, end }));
     }
     if ((event.body || "").length > 50000)

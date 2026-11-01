@@ -142,3 +142,17 @@ test("euro and pound Dodo payments count at Dodo's dollar value (pack price + ta
   assert.equal(usd.known, true, "a dollar payment with an empty tax still counts");
   close(usd.gross, 9.99, "USD 9.99");
 });
+
+test("YooMoney: its own paid and received rubles at the day's rate, the real fee, even for rows saved as USD 9.90", () => {
+  // Real October row: saved as "USD 990", but YooMoney's record says the buyer paid 750 ₽ and Hansora got 727.50 ₽.
+  const row = { provider: "yoomoney", status: "succeeded", credits: 100, currency: "USD", amount_cents: 990, paid_at: "2026-10-23T22:46:11Z",
+    yoomoney: { paid: "750.00", received: "727.50" } };
+  const u = paymentUsd(row, { rubRates: { "2026-10-23": 0.0123 } });
+  assert.equal(u.currency, "RUB");
+  close(u.gross, 750 * 0.0123, "what the buyer paid");
+  close(u.fees, 22.5 * 0.0123, "YooMoney kept 3%");
+  close(u.net, 727.5 * 0.0123, "what Hansora received");
+  // No rate for that day: another day's rate of the period is used rather than leaving the payment out.
+  close(paymentUsd(row, { rubRates: { "2026-10-24": 0.0125 } }).net, 727.5 * 0.0125, "the period's rate");
+  assert.equal(paymentUsd(row, {}).known, false, "no rate at all: reported, not guessed");
+});

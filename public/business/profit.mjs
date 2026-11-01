@@ -74,7 +74,7 @@ function render(d) {
   const warn = $("#warning");
   warn.hidden = !d.quality.unconverted_payments.length;
   warn.innerHTML = d.quality.needs_rub_rate
-    ? `${d.quality.unconverted_payments.length} YooMoney payment(s) are not counted yet. Set the RUB → USD rate in Settings at the bottom.`
+    ? `${d.quality.unconverted_payments.length} YooMoney payment(s) are not counted: the day's ruble rate could not be fetched. Refresh in a minute, or type a rate in Settings at the bottom.`
     : `${d.quality.unconverted_payments.length} payment(s) could not be converted to USD and are not counted.`;
   tile($("#tile-profit"), "Net profit", usd(t.profit), tone(t.profit), [
     t.margin != null ? `${t.margin}% of money in` : "No sales in this period",
@@ -131,7 +131,6 @@ function render(d) {
     d.expenses.map((e) => [esc(e.name), `${e.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })} ${esc(e.currency)}`, { none: "Once", monthly: "Monthly", yearly: "Yearly" }[e.recurrence] || e.recurrence, shortDay(e.starts_on), `<button class="link" data-archive="${esc(e.id)}">Remove</button>`]));
 
   $("#s-rub").value = d.settings.fx?.RUB ?? "";
-  $("#s-ymfee").value = d.settings.fees?.yoomoney_pct ?? "";
   const q = d.quality, notes = [];
   if (q.estimated_runs) notes.push(`${int(q.estimated_runs)} of ${int(q.runs)} generations didn't save their settings, so their cost is the credits charged × that model's cost per credit from the price sheet.`);
   if (q.unknown_cost_runs) notes.push(`${int(q.unknown_cost_runs)} generations have no price (unknown model, no credits charged).`);
@@ -205,7 +204,7 @@ $("#settings-form").onsubmit = async (e) => {
   if (rub) fx.RUB = Number(rub); else delete fx.RUB;
   $("#s-msg").textContent = "Saving…";
   try {
-    await api({ method: "POST", body: JSON.stringify({ action: "save_settings", settings: { fx, fees: { yoomoney_pct: Number($("#s-ymfee").value.trim().replace(",", ".") || 0) } } }) });
+    await api({ method: "POST", body: JSON.stringify({ action: "save_settings", settings: { fx, fees: state.data?.settings.fees || {} } }) });
     $("#s-msg").textContent = "Saved."; load();
   } catch (err) { $("#s-msg").textContent = err.message; }
 };
