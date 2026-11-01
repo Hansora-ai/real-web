@@ -4,6 +4,7 @@ import http from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, extname } from "node:path";
 import { buildProfit } from "../lib/business/profit.mjs";
+import { buildActivity } from "../lib/business/activity.mjs";
 import { validateExpense, dayNumber } from "../public/business/finance.mjs";
 const root = resolve("public"),
   store = "/tmp/hansora-business-preview/snapshot.json";
@@ -89,7 +90,8 @@ const server = http.createServer(async (req, res) => {
               ),
             };
           });
-        return send(res, 200, buildProfit(selected, { start, end }));
+        const profit = buildProfit(selected, { start, end });
+        return send(res, 200, { ...profit, activity: buildActivity(selected, { start, end, now: Date.parse(`${end}T21:30:00Z`) }) });
       }
       if (req.method !== "POST")
         return send(res, 405, { error: "Method not allowed." });

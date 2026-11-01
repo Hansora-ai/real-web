@@ -28,11 +28,58 @@
       <button data-range="lastmonth">Last month</button>
       <span class="custom"><input type="date" id="from" aria-label="From" /> – <input type="date" id="to" aria-label="To" /><button id="apply" type="button">Show</button></span>
     </nav>
-    <p class="period" id="period"></p>
+    <div class="subbar">
+      <p class="period" id="period"></p>
+      <nav class="tabs" aria-label="View">
+        <button data-tab="profit" class="on">Profit</button>
+        <button data-tab="traffic">Traffic</button>
+        <button data-tab="people">People</button>
+      </nav>
+    </div>
     <p class="status" id="status" role="status"></p>
     <p class="warning" id="warning" hidden></p>
 
     <main id="page" hidden>
+      <div class="view" data-view="traffic" hidden>
+        <section class="live" id="live"></section>
+        <section class="grid2">
+          <article class="panel">
+            <h2>Is today normal?</h2>
+            <p class="hint">Today so far against the same hours of yesterday and of the last 7 days (UTC).</p>
+            <div class="table-wrap"><table id="compare"></table></div>
+          </article>
+          <article class="panel">
+            <h2>Where people come from</h2>
+            <div id="surfaces" class="split"></div>
+          </article>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>Hour by hour</h2><div class="legend"><i class="l-in"></i>Generations <i class="l-signup"></i>Sign-ups <i class="l-sale"></i>Sales</div></div>
+          <p class="hint" id="hours-day"></p>
+          <div id="hours" class="chart"></div>
+        </section>
+        <section class="grid2">
+          <article class="panel">
+            <h2>Ratings</h2>
+            <div id="rating-score" class="score"></div>
+            <div class="table-wrap"><table id="rating-models"></table></div>
+          </article>
+          <article class="panel">
+            <h2>Latest feedback</h2>
+            <div id="rating-comments" class="comments"></div>
+          </article>
+        </section>
+      </div>
+
+      <div class="view" data-view="people" hidden>
+        <section class="panel">
+          <div class="panel-head"><h2>Everyone active in this period</h2><input id="people-search" class="search" placeholder="Search email…" /></div>
+          <p class="hint">Newest activity first: what they made, whether they rated it and whether they bought.</p>
+          <div class="table-wrap"><table id="users"></table></div>
+        </section>
+      </div>
+
+      <div class="view" data-view="profit">
       <section class="hero">
         <article class="tile profit" id="tile-profit"></article>
         <article class="tile" id="tile-in"></article>
@@ -122,6 +169,7 @@
           </ul>
         </article>
       </section>
+      </div>
     </main>
 
     <dialog id="login">

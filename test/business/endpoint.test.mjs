@@ -61,7 +61,9 @@ test("valid owner receives private aggregates through the service-only RPC", asy
   assert.match(calls[1].url, /rpc\/business_dashboard_snapshot$/);
   // 30 days back, so the real cost of one credit can be measured; sign-ups by UTC day, like Dodo.
   assert.deepEqual(JSON.parse(calls[1].options.body), { p_start: "2026-09-30", p_end: "2026-10-30" });
-  assert.match(calls[2].url, /profiles\?select=a&a=gte\.2026-10-30T00:00:00Z&a=lt\.2026-10-31T00:00:00Z/);
+  // From the start of the 30-day window, so today can be compared with the days before.
+  assert.match(calls[2].url, /profiles\?select=user_id,email,a&a=gte\.2026-09-30T00:00:00Z&a=lt\.2026-10-31T00:00:00Z/);
+  assert.ok("activity" in JSON.parse(result.body), "traffic and people come with the report");
   assert.equal(JSON.parse(result.body).totals.profit, 0);
   assert.ok(!result.body.includes("server-secret"));
 });
