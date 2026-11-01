@@ -84,15 +84,16 @@ function render(d) {
     `${int(t.payments)} payment${t.payments === 1 ? "" : "s"} · ${usd(t.gross)} paid`,
     `− tax ${usd(t.tax)} − fees ${usd(t.fees)}${t.refunds ? ` − refunds ${usd(t.refunds)}` : ""}`,
   ]);
-  tile($("#tile-cost"), "Costs", usd(t.cost_of_sold + t.cost_free + t.cost_internal), "", [
+  tile($("#tile-cost"), "Costs", usd(t.cost_of_sold - t.correction + t.cost_free + t.cost_internal), "", [
     `Credits sold ${usd(t.cost_of_sold)} <small>(${int(t.credits_sold)} × $${t.cost_per_credit.toFixed(4)})</small>`,
     `Free users ${usd(t.cost_free)} · Your own use ${usd(t.cost_internal)}`,
+    `Real-use correction <b class="${tone(t.correction)}">${usd(t.correction, true)}</b>`,
   ]);
   tile($("#tile-exp"), "Expenses", usd(t.expenses), "", [`${d.expenses.length} active · spread per day`]);
 
   chart(d.days);
-  const row = (r) => [usd(r.net), usd(r.cost_of_sold), usd(r.cost_free), usd(r.cost_internal), usd(r.expenses), `<b class="${tone(r.profit)}">${usd(r.profit)}</b>`, `<span class="muted">${usd(r.cost)}</span>`, int(r.signups), `${int(r.new_buyers)} new${r.repeat_buyers ? ` · ${r.repeat_buyers} again` : ""}`];
-  table($("#days"), ["Day", "Money in", "Credits sold cost", "Free users", "Own use", "Expenses", "Profit", "Provider spending", "Sign-ups", "Buyers"],
+  const row = (r) => [usd(r.net), usd(r.cost_of_sold), `<span class="${tone(r.correction)}">${usd(r.correction, true)}</span>`, usd(r.cost_free), usd(r.cost_internal), usd(r.expenses), `<b class="${tone(r.profit)}">${usd(r.profit)}</b>`, `<span class="muted">${usd(r.cost)}</span>`, int(r.signups), `${int(r.new_buyers)} new${r.repeat_buyers ? ` · ${r.repeat_buyers} again` : ""}`];
+  table($("#days"), ["Day", "Money in", "Credits sold cost", "Real-use correction", "Free users", "Own use", "Expenses", "Profit", "Provider spending", "Sign-ups", "Buyers"],
     [...d.days].reverse().map((r) => [shortDay(r.day), ...row(r)]), ["Total", ...row(t)]);
 
   const reserve = t.reserve_for_unused_now;
@@ -123,8 +124,9 @@ function render(d) {
     d.journeys.map((j) => [when(j.first_purchase), esc(j.email || j.user_id.slice(0, 8)), esc(j.last_model), int(j.generations), int(j.failed), j.hours_to_buy == null ? "—" : j.hours_to_buy < 1 ? `${Math.round(j.hours_to_buy * 60)} min` : j.hours_to_buy < 48 ? `${Math.round(j.hours_to_buy)} h` : `${Math.round(j.hours_to_buy / 24)} days`]));
   table($("#sales"), ["When", "Buyer", "Via", "Credits", "Paid", "Tax", "Fee", "Money in"],
     d.sales.map((s) => [when(s.paid_at), esc(s.email || s.user_id?.slice(0, 8)), s.provider, int(s.credits), usd(s.gross), usd(s.tax), usd(s.fees), `<b>${usd(s.net)}</b>`]));
-  table($("#buyers"), ["Buyer", "Bought", "Paid (net)", "Balance", "Unused bought credits", "Worth"],
-    d.buyers.filter((b) => b.unused > 0).slice(0, 30).map((b) => [esc(b.email || b.user_id.slice(0, 8)), int(b.bought), usd(b.paid), int(b.balance), int(b.unused), usd(b.unused_value)]));
+  table($("#buyers"), ["Buyer", "Paid (net)", "Credits bought", "Used", "Real cost of use", "Profit so far", "Unused", "Expected on unused", "Total profit", "Margin"],
+    [...d.buyers].sort((a, b) => b.paid - a.paid).slice(0, 40).map((b) => [esc(b.email || b.user_id.slice(0, 8)), usd(b.paid), int(b.bought), int(b.used_credits), usd(b.used_cost),
+      `<span class="${tone(b.earned)}">${usd(b.earned)}</span>`, int(b.unused), usd(b.expected), `<b class="${tone(b.profit)}">${usd(b.profit)}</b>`, b.margin == null ? "—" : `${b.margin}%`]));
   table($("#expenses"), ["Name", "Amount", "Repeats", "Since", ""],
     d.expenses.map((e) => [esc(e.name), `${e.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })} ${esc(e.currency)}`, { none: "Once", monthly: "Monthly", yearly: "Yearly" }[e.recurrence] || e.recurrence, shortDay(e.starts_on), `<button class="link" data-archive="${esc(e.id)}">Remove</button>`]));
 

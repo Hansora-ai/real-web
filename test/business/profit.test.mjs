@@ -65,7 +65,9 @@ test("a day's profit, free-user cost, unused credits and what new buyers did bef
   // standard $0.0068), minus free users, the owner's own runs and the day's expenses. The buyer's Wan run is not
   // a cost again.
   close(t.cost_of_sold, 900 * 0.0068, "cost of the credits sold");
-  close(t.profit, t.net - 900 * 0.0068 - (0.15 + 0.135) - 1.19 - 1, "profit");
+  // The buyer's Wan video (100 credits) really cost $0.58 against $0.68 at the average: a +$0.10 correction.
+  close(t.correction, 100 * 0.0068 - 0.58, "correction for what the buyer really used");
+  close(t.profit, t.net - 900 * 0.0068 + (100 * 0.0068 - 0.58) - (0.15 + 0.135) - 1.19 - 1, "profit");
   assert.equal(t.signups, 7); assert.equal(t.generators, 2); assert.equal(t.generations, 4); assert.equal(t.failed, 1);
   assert.equal(t.new_buyers, 1); assert.equal(t.credits_sold, 900); assert.equal(t.credits_used_buyers, 100);
   assert.equal(t.unused_credits_now, 800, "800 of the 900 bought credits are still unused");
@@ -98,4 +100,30 @@ test("Armenia days, the owner's own purchases and the measured cost per credit",
   close(t.cost_of_sold, (2000 + 900) * 0.0058, "cost of the credits sold (the owner's own purchase is not counted twice)");
   close(t.cost_buyers, 11.6, "provider spending is still shown");
   assert.equal(t.new_buyers + t.repeat_buyers, 2, "the owner's own purchase is not a customer");
+});
+
+test("a buyer who spends on a thin-margin model lowers the profit of the day they spend, and their own profit", () => {
+  const buyer = "44444444-4444-4444-8444-444444444444";
+  const snapshot = {
+    payments: [{ id: 1, transaction_id: "p", uid: buyer, credits: 510, status: "succeeded", provider: "dodopayments", paid_at: "2026-10-20T10:00:00Z", currency: "USD", amount_cents: 4999,
+      financial: { settlement_amount: 4999, settlement_currency: "USD", settlement_tax: 0, card_issuing_country: "US" } }],
+    // 10 Wan videos to measure the average ($0.0058 a credit), then on 2 Nov two Seedance 2.5 1080p videos.
+    generations: [
+      ...Array.from({ length: 10 }, (_, i) => ({ user_id: buyer, created_at: "2026-10-25T10:00:00Z", provider: "Wan 3.0", model: "wan3.0-video", resolution: "720p", duration: 10, input_seconds: 0, status: "done", charged_cost: 10, run_id: `w${i}` })),
+      ...[1, 2].map((i) => ({ user_id: buyer, created_at: "2026-11-02T10:00:00Z", provider: "Seedance 2.5", model: "doubao-seedance-2.5-face", resolution: "1080p", duration: 10, input_seconds: 0, status: "done", charged_cost: 75.7, run_id: `s${i}` })),
+    ],
+    buyers: [{ user_id: buyer, email: "b@x.com", credits: 51 }], purchase_journeys: [], expenses: [], settings: {},
+  };
+  const r = buildProfit(snapshot, { start: "2026-11-02", end: "2026-11-02" });
+  const perCredit = (5.8 + 12.86) / 2514; // the 30-day average includes these runs: $18.66 for 2,514 credits
+  close(r.totals.cost_per_credit, perCredit, "average cost per credit");
+  close(r.totals.correction, 1514 * perCredit - 12.86, "the day they spend shows what the expensive model really cost");
+  assert.ok(r.totals.correction < 0, "a thin-margin model is a negative correction");
+  close(r.totals.profit, r.totals.correction, "no sales that day: only the correction");
+  const b = r.buyers[0];
+  const paid = 49.99 - (49.99 * 0.04 + 0.4);
+  assert.equal(b.used_credits, 2514); assert.equal(b.unused, 510);
+  close(b.used_cost, 5.8 + 12.86, "what their generations really cost");
+  close(b.earned, 2514 * (paid / 5100) - (5.8 + 12.86), "profit from the credits they used");
+  close(b.expected, 510 * (paid / 5100 - perCredit), "expected profit on the credits left");
 });
