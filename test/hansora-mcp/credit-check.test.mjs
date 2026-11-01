@@ -868,10 +868,14 @@ test('a new user\'s first video that fails on the provider\'s side is started on
   assert.equal(content.submitted.length, 0);
   assert.equal(content.result.structuredContent.failure_kind, 'content');
   const retryFailed = { ...failedRow, meta: { ...failedRow.meta, run_id: `${old}-retry` } };
-  // Grok failing first: Veo would cost more than the first try (20 > 18), so nothing is started.
+  // Grok failing on the provider's side: remade with Veo 3.1 Lite 720p at Veo's own price (20 credits), as the owner decided.
   const grokFailed = { ...failedRow, provider: 'Grok', meta: { ...failedRow.meta, model: 'grok-imagine/image-to-video', engine: 'grok', charged_cost: 1.8, refund_amount: 1.8 } };
-  const pricier = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('first_video_recipe') ? reply([{ model_id: 'grok-video', details: recipe.details }]) : world({ failure: grokFailed })(href)) });
-  assert.equal(pricier.submitted.length, 0);
+  const toVeo = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('first_video_recipe') ? reply([{ model_id: 'grok-video', details: recipe.details }]) : world({ failure: grokFailed })(href)) });
+  assert.equal(toVeo.submitted.length, 1);
+  assert.equal(toVeo.submitted[0].model_id, 'veo31-lite');
+  assert.match(JSON.stringify(toVeo.submitted[0]), /720p/);
+  assert.match(toVeo.result.structuredContent.switch_note, /^Grok Video had a temporary issue on the provider's side, so this video was made with Veo 3\.1 Lite instead\./);
+  assert.match(toVeo.result.structuredContent.next_step, /This switch was only for this video: for the user's next videos the model in use stays Grok Video\./);
   const twice = await callTool('get_generation', { run_id: `${old}-retry` }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && !href.includes('not.is.null') ? reply([retryFailed]) : world()(href)) });
   assert.equal(twice.submitted.length, 0);
 });
@@ -1058,6 +1062,11 @@ test('a new user\'s first video sent to Veo is made with Grok, unless ChatGPT th
   assert.equal(chosen.submitted.length, 1);
   assert.equal(chosen.submitted[0].model_id, 'veo31-lite');
 
+  // Right after this user's Grok video failed, Veo goes through instead of being sent back to Grok.
+  const grokJustFailed = await callTool('create_generation', request, { credits: 3, rest: (href) => (href.includes('provider=eq.Grok') && href.includes('meta->>status=eq.failed') ? new Response(JSON.stringify([{ id: 'g' }]), { status: 200, headers: { 'Content-Type': 'application/json' } }) : undefined) });
+  assert.equal(grokJustFailed.submitted.length, 1);
+  assert.equal(grokJustFailed.submitted[0].model_id, 'veo31-lite');
+
   // Returning users, and requests Grok cannot take as they are, keep Veo.
   const returning = await callTool('create_generation', request, { credits: 100, rest: returningUser });
   assert.equal(returning.submitted[0].model_id, 'veo31-lite');
@@ -1114,4 +1123,22 @@ test('a mistyped Hansora picture link is replaced by the saved picture before th
   assert.equal(missing.submitted.length, 0, 'nothing starts or is charged');
   assert.equal(missing.result.structuredContent.error, 'file_link_not_found');
   assert.match(missing.result.structuredContent.next_step, /copy its result_url exactly/);
+});
+
+test('model names ChatGPT writes its own way still find the model', async () => {
+  const { getModel } = await import('../../lib/hansora-mcp/registry.mjs');
+  for (const [name, id] of [['kling-4', 'kling40'], ['seedance-2-5', 'seedance25'], ['veo3.1lite', 'veo31-lite'], ['elevenlabs_tts_multilingual_v2', 'voice'], ['Nano Banana 2.1', 'nano-banana-2-1'], ['wan 3', 'wan-3']])
+    assert.equal(getModel(name)?.id, id, name);
+  assert.equal(getModel('made-up-model'), null);
+});
+
+test('the last video ChatGPT keeps using ignores a video Hansora remade after a temporary issue', async () => {
+  const { getLastVideo } = await import('../../lib/hansora-mcp/data.mjs');
+  let asked = '';
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url) => { asked = decodeURIComponent(String(url)); return new Response('[]', { status: 200 }); };
+  try { await getLastVideo('u'); } finally { globalThis.fetch = original; }
+  assert.match(asked, /or=\(meta->>run_id\.is\.null,meta->>run_id\.not\.like\.\*-retry\)/);
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.match(VIDEO_SELECTION_GUIDE, /does not change the model in use: the next videos use the model the user had before/);
 });
