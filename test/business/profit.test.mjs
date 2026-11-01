@@ -76,24 +76,25 @@ test("a day's profit, free-user cost, unused credits and what new buyers did bef
   assert.equal(r.journeys[0].hours_to_buy, 1);
 });
 
-test("Armenia days, the owner's own purchases and the measured cost per credit", () => {
+test("UTC days like Dodo, the owner's own purchases and the measured cost per credit", () => {
   const buyer = "33333333-3333-4333-8333-333333333333";
   const usd = (cents) => ({ settlement_amount: cents, settlement_currency: "USD", settlement_tax: 0, card_issuing_country: "US" });
   const snapshot = {
     payments: [
-      // 21:30 UTC on 1 Nov is 01:30 on 2 Nov in Armenia.
-      { id: 1, transaction_id: "late", uid: buyer, credits: 200, status: "succeeded", provider: "dodopayments", paid_at: "2026-11-01T21:30:00Z", currency: "USD", amount_cents: 1999, financial: usd(1999) },
+      // Saman's real case: 23:34 UTC on 1 Nov is 03:34 on 2 Nov in Armenia, but Dodo counts it on 1 Nov.
+      { id: 0, transaction_id: "utc-yesterday", uid: buyer, credits: 200, status: "succeeded", provider: "dodopayments", paid_at: "2026-11-01T23:34:00Z", currency: "USD", amount_cents: 1999, financial: usd(1999) },
+      { id: 1, transaction_id: "late", uid: buyer, credits: 200, status: "succeeded", provider: "dodopayments", paid_at: "2026-11-02T00:30:00Z", currency: "USD", amount_cents: 1999, financial: usd(1999) },
       { id: 2, transaction_id: "own", uid: OWNER_ID, credits: 90, status: "succeeded", provider: "dodopayments", paid_at: "2026-11-02T08:00:00Z", currency: "USD", amount_cents: 999, financial: usd(999) },
       // Saved without settlement or tax: completed from Dodo's own record.
       { id: 3, transaction_id: "bare", uid: buyer, credits: 90, status: "succeeded", provider: "dodopayments", paid_at: "2026-11-02T09:00:00Z", currency: "EUR", amount_cents: 900, financial: {},
         dodo: { total_amount: 900, currency: "EUR", tax: 0, settlement_amount: 1050, settlement_currency: "USD", settlement_tax: 0, card_issuing_country: "US" } },
     ],
-    generations: Array.from({ length: 20 }, (_, i) => ({ user_id: buyer, created_at: "2026-11-01T22:00:00Z", provider: "Wan 3.0", model: "wan3.0-video", resolution: "720p", duration: 10, input_seconds: 0, status: "done", charged_cost: 10, run_id: `r${i}` })),
+    generations: Array.from({ length: 20 }, (_, i) => ({ user_id: buyer, created_at: "2026-11-02T01:00:00Z", provider: "Wan 3.0", model: "wan3.0-video", resolution: "720p", duration: 10, input_seconds: 0, status: "done", charged_cost: 10, run_id: `r${i}` })),
     buyers: [{ user_id: buyer, credits: 0 }], purchase_journeys: [], expenses: [], settings: {},
   };
   const r = buildProfit(snapshot, { start: "2026-11-02", end: "2026-11-02" });
   const t = r.totals;
-  assert.equal(t.payments, 3, "the late payment, the owner's own and the completed one all count on 2 Nov");
+  assert.equal(t.payments, 3, "2 Nov (UTC): the early payment, the owner's own and the completed one, not the 23:34 one of 1 Nov");
   close(t.gross, 19.99 + 9.99 + 10.5, "gross as in Dodo");
   // 20 Wan runs × 100 credits = 2,000 credits for $11.60 → $0.0058 a credit.
   close(t.cost_per_credit, 0.0058, "measured cost per credit");
