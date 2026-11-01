@@ -444,7 +444,18 @@ function isFinalFailurePayload(value) {
   return /^(fail|failed|failure|error|errored|cancelled|canceled|rejected)$/.test(explicit);
 }
 function failureReason(value) {
-  return String(value?.error || value?.message || value?.msg || value?.failMsg || value?.data?.error || value?.data?.message || value?.data?.msg || value?.data?.reason || value?.data?.failMsg || value?.data?.failCode || value?.result?.error || value?.result?.message || value?.result?.failMsg || "kie_failed");
+  // Kie's reply for a failed task still says msg "success" (the request itself worked): read the task's own
+  // reason first, and never store "success" or "ok" as the error.
+  const candidates = [
+    value?.data?.failMsg, value?.data?.errorMessage, value?.data?.error, value?.data?.reason, value?.failMsg,
+    value?.error, value?.message, value?.msg, value?.data?.message, value?.data?.msg,
+    value?.result?.failMsg, value?.result?.error, value?.result?.message
+  ];
+  for (const candidate of candidates) {
+    const text = typeof candidate === "string" ? candidate.trim() : "";
+    if (text && !/^(success|succeeded|ok)$/i.test(text)) return text;
+  }
+  return "kie_failed";
 }
 
 function normalizeComparableUrl(url) { return String(url || "").replace(/[)"'\\\]}]+$/g, "").trim(); }
