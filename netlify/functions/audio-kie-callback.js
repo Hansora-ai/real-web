@@ -83,7 +83,20 @@ function cors(){ return { "Access-Control-Allow-Origin":"*", "Access-Control-All
 function safeJson(s){ try { return JSON.parse(s || "{}"); } catch { return {}; } }
 function sb(){ return { "apikey":SERVICE_KEY, "Authorization":`Bearer ${SERVICE_KEY}` }; }
 function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === "isolation" ? "Voice Isolation" : kind === "voice-change" ? "Voice Changer" : "Text to Voice"; }
-function failureReason(body){ return String(body?.error || body?.message || body?.msg || body?.data?.errorMessage || body?.data?.failMsg || body?.data?.error || body?.data?.message || body?.data?.msg || "kie_failed"); }
+function failureReason(body) {
+  // Kie's reply for a failed task still says msg "success" (the request itself worked): read the task's own
+  // reason first, and never store "success" or "ok" as the error.
+  const candidates = [
+    body?.data?.failMsg, body?.data?.errorMessage, body?.data?.error, body?.data?.reason, body?.failMsg,
+    body?.error, body?.message, body?.msg, body?.data?.message, body?.data?.msg,
+    body?.result?.failMsg, body?.result?.error, body?.result?.message
+  ];
+  for (const candidate of candidates) {
+    const text = typeof candidate === "string" ? candidate.trim() : "";
+    if (text && !/^(success|succeeded|ok)$/i.test(text)) return text;
+  }
+  return "kie_failed";
+}
 function isFailure(body){
   const data = body?.data || body || {};
   const flag = data?.successFlag ?? body?.successFlag;
