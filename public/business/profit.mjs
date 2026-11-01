@@ -83,6 +83,7 @@ function render(d) {
   tile($("#tile-in"), "Money in", usd(t.net), "", [
     `${int(t.payments)} payment${t.payments === 1 ? "" : "s"} · ${usd(t.gross)} paid`,
     `− tax ${usd(t.tax)} − fees ${usd(t.fees)}${t.refunds ? ` − refunds ${usd(t.refunds)}` : ""}`,
+    `Dodo <b>${usd(t.net_dodo)}</b> (${int(t.payments_dodo)}) · YooMoney <b>${usd(t.net_yoomoney)}</b> (${int(t.payments_yoomoney)})`,
   ]);
   tile($("#tile-cost"), "Costs", usd(t.cost_of_sold - t.correction + t.cost_free + t.cost_internal), "", [
     `Credits sold ${usd(t.cost_of_sold)} <small>(${int(t.credits_sold)} × $${t.cost_per_credit.toFixed(4)})</small>`,
