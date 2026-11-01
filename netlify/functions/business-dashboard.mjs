@@ -5,6 +5,7 @@ import {
   OWNER_ID,
 } from "../../lib/business/access.mjs";
 import { buildProfit, paymentUsd } from "../../lib/business/profit.mjs";
+import { buildActivity } from "../../lib/business/activity.mjs";
 import { INTERNAL_IDS } from "../../lib/business/access.mjs";
 import { validateExpense, dayNumber, dateString } from "../../public/business/finance.mjs";
 const uuid = (value) =>
@@ -27,6 +28,17 @@ async function completeFromDodo(snapshot, lo, hi) {
       if (response.ok) p.dodo = await response.json();
     } catch {}
   }));
+}
+
+// Emails of people active in the period who signed up before it (the sign-up query has the newer ones).
+async function addEmails(auth, snapshot, lo, hi) {
+  snapshot.emails = snapshot.emails || {};
+  const ids = [...new Set((snapshot.generations || []).filter((g) => g.created_at >= lo && g.created_at < hi).map((g) => g.user_id))]
+    .filter((id) => id && !(id in snapshot.emails)).slice(0, 600);
+  for (let i = 0; i < ids.length; i += 100) {
+    const rows = await database(auth, `profiles?select=user_id,email&user_id=in.(${ids.slice(i, i + 100).join(",")})`).catch(() => []);
+    for (const r of Array.isArray(rows) ? rows : []) snapshot.emails[r.user_id] = r.email;
+  }
 }
 
 // The official ruble → dollar rate of a day, from public daily rates (no key needed); remembered while warm.
@@ -88,11 +100,18 @@ export async function handler(event) {
         body: JSON.stringify({ p_start: from, p_end: end }),
       });
       const lo = `${start}T00:00:00Z`, hi = `${dateString(dayNumber(end) + 1)}T00:00:00Z`;
-      const signups = await database(auth, `profiles?select=a&a=gte.${lo}&a=lt.${hi}&user_id=not.in.(${INTERNAL_IDS.join(",")})&limit=50000`).catch(() => null);
-      if (Array.isArray(signups)) snapshot.signup_times = signups.map((r) => r.a).filter(Boolean);
+      // Sign-ups from the start of the data window, so today can be compared with the days before.
+      const signups = await database(auth, `profiles?select=user_id,email,a&a=gte.${from}T00:00:00Z&a=lt.${hi}&user_id=not.in.(${INTERNAL_IDS.join(",")})&limit=50000`).catch(() => null);
+      if (Array.isArray(signups)) {
+        snapshot.signup_times = signups.map((r) => r.a).filter(Boolean);
+        snapshot.signup_at = Object.fromEntries(signups.filter((r) => r.a).map((r) => [r.user_id, r.a]));
+        snapshot.emails = Object.fromEntries(signups.map((r) => [r.user_id, r.email]));
+      }
+      await addEmails(auth, snapshot, lo, hi);
       await completeFromDodo(snapshot, lo, hi);
       await completeYooMoney(auth, snapshot, lo, hi);
-      return json(200, buildProfit(snapshot, { start, end }));
+      const profit = buildProfit(snapshot, { start, end });
+      return json(200, { ...profit, activity: buildActivity(snapshot, { start, end }) });
     }
     if ((event.body || "").length > 50000)
       return json(413, { error: "Request is too large." });

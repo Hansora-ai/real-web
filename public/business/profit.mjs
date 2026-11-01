@@ -15,6 +15,12 @@ const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const shortDay = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const when = (t) => new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
 const tone = (v) => (v > 0.005 ? "up" : v < -0.005 ? "down" : "");
+const local = (t) => new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const ago = (t) => {
+  if (!t) return "—";
+  const m = Math.round((Date.now() - new Date(t)) / 60000);
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 48 * 60 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`;
+};
 
 function rangeFor(preset) {
   const today = todayUTC(), t = dayNumber(today);
@@ -131,11 +137,75 @@ function render(d) {
   table($("#expenses"), ["Name", "Amount", "Repeats", "Since", ""],
     d.expenses.map((e) => [esc(e.name), `${e.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })} ${esc(e.currency)}`, { none: "Once", monthly: "Monthly", yearly: "Yearly" }[e.recurrence] || e.recurrence, shortDay(e.starts_on), `<button class="link" data-archive="${esc(e.id)}">Remove</button>`]));
 
+  if (d.activity) renderActivity(d.activity);
   $("#s-rub").value = d.settings.fx?.RUB ?? "";
   const q = d.quality, notes = [];
   if (q.estimated_runs) notes.push(`${int(q.estimated_runs)} of ${int(q.runs)} generations didn't save their settings, so their cost is the credits charged × that model's cost per credit from the price sheet.`);
   if (q.unknown_cost_runs) notes.push(`${int(q.unknown_cost_runs)} generations have no price (unknown model, no credits charged).`);
   $("#quality-note").innerHTML = notes.join(" ") || "All generations were priced from their recorded settings.";
+}
+
+// Traffic: live counters, today against yesterday and the week, hours, sources and ratings.
+function renderActivity(a) {
+  const L = a.live, fresh = (t, mins) => t && Date.now() - new Date(t) < mins * 60000;
+  const chip = (label, value, sub, on) => `<div class="chip${on ? " on" : ""}"><span>${label}</span><b>${value}</b><small>${sub}</small></div>`;
+  $("#live").innerHTML = [
+    chip("Active now", int(L.active_15m), "people in the last 15 min", L.active_15m > 0),
+    chip("Last hour", `${int(L.generations_60m)} gen.`, `${int(L.active_60m)} people · ${int(L.signups_60m)} sign-ups`, L.generations_60m > 0),
+    chip("Last sign-up", ago(L.last_signup_at), L.last_signup_at ? local(L.last_signup_at) : "", fresh(L.last_signup_at, 60)),
+    chip("Last generation", ago(L.last_generation_at), L.last_generation_at ? local(L.last_generation_at) : "", fresh(L.last_generation_at, 15)),
+    chip("Last sale", ago(L.last_sale_at), L.last_sale_at ? local(L.last_sale_at) : "", fresh(L.last_sale_at, 24 * 60)),
+  ].join("");
+  const C = a.compare, vs = (now, before) => {
+    if (!before) return now ? `<span class="up">new</span>` : "";
+    const pct = Math.round(((now - before) / before) * 100);
+    return `<span class="${pct >= 0 ? "up" : "down"}">${pct >= 0 ? "+" : ""}${pct}%</span>`;
+  };
+  table($("#compare"), ["", "Today so far", "Yesterday", "", "7-day average", ""],
+    [["Sign-ups", "signups"], ["People generating", "people"], ["Generations", "generations"], ["Failed", "failed"], ["Sales", "sales"]].map(([label, k]) =>
+      [label, `<b>${int(C.today[k])}</b>`, int(C.yesterday[k]), vs(C.today[k], C.yesterday[k]), C.week_average[k], vs(C.today[k], C.week_average[k])]));
+  const S = a.surfaces, total = S.chatgpt.generations + S.website.generations || 1;
+  $("#surfaces").innerHTML = [["ChatGPT", S.chatgpt, "c-gpt"], ["Website", S.website, "c-web"]].map(([name, x, cls]) =>
+    `<div class="src"><div class="src-head"><b>${name}</b><span>${int(x.people)} people · ${int(x.generations)} generations</span></div><div class="meter"><i class="${cls}" style="width:${(x.generations / total) * 100}%"></i></div></div>`).join("");
+  $("#hours-day").textContent = `${new Date(a.hours[0].at).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })} (UTC day), shown in your local time`;
+  hoursChart(a.hours);
+  const R = a.ratings, n = R.up + R.down;
+  $("#rating-score").innerHTML = n ? `<b>${Math.round((R.up / n) * 100)}%</b> liked <span>· ${R.up} 👍 · ${R.down} 👎</span>` : `<span>No ratings in this period.</span>`;
+  table($("#rating-models"), ["Model", "👍", "👎", "Liked"], R.by_model.map((m) => [esc(m.model), m.up, m.down, `${Math.round((m.up / (m.up + m.down)) * 100)}%`]));
+  $("#rating-comments").innerHTML = R.recent.length ? R.recent.map((r) => `<div class="comment ${r.rating > 0 ? "good" : "bad"}"><div><b>${r.rating > 0 ? "👍" : "👎"} ${esc(r.model)}</b><small>${ago(r.at)}</small></div>${r.comment ? `<p>${esc(r.comment)}</p>` : ""}${(Array.isArray(r.reasons) ? r.reasons : []).map((x) => `<em>${esc(x)}</em>`).join("")}</div>`).join("") : `<p class="empty">No comments in this period.</p>`;
+  state.users = a.users;
+  renderUsers();
+}
+
+function renderUsers() {
+  const q = ($("#people-search")?.value || "").trim().toLowerCase();
+  const list = (state.users || []).filter((u) => !q || String(u.email || u.user_id).toLowerCase().includes(q));
+  table($("#users"), ["Person", "Signed up", "Via", "Made", "Models", "Rated", "Bought", "Last active"],
+    list.map((u) => [
+      `<b>${esc(u.email || u.user_id.slice(0, 8))}</b>`,
+      u.signed_up_at ? local(u.signed_up_at) : "<span class=muted>earlier</span>",
+      u.surfaces.join(" · ") || "—",
+      u.generations ? `${int(u.generations)}${u.failed ? ` <span class="down">· ${u.failed} failed</span>` : ""}` : "<span class=muted>nothing yet</span>",
+      `<span class="models">${esc(u.models.slice(0, 3).join(", "))}${u.models.length > 3 ? " …" : ""}</span>`,
+      u.likes || u.dislikes ? `${u.likes ? `👍 ${u.likes}` : ""} ${u.dislikes ? `👎 ${u.dislikes}` : ""}${u.comment ? `<br><small class="muted">“${esc(u.comment.slice(0, 80))}”</small>` : ""}` : "<span class=muted>—</span>",
+      u.purchases ? `<b class="up">${usd(u.paid)}</b>${u.purchases > 1 ? ` (${u.purchases})` : ""}` : u.first_purchase_at ? "<span class=muted>earlier</span>" : "<span class=muted>no</span>",
+      ago(u.last_at),
+    ]));
+}
+
+// Generations, sign-ups and sales per hour of the day, labelled in the viewer's own time.
+function hoursChart(hours) {
+  const w = 720, h = 200, pad = 26, slot = (w - pad * 2) / 24;
+  const top = Math.max(1, ...hours.map((x) => Math.max(x.generations, x.signups)));
+  const y = (v) => h - pad - (v / top) * (h - pad * 2);
+  const bars = hours.map((x, i) => {
+    const cx = pad + slot * i, label = new Date(x.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    return `<rect class="b-in" x="${cx + slot * 0.12}" y="${y(x.generations)}" width="${slot * 0.4}" height="${h - pad - y(x.generations)}"><title>${label} · ${x.generations} generations · ${x.people} people</title></rect>`
+      + `<rect class="b-signup" x="${cx + slot * 0.52}" y="${y(x.signups)}" width="${slot * 0.36}" height="${h - pad - y(x.signups)}"><title>${label} · ${x.signups} sign-ups</title></rect>`
+      + (x.sales ? `<circle class="dot-sale" cx="${cx + slot / 2}" cy="${pad - 8}" r="4"><title>${label} · ${x.sales} sale(s)</title></circle>` : "")
+      + (i % 3 === 0 ? `<text x="${cx + slot / 2}" y="${h - 6}">${label}</text>` : "");
+  }).join("");
+  $("#hours").innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Activity per hour"><line class="zero" x1="${pad}" x2="${w - pad}" y1="${h - pad}" y2="${h - pad}"/>${bars}<text class="axis" x="${pad}" y="12">${top}</text></svg>`;
 }
 
 function kv(el, rows) { el.innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join(""); }
@@ -176,6 +246,16 @@ $("#apply").onclick = () => {
   setRange({ start, end }, null);
 };
 $("#refresh").onclick = () => load();
+function showTab(name) {
+  document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
+  document.querySelectorAll("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== name));
+  try { localStorage.setItem("hansora-profit-tab", name); } catch {}
+}
+document.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
+try { showTab(localStorage.getItem("hansora-profit-tab") || "profit"); } catch { showTab("profit"); }
+$("#people-search").oninput = () => renderUsers();
+// While today is shown, refresh every 2 minutes so the live counters stay live.
+setInterval(() => { if (state.range?.end === todayUTC() && !document.hidden && state.data) load(); }, 120000);
 
 $("#expense-form").onsubmit = async (e) => {
   e.preventDefault();
