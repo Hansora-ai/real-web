@@ -868,10 +868,13 @@ test('a new user\'s first video that fails on the provider\'s side is started on
   assert.equal(content.submitted.length, 0);
   assert.equal(content.result.structuredContent.failure_kind, 'content');
   const retryFailed = { ...failedRow, meta: { ...failedRow.meta, run_id: `${old}-retry` } };
-  // Grok failing first: Veo would cost more than the first try (20 > 18), so nothing is started.
+  // Grok failing on the provider's side: remade with Veo 3.1 Lite 720p at Veo's own price (20 credits), as the owner decided.
   const grokFailed = { ...failedRow, provider: 'Grok', meta: { ...failedRow.meta, model: 'grok-imagine/image-to-video', engine: 'grok', charged_cost: 1.8, refund_amount: 1.8 } };
-  const pricier = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('first_video_recipe') ? reply([{ model_id: 'grok-video', details: recipe.details }]) : world({ failure: grokFailed })(href)) });
-  assert.equal(pricier.submitted.length, 0);
+  const toVeo = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('first_video_recipe') ? reply([{ model_id: 'grok-video', details: recipe.details }]) : world({ failure: grokFailed })(href)) });
+  assert.equal(toVeo.submitted.length, 1);
+  assert.equal(toVeo.submitted[0].model_id, 'veo31-lite');
+  assert.match(JSON.stringify(toVeo.submitted[0]), /720p/);
+  assert.match(toVeo.result.structuredContent.switch_note, /^Grok Video had a temporary issue on the provider's side, so this video was made with Veo 3\.1 Lite instead\./);
   const twice = await callTool('get_generation', { run_id: `${old}-retry` }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && !href.includes('not.is.null') ? reply([retryFailed]) : world()(href)) });
   assert.equal(twice.submitted.length, 0);
 });
@@ -1057,6 +1060,11 @@ test('a new user\'s first video sent to Veo is made with Grok, unless ChatGPT th
   const chosen = await callTool('create_generation', request, { credits: 3, veoChosen: true });
   assert.equal(chosen.submitted.length, 1);
   assert.equal(chosen.submitted[0].model_id, 'veo31-lite');
+
+  // Right after this user's Grok video failed, Veo goes through instead of being sent back to Grok.
+  const grokJustFailed = await callTool('create_generation', request, { credits: 3, rest: (href) => (href.includes('provider=eq.Grok') && href.includes('meta->>status=eq.failed') ? new Response(JSON.stringify([{ id: 'g' }]), { status: 200, headers: { 'Content-Type': 'application/json' } }) : undefined) });
+  assert.equal(grokJustFailed.submitted.length, 1);
+  assert.equal(grokJustFailed.submitted[0].model_id, 'veo31-lite');
 
   // Returning users, and requests Grok cannot take as they are, keep Veo.
   const returning = await callTool('create_generation', request, { credits: 100, rest: returningUser });

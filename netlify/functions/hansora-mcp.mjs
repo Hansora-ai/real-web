@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getRecentResultUrls, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getRecentResultUrls, hadRecentGrokFailure, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -332,7 +332,9 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
     const failed = recipe ? getModel(recipe.model_id) : null;
     if (!failed || failed.category !== 'video') return null;
     const veoOutage = VEO_MODELS.has(failed.id) && presented.failure_kind === 'temporary';
-    if (!veoOutage && !(await isFirstGeneration(userId))) return null;
+    // Grok's temporary failures ("Playground task failed") are remade with Veo 3.1 Lite for anyone.
+    const grokOutage = failed.id === 'grok-video' && presented.failure_kind === 'temporary';
+    if (!veoOutage && !grokOutage && !(await isFirstGeneration(userId))) return null;
     const account = await getAccount(userId).catch(() => null);
     if (!account) return null;
     const request = {
@@ -343,12 +345,14 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
       ...(typeof recipe.sound === 'boolean' ? { sound: recipe.sound } : {})
     };
     if (!request.prompt) return null;
-    // Never more than the user's first try cost (it was refunded), so the retry needs no new consent.
+    // Never more than the user's first try cost (it was refunded), so the retry needs no new consent. The one
+    // exception is Grok → Veo 3.1 Lite at Veo's own price (20 credits for 8 s at 720p), as the owner decided.
     const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
     const firstTry = Number(meta.charged_cost ?? meta.charge_cost ?? meta.refund_amount) * 10;
     if (!(firstTry > 0)) return null;
     const option = optionsWithinBalance(failed.id, request, Number(account.internal_credits || 0), 4, firstVideoOrder(), true)
-      .find((candidate) => candidate.model_id !== failed.id && candidate.credits <= firstTry);
+      .find((candidate) => candidate.model_id !== failed.id
+        && (candidate.credits <= firstTry || (grokOutage && candidate.model_id === 'veo31-lite')));
     const model = option ? getModel(option.model_id) : null;
     const endpoint = model ? getRunner(model.id) : '';
     if (!model || !endpoint) return null;
@@ -425,6 +429,8 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
   if (Number(balanceInternal) < grok.internalCredits) return null;
   if (!(await isFirstGeneration(userId))) return null;
   if (await hadRecentOutcome(userId, FIRST_VIDEO_STEERED, new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
+  // Right after this user's Grok video failed, Grok is not the better first video: let Veo through.
+  if (await hadRecentGrokFailure(userId, new Date(Date.now() - 30 * 60 * 1000).toISOString())) return null;
   const value = {
     ok: false, error: 'first_video_on_grok', generated: false, credits_used: 0,
     model_id: model.id, model_name: model.name,
