@@ -392,7 +392,7 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
     meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId },
     ...(view.status === 'processing' ? {
       message: note,
-      next_step: `${note} The card shows this and the new video by itself. In your next reply, tell the user this in one short line.`
+      next_step: `${note} The card shows this and the new video by itself. In your next reply, tell the user this in one short line. This switch was only for this video: for the user's next videos the model in use stays ${failedName}.`
     } : {})
   };
 }
@@ -1027,7 +1027,7 @@ export function createHansoraServer(ctx) {
       // Said in the card and by ChatGPT, so nobody is misled about which model made the video.
       const restingNote = (credits) => (resting ? switchNote({ from: resting.from, to: 'Grok Video', credits: credits ?? null, reason: 'resting' }) : '');
       const restingFields = (credits) => (resting ? { switched_from: resting.from, switch_note: restingNote(credits) } : {});
-      const restingStep = (credits) => (resting ? `${restingNote(credits)} Tell the user this in one short line, without asking anything. ` : '');
+      const restingStep = (credits) => (resting ? `${restingNote(credits)} Tell the user this in one short line, without asking anything. This switch is only for this video: the model in use stays ${resting.from}. ` : '');
       const model = getModel(input.model_id);
       const endpoint = getRunner(input.model_id);
       if (!model) throw new Error('unsupported_model');

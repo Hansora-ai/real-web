@@ -875,6 +875,7 @@ test('a new user\'s first video that fails on the provider\'s side is started on
   assert.equal(toVeo.submitted[0].model_id, 'veo31-lite');
   assert.match(JSON.stringify(toVeo.submitted[0]), /720p/);
   assert.match(toVeo.result.structuredContent.switch_note, /^Grok Video had a temporary issue on the provider's side, so this video was made with Veo 3\.1 Lite instead\./);
+  assert.match(toVeo.result.structuredContent.next_step, /This switch was only for this video: for the user's next videos the model in use stays Grok Video\./);
   const twice = await callTool('get_generation', { run_id: `${old}-retry` }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && !href.includes('not.is.null') ? reply([retryFailed]) : world()(href)) });
   assert.equal(twice.submitted.length, 0);
 });
@@ -1129,4 +1130,15 @@ test('model names ChatGPT writes its own way still find the model', async () => 
   for (const [name, id] of [['kling-4', 'kling40'], ['seedance-2-5', 'seedance25'], ['veo3.1lite', 'veo31-lite'], ['elevenlabs_tts_multilingual_v2', 'voice'], ['Nano Banana 2.1', 'nano-banana-2-1'], ['wan 3', 'wan-3']])
     assert.equal(getModel(name)?.id, id, name);
   assert.equal(getModel('made-up-model'), null);
+});
+
+test('the last video ChatGPT keeps using ignores a video Hansora remade after a temporary issue', async () => {
+  const { getLastVideo } = await import('../../lib/hansora-mcp/data.mjs');
+  let asked = '';
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url) => { asked = decodeURIComponent(String(url)); return new Response('[]', { status: 200 }); };
+  try { await getLastVideo('u'); } finally { globalThis.fetch = original; }
+  assert.match(asked, /or=\(meta->>run_id\.is\.null,meta->>run_id\.not\.like\.\*-retry\)/);
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.match(VIDEO_SELECTION_GUIDE, /does not change the model in use: the next videos use the model the user had before/);
 });
