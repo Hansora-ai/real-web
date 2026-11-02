@@ -1,47 +1,31 @@
 # Hansora app (iPhone, iPad, Android)
 
-Plan and decisions: [`docs/mobile-app/PLAN.md`](../docs/mobile-app/PLAN.md). Website changes still to copy:
-[`docs/mobile-app/SYNC.md`](../docs/mobile-app/SYNC.md).
+The app's pages are the website's own files from `public/`, packaged into `app/www` when the app is built.
+The app never opens hansora.co pages; it only talks to the same server (login, credits, generations, chats).
+Everything app-only is in `additions/` (store rules, login through the phone's browser, Creative ↔ Automation door).
+Plan: [`docs/mobile-app/PLAN.md`](../docs/mobile-app/PLAN.md).
 
-Separate from the website build: nothing in this folder is deployed to hansora.co.
-
-## Try it in a browser
+## iPhone (Mac with Xcode)
 
 ```bash
 cd app
 npm install
-npm run dev
+npm run ios
 ```
 
-Open the address it prints, then in Chrome press F12 → the phone icon to see it at iPhone size.
-It uses the real Hansora login and data.
+In Xcode: App target → Signing & Capabilities → choose your team, then pick your iPhone and press ▶.
 
-## Run it on your iPhone (Mac with Xcode)
-
-```bash
-cd app
-npm install
-npm run build
-npx cap sync ios
-npx cap open ios
-```
-
-In Xcode: select the **App** target → *Signing & Capabilities* → choose your team, add **Sign in with Apple**,
-then pick your iPhone at the top and press ▶.
-
-## Run it on Android (Android Studio)
+## Android (Android Studio)
 
 ```bash
 cd app
 npm install
-npm run build
-npx cap sync android
-npx cap open android
+npm run android
 ```
 
 ## Checks
 
 ```bash
+cd app
 npm test
-npm run build
 ```

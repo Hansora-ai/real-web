@@ -14,11 +14,11 @@ the reference for features, prices, credits and wording.
 | Topic | Decision |
 |---|---|
 | Platforms | iPhone, iPad, Android — one codebase |
-| Tech | Capacitor 8 + Ionic 9 (React) in `app/`. Own screens built for phones, never the website in a frame |
+| Tech | Capacitor 8 in `app/`. The app's pages are the **website's own files**, packaged into the app at build time (`app/scripts/package-site.mjs`). The app never opens hansora.co pages; it only calls the same server. App-only parts live in `app/additions/` |
 | Bundle ID | `co.hansora.app` (owner owns hansora.co). Can never change after the first release |
 | Backend | The same Supabase project and Netlify functions as the website. No second backend |
-| Design | The website's look: Inter, dark by default + light, blue accent, logo gradient. Tokens in `app/src/theme/tokens.css` |
-| Languages | English, Russian, Armenian. Phone language decides, English fallback. No Armenian-only defaults or examples |
+| Design | **Identical to the website** (owner's decision, 2026-11-02): same pages, banners, headers, bottom bars and menus. Two sections, Creative and Automation, with a clear door between them. Only add/remove what Apple and Google require |
+| Languages | English first; Russian and Armenian after (the website's _ru/_arm pages are already packaged) |
 | Login | Email + password, Google (≈90% of users), and **Sign in with Apple** (Apple requires it when Google is offered) |
 | Credits | Same balance as the website. Stored credits shown ×10 with ⚡ (3 stored = 30⚡ welcome gift) |
 | Buying credits | **Option A**: Apple / Google in-app purchases for the same packages, and website purchases still count |

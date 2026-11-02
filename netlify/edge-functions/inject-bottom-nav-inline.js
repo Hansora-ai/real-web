@@ -6,8 +6,7 @@ export default async (request, context) => {
   const requestPath = new URL(request.url).pathname.toLowerCase();
 
   // Authentication, connector documentation and the full-screen video editor use focused standalone layouts.
-  // The phone-app preview (/app-preview/, PR previews only) has its own tab bar.
-  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || /^\/caption-studio(?:_(?:ru|arm))?(?:\.html)?\/?$/.test(requestPath) || /^\/automation(?:-[a-z]+)?(?:\.html)?(?:\/|$)/.test(requestPath) || requestPath.startsWith('/app-preview/') || requestPath === '/app-preview') {
+  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || /^\/caption-studio(?:_(?:ru|arm))?(?:\.html)?\/?$/.test(requestPath) || /^\/automation(?:-[a-z]+)?(?:\.html)?(?:\/|$)/.test(requestPath)) {
     return res;
   }
 

@@ -1,16 +1,20 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+// The app's pages are the website's own files packaged into www/ (scripts/package-site.mjs);
+// the app never opens hansora.co pages. It only calls the same server (login, credits, generations, chats).
 // The bundle ID can never change after the first store release.
 const config: CapacitorConfig = {
   appId: 'co.hansora.app',
   appName: 'Hansora',
-  webDir: 'dist',
-  backgroundColor: '#08090b',
-  ios: { contentInset: 'never', scheme: 'Hansora' },
+  webDir: 'www',
+  backgroundColor: '#08090c',
+  appendUserAgent: 'HansoraApp',
+  ios: { contentInset: 'always', scheme: 'Hansora' },
+  android: { adjustMarginsForEdgeToEdge: 'auto' },
   plugins: {
-    // Requests to hansora.co go through the phone's native HTTP, so the website's server needs no changes.
+    // Server calls go through the phone's native HTTP, so hansora.co needs no changes.
     CapacitorHttp: { enabled: true },
-    SplashScreen: { launchShowDuration: 0, backgroundColor: '#08090b' },
+    SplashScreen: { launchShowDuration: 0, backgroundColor: '#08090c' },
   },
 };
 

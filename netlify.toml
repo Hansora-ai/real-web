@@ -7,11 +7,6 @@
 [build.environment]
   NODE_VERSION = "22.22.0"
 
-# PR previews only: also build the phone app at /app-preview/ so it can be opened on a phone.
-# Production (hansora.co) is unchanged. If the app build fails, the website preview still deploys.
-[context.deploy-preview]
-  command = "npm run build:functions && (npm --prefix app ci --no-audit --no-fund && APP_BASE=/app-preview/ npm --prefix app run build -- --outDir ../public/app-preview --emptyOutDir || echo 'App preview build failed; website preview continues')"
-
 [functions]
   node_bundler = "esbuild"
 

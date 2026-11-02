@@ -1,0 +1,22 @@
+/* Hansora app additions (the pages' own design is unchanged). */
+
+/* Store rules: no website checkout inside the app. */
+html.hansora-app a[href*="pricing"],
+html.hansora-app #hansoraSignupOffer { display: none !important; }
+
+/* Behave like an app: no text-size jumps, no rubber-band page, 16px inputs (no zoom on focus). */
+html.hansora-app { -webkit-text-size-adjust: 100%; overscroll-behavior-y: none; }
+html.hansora-app body { -webkit-touch-callout: none; }
+html.hansora-app input, html.hansora-app textarea, html.hansora-app select { font-size: max(16px, 1em); }
+
+/* Door to Automation at the top of Creative's menu. */
+#hs-overlay .links a.app-door, .app-door {
+  display: flex !important; align-items: center; gap: 12px; margin: 0 0 12px; padding: 14px 16px; border-radius: 16px;
+  text-decoration: none !important; color: #0a0a0b !important; background: #fff !important; border-color: #fff !important; font-family: Inter, -apple-system, sans-serif;
+}
+#hs-overlay .links a.app-door b, #hs-overlay .links a.app-door i { color: #0a0a0b !important; }
+#hs-overlay .links a.app-door small { color: #51535c !important; }
+.app-door span { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.app-door b { font-size: 16px; font-weight: 800; }
+.app-door small { font-size: 12.5px; color: #51535c; font-weight: 500; }
+.app-door i { margin-left: auto; font-style: normal; font-size: 18px; font-weight: 800; }
