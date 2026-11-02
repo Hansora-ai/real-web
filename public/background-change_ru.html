@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="./header.js"></script>
   <script defer src="./kie-upload-bridge.js"></script>
+  <script src="./kling4-pricing.js"></script>
   <style>
     :root{
       --bg:#060712;
@@ -992,23 +993,15 @@
           </div>
 
           <div class="field">
-            <div class="label"><span>Соотношение сторон</span></div>
-            <div class="pill-row" id="aspectRow">
-              <button type="button" data-aspect="16:9" class="active">16:9</button>
-              <button type="button" data-aspect="9:16">9:16</button>
-            </div>
-          </div>
-
-          <div class="field">
             <div class="label"><span>Разрешение</span></div>
             <div class="pill-row" id="resolutionRow">
-              <button type="button" data-resolution="1080p" class="active">1080p</button>
-              <button type="button" data-resolution="4K">4K</button>
+              <button type="button" data-resolution="720p" class="active">720p</button>
+              <button type="button" data-resolution="1080p">1080p</button>
             </div>
           </div>
 
           <p id="status" class="status"></p>
-          <button id="runBtn" class="run" type="button">Запустить 11 ⚡</button>
+          <button id="runBtn" class="run" type="button">Сгенерировать 220 ⚡</button>
         </div>
       </section>
 
@@ -1130,7 +1123,7 @@
     let filmRenderToken = 0;
     let imageFiles = [];
     let aspectRatio = '16:9';
-    let resolution = '1080p';
+    let resolution = '720p';
     const activePolls = new Map();
 
     function fmt(value) {
@@ -1143,7 +1136,7 @@
     }
 
     function runCost() {
-      return resolution === '4K' ? 16 : 11;
+      return window.Kling4Pricing.quote({resolution, inputSeconds:Math.max(4, selectedLength() || 10), lite:true}).internalCredits;
     }
 
     function displayedRunCost() {
@@ -1286,7 +1279,7 @@
       const status = String(data.status || '').toLowerCase();
       const url = data.result_url || '';
       const ready = !!url;
-      const failed = !ready && /fail|error|cancel|reject/i.test(status);
+      const failed = !ready && (!/^audio_/.test(status) && /fail|error|cancel|reject/i.test(status));
       const mobile = usesMobileCard();
       const chip = card.querySelector('.result-chip');
       const media = card.querySelector('.result-media');
@@ -1374,7 +1367,7 @@
         meta: { run_id: runId, task_id: taskId, status: 'processing' }
       });
       els.resultsList.prepend(card);
-      if (userId && runId && taskId) startPoll({ userId, runId, taskId, card });
+      if (userId && runId) startPoll({ userId, runId, taskId, card });
       return card;
     }
 
@@ -1386,13 +1379,13 @@
       const res = await fetch('/.netlify/functions/background-change-check?' + qs.toString(), {
         method: 'GET',
         cache: 'no-store',
-        headers: { Accept:'application/json', 'Cache-Control':'no-cache' }
+        headers: { Accept:'application/json', 'Cache-Control':'no-cache', Authorization:'Bearer ' + (await getUserAndToken()).token }
       });
       return res.json().catch(() => ({}));
     }
 
     async function startPoll({ userId, runId, taskId, card }) {
-      if (!userId || !runId || !taskId || activePolls.has(runId)) return;
+      if (!userId || !runId || activePolls.has(runId)) return;
       const token = { cancelled:false };
       activePolls.set(runId, token);
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1408,7 +1401,7 @@
               setStatus('Background Change готов.', 'good');
               return;
             }
-            if (checked.failed || /fail|error|cancel|reject/i.test(status)) {
+            if (checked.failed || (!/^audio_/.test(status) && /fail|error|cancel|reject/i.test(status))) {
               applyResultCard(card, { status:'failed', result_url:'' });
               setStatus(checked.error || 'Генерация не удалась.', 'bad');
               return;
@@ -1426,7 +1419,7 @@
       const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
       const engine = String(meta.engine || '').toLowerCase();
       const sourceFeature = String(meta.source_feature || '').toLowerCase();
-      return sourceFeature === 'background-change' || provider === 'background change' || engine === 'background-change-gemini-omni';
+      return meta.tool_feature === 'background-change' || sourceFeature === 'background-change' || provider === 'background change' || engine === 'background-change-gemini-omni';
     }
 
     async function loadRecentGenerations() {
@@ -1466,8 +1459,8 @@
       end = Number(end || 0);
       if (!Number.isFinite(start)) start = 0;
       if (!Number.isFinite(end)) end = start + 10;
-      start = Math.max(0, Math.min(start, Math.max(0, max - 1)));
-      end = Math.max(start + 1, Math.min(end, max));
+      start = Math.max(0, Math.min(start, Math.max(0, max - 4)));
+      end = Math.max(start + 4, Math.min(end, max));
       if (end - start > 10) end = start + 10;
       if (end > max) {
         end = max;
@@ -1488,6 +1481,7 @@
       els.trimLength.textContent = `${fmt(Math.min(10, Math.max(0, selectedLength())))} из видео`;
       els.trimBubble.textContent = fmt(selectedLength());
       updateTimingLabel();
+      updateRunLabel();
     }
 
     function secondsFromPointer(event) {
@@ -1500,11 +1494,11 @@
 
     function moveTrimHandle(kind, seconds) {
       if (kind === 'start') {
-        setTrimWindow(Math.min(seconds, trimEnd - 1), trimEnd);
+        setTrimWindow(Math.min(seconds, trimEnd - 4), trimEnd);
       } else if (kind === 'end') {
-        setTrimWindow(trimStart, Math.max(seconds, trimStart + 1));
+        setTrimWindow(trimStart, Math.max(seconds, trimStart + 4));
       } else {
-        const length = Math.min(10, Math.max(1, selectedLength() || 10));
+        const length = Math.min(10, Math.max(4, selectedLength() || 10));
         let start = seconds - length / 2;
         start = Math.max(0, Math.min(start, Math.max(0, (videoDuration || 10) - length)));
         setTrimWindow(start, start + length);
@@ -1593,6 +1587,7 @@
       document.body.style.overflow = '';
       try { els.trimVideo.pause(); } catch {}
       updateTimingLabel();
+      updateRunLabel();
     }
 
     function clearVideoFile() {
@@ -1608,6 +1603,7 @@
       els.videoName.textContent = 'Загруженное видео';
       els.videoTiming.textContent = '0.0s - 0.0s';
       setStatus('');
+      updateRunLabel();
     }
 
     function setVideoFile(file) {
@@ -1635,6 +1631,7 @@
         trimStart = 0;
         trimEnd = Math.min(10, videoDuration || 10);
         updateTimingLabel();
+        updateRunLabel();
         if (videoDuration > 10.05) openTrimModal();
       };
       probe.onerror = () => setStatus('Не удалось определить длительность видео.', 'bad');
@@ -1711,7 +1708,7 @@
         setStatus('Сначала опишите желаемый фон.', 'bad');
         return;
       }
-      if (!trimEnd || trimEnd <= trimStart) {
+      if (!trimEnd || selectedLength() < 4 || selectedLength() > 10.0001) {
         setStatus('Сначала выберите корректный фрагмент видео.', 'bad');
         return;
       }
@@ -1735,8 +1732,8 @@
         const imageUrls = imageFiles.length ? await uploadFiles(imageFiles, 'изображения-референсы') : [];
         const start = Number(trimStart.toFixed(3));
         const ends = Number(trimEnd.toFixed(3));
-        const length = Math.max(1, ends - start);
-        const duration = [4, 6, 8, 10].find((value) => value >= length) || 10;
+        const length = ends - start;
+        const duration = Math.ceil(length - 1e-7);
         setStatus('Отправляем запрос на замену фона...');
         const body = {
           uid:user.id,
@@ -1745,7 +1742,8 @@
           source_feature:'background-change',
           prompt,
           aspect_ratio:aspectRatio,
-          resolution:resolution === '4K' ? '4k' : '1080p',
+          resolution,
+          expected_credits:Math.round(runCost() * 10),
           duration,
           image_urls:imageUrls,
           video_url:videoUrls[0],
@@ -1870,7 +1868,7 @@
       button.addEventListener('click', () => {
         document.querySelectorAll('#resolutionRow button').forEach((item) => item.classList.remove('active'));
         button.classList.add('active');
-        resolution = button.dataset.resolution || '1080p';
+        resolution = button.dataset.resolution || '720p';
         updateRunLabel();
       });
     });

@@ -587,3 +587,6 @@ function collectResultUrls(value, excludeUrls = []) {
 function messageOf(error) {
   return error && error.message ? error.message : String(error);
 }
+
+// Route new Kling jobs without interrupting pending Gemini generations.
+exports.handler = require('../../lib/kling4/features.cjs').checker('background-change', exports.handler);

@@ -19,6 +19,8 @@ test('Netlify bundles all endpoints on API v2 with routes, background jobs and s
     const functions = await zipFunctions(join(root, 'netlify/runtime-functions'), dir, {
       basePath: root, repositoryRoot: root, parallelLimit: 4,
       config: { '*': { nodeBundler: 'esbuild', nodeVersion: '22.x' },
+        'run-video-relight-gemini-omni': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
+        'run-background-change-gemini-omni': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
         'run-kling-40': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
         'run-henshin': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
         'run-seedance-2': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
@@ -48,7 +50,7 @@ test('Netlify bundles all endpoints on API v2 with routes, background jobs and s
     assert.equal(get('reapi-sweep').schedule, '* * * * *');
     assert.ok(get('reapi-check'));
     assert.ok(get('kling4-check'));assert.equal(get('kling4-sweep').schedule,'* * * * *');
-    for (const name of ['run-kling-40','run-henshin','run-seedance-2','run-seedance-25','run-seedance-cheap','run-seedance-25-cheap','run-wan-3']) {
+    for (const name of ['run-video-relight-gemini-omni','run-background-change-gemini-omni','run-kling-40','run-henshin','run-seedance-2','run-seedance-25','run-seedance-cheap','run-seedance-25-cheap','run-wan-3']) {
       assert.ok((await readFile(get(name).path)).includes(Buffer.from('public/vendor/henshin/ffmpeg-core.wasm')), `${name} must include the duration-probing WASM`);
     }
     assert.equal(get('kie-missing-task-sweep').schedule, '* * * * *');

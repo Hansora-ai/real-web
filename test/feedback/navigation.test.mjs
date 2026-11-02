@@ -18,3 +18,11 @@ test('English, Russian and Armenian menus load the same form, with valid inline 
 test('standalone editor/automation exclusions remain intact', async () => {
   for (const path of ['/caption-studio.html','/caption-studio_arm.html','/caption-studio_ru.html','/automation.html','/oauth/consent']) assert.equal(await (await response(path)).text(),html);
 });
+
+test('mobile Video Edit opens localized Henshin in edit mode', async()=>{
+ for(const suffix of ['', '_ru', '_arm']){
+  const output=await (await response(`/index${suffix}.html`)).text();
+  assert.match(output,new RegExp(`href="/henshin${suffix}\\.html\\?mode=edit">Video Edit</a>`));
+  assert.doesNotMatch(output,/href="[^"]*video-edit/);
+ }
+});
