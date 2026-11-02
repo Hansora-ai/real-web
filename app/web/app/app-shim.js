@@ -185,8 +185,17 @@
       });
     }
   }
-  if (!isAutomation) {
-    onReady(addDoors);
-    new MutationObserver(addDoors).observe(root, { childList: true, subtree: true });
+  // Automation: the same white door, back to Creative, at the top of its Menu.
+  function addCreativeDoor() {
+    var nav = document.getElementById('automation-nav');
+    if (!nav || nav.querySelector('.app-door')) return;
+    var a = document.createElement('a');
+    a.className = 'app-door creative';
+    a.href = '/index.html';
+    a.innerHTML = '<span><b>Hansora Creative</b><small>Images, videos, audio &amp; more</small></span><i>→</i>';
+    nav.insertBefore(a, nav.firstChild);
   }
+  var addAnyDoor = isAutomation ? addCreativeDoor : addDoors;
+  onReady(addAnyDoor);
+  new MutationObserver(addAnyDoor).observe(root, { childList: true, subtree: true });
 })();
