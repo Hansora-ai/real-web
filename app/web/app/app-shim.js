@@ -243,6 +243,51 @@
     }, { passive: true });
   })();
 
+  // App wording: "Click" -> "Tap", and Hansora's own "website" -> "app". Not on legal pages, and never inside
+  // chats, contacts, products or anything people type (a business's own website stays a website).
+  var LEGAL = /(policy|termsofuse|privacy|terms|data-deletion)\.html$/i;
+  var WORDING = [
+    [/\bDouble-click\b/g, 'Double-tap'], [/\bdouble-click\b/g, 'double-tap'],
+    [/\bClick(ing|ed)?\b/g, function (m, end) { return 'Tap' + (end === 'ing' ? 'ping' : end === 'ed' ? 'ped' : ''); }],
+    [/\bclick(ing|ed)?\b/g, function (m, end) { return 'tap' + (end === 'ing' ? 'ping' : end === 'ed' ? 'ped' : ''); }],
+    [/\b(the )?same prices as (on )?the website\b/gi, 'the same prices as in the app'],
+    [/\bthe same as on the website\b/gi, 'the same as in the app'],
+    [/\bHansora website\b/g, 'Hansora app'], [/\b(on|in) our website\b/gi, '$1 our app'], [/\bthis website\b/gi, 'this app']
+  ];
+  var KEEP = 'input, textarea, select, script, style, [contenteditable], .ui-convo, .ui-thread, .ui-messages, .ui-message, .ui-contact-list, .ui-record-row, [data-app-keep-text]';
+  function appWording(rootNode) {
+    if (LEGAL.test(location.pathname) || !rootNode) return;
+    var walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT);
+    var node;
+    while ((node = walker.nextNode())) {
+      var text = node.nodeValue;
+      if (!text || !/click|website/i.test(text)) continue;
+      var parent = node.parentElement;
+      if (!parent || parent.closest(KEEP)) continue;
+      var next = text;
+      WORDING.forEach(function (rule) { next = next.replace(rule[0], rule[1]); });
+      if (next !== text) node.nodeValue = next;
+    }
+  }
+  onReady(function () {
+    appWording(document.body);
+    new MutationObserver(function (changes) {
+      changes.forEach(function (c) { c.addedNodes.forEach(function (n) { if (n.nodeType === 1) appWording(n); else if (n.nodeType === 3 && n.parentNode) appWording(n.parentNode); }); });
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+
+  // Section name in the middle of the app's top bar.
+  function addTitle() {
+    var bar = document.querySelector('#siteHeader .shell.nav, .auto-header');
+    if (!bar || bar.querySelector('.app-title')) return;
+    var title = document.createElement('span');
+    title.className = 'app-title';
+    title.textContent = isAutomation ? 'Automation' : 'Creative';
+    bar.appendChild(title);
+  }
+  onReady(addTitle);
+  new MutationObserver(addTitle).observe(root, { childList: true, subtree: true });
+
   // ---------- 7. Doors between Creative and Automation ----------
   var isAutomation = /^\/automation/i.test(location.pathname);
   function addDoors() {
