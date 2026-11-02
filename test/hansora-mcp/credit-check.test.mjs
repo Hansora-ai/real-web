@@ -368,7 +368,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
   assert.match(guide, /not from how long or detailed your own prompt is/);
   assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - A new user's first video \(no video yet\): Grok Video, 720p, 6 seconds, or 8 seconds if the user asked for 7 or 8 seconds\. Use Veo 3\.1 Lite \(8 seconds, 720p\) only if people in the video must speak a language other than English \(Chinese included\)\./);
-  assert.match(guide, /7\. The user's photo with big changes .*Grok Video and Veo 3\.1 Lite use a photo only as the first frame, so with them \(always for a new user's first video\) first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\).*Start the video as soon as the picture is ready \(get_generation\), without asking.*Models that take reference images \(Seedance 2\.5, Kling 4\.0, Wan 3\.0, Gemini Omni Flash, Gemini Omni\) get the photo as the character reference instead, with no picture step\./);
+  assert.match(guide, /7\. Only when the user sent their own photo and wants it changed .*Grok Video and Veo 3\.1 Lite use a photo only as the first frame, so with them first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\).*Without a photo from the user, never make a picture first, neither with Hansora nor with your own image tool: send the text straight to the video model\..*Start the video as soon as the picture is ready \(get_generation\), without asking.*Models that take reference images \(Seedance 2\.5, Kling 4\.0, Wan 3\.0, Gemini Omni Flash, Gemini Omni\) get the photo as the character reference instead, with no picture step\./);
   assert.match(guide, /If you are not sure, treat it as complex/);
   // One short question with plain choices, so users who know no model names can pick. The model of
   // the user's last video comes first, so "ok" keeps the price they already know.
@@ -1081,7 +1081,7 @@ test('a new user\'s first video from a photo explains how to put the person into
   const viaSwitch = (await callTool('create_generation', { model_id: 'seedance25', prompt: scene, duration: 10, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
   const viaSteer = (await callTool('create_generation', { model_id: 'veo31-lite', prompt: scene, duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
   for (const value of [viaSwitch, viaSteer]) {
-    assert.match(value.next_step, /If the user wants their photo changed \(a new outfit, place, atmosphere or style, or added people or things\), not just animated as it is, do this instead: first call create_generation with model_id nano-banana-2-1, resolution 1K, the user's photo and a prompt describing the changed picture \(3 credits\)\. When the picture is ready \(get_generation\), call create_generation with the video model and settings above, that picture as the photo and a prompt for the motion, without asking\./);
+    assert.match(value.next_step, /If the user wants their photo changed \(a new outfit, place, atmosphere or style, or added people or things\), not just animated as it is, do this instead: first call create_generation with model_id nano-banana-2-1, resolution 1K, the user's photo and a prompt describing the changed picture \(3 credits\)\. When the picture is ready, Hansora starts the video from it by itself with the video model and settings above, and the same card shows it: do not start the video yourself\..*Without a photo from the user, never make a picture first\./);
   }
   // Without a photo there is nothing to place, so no such instruction.
   const noPhoto = (await callTool('create_generation', { model_id: 'seedance25', prompt: 'A knight at sunset', duration: 10, resolution: '720p' }, { credits: 3 })).result.structuredContent;
@@ -1274,4 +1274,90 @@ test('a user who bought credits and has no video yet is asked once, in plain wor
   assert.equal(returning.submitted.length, 1);
   const free = await callTool('create_generation', { model_id: 'veo31-lite', prompt: 'The van drives along the square', duration: 8, resolution: '720p' }, { credits: 3, rest: noVideo });
   assert.equal(free.result.structuredContent.error, 'first_video_on_grok');
+});
+
+test('picture first: Hansora starts the planned video from the picture itself, under the picture\'s card, once', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const photo = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/me.jpg';
+
+  // 1. A new user's first video from their photo, steered to picture first: the planned video is kept.
+  const saved = [];
+  const keep = (href, options) => {
+    if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const steered = await callTool('create_generation', { model_id: 'seedance25', prompt: 'She walks on a beach at sunset in a red dress', duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 3, rest: keep });
+  assert.equal(steered.submitted.length, 0);
+  assert.match(steered.result.structuredContent.next_step, /Hansora starts the video from it by itself/);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const plan = saved.find((row) => row.tool === 'pending_video');
+  assert.ok(plan, 'plan kept');
+  assert.equal(plan.model_id, 'grok-video');
+  assert.equal(plan.details.prompt, 'She walks on a beach at sunset in a red dress');
+
+  // 2. The picture is ready: the video starts from it, and the picture's card follows the video.
+  const pictureRun = 'user-1-mcp-1793603000000-a1b2c3d4';
+  const picture = { id: 'p1', kind: 'image', provider: 'Nano Banana 2.1', created_at: new Date(Date.now() - 60000).toISOString(),
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/pic.png',
+    meta: { run_id: pictureRun, status: 'done', model_id: 'nano-banana-2-1', input_urls: [photo] } };
+  const world = ({ video = null, planned = true, startedSince = [] } = {}) => (href, options) => {
+    if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') return reply({});
+    if (href.includes('tool=eq.pending_video')) return reply(planned ? [{ model_id: 'grok-video', details: plan.details, created_at: new Date(Date.now() - 120000).toISOString() }] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(encodeURIComponent(`${pictureRun}-video`))) return reply(video ? [video] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes('kind=eq.video') && href.includes('created_at=gt.')) return reply(startedSince);
+    if (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(pictureRun)}`)) return reply([picture]);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const started = await callTool('get_generation', { run_id: pictureRun }, { credits: 2.7, rest: world() });
+  assert.equal(started.submitted.length, 1);
+  assert.equal(started.submitted[0].model_id, 'grok-video');
+  assert.equal(started.submitted[0].payload.run_id, `${pictureRun}-video`);
+  assert.ok(JSON.stringify(started.submitted[0].payload).includes(picture.result_url));
+  const shown = started.result.structuredContent;
+  assert.equal(shown.run_id, pictureRun);
+  assert.equal(shown.status, 'processing');
+  assert.equal(shown.switch_note, 'Your picture is ready, and Hansora is now turning it into your video.');
+
+  // 3. Later checks follow that video and never start another one.
+  const done = { id: 'v1', kind: 'video', provider: 'Grok', created_at: new Date().toISOString(),
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/v.mp4',
+    meta: { run_id: `${pictureRun}-video`, engine: 'grok', status: 'done' } };
+  const later = await callTool('get_generation', { run_id: pictureRun }, { credits: 0.9, rest: world({ video: done }) });
+  assert.equal(later.submitted.length, 0);
+  assert.equal(later.result.structuredContent.status, 'ready');
+  assert.equal(later.result.structuredContent.result_url, done.result_url);
+  assert.equal(later.result.structuredContent.picture_url, picture.result_url);
+
+  // 4. ChatGPT starting the video itself meanwhile: nothing new starts.
+  const again = await callTool('create_generation', { model_id: 'grok-video', prompt: 'She walks on a beach', duration: 6, resolution: '720p', image_urls: [picture.result_url] }, {
+    credits: 0.9, rest: (href) => (href.includes('like.*-mcp-*-video') ? reply([{ run_id: `${pictureRun}-video`, status: 'processing' }]) : returningUser(href))
+  });
+  assert.equal(again.submitted.length, 0);
+  assert.equal(again.result.structuredContent.error, 'video_already_started');
+
+  // 5. No plan, or a video ChatGPT already started: the picture is just shown.
+  const plain = await callTool('get_generation', { run_id: pictureRun }, { credits: 2.7, rest: world({ planned: false }) });
+  assert.equal(plain.submitted.length, 0);
+  assert.equal(plain.result.structuredContent.status, 'ready');
+  assert.equal(plain.result.structuredContent.result_url, picture.result_url);
+  const manual = await callTool('get_generation', { run_id: pictureRun }, { credits: 2.7, rest: world({ startedSince: [{ id: 'v0' }] }) });
+  assert.equal(manual.submitted.length, 0);
+});
+
+test('a video prompt about the user\'s photo with no photo attached is sent back once, nothing charged', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const prompt = 'Animate the supplied photo: the two foxes play in the meadow.';
+  const missing = await callTool('create_generation', { model_id: 'grok-video', prompt, duration: 6, resolution: '720p' }, { credits: 100, rest: returningUser });
+  assert.equal(missing.submitted.length, 0);
+  assert.equal(missing.result.structuredContent.error, 'photo_missing');
+  assert.match(missing.result.structuredContent.next_step, /call create_generation again with that photo attached \(image_files\)/);
+  // Sent again the same way: it starts. A prompt without a photo reference starts right away.
+  const again = await callTool('create_generation', { model_id: 'grok-video', prompt, duration: 6, resolution: '720p' }, {
+    credits: 100, rest: (href) => (href.includes('photo_missing') ? reply([{ id: 'asked' }]) : returningUser(href))
+  });
+  assert.equal(again.submitted.length, 1);
+  const text = await callTool('create_generation', { model_id: 'grok-video', prompt: 'Two foxes play in a meadow at dawn.', duration: 6, resolution: '720p' }, { credits: 100, rest: returningUser });
+  assert.equal(text.submitted.length, 1);
 });
