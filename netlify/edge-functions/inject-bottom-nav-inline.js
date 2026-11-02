@@ -611,7 +611,7 @@ export default async (request, context) => {
         <a href="${localizedPath('/prompt-builder.html')}">Cartoon Prompt Builder</a>
         <a href="${localizedPath('/kid-cartoon.html')}">Kid Cartoon</a>
         <a href="${localizedPath('/henshin.html')}">Henshin</a>
-        <a href="${localizedPath('/video-edit.html')}">Video Edit</a>
+        <a href="${localizedPath('/henshin.html?mode=edit')}">Video Edit</a>
         <a href="${localizedPath('/background-change.html')}">Background Change</a>
         <a href="${localizedPath('/video-relight.html')}">Video Relight</a>
         <a href="${localizedPath('/upscale.html?mode=video')}">Video upscale</a>

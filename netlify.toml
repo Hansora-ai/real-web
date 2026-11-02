@@ -24,6 +24,14 @@
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
 
+[functions."run-video-relight-gemini-omni"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
+[functions."run-background-change-gemini-omni"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
 [functions."run-kling-40"]
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]

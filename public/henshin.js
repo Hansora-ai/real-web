@@ -202,7 +202,7 @@
   const parts=String(value).match(/^(\d+(?:\.\d+)?)[:x/]([\d.]+)$/);return parts?Number(parts[1])/Number(parts[2]):0;
  }
  function generationStage(stage,label){const box=document.createElement('div');box.className='generation-stage';box.dataset.stage=stage;box.innerHTML='<div class="generation-stage-icon" aria-hidden="true"><span class="request-loading-spinner"></span><span class="generation-stage-core"></span></div><div class="generation-stage-label"></div>';box.querySelector('.generation-stage-label').textContent=label;return box;}
- function isHenshin(row){return row.meta?.source_feature==='henshin';}
+ function isHenshin(row){return row.meta?.source_feature==='henshin'&&!row.meta?.tool_feature;}
  function isSeedance(row){return row.meta?.engine==='seedance-2.5'||row.provider==='Seedance 2.5';}
  function action(label,fn){const button=document.createElement('button');button.textContent=label;button.onclick=fn;return button;}
  function downloadAction(url){const button=decorate(action('',event=>download(url,event.currentTarget)),'download',t('Download'));if(activeDownloads.has(url)){button.disabled=true;button.setAttribute('aria-busy','true');button.innerHTML='<svg class="download-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>';}return button;}
