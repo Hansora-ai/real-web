@@ -174,7 +174,62 @@
     });
   });
 
-  // ---------- 6. Doors between Creative and Automation ----------
+  // ---------- 6. Moving around like an app ----------
+  // Slide direction: going back slides the other way.
+  window.addEventListener('pagereveal', function (event) {
+    if (event.viewTransition) root.classList.add('app-vt');
+    var type = window.navigation && window.navigation.activation && window.navigation.activation.navigationType;
+    root.classList.toggle('app-going-back', type === 'traverse');
+  });
+
+  // Back arrow on inner pages. Main pages (the bottom-bar tabs) have none, like an app.
+  var MAIN_PAGES = /^\/(index\.html)?$|^\/(search-models|usage|automation-dashboard|automation-agent|automation-inbox|automation)\.html$/i;
+  function addBackButton() {
+    if (MAIN_PAGES.test(location.pathname) || /^\/app\//.test(location.pathname) || document.querySelector('.app-back-btn')) return;
+    var brand = document.querySelector('.site-header .brand, .auto-header .auto-brand');
+    if (!brand) return;
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'app-back-btn';
+    button.setAttribute('aria-label', 'Back');
+    button.textContent = '‹';
+    button.addEventListener('click', function () {
+      var cameFromApp = document.referrer && document.referrer.indexOf(location.origin) === 0;
+      if (cameFromApp && history.length > 1) history.back();
+      else location.href = isAutomation ? '/automation-dashboard.html' : '/index.html';
+    });
+    brand.parentNode.insertBefore(button, brand);
+  }
+  onReady(addBackButton);
+  new MutationObserver(addBackButton).observe(root, { childList: true, subtree: true });
+
+  // Pull down to refresh (only when the page is at the very top and nothing else is being scrolled).
+  (function () {
+    var startY = 0, pulling = false, distance = 0, indicator = null;
+    function scrolledInside(el) { for (; el && el !== document.body; el = el.parentElement) { if (el.scrollTop > 0) return true; } return false; }
+    document.addEventListener('touchstart', function (event) {
+      pulling = window.scrollY <= 0 && event.touches.length === 1 && !scrolledInside(event.target) && !document.querySelector('.is-open, .menu-open, [aria-modal="true"]:not([hidden])');
+      startY = event.touches[0].clientY; distance = 0;
+    }, { passive: true });
+    document.addEventListener('touchmove', function (event) {
+      if (!pulling) return;
+      distance = event.touches[0].clientY - startY;
+      if (distance <= 0) return;
+      if (!indicator) { indicator = document.createElement('div'); indicator.className = 'app-ptr'; indicator.textContent = '↻'; document.body.appendChild(indicator); }
+      var shown = Math.min(distance, 140) / 140;
+      indicator.style.transition = 'none';
+      indicator.style.transform = 'translateY(' + (-70 + shown * 90) + 'px) rotate(' + (shown * 270) + 'deg)';
+      indicator.classList.toggle('ready', distance > 110);
+    }, { passive: true });
+    document.addEventListener('touchend', function () {
+      if (!pulling || !indicator) { pulling = false; return; }
+      pulling = false;
+      if (distance > 110) { indicator.style.transition = ''; indicator.style.transform = 'translateY(20px)'; indicator.classList.add('spin'); setTimeout(function () { location.reload(); }, 250); }
+      else { indicator.style.transition = ''; indicator.style.transform = 'translateY(-70px)'; }
+    }, { passive: true });
+  })();
+
+  // ---------- 7. Doors between Creative and Automation ----------
   var isAutomation = /^\/automation/i.test(location.pathname);
   function addDoors() {
     // Creative: top of the bottom-bar Menu.

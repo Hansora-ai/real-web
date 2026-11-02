@@ -42,3 +42,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 }
+
+// Hansora: the app's main screen. Turns on the iPhone swipe-from-the-edge gesture to go back and forward
+// between pages (used by Main.storyboard).
+class MainViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        webView?.allowsBackForwardNavigationGestures = true
+    }
+}
