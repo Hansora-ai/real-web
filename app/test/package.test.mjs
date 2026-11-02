@@ -1,15 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 
-execFileSync(process.execPath, [new URL('../scripts/package-site.mjs', import.meta.url).pathname]);
-const www = new URL('../www/', import.meta.url);
-const pages = readdirSync(www).filter(name => name.endsWith('.html'));
+// The app's own files (web/) — a separate copy of the website, changed for the app.
+const web = new URL('../web/', import.meta.url);
+const pages = readdirSync(web).filter(name => name.endsWith('.html'));
 
-test('every page loads the app additions before its own scripts', () => {
+test('every app page loads the app parts before its own scripts', () => {
   for (const name of pages) {
-    const html = readFileSync(new URL(name, www), 'utf8');
+    const html = readFileSync(new URL(name, web), 'utf8');
     const shim = html.indexOf('/app/app-shim.js');
     assert.ok(shim >= 0, `${name} has no app-shim`);
     const firstScript = html.search(/<script(?![^>]*app-shim)/i);
@@ -17,12 +16,13 @@ test('every page loads the app additions before its own scripts', () => {
   }
 });
 
-test('Creative pages get the website bottom menu, Automation pages do not (same as the website)', () => {
-  assert.match(readFileSync(new URL('index.html', www), 'utf8'), /class="hs-bottom-nav"/);
-  assert.doesNotMatch(readFileSync(new URL('automation-inbox.html', www), 'utf8'), /class="hs-bottom-nav"/);
+test('Creative pages have the bottom bar, Automation pages their own (same as the website)', () => {
+  assert.match(readFileSync(new URL('index.html', web), 'utf8'), /class="hs-bottom-nav"/);
+  assert.doesNotMatch(readFileSync(new URL('automation-inbox.html', web), 'utf8'), /class="hs-bottom-nav"/);
 });
 
-test('the website files themselves are not changed', () => {
-  const original = readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
-  assert.doesNotMatch(original, /app-shim/);
+test('the app does not open the website: no page points the app at hansora.co', () => {
+  const config = readFileSync(new URL('../capacitor.config.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(config, /server\s*:\s*\{[^}]*url/);
+  assert.match(config, /webDir: 'web'/);
 });

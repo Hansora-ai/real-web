@@ -1,12 +1,13 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// The app's pages are the website's own files packaged into www/ (scripts/package-site.mjs);
-// the app never opens hansora.co pages. It only calls the same server (login, credits, generations, chats).
+// The app's own files are in web/: a separate copy of the website's pages, design and functions, changed for the app.
+// The app never opens hansora.co pages; it only calls the same server (login, credits, generations, chats).
+// App-only parts: web/app/app-shim.js and web/app/app.css.
 // The bundle ID can never change after the first store release.
 const config: CapacitorConfig = {
   appId: 'co.hansora.app',
   appName: 'Hansora',
-  webDir: 'www',
+  webDir: 'web',
   backgroundColor: '#08090c',
   appendUserAgent: 'HansoraApp',
   ios: { contentInset: 'always', scheme: 'Hansora' },

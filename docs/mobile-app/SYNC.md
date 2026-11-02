@@ -9,5 +9,6 @@ gets ticked when the app has it too. Newest at the top.
 
 ## How website changes reach the app
 
-The app is built from the website's own files (`public/`). Any website change is in the next app build
-(`cd app && npm run sync`) — nothing to copy by hand. Only the app additions (`app/additions/`) are app-specific.
+The app has its own copy of the website files in `app/web/` (made 2026-11-02 from `public/`, English pages).
+The app does not read the website's folder, so each website change the owner reports is made again in `app/web/`
+and listed in the table above.

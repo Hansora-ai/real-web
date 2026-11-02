@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script src="/app/app-shim.js"></script><link rel="stylesheet" href="/app/app.css">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17704413676"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'AW-17704413676');
+  </script>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA AI — Models</title>
+  <meta name="description" content="Simple, beautiful AI generation for images & video." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <link href="header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .brand{color:var(--brand)}
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .hero-glow{position:absolute; inset:-20%; background:
+      radial-gradient(800px 400px at 0% 0%, rgba(99,102,241,.25), transparent 60%),
+      radial-gradient(800px 400px at 100% 100%, rgba(56,189,248,.18), transparent 60%);
+      filter: blur(40px); opacity:.6; pointer-events:none}
+    a{transition:all .15s}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    #authCard{ background: var(--base-bg); }
+    
+    
+  
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+        radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+        var(--base-bg);
+      color:#e5e7eb
+    }
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    a{transition:all .15s}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+	    .chip{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12)}
+	    .ring-muted{--tw-ring-color: rgba(255,255,255,.2)}
+	    .filter-btn{min-width:92px;text-align:center}
+	    .get-started-main{min-width:190px}
+	    .model-name-card h3{line-height:1.2}
+	    .model-thumb{aspect-ratio:16/9}
+	    .model-thumb img{display:block;width:100%;height:100%;object-fit:cover}
+	    .model-name-card{height:100%}
+	    .model-name-card > div:last-child{min-height:56px;display:flex;align-items:center;justify-content:center;text-align:center}
+	    @media (min-width:640px){.model-name-card > div:last-child{min-height:72px}}
+	  </style>
+
+  <!-- Meta Pixel Code -->
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '1336278884948294');
+  fbq('track', 'PageView');
+  </script>
+  <!-- End Meta Pixel Code -->
+
+<link rel="stylesheet" href="/models-epic.css?v=20261023">
+</head>
+<body class="min-h-screen">
+  <!-- Meta Pixel (noscript) -->
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
+  /></noscript>
+  <!-- End Meta Pixel (noscript) -->
+
+<div id="sharedHeader"></div>
+
+  <section class="mx-hero" aria-labelledby="mx-title">
+    <div class="mx-orbit" aria-hidden="true">
+      <i class="mx-aura"></i>
+      <div class="mx-ring r1"><span style="--i:0;--n:6"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png" alt="" loading="eager" decoding="async"></span><span style="--i:1;--n:6"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png" alt="" loading="eager" decoding="async"></span><span style="--i:2;--n:6"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png" alt="" loading="eager" decoding="async"></span><span style="--i:3;--n:6"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png" alt="" loading="eager" decoding="async"></span><span style="--i:4;--n:6"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/3.png" alt="" loading="eager" decoding="async"></span><span style="--i:5;--n:6"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/6.png" alt="" loading="eager" decoding="async"></span></div>
+      <div class="mx-ring r2"><span style="--i:0;--n:8"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/4.png" alt="" loading="eager" decoding="async"></span><span style="--i:1;--n:8"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/15.png" alt="" loading="eager" decoding="async"></span><span style="--i:2;--n:8"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/16.png" alt="" loading="eager" decoding="async"></span><span style="--i:3;--n:8"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/22.png" alt="" loading="eager" decoding="async"></span><span style="--i:4;--n:8"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/26.png" alt="" loading="eager" decoding="async"></span><span style="--i:5;--n:8"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/20.png" alt="" loading="eager" decoding="async"></span><span style="--i:6;--n:8"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/18.png" alt="" loading="eager" decoding="async"></span><span style="--i:7;--n:8"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/7.png" alt="" loading="eager" decoding="async"></span></div>
+      <div class="mx-ring r3"><span style="--i:0;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/8.png" alt="" loading="eager" decoding="async"></span><span style="--i:1;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/9.png" alt="" loading="eager" decoding="async"></span><span style="--i:2;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/11.png" alt="" loading="eager" decoding="async"></span><span style="--i:3;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/12.png" alt="" loading="eager" decoding="async"></span><span style="--i:4;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/17.png" alt="" loading="eager" decoding="async"></span><span style="--i:5;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/23.png" alt="" loading="eager" decoding="async"></span><span style="--i:6;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/24.png" alt="" loading="eager" decoding="async"></span><span style="--i:7;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/25.png" alt="" loading="eager" decoding="async"></span><span style="--i:8;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/27.png" alt="" loading="eager" decoding="async"></span><span style="--i:9;--n:10"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/19.png" alt="" loading="eager" decoding="async"></span></div>
+      <div class="mx-core"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(23).png" alt=""></div>
+    </div>
+    <div class="mx-hero-copy">
+      <span class="mx-kicker"><i></i>Hansora AI</span>
+      <h1 id="mx-title">Every top AI model.<br><span>One place.</span></h1>
+      <p>Images, video, audio and ready-made tools from the best AI labs. One account, one balance.</p>
+      <label class="mx-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input id="mxSearch" type="search" placeholder="Search Kling, Veo, Nano Banana…" autocomplete="off" aria-label="Search models">
+      </label>
+    </div>
+  </section>
+
+  <div class="mx-bar">
+    <div class="mx-tabs" role="tablist" aria-label="Model categories">
+      <i class="mx-pill" aria-hidden="true"></i>
+      <button data-filter="all" class="filter-btn mx-tab">All</button>
+      <button data-filter="image" class="filter-btn mx-tab">Image</button>
+      <button data-filter="video" class="filter-btn mx-tab">Video</button>
+      <button data-filter="features" class="filter-btn mx-tab">Features</button>
+      <button data-filter="audio" class="filter-btn mx-tab">Audio</button>
+    </div>
+    <a href="search-models.html" class="get-started-main mx-go">Get started</a>
+  </div>
+  <p class="mx-empty" id="mxEmpty" hidden>No models match your search.</p>
+
+  <section id="imageSection" data-category-section="image" class="pb-12">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="mx-head"><h2>Image Models</h2><p>Pictures, posters and product photos</p></div>
+      <div id="imageGrid" class="mx-list"></div>
+    </div>
+  </section>
+
+  <section id="videoSection" data-category-section="video" class="pb-12">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="mx-head"><h2>Video Models</h2><p>Turn text or images into video</p></div>
+      <div id="videoGrid" class="mx-list"></div>
+    </div>
+  </section>
+
+  <section id="featuresSection" data-category-section="features" class="pb-12">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="mx-head"><h2>Tools and features</h2><p>Ready-made tools for creators and shops</p></div>
+      <div id="featuresGrid" class="mx-list"></div>
+    </div>
+  </section>
+
+  <section id="audioSection" data-category-section="audio" class="pb-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="mx-head"><h2>Audio</h2><p>Voices, sound and music</p></div>
+      <div id="audioGrid" class="mx-list"></div>
+    </div>
+  </section>
+
+
+  <script>
+    const MODEL_PLACEHOLDERS = [
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/2.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/3.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/4.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/5.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/6.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/7.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/8.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/9.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/10.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/11.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png'
+    ];
+    const MODEL_IMAGE_BASE = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE';
+    const MODEL_IMAGE_URLS = {
+      'gpt-image-2-5': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%285%29.jpg',
+      'seedance25': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg',
+      'wan-3': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%287%29.jpg',
+      'gpt-image-2': `${MODEL_IMAGE_BASE}/2.png`,
+      'nano-banana-2': `${MODEL_IMAGE_BASE}/4.png`,
+      'nano-banana-pro': `${MODEL_IMAGE_BASE}/3.png`,
+      'seedream-5-lite': `${MODEL_IMAGE_BASE}/6.png`,
+      'grok-image': `${MODEL_IMAGE_BASE}/7.png`,
+      'seedream-4-5': `${MODEL_IMAGE_BASE}/8.png`,
+      'wan-2-7': `${MODEL_IMAGE_BASE}/10.png`,
+      'qwen-2': `${MODEL_IMAGE_BASE}/11.png`,
+      'z-image': `${MODEL_IMAGE_BASE}/13.png`,
+      'gpt-image-1-5': `${MODEL_IMAGE_BASE}/12.png`,
+      'nano-banana': `${MODEL_IMAGE_BASE}/5.png`,
+      'seedance-2': `${MODEL_IMAGE_BASE}/14.png`,
+      'kling-3': `${MODEL_IMAGE_BASE}/1.png`,
+      'seedance-2-mini': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/ChatGPT%20Image%20Jun%2023,%202026,%2011_30_53%20PM.png',
+      'kling-3-turbo': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/ChatGPT%20Image%20Jun%2023,%202026,%2011_32_23%20PM.png',
+      'gemini-omni': `${MODEL_IMAGE_BASE}/15.png`,
+      'happyhorse-1': `${MODEL_IMAGE_BASE}/16.png`,
+      'veo31': `${MODEL_IMAGE_BASE}/17.png`,
+      'grok-video': `${MODEL_IMAGE_BASE}/7.png`,
+      'kling26': `${MODEL_IMAGE_BASE}/18.png`,
+      'kling-2-5-turbo': `${MODEL_IMAGE_BASE}/19.png`,
+      'wan-2-7-video': `${MODEL_IMAGE_BASE}/10.png`,
+      'kling-motion-control': `${MODEL_IMAGE_BASE}/20.png`,
+      'aleph': `${MODEL_IMAGE_BASE}/21.png`,
+      '/upscale.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/7.png',
+      '/expand.html?mode=angles': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/4.png',
+      '/expand.html?mode=expand': `${MODEL_IMAGE_BASE}/25.png`,
+      '/expand.html?mode=face-swap': `${MODEL_IMAGE_BASE}/26.png`,
+      '/character.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/5.png',
+      '/upscale.html?mode=video': `${MODEL_IMAGE_BASE}/22.png`,
+      '/lipsync.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Untitled%20design%20(27).png',
+      '/analyse.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/6.png',
+      '/product_card.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(29).png',
+      '/prompt-builder.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(30).png',
+      '/kid-cartoon.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(37).png',
+      '/henshin.html?mode=edit': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(42).png',
+      '/background-change.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(43).png',
+      '/audio.html?tool=text-to-speech': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=voice-isolater': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=voice-changer': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=song-creation': `${MODEL_IMAGE_BASE}/30.png`
+    };
+
+    function modelHref(id) {
+      return `/search-models.html?model=${encodeURIComponent(id)}`;
+    }
+
+    function fromHeaderItems(items, type, offset) {
+      return items.map((item, index) => ({
+        type,
+        id: item.id || '',
+        name: item.label,
+        href: item.href || modelHref(item.id),
+        thumbnail: MODEL_IMAGE_URLS[item.id || item.href || item.label] || '',
+        logo: item.logoUrl || (item.logo ? `https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/${item.logo}.png` : ''),
+        note: item.note || ''
+      }));
+    }
+
+    const LOGO = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/';
+    const IMAGE_MODELS = fromHeaderItems([
+      { label: 'Nano Banana 2.1', id: 'nano-banana-2-1', logo: 13, note: 'Fast image edits' },
+      { label: 'GPT Image 2.5', id: 'gpt-image-2-5', logo: 2, note: 'Newest OpenAI image model' },
+      { label: 'GPT Image 2', id: 'gpt-image-2', logo: 2, note: 'Accurate text and layouts' },
+      { label: 'Nano Banana 2', id: 'nano-banana-2', logo: 13, note: 'Fast, sharp images by Google' },
+      { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', logo: 13, note: 'Low-cost 1K image edits' },
+      { label: 'Nano Banana Pro', id: 'nano-banana-pro', logo: 13, note: 'Google’s best for detail and edits' },
+      { label: 'Seedream 5.0 Pro', id: 'seedream-5-pro', logo: 5, note: 'Pro controlled image edits' },
+      { label: 'Seedream 5 Flash', id: 'seedream-5-flash', logo: 5, note: 'Light, fast creative images' },
+      { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', logo: 5, note: 'Fast high-resolution images' },
+      { label: 'Grok Image', id: 'grok-image', logo: 4, note: 'Bold creative images by xAI' },
+      { label: 'Seedream 4.5', id: 'seedream-4-5', logo: 5, note: 'Photoreal images and edits' },
+      { label: 'Wan 2.7', id: 'wan-2-7', logo: 6, note: 'Image and frame work' },
+      { label: 'Qwen 2', id: 'qwen-2', logo: 6, note: 'Great with text inside images' },
+      { label: 'Z Image', id: 'z-image', logo: 6, note: 'Quick, low-cost images' },
+      { label: 'GPT Image 1.5', id: 'gpt-image-1-5', logo: 2, note: 'Reliable everyday images' },
+      { label: 'Nano Banana', id: 'nano-banana', logo: 13, note: 'Quick image edits by Google' }
+    ], 'image', 0);
+
+    const VIDEO_MODELS = fromHeaderItems([
+      { label: 'Seedance 2.5', id: 'seedance25', logo: 5, note: 'Cinematic video with sound' },
+      { label: 'Kling 4.0', id: 'kling40', logo: 14, note: 'Create and edit videos' },
+      { label: 'Henshin', id: 'henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Transform video characters' },
+      { label: 'Gemini Omni Flash 1.1', id: 'gemini-omni-flash-1-1', logo: 3, note: 'Prompt, image and video inputs' },
+      { label: 'Wan 3.0', id: 'wan-3', logo: 6, note: 'Long, detailed video clips' },
+      { label: 'Seedance 2.0', id: 'seedance-2', logo: 5, note: 'Smooth cinematic motion' },
+      { label: 'Kling 3.0', id: 'kling-3', logo: 14, note: 'Realistic motion and physics' },
+      { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', logo: 5, note: 'Fast and affordable video' },
+      { label: 'Kling 3 Turbo', id: 'kling-3-turbo', logo: 14, note: 'Faster Kling generations' },
+      { label: 'HappyHorse 1.0', id: 'happyhorse-1', logo: 15, note: 'Video and audio model' },
+      { label: 'Veo 3.1', id: 'veo31', logo: 3, note: 'Google video with native audio' },
+      { label: 'Grok', id: 'grok-video', logo: 4, note: 'Fast cinematic video by xAI' },
+      { label: 'Kling 2.6', id: 'kling26', logo: 14, note: 'Video with sound, lower cost' },
+      { label: 'Kling 2.5 Turbo', id: 'kling-2-5-turbo', logo: 14, note: 'Quick, budget-friendly video' },
+      { label: 'Wan 2.7', id: 'wan-2-7-video', logo: 6, note: 'First and last frame control' },
+      { label: 'Kling Motion Control', id: 'kling-motion-control', logo: 14, note: 'Copy motion from any clip' },
+      { label: 'Aleph', id: 'aleph', logo: 16, note: 'Transform existing videos' }
+    ], 'video', 3);
+
+    const FEATURES = fromHeaderItems([
+      { label: 'Henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Transform video characters' },
+      { label: 'Caption & Montage', href: '/caption-studio.html', logoUrl: '/icons/caption-studio.svg', note: 'Add captions and edit videos' },
+      { label: 'Video Edit', href: '/henshin.html?mode=edit', logo: 22, note: 'Change anything in a video' },
+      { label: 'Background Change', href: '/background-change.html', logo: 23, note: 'New background, same video' },
+      { label: 'Video Relight', href: '/video-relight.html', logo: 24, note: 'Change the lighting of a video' },
+      { label: 'Video upscale', href: '/upscale.html?mode=video', logo: 25, note: 'Sharper, higher-resolution video' },
+      { label: 'Lips sync / Avatar', href: '/lipsync.html', logo: 26, note: 'Make any face talk' },
+      { label: 'Kid Cartoon', href: '/kid-cartoon.html', logo: 27, note: 'Your kid as a cartoon hero' },
+      { label: 'Hook analyse', href: '/analyse.html', logo: 21, note: 'Score your video hooks and ideas' },
+      { label: 'Image Upscale', href: '/upscale.html', logo: 7, note: 'Enlarge images without blur' },
+      { label: 'Full angles', href: '/expand.html?mode=angles', logo: 8, note: 'See a product from every side' },
+      { label: 'Expand', href: '/expand.html?mode=expand', logo: 9, note: 'Extend images beyond the frame' },
+      { label: 'Character', href: '/character.html', logo: 11, note: 'Keep one character consistent' },
+      { label: 'Product Card', href: '/product_card.html', logo: 12, note: 'Sales-ready product cards' },
+      { label: 'Prompt Builder', href: '/prompt-builder.html', logo: 17, note: 'Build cartoon prompts fast' }
+    ], 'features', 6);
+
+    const AUDIO_MODELS = fromHeaderItems([
+      { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', logo: 18, note: 'Natural voices in many languages' },
+      { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', logo: 19, note: 'Separate clean vocals' },
+      { label: 'Voice changer', href: '/audio.html?tool=voice-changer', logo: 28, note: 'Transform any voice' },
+      { label: 'Song Creation', href: '/audio.html?tool=song-creation', logo: 20, note: 'Full songs from a prompt' }
+    ], 'audio', 9);
+
+    const MX_TAGS = { 'seedance25': 'TOP', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-5': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+
+    function tile(m) {
+      const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';
+      const tag = MX_TAGS[m.id] ? `<span class="mx-tag mx-tag-${MX_TAGS[m.id].toLowerCase()}">${MX_TAGS[m.id]}</span>` : '';
+      const pic = `<span class="mx-thumb mx-icon"><img src="${m.logo}" alt="" loading="lazy" decoding="async" /></span>`;
+      return `
+        <a href="${m.href}" data-model-link="1"${dataModel} data-name="${m.name.toLowerCase()}" class="model-name-card mx-card mx-row">
+          ${pic}
+          <span class="mx-txt"><strong>${m.name}${tag}</strong><small>${m.note}</small></span>
+          <svg class="mx-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </a>`;
+    }
+
+    function renderSections() {
+      const grids = {
+        image: document.getElementById('imageGrid'),
+        video: document.getElementById('videoGrid'),
+        features: document.getElementById('featuresGrid'),
+        audio: document.getElementById('audioGrid')
+      };
+      if (grids.image) grids.image.innerHTML = IMAGE_MODELS.map(tile).join('');
+      if (grids.video) grids.video.innerHTML = VIDEO_MODELS.map(tile).join('');
+      if (grids.features) grids.features.innerHTML = FEATURES.map(tile).join('');
+      if (grids.audio) grids.audio.innerHTML = AUDIO_MODELS.map(tile).join('');
+    }
+
+    function setupFilters() {
+      const btns = Array.from(document.querySelectorAll('.filter-btn'));
+      const sections = Array.from(document.querySelectorAll('[data-category-section]'));
+      function activate(btn) {
+        btns.forEach(b => {
+          b.classList.remove('btn-brand');
+          b.classList.add('btn');
+        });
+        btn.classList.remove('btn');
+        btn.classList.add('btn-brand');
+      }
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const filter = btn.getAttribute('data-filter');
+          activate(btn);
+          sections.forEach(section => {
+            const category = section.getAttribute('data-category-section');
+            section.style.display = filter === 'all' || filter === category ? '' : 'none';
+          });
+        });
+      });
+      if (btns[0]) activate(btns[0]);
+    }
+
+    renderSections();
+    setupFilters();
+</script>
+
+<footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="/Termsofuse" class="hover:text-white/80">Terms</a>
+        <a href="/policy" class="hover:text-white/80">Privacy</a>
+        <a href="/contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
+<div id="legacyAuthModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
+    <div id="legacyAuthCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="legacyAuthTitle" class="text-lg font-semibold">Log in</h3>
+        <button id="legacyAuthClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
+      </div>
+      <form id="legacyAuthForm" class="space-y-3">
+        <input id="legacyAuthEmail" type="email" placeholder="Email" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="legacyAuthPass" type="password" placeholder="Password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="legacyAuthPass2" type="password" placeholder="Repeat password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
+        <div class="flex gap-2">
+          <button id="legacyBtnDoLogin" type="button" class="w-1/2 rounded-lg btn px-3 py-2 font-semibold">Log in</button>
+          <button id="legacyBtnDoSignup" type="button" class="w-1/2 rounded-lg btn px-3 py-2">Sign up</button>
+        </div>
+        <p id="legacyAuthMsg" class="text-xs text-zinc-400"></p>
+      </form>
+    </div>
+  </div>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var sb = window.__HANSORA_SB__;
+
+    
+  window.supabaseClient = window.__HANSORA_SB__; // expose for header bootstrap
+  window._supabase = window.__HANSORA_SB__;
+// Header elements are handled by HSHeader (persistent header)
+// Keep these null to prevent legacy header code from throwing.
+const $btnLoginNav = null;
+const $btnGetStarted = null;
+const $navUser = null;
+const $navCredits = null;
+const $navAvatar = null;
+const $navMenu = null;
+const $btnLogout = null;
+const $navAvatarImg = null;
+
+// Hero button
+    const $btnLogin = document.getElementById('btnLogin');
+
+    // Modal elements
+    const $modal = document.getElementById('legacyAuthModal');
+    const $close = document.getElementById('legacyAuthClose');
+    const $title = document.getElementById('legacyAuthTitle');
+    const $emailIn = document.getElementById('legacyAuthEmail');
+    const $passIn = document.getElementById('legacyAuthPass');
+    const $pass2In = document.getElementById('legacyAuthPass2');
+    const $msg = document.getElementById('legacyAuthMsg');
+    const $doLogin = document.getElementById('legacyBtnDoLogin');
+    const $doSignup = document.getElementById('legacyBtnDoSignup');
+
+    let authMode = 'login';
+    function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
+    function closeAuth(){ $modal.classList.add('hidden'); $msg.textContent=''; }
+    function setAuthMode(mode){
+      authMode = mode;
+      if(mode==='signup'){
+        $title.textContent = 'Sign up';
+        $pass2In.classList.remove('hidden');
+        $doSignup.classList.add('btn-brand'); $doLogin.classList.remove('btn-brand');
+      }else{
+        $title.textContent = 'Log in';
+        $pass2In.classList.add('hidden');
+        $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
+      }
+    }
+    function showLoggedInUI(profile, user){
+      if($btnLoginNav) $btnLoginNav.classList.add('hidden');
+      if($btnGetStarted) $btnGetStarted.classList.add('hidden');
+      if($navUser) $navUser.classList.remove('hidden');
+      if($navUser) $navUser.classList.add('flex');
+      if($navCredits) $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
+      if(user?.user_metadata?.avatar_url){
+        if($navAvatarImg) $navAvatarImg.src = user.user_metadata.avatar_url;
+        if($navAvatarImg) $navAvatarImg.classList.remove('hidden');
+      } else {
+        if($navAvatarImg) $navAvatarImg.classList.add('hidden');
+      }
+    }
+    function showLoggedOutUI(){
+      if($btnLoginNav) $btnLoginNav.classList.remove('hidden');
+      if($btnGetStarted) $btnGetStarted.classList.remove('hidden');
+      if($navUser) $navUser.classList.add('hidden');
+      if($navUser) $navUser.classList.remove('flex');
+    }
+    // Openers
+    if($btnLogin) $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    if($btnLoginNav) $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    if($btnGetStarted) $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+    if($close) $close.addEventListener('click', closeAuth);
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await sb
+        .from('profiles')
+        .select('user_id,email,credits')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if(error){ throw error; }
+      if(!data){
+        const ins = await sb.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error){ throw ins.error; }
+        return ins.data;
+      }
+      return data;
+    }
+    async function refreshCredits(){
+      try {
+        if (window.HSHeader && typeof window.HSHeader.refreshCredits === 'function') {
+          return await window.HSHeader.refreshCredits();
+        }
+        // fallback: no-op (header is handled by HSHeader)
+        return null;
+      } catch (e) {
+        console.warn('refreshCredits failed', e);
+        return null;
+      }
+    }
+    window.refreshCredits = refreshCredits; // kept for existing callbacks
+
+    // Sign up
+    $doSignup.addEventListener('click', async ()=>{
+      if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
+      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
+      if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
+      $msg.textContent = 'Creating account…';
+      const { data, error } = await sb.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      if(error){ $msg.textContent = error.message; return; }
+      $msg.textContent = 'Check your email to confirm, then Log in.';
+      setAuthMode('login');
+    });
+    // Log in
+    $doLogin.addEventListener('click', async ()=>{
+      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
+      $msg.textContent = 'Signing in…';
+      try{
+        const { data, error } = await sb.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        if(error){ $msg.textContent = error.message; return; }
+        const user = data.user;
+        const prof = await getOrCreateProfile(user);
+        showLoggedInUI(prof, user);
+        closeAuth();
+      }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
+    });
+    // Logout
+    const legacyLogout = document.getElementById('btnLogout');
+    if(legacyLogout) legacyLogout.addEventListener('click', async ()=>{
+      await sb.auth.signOut({ scope: 'local' });
+      showLoggedOutUI();
+    });
+    
+    // === Credit helpers (pure Supabase; no Make.com) ===
+    async function getUserId() {
+      const { data } = await sb.auth.getUser();
+      return data.user?.id || null;
+    }
+    async function setCredits(value) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { error } = await sb
+        .from('profiles')
+        .update({ credits: value })
+        .eq('user_id', uid);
+      if (error) throw error;
+      await window.refreshCredits();
+    }
+    async function addCredits(delta) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { data, error } = await sb
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      const next = (data?.credits ?? 0) + delta;
+      await setCredits(next);
+    }
+    async function useCredits(cost) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { data, error } = await sb
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      const current = data?.credits ?? 0;
+      if (current < cost) throw new Error('Not enough credits');
+      await setCredits(current - cost);
+    }
+    window.hansoraCredits = { addCredits, useCredits, setCredits };
+
+    // Restore session
+    (async ()=>{
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
+    })();
+  </script>
+<script>
+  (function(){ 
+    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+    ready(async function(){ 
+      try {
+        if (typeof sb === 'undefined' || !sb.auth) return;
+        const navCreditsEl = document.getElementById('navCredits');
+        const runBtn = document.getElementById('runBtn');
+        const R = (c)=>{ 
+          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+          if (runBtn) {
+            const ok = (c ?? 0) > 0;
+            runBtn.disabled = !ok;
+            runBtn.classList.toggle('opacity-50', !ok);
+            runBtn.classList.toggle('cursor-not-allowed', !ok);
+          }
+        };
+
+        const ures = await sb.auth.getUser();
+        const user = ures?.data?.user;
+        if(!user) return;
+
+        async function loadCreditsOnce(){ 
+          try {
+            const { data: prof } = await sb.from('profiles')
+              .select('credits').eq('user_id', user.id).maybeSingle();
+            const c = prof?.credits ?? 0;
+            R(c);
+            return c;
+          } catch(e) { console.warn('credits poll read failed', e); return null; }
+        }
+
+        // Long polling burst (3 minutes) every 2s
+        function startCreditsPolling(durationMs=180000, intervalMs=2000){
+          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
+          const t0 = Date.now();
+          window.__creditsPoll = setInterval(async ()=>{
+            await loadCreditsOnce();
+            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
+          }, intervalMs);
+        }
+
+        // Initial load -> reflect current value
+        await loadCreditsOnce();
+
+        // If __run exists, wrap it so we start long polling right after Run
+        if (typeof window.__run === 'function') {
+          const __origRun = window.__run;
+          window.__run = async function(){ 
+            const c = await loadCreditsOnce();
+            if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
+            startCreditsPolling(180000, 2000); // 3 minutes polling
+            return __origRun();
+          }
+        }
+      } catch(e){ console.warn('credits polling v2 error', e); }
+    });
+  })();
+  </script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const el = document.getElementById('btnLoginSignup');
+  if (!el || !window.supabase) return;
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.user) {
+      el.style.display = 'none';
+    }
+    sb.auth.onAuthStateChange((_e, session) => {
+      if (session && session.user) {
+        el.style.display = 'none';
+      } else {
+        el.style.display = '';
+      }
+    });
+  } catch (_) { /* silent */ }
+});
+</script>
+
+<script defer src="/models-epic.js?v=20261018"></script>
+<style>
+  .hs-bottom-nav,
+  .hs-overlay,
+  .hs-radial { display: none; }
+
+  @media (max-width: 768px){
+    :root{
+      --hs-ink:#e5e7eb;
+      --hs-muted:#a9afbd;
+      --hs-line:rgba(255,255,255,.10);
+      --hs-panel:#111217;
+      --hs-panel-2:#171820;
+      --hs-grad-a:#8b5cf6;
+      --hs-grad-b:#4f9cff;
+      --hs-bottom-height:80px;
+      /* iPhone Safari can draw the page under the home bar without reporting a safe area, so always keep room for it. */
+      --hs-safe-bottom:max(env(safe-area-inset-bottom, 0px), 14px);
+    }
+    body{ padding-bottom:calc(var(--hs-bottom-height) + var(--hs-safe-bottom)); }
+    /* Floating glass dock */
+    .hs-bottom-nav{
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      padding:0 env(safe-area-inset-right, 0px) var(--hs-safe-bottom) env(safe-area-inset-left, 0px);
+      z-index:60;
+      display:block;
+      box-sizing:border-box;
+      isolation:isolate;
+      border-radius:24px 24px 0 0;
+      border:0;
+      border-top:1px solid rgba(255,255,255,.10);
+      background:rgba(12,14,21,.985);
+      -webkit-backdrop-filter:blur(22px) saturate(170%);
+      backdrop-filter:blur(22px) saturate(170%);
+      box-shadow:0 -10px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07);
+      transform:translate3d(0,var(--hs-viewport-shift,0px),0);
+      -webkit-transform:translate3d(0,var(--hs-viewport-shift,0px),0);
+    }
+    .hs-bottom-nav::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      z-index:-1;
+      border-radius:inherit;
+      background:radial-gradient(120% 140% at 50% 0%, rgba(139,92,246,.10), transparent 60%);
+      pointer-events:none;
+    }
+    .hs-bottom-rail{
+      height:78px;
+      max-width:560px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr) 66px minmax(0,1fr) minmax(0,1fr);
+      align-items:center;
+      padding:0 4px;
+    }
+    .hs-btn{
+      position:relative;
+      width:100%;
+      min-width:0;
+      height:70px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      border:0;
+      border-radius:18px;
+      background:transparent;
+      color:rgba(226,230,240,.58);
+      font:600 11.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
+      text-decoration:none;
+      -webkit-tap-highlight-color:transparent;
+      transition:color .2s ease, transform .15s ease;
+    }
+    html[lang="ru"] .hs-btn, html[lang="ru"] .hs-fab-label{ font-size:10.5px; letter-spacing:0; }
+    html[lang="hy"] .hs-btn, html[lang="hy"] .hs-fab-label{ font-size:10px; letter-spacing:0; }
+    .hs-btn span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px; }
+    .hs-btn:active{ transform:scale(.92); color:#fff; }
+    .hs-btn.is-active{ color:#fff; }
+    .hs-btn.is-active svg{ filter:drop-shadow(0 0 8px rgba(167,139,250,.7)); }
+    .hs-btn.is-active::after{
+      content:"";
+      position:absolute;
+      bottom:4px;
+      left:50%;
+      width:16px;
+      height:3px;
+      margin-left:-8px;
+      border-radius:3px;
+      background:linear-gradient(90deg,#a78bfa,#38bdf8);
+    }
+    .hs-btn svg,
+    .hs-overlay svg,
+    .hs-radial svg{
+      width:26px;
+      height:26px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2.25;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    .hs-btn svg{ width:24px; height:24px; stroke-width:1.9; }
+    .hs-fab-wrap{ display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; }
+    .hs-fab{
+      position:relative;
+      width:58px;
+      height:58px;
+      margin-top:-30px;
+      display:grid;
+      place-items:center;
+      padding:0;
+      border-radius:50%;
+      border:0;
+      background:conic-gradient(from 210deg,#8b5cf6,#6366f1,#38bdf8,#8b5cf6);
+      box-shadow:0 0 0 5px rgba(14,16,24,.92), 0 12px 28px rgba(99,102,241,.55), 0 4px 14px rgba(56,189,248,.35);
+      color:#fff;
+      -webkit-tap-highlight-color:transparent;
+      transition:transform .15s ease;
+    }
+    .hs-fab::before{
+      content:"";
+      position:absolute;
+      inset:2px;
+      border-radius:50%;
+      background:linear-gradient(160deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%);
+      pointer-events:none;
+    }
+    .hs-fab:active{ transform:scale(.92); }
+    .hs-fab svg.hs-fab-plus{ width:26px; height:26px; stroke:#fff; stroke-width:2.6; fill:none; stroke-linecap:round; position:relative; }
+    .hs-fab-label{
+      margin-top:7px;
+      color:#fff;
+      font:700 11.5px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
+      max-width:72px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .hs-radial{
+      position:fixed;
+      inset:0;
+      z-index:72;
+    }
+    .hs-radial.is-open{ display:block; }
+    .hs-radial-backdrop{
+      position:absolute;
+      inset:0;
+      background:radial-gradient(120% 70% at 50% 100%, rgba(76,29,149,.38), rgba(3,4,10,.62) 70%);
+      -webkit-backdrop-filter:blur(6px);
+      backdrop-filter:blur(6px);
+      opacity:0;
+      transition:opacity .25s ease;
+    }
+    .hs-radial.is-open .hs-radial-backdrop{ opacity:1; }
+    .hs-radial-panel{
+      position:absolute;
+      left:50%;
+      bottom:0;
+      width:min(112vw,520px);
+      height:262px;
+      transform:translateX(-50%) translateY(40px) scale(.94);
+      transform-origin:bottom center;
+      border-radius:999px 999px 0 0 / 360px 360px 0 0;
+      border:1px solid rgba(255,255,255,.10);
+      border-bottom:0;
+      background:
+        radial-gradient(60% 55% at 50% 0%, rgba(139,92,246,.22), transparent 70%),
+        radial-gradient(45% 45% at 50% 100%, rgba(56,189,248,.14), transparent 70%),
+        linear-gradient(180deg, rgba(24,22,38,.97), rgba(10,11,18,.99));
+      box-shadow:0 -24px 90px rgba(109,40,217,.28), 0 -2px 0 rgba(255,255,255,.04) inset, 0 1px 0 rgba(255,255,255,.10) inset;
+      -webkit-backdrop-filter:blur(22px) saturate(160%);
+      backdrop-filter:blur(22px) saturate(160%);
+      opacity:0;
+      transition:opacity .25s ease, transform .32s cubic-bezier(.2,.9,.25,1.15);
+    }
+    .hs-radial-panel::before{
+      content:"";
+      position:absolute;
+      inset:-1px -1px 0;
+      border-radius:inherit;
+      padding:1px 1px 0;
+      background:linear-gradient(90deg, rgba(56,189,248,.0), rgba(167,139,250,.75) 30%, rgba(244,114,182,.6) 70%, rgba(56,189,248,0));
+      -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;
+      mask-composite:exclude;
+      pointer-events:none;
+    }
+    .hs-radial.is-open .hs-radial-panel{
+      opacity:1;
+      transform:translateX(-50%) translateY(0) scale(1);
+    }
+    .hs-radial-item{
+      position:absolute;
+      width:96px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      border:0;
+      background:transparent;
+      color:#eef0f7;
+      text-decoration:none;
+      transform:translate(-50%,-50%);
+      font:750 12.5px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.01em;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .hs-radial-item b{ font-weight:750; text-align:center; text-shadow:0 1px 8px rgba(0,0,0,.5); }
+    html[lang="hy"] .hs-radial-item b{ max-width:84px; }
+    html:has(.hs-radial.is-open) .hsa-launcher{ opacity:0; pointer-events:none; }
+    .hs-radial-icon{
+      position:relative;
+      width:54px;
+      height:54px;
+      display:grid;
+      place-items:center;
+      border-radius:18px;
+      background:linear-gradient(145deg, var(--hs-c1,#8b5cf6), var(--hs-c2,#38bdf8));
+      color:#fff;
+      box-shadow:0 10px 26px -8px var(--hs-glow,rgba(139,92,246,.7)), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -8px 16px rgba(0,0,0,.18);
+      opacity:0;
+      transform:translateY(16px) scale(.7);
+      transition:transform .18s ease, opacity .18s ease;
+    }
+    .hs-radial-icon::after{
+      content:"";
+      position:absolute;
+      inset:1px;
+      border-radius:17px;
+      background:linear-gradient(180deg, rgba(255,255,255,.22), transparent 45%);
+      pointer-events:none;
+    }
+    .hs-radial-icon svg{ width:25px; height:25px; stroke-width:2.1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
+    .hs-radial.is-open .hs-radial-icon{ animation:hs-radial-pop .42s cubic-bezier(.2,.9,.3,1.3) forwards; }
+    .hs-radial.is-open .hs-radial-video .hs-radial-icon{ animation-delay:.03s; }
+    .hs-radial.is-open .hs-radial-image .hs-radial-icon,
+    .hs-radial.is-open .hs-radial-audio .hs-radial-icon{ animation-delay:.08s; }
+    .hs-radial.is-open .hs-radial-trend .hs-radial-icon,
+    .hs-radial.is-open .hs-radial-more .hs-radial-icon{ animation-delay:.13s; }
+    @keyframes hs-radial-pop{ to{ opacity:1; transform:none; } }
+    .hs-radial-item:active .hs-radial-icon{ transform:scale(.92); }
+    .hs-radial-image{ left:28%; top:38%; --hs-c1:#38bdf8; --hs-c2:#6366f1; --hs-glow:rgba(56,189,248,.65); }
+    .hs-radial-video{ left:50%; top:23%; --hs-c1:#a78bfa; --hs-c2:#7c3aed; --hs-glow:rgba(139,92,246,.75); }
+    .hs-radial-audio{ left:72%; top:38%; --hs-c1:#f472b6; --hs-c2:#c026d3; --hs-glow:rgba(236,72,153,.6); }
+    .hs-radial-trend{ left:16%; top:70%; --hs-c1:#d9ff3d; --hs-c2:#22c55e; --hs-glow:rgba(163,230,53,.5); }
+    .hs-radial-trend .hs-radial-icon{ color:#0b1203; }
+    .hs-radial-more{ left:84%; top:70%; --hs-c1:#fbbf24; --hs-c2:#f97316; --hs-glow:rgba(251,146,60,.55); }
+    .hs-radial-close{
+      position:absolute;
+      left:50%;
+      bottom:15%;
+      width:58px;
+      height:58px;
+      transform:translateX(-50%);
+      border:0;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:
+        linear-gradient(rgba(16,17,26,.92), rgba(16,17,26,.92)) padding-box,
+        conic-gradient(from 210deg, #38bdf8, #8b5cf6, #ec4899, #f59e0b, #38bdf8) border-box;
+      border:2px solid transparent;
+      color:#fff;
+      box-shadow:0 10px 30px rgba(109,40,217,.45);
+      transition:transform .3s cubic-bezier(.2,.9,.3,1.2);
+      -webkit-tap-highlight-color:transparent;
+    }
+    .hs-radial.is-open .hs-radial-close{ transform:translateX(-50%) rotate(90deg); }
+    .hs-radial-close:active{ transform:translateX(-50%) rotate(90deg) scale(.92); }
+    .hs-radial-close svg{ width:26px; height:26px; stroke-width:2.6; }
+    @media (prefers-reduced-motion:reduce){
+      .hs-radial-panel, .hs-radial-close, .hs-radial-backdrop{ transition:none; }
+      .hs-radial.is-open .hs-radial-icon{ animation:none; opacity:1; transform:none; }
+    }
+    .hs-overlay{
+      position:fixed;
+      inset:0;
+      z-index:70;
+    }
+    /* Size the menu to the visible screen (not the area behind Safari's toolbar) so the list can scroll all the way. */
+    @supports (height:100dvh){ .hs-overlay{ bottom:auto; height:100dvh; } }
+    .hs-overlay.is-open{ display:block; }
+    .hs-overlay .backdrop{
+      position:absolute;
+      inset:0;
+      background:rgba(3,5,10,.74);
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+    }
+    .hs-overlay .panel{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      max-height:88vh;
+      max-height:86dvh;
+      overflow:auto;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+      touch-action:pan-y;
+      padding:0 18px calc(32px + var(--hs-safe-bottom));
+      border-radius:28px 28px 0 0;
+      border-top:1px solid rgba(255,255,255,.12);
+      background:rgba(16,17,23,.98);
+      box-shadow:0 -20px 70px rgba(0,0,0,.46);
+    }
+    .hs-overlay .panel header{
+      /* Title and close button stay pinned while the list scrolls. */
+      position:sticky;
+      top:0;
+      z-index:2;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin:0 -18px 14px;
+      padding:16px 18px 12px;
+      background:#101117;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      color:var(--hs-ink);
+    }
+    .hs-overlay .panel h3{
+      margin:0;
+      font:850 20px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+    }
+    #hs-close{
+      flex:0 0 50px;
+      width:50px;
+      height:50px;
+      padding:0;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.12);
+      background:#282a32;
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-sizing:border-box;
+      line-height:1;
+    }
+    #hs-close svg{
+      width:28px;
+      height:28px;
+      display:block;
+      margin:auto;
+    }
+    .hs-overlay .links{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .hs-overlay .links a,
+    .hs-feature-toggle{
+      min-height:62px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      padding:0 18px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+      color:var(--hs-ink);
+      font:750 16px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      text-decoration:none;
+    }
+    .hs-top-badge{
+      margin-left:auto;
+      display:inline-flex;
+      align-items:center;
+      height:20px;
+      padding:0 8px;
+      border-radius:7px;
+      background:linear-gradient(135deg,#d9ff3d,#a3f05a);
+      color:#0b1203;
+      font:900 11px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      letter-spacing:.02em;
+      box-shadow:0 0 14px rgba(201,255,61,.3);
+    }
+    .hs-feature-toggle{
+      width:100%;
+      justify-content:space-between;
+    }
+    .hs-feature-toggle span{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+    .hs-chev{ transition:transform .18s ease; }
+    .hs-overlay.features-open .hs-chev{ transform:rotate(180deg); }
+    .hs-feature-list{
+      display:none;
+      grid-template-columns:1fr;
+      gap:8px;
+      padding:2px 0 6px 18px;
+    }
+    .hs-overlay.features-open .hs-feature-list{ display:grid; }
+    .hs-feature-list a{
+      min-height:46px !important;
+      border-radius:14px !important;
+      padding:0 14px !important;
+      background:rgba(125,211,252,.06) !important;
+      font-size:14px !important;
+      color:#d8ecff !important;
+    }
+  }
+</style><nav aria-label="Mobile bottom navigation" class="hs-bottom-nav">
+  <div class="hs-bottom-rail">
+    <a aria-label="Home" class="hs-btn" href="/index.html">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
+      <span>Home</span>
+    </a>
+    <a aria-label="Features" class="hs-btn is-active" aria-current="page" href="/models.html#featuresSection">
+      <svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"></path></svg>
+      <span>Features</span>
+    </a>
+    <div class="hs-fab-wrap">
+      <button aria-label="Open create menu" class="hs-fab" id="hs-models-btn" type="button">
+        <svg aria-hidden="true" class="hs-fab-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+      <span aria-hidden="true" class="hs-fab-label">Create</span>
+    </div>
+    <a aria-label="History" class="hs-btn" href="/usage.html">
+      <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"></path><path d="M3 3v6h6"></path><path d="M12 7v6l4 2"></path></svg>
+      <span>History</span>
+    </a>
+    <button aria-label="Menu" class="hs-btn" id="hs-menu-btn" type="button">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      <span>Menu</span>
+    </button>
+  </div>
+</nav>
+
+<div class="hs-radial" id="hs-radial" aria-hidden="true">
+  <div class="hs-radial-backdrop" id="hs-radial-backdrop"></div>
+  <div class="hs-radial-panel" role="dialog" aria-modal="true" aria-label="Choose model type">
+    <a class="hs-radial-item hs-radial-image" href="/search-models.html">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path><circle cx="8" cy="8" r="1.5"></circle></svg></span>
+      <b>Image</b>
+    </a>
+    <a class="hs-radial-item hs-radial-video" data-hs-video-landing href="/search-models.html?model=gemini-omni-flash-1-1">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg></span>
+      <b>Video</b>
+    </a>
+    <a class="hs-radial-item hs-radial-audio" href="/audio.html">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path><path d="M21 11v2"></path></svg></span>
+      <b>Audio</b>
+    </a>
+    <a class="hs-radial-item hs-radial-trend" href="/examples.html">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 17l5-5 4 3 7-8"></path><path d="M15 7h5v5"></path></svg></span>
+      <b>Trend</b>
+    </a>
+    <a class="hs-radial-item hs-radial-more" href="/models.html">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"></path><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z"></path></svg></span>
+      <b>See more</b>
+    </a>
+    <button class="hs-radial-close" id="hs-radial-close" type="button" aria-label="Close models menu">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </button>
+  </div>
+</div>
+
+<div class="hs-overlay" id="hs-overlay" aria-hidden="true">
+  <div class="backdrop" id="hs-backdrop"></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="hs-ol-title">
+    <header>
+      <h3 id="hs-ol-title">Menu</h3>
+      <button id="hs-close" aria-label="Close menu" type="button">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </header>
+    <div class="links">
+      <a href="/search-models.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> Image</a>
+      <a data-hs-video-landing href="/search-models.html?model=gemini-omni-flash-1-1"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> Video</a>
+      <a href="/audio.html"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> Audio</a>
+      <a href="/henshin.html"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"></circle><path d="M3.5 20c1.1-3.6 3.6-5.5 6.5-5.5 1.6 0 3 .5 4.1 1.5"></path><path d="M18 13l.9 2.1L21 16l-2.1.9L18 19l-.9-2.1L15 16l2.1-.9L18 13z"></path></svg> Henshin<span class="hs-top-badge">Top</span></a>
+      <a href="/mcp-setup.html"><svg viewBox="0 0 24 24"><path d="M9 2v5M15 2v5"></path><path d="M6 7h12v4a6 6 0 0 1-12 0z"></path><path d="M12 17v5"></path></svg> ChatGPT Plugin</a>
+      <button class="hs-feature-toggle" id="hs-feature-toggle" type="button">
+        <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> Features</span>
+        <svg class="hs-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <div class="hs-feature-list" id="hs-feature-list">
+        <a href="/upscale.html">Image upscale</a>
+        <a href="/expand.html?mode=angles">Full angles</a>
+        <a href="/expand.html?mode=expand">Expand</a>
+        <a href="/character.html">Character</a>
+        <a href="/product_card.html">Product Card</a>
+        <a href="/prompt-builder.html">Cartoon Prompt Builder</a>
+        <a href="/kid-cartoon.html">Kid Cartoon</a>
+        <a href="/henshin.html">Henshin</a>
+        <a href="/video-edit.html">Video Edit</a>
+        <a href="/background-change.html">Background Change</a>
+        <a href="/video-relight.html">Video Relight</a>
+        <a href="/upscale.html?mode=video">Video upscale</a>
+        <a href="/lipsync.html">Lipsync Avatar</a>
+        <a href="/audio.html?tool=text-to-speech">Text to speech</a>
+        <a href="/audio.html?tool=voice-isolater">Voice isolater</a>
+        <a href="/audio.html?tool=voice-changer">Voice changer</a>
+        <a href="/audio.html?tool=song-creation">Song Creation</a>
+        <a href="/analyse.html">Hook analyse</a>
+        <a href="/models.html">See more</a>
+      </div>
+      <a href="/pricing.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3z"></path><path d="M8 10h8M8 14h8"></path></svg> Pricing</a>
+      <a href="/index.html#faq"><svg viewBox="0 0 24 24"><path d="M12 17h.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> FAQ</a>
+      <a href="/contact.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M4 8l8 6 8-6"></path></svg> Contact</a>
+      <button class="hs-feature-toggle" id="hs-feedback-btn" data-hansora-feedback type="button" aria-haspopup="dialog"><span><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 1-8 8H5l-3 3V11a9 9 0 0 1 18 0Z"></path><path d="M7 10h8M7 14h5"></path></svg> Feedback</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const menuBtn = document.getElementById('hs-menu-btn');
+    const overlay = document.getElementById('hs-overlay');
+    const closeBtn = document.getElementById('hs-close');
+    const backdrop = document.getElementById('hs-backdrop');
+    const modelsBtn = document.getElementById('hs-models-btn');
+    const radial = document.getElementById('hs-radial');
+    const radialBackdrop = document.getElementById('hs-radial-backdrop');
+    const radialClose = document.getElementById('hs-radial-close');
+    const radialMore = document.getElementById('hs-radial-more');
+    const featureToggle = document.getElementById('hs-feature-toggle');
+    const bottomNav = document.querySelector('.hs-bottom-nav');
+    let lockedScrollY = 0;
+    let lockCount = 0;
+    let bottomNavShift = 0;
+    let bottomNavFrame = 0;
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    let analyticsAuthCache = window.__hansoraAnalyticsAuth || null;
+    const refreshAnalyticsAuthCache = () => {
+      analyticsAuthCache = null;
+      try {
+        for (let i = 0; i < localStorage.length; i += 1) {
+          const key = localStorage.key(i);
+          if (!/^sb-.*-auth-token$/.test(key || '')) continue;
+          const value = JSON.parse(localStorage.getItem(key) || '{}');
+          const session = value.currentSession || value.session || value;
+          const user = session.user || value.user || {};
+          if (session.access_token && user.id) {
+            analyticsAuthCache = {
+              accessToken: session.access_token,
+              userId: user.id,
+              email: user.email || null
+            };
+            break;
+          }
+        }
+      } catch (_) {}
+      window.__hansoraAnalyticsAuth = analyticsAuthCache;
+      return analyticsAuthCache;
+    };
+    const readAnalyticsAuth = () => {
+      return window.__hansoraAnalyticsAuth || analyticsAuthCache || null;
+    };
+    const analyticsSessionId = () => {
+      const key = 'hansora.analytics.session_id';
+      try {
+        let value = sessionStorage.getItem(key);
+        if (!value) {
+          value = window.crypto && typeof window.crypto.randomUUID === 'function'
+            ? window.crypto.randomUUID()
+            : Date.now() + '-' + Math.random().toString(36).slice(2);
+          sessionStorage.setItem(key, value);
+        }
+        return value;
+      } catch (_) {
+        return null;
+      }
+    };
+    const clickDestination = (element) => {
+      const raw = element && element.getAttribute ? element.getAttribute('href') || '' : '';
+      if (!raw || raw.charAt(0) === '#') return raw.slice(0, 180) || null;
+      try {
+        const url = new URL(raw, location.href);
+        return url.origin === location.origin
+          ? (url.pathname + url.hash).slice(0, 300)
+          : (url.origin + url.pathname).slice(0, 300);
+      } catch (_) {
+        return raw.slice(0, 300);
+      }
+    };
+    const bindMobileNavClickTracking = () => {
+      if (window.__hansoraMobileNavClickTrackingBound) return;
+      window.__hansoraMobileNavClickTrackingBound = true;
+      refreshAnalyticsAuthCache();
+      window.addEventListener('storage', (event) => {
+        if (/^sb-.*-auth-token$/.test(event.key || '')) refreshAnalyticsAuthCache();
+      });
+
+      document.addEventListener('click', (event) => {
+        try {
+          // The shared header tracker already records this click when present.
+          if (window.__hansoraGlobalClickTrackingBound) return;
+          const target = event.target && event.target.closest
+            ? event.target.closest('.hs-bottom-nav a,.hs-bottom-nav button,.hs-radial a,.hs-radial button,.hs-overlay a,.hs-overlay button')
+            : null;
+          if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
+
+          const auth = readAnalyticsAuth();
+          if (!auth || !auth.userId || !auth.accessToken) return;
+
+          const label = String(
+            target.getAttribute('aria-label') ||
+            target.getAttribute('title') ||
+            target.textContent ||
+            target.id ||
+            'unlabeled'
+          ).replace(/\s+/g, ' ').trim().slice(0, 180);
+
+          fetch(SUPABASE_URL + '/rest/v1/click_events', {
+            method: 'POST',
+            keepalive: true,
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + auth.accessToken,
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              user_id: auth.userId,
+              email: auth.email,
+              event_name: 'click',
+              element_type: String(target.tagName || '').toLowerCase() || null,
+              element_id: String(target.id || '').slice(0, 180) || null,
+              element_label: label || 'unlabeled',
+              destination: clickDestination(target),
+              page_path: (location.pathname + (location.hash || '')).slice(0, 300),
+              session_id: analyticsSessionId(),
+              device_type: 'mobile'
+            })
+          }).catch(() => {});
+        } catch (_) {}
+      }, true);
+    };
+    const getCurrentCredits = () => {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function') {
+          return Number(window.HansoraHeader.getCurrentCredits() || 0);
+        }
+        return Number(localStorage.getItem('hansora.header.credits') || 0);
+      } catch (_) {
+        return 0;
+      }
+    };
+    const localizedSearchModelsPath = "/search-models.html";
+    const updateVideoLandingLinks = () => {
+      const model = getCurrentCredits() < 4 ? 'grok-video' : 'gemini-omni-flash-1-1';
+      document.querySelectorAll('[data-hs-video-landing]').forEach((link) => {
+        link.setAttribute('href', localizedSearchModelsPath + '?model=' + encodeURIComponent(model));
+      });
+    };
+    const syncBottomNavToViewport = () => {
+      if (!bottomNav) return;
+      cancelAnimationFrame(bottomNavFrame);
+      bottomNavFrame = requestAnimationFrame(() => {
+        const viewportBottom = window.visualViewport
+          ? window.visualViewport.offsetTop + window.visualViewport.height
+          : window.innerHeight;
+        const rect = bottomNav.getBoundingClientRect();
+        const unshiftedBottom = rect.bottom - bottomNavShift;
+        // Keep the dock's floating gap above the screen edge instead of pinning it flush to the bottom.
+        const dockGap = parseFloat(getComputedStyle(bottomNav).bottom) || 0;
+        bottomNavShift = Math.max(0, Math.round(viewportBottom - dockGap - unshiftedBottom));
+        bottomNav.style.setProperty('--hs-viewport-shift', bottomNavShift + 'px');
+      });
+    };
+    const lockPageScroll = () => {
+      lockCount += 1;
+      if (lockCount > 1) return;
+      lockedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + lockedScrollY + 'px';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    };
+    const unlockPageScroll = () => {
+      lockCount = Math.max(0, lockCount - 1);
+      if (lockCount > 0) return;
+      document.documentElement.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, lockedScrollY || 0);
+    };
+    const openMenu = (expandFeatures) => {
+      if (!overlay) return;
+      if (overlay.classList.contains('is-open')) {
+        if (expandFeatures) overlay.classList.add('features-open');
+        return;
+      }
+      lockPageScroll();
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden', 'false');
+      if (expandFeatures) overlay.classList.add('features-open');
+    };
+    const closeMenu = () => {
+      if (!overlay) return;
+      if (!overlay.classList.contains('is-open')) return;
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+      unlockPageScroll();
+    };
+    const openRadial = () => {
+      if (!radial) return;
+      if (radial.classList.contains('is-open')) return;
+      closeMenu();
+      lockPageScroll();
+      radial.classList.add('is-open');
+      radial.setAttribute('aria-hidden', 'false');
+    };
+    const closeRadial = () => {
+      if (!radial) return;
+      if (!radial.classList.contains('is-open')) return;
+      radial.classList.remove('is-open');
+      radial.setAttribute('aria-hidden', 'true');
+      unlockPageScroll();
+    };
+    menuBtn && menuBtn.addEventListener('click', () => { closeRadial(); openMenu(false); });
+    closeBtn && closeBtn.addEventListener('click', closeMenu);
+    backdrop && backdrop.addEventListener('click', closeMenu);
+    document.getElementById('hs-feedback-btn')?.addEventListener('click', closeMenu);
+    modelsBtn && modelsBtn.addEventListener('click', openRadial);
+    radialBackdrop && radialBackdrop.addEventListener('click', closeRadial);
+    radialClose && radialClose.addEventListener('click', closeRadial);
+    radialMore && radialMore.addEventListener('click', () => { closeRadial(); openMenu(true); });
+    featureToggle && featureToggle.addEventListener('click', () => overlay && overlay.classList.toggle('features-open'));
+    document.querySelectorAll('[data-hs-video-landing]').forEach((link) => {
+      link.addEventListener('click', updateVideoLandingLinks);
+    });
+    bindMobileNavClickTracking();
+    updateVideoLandingLinks();
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'hansora.header.credits') updateVideoLandingLinks();
+    });
+    syncBottomNavToViewport();
+    window.addEventListener('resize', syncBottomNavToViewport, { passive:true });
+    window.addEventListener('orientationchange', syncBottomNavToViewport, { passive:true });
+    window.visualViewport && window.visualViewport.addEventListener('resize', syncBottomNavToViewport, { passive:true });
+    window.visualViewport && window.visualViewport.addEventListener('scroll', syncBottomNavToViewport, { passive:true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) syncBottomNavToViewport();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeRadial();
+        closeMenu();
+      }
+    });
+  })();
+</script>
+<script id="hansoraFeedbackScript" src="/feedback.js?v=1" defer></script></body>
+</html>

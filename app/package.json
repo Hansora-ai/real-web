@@ -4,10 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "package": "node scripts/package-site.mjs",
-    "sync": "node scripts/package-site.mjs && cap sync",
-    "ios": "npm run sync && cap open ios",
-    "android": "npm run sync && cap open android",
+    "sync": "cap sync",
+    "ios": "cap sync ios && cap open ios",
+    "android": "cap sync android && cap open android",
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {

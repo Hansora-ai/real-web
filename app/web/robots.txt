@@ -1,0 +1,2 @@
+# Search discovery; existing default crawler access is unchanged.
+Sitemap: https://hansora.co/sitemap.xml
