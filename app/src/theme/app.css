@@ -1,0 +1,154 @@
+/* Hansora app styles. Colors come only from tokens.css so dark and light both work. */
+
+html, body { background: var(--h-bg); }
+body {
+  font-family: var(--h-font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  font-feature-settings: 'cv11', 'ss01';
+}
+ion-content { --background: var(--h-bg); }
+ion-content.grouped { --background: var(--h-bg); }
+ion-toolbar { --background: var(--h-bg); --color: var(--h-text); }
+ion-header.header-translucent ion-toolbar { --background: color-mix(in srgb, var(--h-bg) 82%, transparent); }
+ion-title.title-large { font-weight: 750; letter-spacing: -0.02em; }
+ion-title { font-weight: 650; }
+ion-tab-bar { --background: var(--ion-tab-bar-background); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
+ion-tab-button { --color-selected: var(--h-text); font-weight: 550; }
+ion-tab-button.tab-selected ion-icon { color: var(--h-accent); }
+
+/* Boot */
+.boot { position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: 20px; background: var(--h-bg); }
+.boot ion-spinner { color: var(--h-text-3); }
+
+/* Buttons (44pt+ touch targets) */
+.h-btn {
+  appearance: none; border: 0; width: 100%; min-height: 54px; border-radius: 16px; padding: 0 20px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font: 600 17px/1 var(--h-font); letter-spacing: -0.01em; cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+.h-btn:active:not(:disabled) { transform: scale(0.98); opacity: 0.9; }
+.h-btn:disabled { opacity: 0.5; }
+.h-btn ion-icon { font-size: 21px; }
+.h-btn ion-spinner { width: 22px; height: 22px; }
+.h-btn-light { background: var(--h-primary-bg); color: var(--h-on-primary); }
+.h-btn-primary { background: var(--h-accent); color: #fff; }
+.h-btn-ghost { background: var(--h-surface-2); color: var(--h-text); box-shadow: inset 0 0 0 1px var(--h-border-2); }
+.h-link { appearance: none; border: 0; background: none; color: var(--h-accent); font: 500 15px var(--h-font); min-height: 44px; cursor: pointer; }
+.h-inline-link { appearance: none; border: 0; background: none; padding: 0; color: var(--h-text-2); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.h-badge {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px;
+  background: var(--h-accent-soft); color: var(--h-accent-2); font: 600 12px var(--h-font); letter-spacing: 0.02em; text-transform: uppercase;
+}
+
+/* Login */
+.login { --background: var(--h-bg); }
+.login-glow {
+  position: absolute; inset: -20% -30% auto; height: 70%; pointer-events: none;
+  background:
+    radial-gradient(40% 45% at 30% 40%, color-mix(in srgb, var(--h-brand-from) 22%, transparent), transparent 70%),
+    radial-gradient(45% 50% at 72% 30%, color-mix(in srgb, var(--h-brand-to) 24%, transparent), transparent 70%);
+  filter: blur(10px);
+}
+:root[data-theme='light'] .login-glow { opacity: 0.55; }
+.login-wrap {
+  position: relative; min-height: 100%; max-width: 440px; margin: 0 auto;
+  display: flex; flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 20px);
+}
+.login-back {
+  position: absolute; top: calc(env(safe-area-inset-top) + 8px); left: 12px; width: 44px; height: 44px;
+  display: grid; place-items: center; border: 0; border-radius: 22px; background: transparent; color: var(--h-text); font-size: 26px; cursor: pointer;
+}
+.login-hero { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 48px 0 32px; animation: rise 0.5s var(--ease, ease) both; }
+.login-hero.compact { flex: 0; padding: 56px 0 28px; }
+.login-logo {
+  width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; margin-bottom: 28px;
+  background: var(--h-surface); box-shadow: inset 0 0 0 1px var(--h-border-2), 0 20px 50px -20px var(--h-glow);
+}
+.login-logo img { width: 56px; height: 56px; }
+.login-hero h1 {
+  margin: 0; white-space: pre-line; font-size: clamp(32px, 9vw, 40px); line-height: 1.08; font-weight: 750; letter-spacing: -0.035em;
+  background: linear-gradient(180deg, var(--h-text) 30%, color-mix(in srgb, var(--h-text) 70%, var(--h-brand-to)));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.login-hero.compact h1 { font-size: 28px; }
+.login-hero p { margin: 16px 0 0; color: var(--h-text-2); font-size: 17px; line-height: 1.45; max-width: 34ch; }
+.login-actions, .login-form { display: flex; flex-direction: column; gap: 12px; animation: rise 0.5s 0.06s var(--ease, ease) both; }
+.login-or { display: flex; align-items: center; gap: 12px; color: var(--h-text-3); font-size: 13px; margin: 4px 0; }
+.login-or::before, .login-or::after { content: ''; flex: 1; height: 1px; background: var(--h-border-2); }
+.login-note { margin: 8px 4px 0; color: var(--h-text-3); font-size: 13px; line-height: 1.45; text-align: center; }
+.login-notice { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--h-accent-soft); color: var(--h-text); font-size: 14px; line-height: 1.45; }
+.login-terms { margin: 24px 0 0; text-align: center; color: var(--h-text-3); font-size: 12.5px; line-height: 1.5; }
+.login-form .h-link { align-self: center; }
+
+.h-segment { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 12px; background: var(--h-surface-2); margin-bottom: 8px; }
+.h-segment button {
+  appearance: none; border: 0; min-height: 38px; border-radius: 9px; background: transparent; color: var(--h-text-2);
+  font: 600 14px var(--h-font); cursor: pointer; transition: background 0.2s ease, color 0.2s ease;
+}
+.h-segment button.on { background: var(--h-surface-3); color: var(--h-text); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+:root[data-theme='light'] .h-segment button.on { background: var(--h-surface); }
+
+.h-field { display: flex; flex-direction: column; gap: 6px; }
+.h-field span { color: var(--h-text-2); font-size: 13px; font-weight: 550; padding-left: 4px; }
+.h-field input {
+  min-height: 52px; border-radius: 14px; border: 0; padding: 0 16px; outline: none;
+  background: var(--h-surface); color: var(--h-text); font: 400 17px var(--h-font);
+  box-shadow: inset 0 0 0 1px var(--h-border-2); transition: box-shadow 0.15s ease;
+}
+.h-field input:focus { box-shadow: inset 0 0 0 2px var(--h-accent); }
+
+/* Account */
+.credits-card {
+  position: relative; overflow: hidden; margin: 8px 16px 6px; padding: 18px 20px 16px; border-radius: var(--h-radius-lg);
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--h-brand-to) 26%, transparent), transparent 55%),
+    radial-gradient(100% 120% at 0% 100%, color-mix(in srgb, var(--h-brand-from) 18%, transparent), transparent 55%),
+    var(--h-surface);
+  box-shadow: inset 0 0 0 1px var(--h-border-2);
+}
+.credits-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.credits-label { display: inline-flex; align-items: center; gap: 6px; color: var(--h-text-2); font-size: 14px; font-weight: 600; }
+.credits-label ion-icon { color: var(--h-amber); }
+.credits-email { color: var(--h-text-3); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.credits-value { margin-top: 10px; font-size: 40px; line-height: 1.1; font-weight: 750; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.credits-card p { margin: 6px 0 0; color: var(--h-text-3); font-size: 13px; }
+
+ion-list.list-inset { margin-inline: 16px; border-radius: var(--h-radius); }
+ion-list { --ion-item-background: var(--h-surface); }
+ion-item { --background: var(--h-surface); --border-color: var(--h-border-2); --min-height: 50px; font-size: 16px; }
+ion-item ion-icon[slot='start'] { color: var(--h-text-2); font-size: 21px; margin-inline-end: 14px; }
+.row-value { color: var(--h-text-3); font-size: 15px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.danger-row, .danger-row ion-icon[slot='start'] { color: var(--h-red) !important; }
+.group-title { --color: var(--h-text-3); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding-inline-start: 32px; min-height: 36px; margin-top: 10px; }
+.safe-bottom { height: 24px; }
+
+/* Empty states */
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 64px 32px; max-width: 420px; margin: 0 auto; }
+.empty-icon {
+  width: 72px; height: 72px; border-radius: 22px; display: grid; place-items: center; font-size: 32px; color: var(--h-accent-2);
+  background: var(--h-accent-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--h-accent) 25%, transparent);
+}
+.empty h2 { margin: 6px 0 0; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+.empty p { margin: 0; color: var(--h-text-2); font-size: 15px; line-height: 1.5; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .login-hero, .login-actions, .login-form { animation: none; } .h-btn { transition: none; } }
+
+/* Small phones (iPhone SE and similar): keep every sign-in button on the first screen. */
+@media (max-height: 700px) {
+  .login-hero { padding: 16px 0 20px; }
+  .login-logo { width: 64px; height: 64px; border-radius: 18px; margin-bottom: 18px; }
+  .login-logo img { width: 42px; height: 42px; }
+  .login-hero h1 { font-size: 28px; }
+  .login-hero p { font-size: 15px; margin-top: 10px; }
+  .login-actions { gap: 10px; }
+  .login-actions .h-btn { min-height: 50px; }
+  .login-note { display: none; }
+  .login-terms { margin-top: 16px; }
+}
+ion-label.row { display: flex !important; align-items: center; gap: 12px; }
+ion-label.row > span:first-child { flex: 0 0 auto; }
+ion-label.row .row-value { flex: 1 1 auto; min-width: 0; max-width: none; text-align: end; }

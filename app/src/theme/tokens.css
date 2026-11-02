@@ -1,0 +1,122 @@
+/*
+  Hansora design tokens, taken from the website (public/automation-ui.css) so the app looks like Hansora.
+  Dark is the default, like the website. Keep these in step with the website when its colors change.
+*/
+:root,
+:root[data-theme='dark'] {
+  --h-bg: #08090b;
+  --h-bg-soft: #0c0d10;
+  --h-surface: #101114;
+  --h-surface-2: #15161a;
+  --h-surface-3: #1b1c21;
+  --h-border: rgba(255, 255, 255, 0.075);
+  --h-border-2: rgba(255, 255, 255, 0.12);
+  --h-text: #f5f5f6;
+  --h-text-2: #a3a6ad;
+  --h-text-3: #6f727b;
+  --h-accent: #4c8dff;
+  --h-accent-2: #79aaff;
+  --h-accent-soft: rgba(76, 141, 255, 0.12);
+  --h-green: #3ecf8e;
+  --h-green-soft: rgba(62, 207, 142, 0.12);
+  --h-amber: #f5b54a;
+  --h-amber-soft: rgba(245, 181, 74, 0.12);
+  --h-red: #ff6b6b;
+  --h-red-soft: rgba(255, 107, 107, 0.12);
+  --h-primary-bg: #ffffff;
+  --h-on-primary: #0a0a0b;
+  --h-glow: rgba(76, 141, 255, 0.18);
+  --h-brand-from: #2fd3fb;
+  --h-brand-to: #8b87e6;
+  --h-radius: 14px;
+  --h-radius-lg: 20px;
+  --h-font: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Arial, sans-serif;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --h-bg: #f7f7f8;
+  --h-bg-soft: #f1f1f3;
+  --h-surface: #ffffff;
+  --h-surface-2: #f4f4f6;
+  --h-surface-3: #eaeaee;
+  --h-border: rgba(10, 10, 20, 0.08);
+  --h-border-2: rgba(10, 10, 20, 0.12);
+  --h-text: #0b0b0f;
+  --h-text-2: #51535c;
+  --h-text-3: #8b8d96;
+  --h-accent: #2f6fec;
+  --h-accent-2: #1f5fdc;
+  --h-accent-soft: rgba(47, 111, 236, 0.1);
+  --h-green: #12a150;
+  --h-green-soft: rgba(18, 161, 80, 0.1);
+  --h-amber: #c27803;
+  --h-amber-soft: rgba(194, 120, 3, 0.1);
+  --h-red: #dc3b3b;
+  --h-red-soft: rgba(220, 59, 59, 0.08);
+  --h-primary-bg: #0b0b0f;
+  --h-on-primary: #ffffff;
+  --h-glow: rgba(47, 111, 236, 0.12);
+  color-scheme: light;
+}
+
+/* Ionic reads these, so every built-in component (lists, tab bar, toggles) uses Hansora's colors. */
+:root {
+  --ion-font-family: var(--h-font);
+  --ion-background-color: var(--h-bg);
+  --ion-background-color-rgb: 8, 9, 11;
+  --ion-text-color: var(--h-text);
+  --ion-text-color-rgb: 245, 245, 246;
+  --ion-color-primary: var(--h-accent);
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-shade: #4380e0;
+  --ion-color-primary-tint: #5e98ff;
+  --ion-color-danger: var(--h-red);
+  --ion-color-success: var(--h-green);
+  --ion-color-warning: var(--h-amber);
+  --ion-color-medium: var(--h-text-2);
+  --ion-border-color: var(--h-border-2);
+  --ion-item-background: var(--h-surface);
+  --ion-card-background: var(--h-surface);
+  --ion-toolbar-background: var(--h-bg);
+  --ion-toolbar-border-color: var(--h-border);
+  --ion-tab-bar-background: rgba(12, 13, 16, 0.86);
+  --ion-tab-bar-border-color: var(--h-border);
+  --ion-tab-bar-color: var(--h-text-3);
+  --ion-tab-bar-color-selected: var(--h-text);
+  --ion-placeholder-color: var(--h-text-3);
+  --ion-color-step-50: #101114;
+  --ion-color-step-100: #15161a;
+  --ion-color-step-150: #1b1c21;
+  --ion-color-step-200: #222329;
+  --ion-color-step-400: #6f727b;
+  --ion-color-step-600: #a3a6ad;
+  --ion-color-step-850: #e6e6e8;
+  --ion-background-color-step-50: #101114;
+  --ion-background-color-step-100: #15161a;
+  --ion-background-color-step-150: #1b1c21;
+  --ion-background-color-step-200: #222329;
+  --ion-text-color-step-400: #a3a6ad;
+  --ion-text-color-step-600: #6f727b;
+}
+
+:root[data-theme='light'] {
+  --ion-background-color-rgb: 247, 247, 248;
+  --ion-text-color-rgb: 11, 11, 15;
+  --ion-tab-bar-background: rgba(250, 250, 251, 0.86);
+  --ion-color-primary-shade: #2961d0;
+  --ion-color-primary-tint: #447dee;
+  --ion-color-step-50: #f1f1f3;
+  --ion-color-step-100: #eaeaee;
+  --ion-color-step-150: #e1e1e6;
+  --ion-color-step-200: #d6d6dc;
+  --ion-color-step-400: #8b8d96;
+  --ion-color-step-600: #51535c;
+  --ion-color-step-850: #1b1c21;
+  --ion-background-color-step-50: #f1f1f3;
+  --ion-background-color-step-100: #eaeaee;
+  --ion-background-color-step-150: #e1e1e6;
+  --ion-background-color-step-200: #d6d6dc;
+  --ion-text-color-step-400: #51535c;
+  --ion-text-color-step-600: #8b8d96;
+}
