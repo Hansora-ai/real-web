@@ -53,35 +53,34 @@ ion-tab-button.tab-selected ion-icon { color: var(--h-accent); }
 }
 :root[data-theme='light'] .login-glow { opacity: 0.55; }
 .login-wrap {
-  position: relative; min-height: 100%; max-width: 440px; margin: 0 auto;
-  display: flex; flex-direction: column;
-  padding: calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 20px);
+  position: relative; min-height: 100%; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 16px);
 }
 .login-back {
-  position: absolute; top: calc(env(safe-area-inset-top) + 8px); left: 12px; width: 44px; height: 44px;
-  display: grid; place-items: center; border: 0; border-radius: 22px; background: transparent; color: var(--h-text); font-size: 26px; cursor: pointer;
+  width: 44px; height: 44px; margin: -8px 0 12px -12px; display: grid; place-items: center; border: 0; border-radius: 22px;
+  background: transparent; color: var(--h-text); font-size: 26px; cursor: pointer;
 }
-.login-hero { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 48px 0 32px; animation: rise 0.5s var(--ease, ease) both; }
-.login-hero.compact { flex: 0; padding: 56px 0 28px; }
-.login-logo {
-  width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; margin-bottom: 28px;
-  background: var(--h-surface); box-shadow: inset 0 0 0 1px var(--h-border-2), 0 20px 50px -20px var(--h-glow);
-}
-.login-logo img { width: 56px; height: 56px; }
-.login-hero h1 {
-  margin: 0; white-space: pre-line; font-size: clamp(32px, 9vw, 40px); line-height: 1.08; font-weight: 750; letter-spacing: -0.035em;
-  background: linear-gradient(180deg, var(--h-text) 30%, color-mix(in srgb, var(--h-text) 70%, var(--h-brand-to)));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.login-hero.compact h1 { font-size: 28px; }
-.login-hero p { margin: 16px 0 0; color: var(--h-text-2); font-size: 17px; line-height: 1.45; max-width: 34ch; }
-.login-actions, .login-form { display: flex; flex-direction: column; gap: 12px; animation: rise 0.5s 0.06s var(--ease, ease) both; }
-.login-or { display: flex; align-items: center; gap: 12px; color: var(--h-text-3); font-size: 13px; margin: 4px 0; }
+.login-hero { padding: 8px 0 24px; animation: rise 0.45s ease both; }
+.login-logo { display: block; width: 44px; height: 44px; margin-bottom: 20px; filter: drop-shadow(0 8px 24px var(--h-glow)); }
+.login-hero h1 { margin: 0; font-size: 30px; line-height: 1.12; font-weight: 750; letter-spacing: -0.03em; color: var(--h-text); }
+.login-hero p { margin: 8px 0 0; color: var(--h-text-2); font-size: 15.5px; line-height: 1.45; }
+.login-form { display: flex; flex-direction: column; gap: 14px; animation: rise 0.45s 0.05s ease both; }
+.login-form .h-btn-primary { margin-top: 4px; }
+.login-form .h-link { align-self: center; margin-top: -4px; }
+.login-social { margin-top: auto; padding-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+.social-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.h-btn.social { min-height: 58px; font-size: 17px; }
+.h-btn.social ion-icon { font-size: 22px; }
+.h-btn.social .google-mark { width: 22px; height: 22px; }
+.login-or { display: flex; align-items: center; gap: 12px; color: var(--h-text-3); font-size: 13px; }
 .login-or::before, .login-or::after { content: ''; flex: 1; height: 1px; background: var(--h-border-2); }
-.login-note { margin: 8px 4px 0; color: var(--h-text-3); font-size: 13px; line-height: 1.45; text-align: center; }
+.login-note { margin: 0 4px; color: var(--h-text-3); font-size: 12.5px; line-height: 1.45; text-align: center; }
 .login-notice { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--h-accent-soft); color: var(--h-text); font-size: 14px; line-height: 1.45; }
-.login-terms { margin: 24px 0 0; text-align: center; color: var(--h-text-3); font-size: 12.5px; line-height: 1.5; }
-.login-form .h-link { align-self: center; }
+.login-terms { margin: 16px 0 0; text-align: center; color: var(--h-text-3); font-size: 12px; line-height: 1.5; }
+.h-input-wrap { position: relative; display: flex; }
+.h-input-wrap input { flex: 1; padding-right: 52px; }
+.h-eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--h-text-3); font-size: 20px; cursor: pointer; }
+.code-input { text-align: center; font-size: 26px !important; letter-spacing: 0.5em; font-variant-numeric: tabular-nums; }
 
 .h-segment { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 12px; background: var(--h-surface-2); margin-bottom: 8px; }
 .h-segment button {
@@ -135,19 +134,21 @@ ion-item ion-icon[slot='start'] { color: var(--h-text-2); font-size: 21px; margi
 .empty p { margin: 0; color: var(--h-text-2); font-size: 15px; line-height: 1.5; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .login-hero, .login-actions, .login-form { animation: none; } .h-btn { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .login-hero, .login-form { animation: none; } .h-btn { transition: none; } }
 
-/* Small phones (iPhone SE and similar): keep every sign-in button on the first screen. */
+/* Small phones (iPhone SE and similar): tighter spacing so everything fits without scrolling. */
 @media (max-height: 700px) {
-  .login-hero { padding: 16px 0 20px; }
-  .login-logo { width: 64px; height: 64px; border-radius: 18px; margin-bottom: 18px; }
-  .login-logo img { width: 42px; height: 42px; }
-  .login-hero h1 { font-size: 28px; }
-  .login-hero p { font-size: 15px; margin-top: 10px; }
-  .login-actions { gap: 10px; }
-  .login-actions .h-btn { min-height: 50px; }
-  .login-note { display: none; }
-  .login-terms { margin-top: 16px; }
+  .login-wrap { padding-top: calc(env(safe-area-inset-top) + 16px); }
+  .login-logo { width: 36px; height: 36px; margin-bottom: 12px; }
+  .login-hero { padding-bottom: 16px; }
+  .login-hero h1 { font-size: 26px; }
+  .login-hero p, .login-note { display: none; }
+  .login-form { gap: 10px; }
+  .h-field input { min-height: 48px; }
+  .h-btn { min-height: 50px; }
+  .h-btn.social { min-height: 52px; }
+  .login-social { padding-top: 14px; gap: 10px; }
+  .login-terms { margin-top: 10px; }
 }
 ion-label.row { display: flex !important; align-items: center; gap: 12px; }
 ion-label.row > span:first-child { flex: 0 0 auto; }

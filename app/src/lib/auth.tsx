@@ -16,7 +16,9 @@ type AuthState = {
   profile: Profile | null;
   refreshProfile: () => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (email: string, password: string) => Promise<'signed_in' | 'confirm_email'>;
+  signUpWithPassword: (email: string, password: string) => Promise<'signed_in' | 'verify_code' | 'may_exist'>;
+  verifySignupCode: (email: string, code: string) => Promise<void>;
+  resendSignupCode: (email: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signInWithProvider: (provider: OAuthProvider) => Promise<void>;
   signOut: () => Promise<void>;
@@ -79,10 +81,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     },
+    // Same as the website's sign-up (public/header.js): a 6-digit code is emailed, then verified here.
     async signUpWithPassword(email, password) {
-      const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${SITE_URL}/` } });
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { hansora_auth_provider: 'email' } } });
       if (error) throw error;
-      return data.session ? 'signed_in' : 'confirm_email';
+      // Supabase hides whether an email is taken: an existing account comes back with no identities.
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) return 'may_exist';
+      return data.session ? 'signed_in' : 'verify_code';
+    },
+    async verifySignupCode(email, code) {
+      const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
+      if (error) throw error;
+    },
+    async resendSignupCode(email) {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
     },
     async sendPasswordReset(email) {
       // Same reset page as the website.
