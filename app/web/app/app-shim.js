@@ -94,10 +94,12 @@
   // ---------- 3. Store rules: no website checkout inside the app ----------
   // Apple 3.1.1 / Google Play: credits can't be sold through Dodo/YooMoney inside an app.
   // Credits bought on the website still work in the app.
-  if (/(^|\/)(automation-)?pricing(_ru|_arm)?(\.html)?$/i.test(location.pathname) || /russian-payment/i.test(location.pathname)) {
+  if (/(^|\/)(automation-)?pricing(_ru|_arm)?(\.html)?$/i.test(location.pathname) || /russian-payment|\/affilate/i.test(location.pathname)) {
     location.replace('/');
     return;
   }
+  // The website's old login page: the app has its own login screen.
+  if (/^\/login(\.html)?$/i.test(location.pathname)) { location.replace('/app/login.html'); return; }
 
   // ---------- 4. App behaviour ----------
   function onReady(fn) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
@@ -162,6 +164,15 @@
     });
   }
   onReady(addDeleteAccount);
+
+  // Profile: the affiliate program earns from website purchases, so it isn't offered in the app.
+  onReady(function () {
+    document.querySelectorAll('span, h2, h3').forEach(function (el) {
+      if (!/^\s*Affiliate program\s*$/i.test(el.textContent)) return;
+      var card = el.closest('.overflow-hidden') || el.closest('section') || el.parentElement;
+      if (card) card.setAttribute('data-app-hidden', '');
+    });
+  });
 
   // ---------- 6. Doors between Creative and Automation ----------
   var isAutomation = /^\/automation/i.test(location.pathname);

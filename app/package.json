@@ -7,7 +7,8 @@
     "sync": "cap sync",
     "ios": "cap sync ios && cap open ios",
     "android": "cap sync android && cap open android",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "audit": "node test/audit.cjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

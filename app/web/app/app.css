@@ -2,7 +2,9 @@
 
 /* Store rules: no website checkout inside the app. */
 html.hansora-app a[href*="pricing"],
-html.hansora-app #hansoraSignupOffer, html.hansora-app #btnBuyCredits, html.hansora-app #subscriptionUpgradeLink { display: none !important; }
+html.hansora-app #hansoraSignupOffer, html.hansora-app #btnBuyCredits, html.hansora-app #subscriptionUpgradeLink,
+html.hansora-app section#pricing, html.hansora-app section.lx-price, html.hansora-app a[href*="affilate"],
+html.hansora-app [data-app-hidden] { display: none !important; }
 
 /* English first: the language choice comes back when the Russian and Armenian pages are added.
    AI Course: a paid course can't be sold inside the app without Apple's payment system. */
