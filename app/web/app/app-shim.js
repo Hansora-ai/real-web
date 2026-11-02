@@ -276,6 +276,13 @@
     }).observe(document.body, { childList: true, subtree: true });
   });
 
+  // Home page: app polish (app/home-polish.css) and app wording for the news heading.
+  if (/^\/(index\.html)?$/i.test(location.pathname)) onReady(function () {
+    document.body.classList.add('app-home');
+    var reel = document.getElementById('reel-title');
+    if (reel) reel.textContent = "What's new";
+  });
+
   // Section name in the middle of the app's top bar.
   function addTitle() {
     var bar = document.querySelector('#siteHeader .shell.nav, .auto-header');
