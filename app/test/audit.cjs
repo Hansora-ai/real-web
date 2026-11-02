@@ -7,7 +7,7 @@ const server = http.createServer((req, res) => { let p = path.join(root, decodeU
 const exists = href => { const p = href.split(/[?#]/)[0]; if (p === '/' || p === '') return true; let f = path.join(root, p); if (fs.existsSync(f) && fs.statSync(f).isFile()) return true; if (fs.existsSync(f + '.html')) return true; return false; };
 const WORDS = /\b(pricing|buy|purchase|top.?up|subscribe|upgrade|checkout|payment|pay now|telegram|course|discount|% off|chatgpt|plugin|affiliate)\b/i;
 (async () => {
-  const pages = fs.readdirSync(root).filter(n => n.endsWith('.html')).concat(['app/login.html']);
+  const pages = fs.readdirSync(root).filter(n => n.endsWith('.html')).concat(['app/login.html', 'app/automation-intro.html']);
   const b = await chromium.launch();
   const report = {};
   for (const name of pages) {

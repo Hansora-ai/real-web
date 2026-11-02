@@ -1,0 +1,74 @@
+/* Automation intro: an animated phone showing the AI employee at work. */
+* { box-sizing: border-box; }
+body.ai { margin: 0; min-height: 100svh; background: #06070b; color: #f5f5f7; font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+.ai-glow { position: fixed; inset: -10% -30% auto; height: 70vh; pointer-events: none; filter: blur(20px);
+  background: radial-gradient(40% 40% at 25% 40%, rgba(76,141,255,.28), transparent 70%), radial-gradient(40% 45% at 75% 30%, rgba(37,211,102,.16), transparent 70%), radial-gradient(35% 35% at 55% 70%, rgba(238,42,123,.14), transparent 70%); }
+.ai-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top) + 10px) 14px 6px; }
+.ai-back { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.08); color: #fff; text-decoration: none; font-size: 24px; line-height: 1; }
+.ai-kicker { flex: 1; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .16em; color: #8fb3ff; }
+.ai-spacer { width: 38px; }
+.ai-main { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; padding: 8px 20px 140px; }
+.ai-main h1 { margin: 8px 0 0; text-align: center; font-size: 32px; line-height: 1.08; font-weight: 900; letter-spacing: -.04em; }
+.ai-main h1 span { background: linear-gradient(90deg, #7aa7ff, #34d399 50%, #f472b6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ai-lead { margin: 10px auto 0; max-width: 34ch; text-align: center; color: #a9adb9; font-size: 15px; line-height: 1.45; }
+
+.ai-stage { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.ai-phone { position: relative; width: 268px; height: 540px; border-radius: 46px; padding: 11px; background: linear-gradient(145deg, #2a2d38, #12141a);
+  box-shadow: 0 0 0 1px #3b3f4d, 0 40px 80px -30px rgba(0,0,0,.95), 0 0 80px -20px rgba(76,141,255,.35); }
+.ai-island { position: absolute; top: 20px; left: 50%; width: 86px; height: 24px; margin-left: -43px; border-radius: 14px; background: #000; z-index: 3; }
+.ai-screen { position: absolute; inset: 11px; border-radius: 36px; overflow: hidden; background: #0b0c10; }
+.ai-status { position: absolute; top: 0; left: 0; right: 0; height: 44px; padding: 14px 22px 0; display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; z-index: 2; }
+.ai-app { position: absolute; inset: 44px 0 0; display: flex; flex-direction: column; }
+.ai-bar { display: flex; align-items: center; gap: 9px; padding: 8px 12px 10px; border-bottom: .5px solid rgba(255,255,255,.08); }
+.ai-bar .av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #fff; }
+.ai-bar b { font-size: 13px; display: block; } .ai-bar small { font-size: 10.5px; color: #8f93a0; }
+.ai-chat { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 7px; padding: 10px 10px 16px; overflow: hidden; }
+.msg { max-width: 82%; padding: 8px 11px; border-radius: 17px; font-size: 12.5px; line-height: 1.35; animation: pop .35s cubic-bezier(.2,.8,.2,1) both; }
+.msg.in { align-self: flex-start; background: #24262f; border-bottom-left-radius: 6px; }
+.msg.out { align-self: flex-end; background: var(--out, #3478f6); border-bottom-right-radius: 6px; }
+.msg.out .who { display: block; font-size: 9.5px; font-weight: 800; opacity: .75; margin-bottom: 1px; }
+.msg.card { padding: 0; overflow: hidden; background: #1a1c24; width: 70%; }
+.msg.card .img { height: 84px; background: linear-gradient(135deg, #111, #333); display: grid; place-items: center; font-size: 34px; }
+.msg.card .t { padding: 7px 10px; font-size: 12px; } .msg.card .t b { display: block; }
+.typing { align-self: flex-end; display: flex; gap: 4px; padding: 10px 12px; border-radius: 17px; background: var(--out, #3478f6); animation: pop .3s both; }
+.typing i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.85); animation: dot 1s infinite; }
+.typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-3px); opacity: 1; } }
+@keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+
+/* Call scene */
+.call { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 26px 16px 22px; background: radial-gradient(80% 60% at 50% 20%, rgba(34,197,94,.22), transparent 70%); }
+.call .av { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; background: #1f2a24; border: 2px solid #22c55e; }
+.call h3 { margin: 12px 0 2px; font-size: 19px; } .call small { color: #8fe3ad; font-size: 12px; font-weight: 700; }
+.wave { display: flex; align-items: center; gap: 3px; height: 34px; margin: 16px 0 10px; }
+.wave i { width: 4px; border-radius: 2px; background: #34d399; animation: wave 1s ease-in-out infinite; }
+@keyframes wave { 0%, 100% { height: 6px; } 50% { height: 30px; } }
+.line { align-self: stretch; font-size: 12px; line-height: 1.4; padding: 7px 10px; border-radius: 12px; background: rgba(255,255,255,.06); margin-top: 6px; animation: pop .35s both; }
+.line b { color: #8fe3ad; } .line.c b { color: #c9ccd6; }
+.call .end { margin-top: auto; width: 54px; height: 54px; border-radius: 50%; background: #ef4444; display: grid; place-items: center; font-size: 22px; }
+
+/* Lock-screen scene (the owner) */
+.lock { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 30px 12px; background: radial-gradient(90% 60% at 50% 0%, rgba(124,58,237,.35), transparent 70%); }
+.lock .time { font-size: 58px; font-weight: 300; letter-spacing: -.03em; } .lock .date { font-size: 13px; color: #c6c8d2; margin-bottom: 20px; }
+.notif { align-self: stretch; display: flex; gap: 9px; padding: 10px 11px; border-radius: 18px; background: rgba(40,42,52,.88); backdrop-filter: blur(10px); margin-top: 8px; animation: pop .4s both; }
+.notif .ic { width: 30px; height: 30px; flex: none; border-radius: 8px; display: grid; place-items: center; background: #0b0c10; font-size: 15px; }
+.notif b { font-size: 12px; display: block; } .notif small { font-size: 11.5px; color: #d0d2db; line-height: 1.35; display: block; }
+
+.ai-toast { position: absolute; left: 10px; right: 10px; top: 46px; z-index: 4; padding: 10px 12px; border-radius: 16px; background: rgba(28,30,38,.94); backdrop-filter: blur(10px);
+  font-size: 12px; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,.5); transform: translateY(-120%); opacity: 0; transition: transform .4s cubic-bezier(.2,.8,.2,1), opacity .3s; }
+.ai-toast.show { transform: none; opacity: 1; }
+
+.ai-tabs { display: flex; gap: 6px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+.ai-tabs button { border: 0; background: none; color: #9a9eab; font: 700 12.5px Inter, sans-serif; padding: 8px 11px; border-radius: 10px; cursor: pointer; }
+.ai-tabs button.on { background: #fff; color: #0a0a0b; }
+
+.ai-list { list-style: none; margin: 28px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ai-list li { display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 18px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); }
+.ai-list i { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; font-style: normal; font-size: 19px; background: color-mix(in srgb, var(--c) 18%, transparent); }
+.ai-list b { display: block; font-size: 15px; } .ai-list small { display: block; font-size: 13px; color: #a3a7b3; margin-top: 2px; }
+
+.ai-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; gap: 6px; padding: 14px 20px calc(env(safe-area-inset-bottom) + 14px);
+  background: linear-gradient(180deg, rgba(6,7,11,0), #06070b 28%); }
+.ai-go { display: flex; align-items: center; justify-content: center; min-height: 54px; border-radius: 16px; background: #fff; color: #0a0a0b; font-weight: 800; font-size: 17px; text-decoration: none; }
+.ai-alt { text-align: center; color: #a9adb9; font-size: 14px; font-weight: 600; text-decoration: none; padding: 6px; }
+@media (prefers-reduced-motion: reduce) { .msg, .typing, .line, .notif { animation: none; } .wave i { animation: none; height: 14px; } }
