@@ -368,7 +368,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
   assert.match(guide, /not from how long or detailed your own prompt is/);
   assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - A new user's first video \(no video yet\): Grok Video, 720p, 6 seconds, or 8 seconds if the user asked for 7 or 8 seconds\. Use Veo 3\.1 Lite \(8 seconds, 720p\) only if people in the video must speak a language other than English \(Chinese included\)\./);
-  assert.match(guide, /7\. Only when the user sent their own photo and wants it changed .*Grok Video and Veo 3\.1 Lite use a photo only as the first frame, so with them first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\).*Without a photo from the user, never make a picture first, neither with Hansora nor with your own image tool: send the text straight to the video model\..*Start the video as soon as the picture is ready \(get_generation\), without asking.*Models that take reference images \(Seedance 2\.5, Kling 4\.0, Wan 3\.0, Gemini Omni Flash, Gemini Omni\) get the photo as the character reference instead, with no picture step\./);
+  assert.match(guide, /7\. Not for a new user's first video \(step 3 uses Wan 3\.0 for that\)\. Only when the user sent their own photo and wants it changed .*Grok Video and Veo 3\.1 Lite use a photo only as the first frame, so with them first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\).*Without a photo from the user, never make a picture first, neither with Hansora nor with your own image tool: send the text straight to the video model\..*Start the video as soon as the picture is ready \(get_generation\), without asking.*Models that take reference images \(Seedance 2\.5, Kling 4\.0, Wan 3\.0, Gemini Omni Flash, Gemini Omni\) get the photo as the character reference instead, with no picture step\./);
   assert.match(guide, /If you are not sure, treat it as complex/);
   // One short question with plain choices, so users who know no model names can pick. The model of
   // the user's last video comes first, so "ok" keeps the price they already know.
@@ -1080,13 +1080,20 @@ test('a new user\'s first video from a photo explains how to put the person into
   const scene = 'Me in a tuxedo receiving the Ballon d\'Or trophy on stage';
   const viaSwitch = (await callTool('create_generation', { model_id: 'seedance25', prompt: scene, duration: 10, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
   const viaSteer = (await callTool('create_generation', { model_id: 'veo31-lite', prompt: scene, duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
+  // With the 30 free credits: Wan 3.0, 5 seconds at 480p, straight from the photo, with no picture step.
   for (const value of [viaSwitch, viaSteer]) {
-    assert.match(value.next_step, /If the user wants their photo changed \(a new outfit, place, atmosphere or style, or added people or things\), not just animated as it is, do this instead: first call create_generation with model_id nano-banana-2-1, resolution 1K, the user's photo and a prompt describing the changed picture \(3 credits\)\. When the picture is ready, Hansora starts the video from it by itself with the video model and settings above, and the same card shows it: do not start the video yourself\..*Without a photo from the user, never make a picture first\./);
+    assert.match(value.next_step, /If the user wants their photo changed \(a new outfit, place, atmosphere or style, or added people or things\), not just animated as it is, do this instead: call create_generation with model_id wan-3, duration 5, resolution 480p, the user's photo in image_urls \(Wan 3\.0 keeps the person from the photo and builds the new scene, with no picture step\) and a prompt describing the new scene and the motion \(30 credits\)\./);
+    assert.match(value.next_step, /If the user asked for a longer video than 5 seconds, tell them in one short line that their free credits cover 5 seconds, so you made a 5-second version/);
+    assert.doesNotMatch(value.next_step, /nano-banana-2-1/);
   }
+  // Below 30 credits Wan 3.0 does not fit: the picture first stays.
+  const low = (await callTool('create_generation', { model_id: 'seedance25', prompt: scene, duration: 10, resolution: '720p', image_urls: [photo] }, { credits: 2.5, files })).result.structuredContent;
+  assert.match(low.next_step, /first call create_generation with model_id nano-banana-2-1, resolution 1K/);
   // Without a photo there is nothing to place, so no such instruction.
   const noPhoto = (await callTool('create_generation', { model_id: 'seedance25', prompt: 'A knight at sunset', duration: 10, resolution: '720p' }, { credits: 3 })).result.structuredContent;
   assert.doesNotMatch(noPhoto.next_step, /nano-banana-2-1/);
   const list = await callTool('list_models', { category: 'video' }, { credits: 30 });
+  assert.match(list.result.structuredContent.video_selection_guide, /If the user sent their own photo and wants it changed .*use Wan 3\.0, 5 seconds, 480p, with the photo as the reference and no picture step\./);
   assert.match(list.result.structuredContent.video_selection_guide, /first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\) from the user's photo, then animate that picture with the video model/);
 });
 
@@ -1280,14 +1287,15 @@ test('picture first: Hansora starts the planned video from the picture itself, u
   const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
   const photo = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/me.jpg';
 
-  // 1. A new user's first video from their photo, steered to picture first: the planned video is kept.
+  // 1. A new user's first video from their photo, steered to picture first (below the 30 credits Wan 3.0 needs):
+  // the planned video is kept.
   const saved = [];
   const keep = (href, options) => {
     if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
     if (href.includes('/rest/v1/user_generations')) return reply([]);
     return undefined;
   };
-  const steered = await callTool('create_generation', { model_id: 'seedance25', prompt: 'She walks on a beach at sunset in a red dress', duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 3, rest: keep });
+  const steered = await callTool('create_generation', { model_id: 'seedance25', prompt: 'She walks on a beach at sunset in a red dress', duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 2.5, rest: keep });
   assert.equal(steered.submitted.length, 0);
   assert.match(steered.result.structuredContent.next_step, /Hansora starts the video from it by itself/);
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -1360,4 +1368,18 @@ test('a video prompt about the user\'s photo with no photo attached is sent back
   assert.equal(again.submitted.length, 1);
   const text = await callTool('create_generation', { model_id: 'grok-video', prompt: 'Two foxes play in a meadow at dawn.', duration: 6, resolution: '720p' }, { credits: 100, rest: returningUser });
   assert.equal(text.submitted.length, 1);
+});
+
+test('a new user\'s photo in a new scene starts at once on Wan 3.0, 5 s at 480p, with the photo as the reference', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const photo = 'https://cdn.test/me.png';
+  const { result, submitted } = await callTool('create_generation', { model_id: 'wan-3', prompt: 'Me in a red dress walking on a beach at sunset', duration: 5, resolution: '480p', image_urls: [photo] }, {
+    credits: 3, files: { [photo]: Buffer.alloc(8) }, rest: (href) => (href.includes('/rest/v1/user_generations') ? reply([]) : undefined)
+  });
+  assert.equal(result.structuredContent.ok, true);
+  assert.equal(submitted.length, 1);
+  assert.equal(submitted[0].model_id, 'wan-3');
+  assert.deepEqual(submitted[0].payload.reference_image_urls.length, 1);
+  assert.equal(submitted[0].payload.first_frame_url, undefined);
+  assert.equal(submitted[0].payload.expected_credits, 30);
 });
