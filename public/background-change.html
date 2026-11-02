@@ -951,16 +951,16 @@
       <section class="panel composer">
         <div class="panel-pad">
           <h1 class="title">Background Change</h1>
-          <p class="sub">Upload a video, choose the part to use, add optional image references, and describe the new background.</p>
+          <p class="sub">Upload a 4–30 second video, add optional image references, and describe the new background.</p>
 
           <div class="section">
-            <div class="section-head"><label for="sourceVideo">Video upload</label><span class="hint">Select 4–30 seconds</span></div>
+            <div class="section-head"><label for="sourceVideo">Video upload</label><span class="hint">4–30 seconds</span></div>
             <input id="sourceVideo" type="file" accept="video/*" hidden />
             <div id="videoDrop" class="dropzone" role="button" tabindex="0" aria-label="Upload video">
               <div class="empty-upload">
                 <span class="drop-icon" aria-hidden="true">+</span>
                 <strong>Upload video</strong>
-                <small>Upload up to 3 minutes. Select 4–30 seconds to process.</small>
+                <small>Upload a video 4–30 seconds long.</small>
               </div>
               <div class="video-preview-wrap">
                 <div class="video-thumb"><video id="videoThumb" muted playsinline preload="metadata"></video></div>
@@ -968,7 +968,6 @@
                   <strong id="videoName">Uploaded video</strong>
                   <span id="videoTiming">0.0s - 0.0s</span>
                 </div>
-                <button id="changeTrimBtn" class="small-btn" type="button">Edit</button>
                 <button id="clearVideoBtn" class="clear-video" type="button" aria-label="Remove video"></button>
               </div>
             </div>
@@ -1041,34 +1040,6 @@
     </div>
   </main>
 
-  <div id="trimOverlay" class="trim-overlay" role="dialog" aria-modal="true" aria-labelledby="trimTitle">
-    <div class="trim-modal">
-      <div class="trim-head">
-        <strong id="trimTitle">Choose Video Part</strong>
-        <span>Select 4–30 seconds</span>
-      </div>
-      <div class="trim-video"><video id="trimVideo" controls playsinline preload="metadata"></video></div>
-      <div class="trim-controls">
-        <div id="trimStrip" class="trim-strip" aria-label="Choose video segment">
-          <div id="trimFilm" class="trim-film" aria-hidden="true"></div>
-          <div id="trimSelection" class="trim-selection">
-            <span id="trimStartHandle" class="trim-handle left" aria-hidden="true"></span>
-            <span id="trimEndHandle" class="trim-handle right" aria-hidden="true"></span>
-            <span id="trimBubble" class="trim-bubble">30.0s</span>
-          </div>
-        </div>
-        <div class="trim-summary">
-          <span id="trimWindow">0.0s -> 0.0s</span>
-          <span id="trimLength">30.0s from video</span>
-        </div>
-      </div>
-      <div class="trim-actions">
-        <button id="trimCancel" class="trim-cancel" type="button">Cancel</button>
-        <button id="trimConfirm" class="trim-confirm" type="button">Confirm</button>
-      </div>
-    </div>
-  </div>
-
   <div id="previewOverlay" class="preview-overlay">
     <div class="preview-box">
       <button id="previewClose" class="preview-close" type="button" aria-label="Close preview">x</button>
@@ -1088,7 +1059,6 @@
       videoThumb: document.getElementById('videoThumb'),
       videoName: document.getElementById('videoName'),
       videoTiming: document.getElementById('videoTiming'),
-      changeTrim: document.getElementById('changeTrimBtn'),
       clearVideo: document.getElementById('clearVideoBtn'),
       referenceImages: document.getElementById('referenceImages'),
       imageDrop: document.getElementById('imageDrop'),
@@ -1098,29 +1068,11 @@
       run: document.getElementById('runBtn'),
       emptyResults: document.getElementById('emptyResults'),
       resultsList: document.getElementById('resultsList'),
-      trimOverlay: document.getElementById('trimOverlay'),
-      trimVideo: document.getElementById('trimVideo'),
-      trimStrip: document.getElementById('trimStrip'),
-      trimFilm: document.getElementById('trimFilm'),
-      trimSelection: document.getElementById('trimSelection'),
-      trimStartHandle: document.getElementById('trimStartHandle'),
-      trimEndHandle: document.getElementById('trimEndHandle'),
-      trimBubble: document.getElementById('trimBubble'),
-      trimWindow: document.getElementById('trimWindow'),
-      trimLength: document.getElementById('trimLength'),
-      trimCancel: document.getElementById('trimCancel'),
-      trimConfirm: document.getElementById('trimConfirm')
     };
 
     let videoFile = null;
     let videoObjectUrl = '';
     let videoDuration = 0;
-    let trimStart = 0;
-    let trimEnd = 0;
-    let trimStartBeforeModal = 0;
-    let trimEndBeforeModal = 0;
-    let activeTrimDrag = '';
-    let filmRenderToken = 0;
     let imageFiles = [];
     let aspectRatio = '16:9';
     let resolution = '720p';
@@ -1131,12 +1083,8 @@
       return `${num.toFixed(1)}s`;
     }
 
-    function selectedLength() {
-      return Math.max(0, trimEnd - trimStart);
-    }
-
     function runCost() {
-      return window.Kling4Pricing.quote({resolution, inputSeconds:Math.max(4, selectedLength() || 10), lite:true}).internalCredits;
+      return window.Kling4Pricing.quote({resolution, inputSeconds:videoDuration || 10, lite:true}).internalCredits;
     }
 
     function displayedRunCost() {
@@ -1157,7 +1105,7 @@
         els.videoTiming.textContent = 'No video selected';
         return;
       }
-      els.videoTiming.textContent = `${fmt(trimStart)} - ${fmt(trimEnd)} selected (${fmt(selectedLength())})`;
+      els.videoTiming.textContent = fmt(videoDuration);
     }
 
     function getResultUrl(payload) {
@@ -1453,148 +1401,9 @@
       }
     }
 
-    function setTrimWindow(start, end) {
-      const max = Math.max(1, videoDuration || 30);
-      start = Number(start || 0);
-      end = Number(end || 0);
-      if (!Number.isFinite(start)) start = 0;
-      if (!Number.isFinite(end)) end = start + 30;
-      start = Math.max(0, Math.min(start, Math.max(0, max - 4)));
-      end = Math.max(start + 4, Math.min(end, max));
-      if (end - start > 30) end = start + 30;
-      if (end > max) {
-        end = max;
-        start = Math.max(0, end - 30);
-      }
-      trimStart = Number(start.toFixed(1));
-      trimEnd = Number(end.toFixed(1));
-      updateTrimUi();
-    }
-
-    function updateTrimUi() {
-      const max = Math.max(1, videoDuration || 30);
-      const left = Math.max(0, Math.min(100, (trimStart / max) * 100));
-      const width = Math.max(0, Math.min(100 - left, ((trimEnd - trimStart) / max) * 100));
-      els.trimSelection.style.left = `${left}%`;
-      els.trimSelection.style.width = `${width}%`;
-      els.trimWindow.textContent = `${fmt(trimStart)} -> ${fmt(trimEnd)}`;
-      els.trimLength.textContent = `${fmt(Math.min(30, Math.max(0, selectedLength())))} from video`;
-      els.trimBubble.textContent = fmt(selectedLength());
-      updateTimingLabel();
-      updateRunLabel();
-    }
-
-    function secondsFromPointer(event) {
-      const rect = els.trimStrip.getBoundingClientRect();
-      const clientX = event.clientX || (event.touches && event.touches[0] && event.touches[0].clientX) || 0;
-      const pct = rect.width ? (clientX - rect.left) / rect.width : 0;
-      const max = Math.max(1, videoDuration || 30);
-      return Math.max(0, Math.min(max, pct * max));
-    }
-
-    function moveTrimHandle(kind, seconds) {
-      if (kind === 'start') {
-        setTrimWindow(Math.min(seconds, trimEnd - 4), trimEnd);
-      } else if (kind === 'end') {
-        setTrimWindow(trimStart, Math.max(seconds, trimStart + 4));
-      } else {
-        const length = Math.min(30, Math.max(4, selectedLength() || 10));
-        let start = seconds - length / 2;
-        start = Math.max(0, Math.min(start, Math.max(0, (videoDuration || 30) - length)));
-        setTrimWindow(start, start + length);
-      }
-      try { els.trimVideo.currentTime = trimStart; } catch {}
-    }
-
-    async function renderTrimFilmstrip() {
-      const token = ++filmRenderToken;
-      els.trimFilm.innerHTML = '';
-      const count = 9;
-      for (let i = 0; i < count; i++) {
-        const frame = document.createElement('div');
-        frame.className = 'trim-frame';
-        els.trimFilm.appendChild(frame);
-      }
-      if (!videoObjectUrl || !videoDuration) return;
-
-      const snap = document.createElement('video');
-      snap.src = videoObjectUrl;
-      snap.muted = true;
-      snap.playsInline = true;
-      snap.preload = 'auto';
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const waitFor = (name) => new Promise((resolve, reject) => {
-        const ok = () => { cleanup(); resolve(); };
-        const bad = () => { cleanup(); reject(new Error(name)); };
-        const cleanup = () => {
-          snap.removeEventListener(name, ok);
-          snap.removeEventListener('error', bad);
-        };
-        snap.addEventListener(name, ok, { once:true });
-        snap.addEventListener('error', bad, { once:true });
-      });
-      try {
-        if (!snap.readyState) await waitFor('loadedmetadata');
-        canvas.width = 180;
-        canvas.height = 104;
-        const frames = Array.from(els.trimFilm.children);
-        for (let i = 0; i < frames.length; i++) {
-          if (token !== filmRenderToken) return;
-          const time = Math.min(videoDuration - 0.05, (videoDuration * (i + 0.5)) / frames.length);
-          snap.currentTime = Math.max(0, time);
-          await waitFor('seeked');
-          if (token !== filmRenderToken) return;
-          ctx.fillStyle = '#11141c';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          const scale = Math.max(canvas.width / snap.videoWidth, canvas.height / snap.videoHeight);
-          const width = snap.videoWidth * scale;
-          const height = snap.videoHeight * scale;
-          ctx.drawImage(snap, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
-          const img = document.createElement('img');
-          img.alt = '';
-          img.draggable = false;
-          img.src = canvas.toDataURL('image/jpeg', .68);
-          frames[i].innerHTML = '';
-          frames[i].appendChild(img);
-        }
-      } catch {
-        // Thumbnail generation is only visual; timing still works if the browser cannot sample frames.
-      } finally {
-        snap.removeAttribute('src');
-        snap.load();
-      }
-    }
-
-    function openTrimModal() {
-      if (!videoFile || !videoObjectUrl) return;
-      trimStartBeforeModal = trimStart;
-      trimEndBeforeModal = trimEnd;
-      els.trimVideo.src = videoObjectUrl;
-      els.trimVideo.currentTime = trimStart || 0;
-      updateTrimUi();
-      renderTrimFilmstrip();
-      els.trimOverlay.classList.add('show');
-      document.body.style.overflow = 'hidden';
-      setTimeout(() => {
-        try { els.trimVideo.currentTime = trimStart || 0; } catch {}
-      }, 80);
-    }
-
-    function closeTrimModal({ restore = false } = {}) {
-      if (restore) setTrimWindow(trimStartBeforeModal, trimEndBeforeModal);
-      els.trimOverlay.classList.remove('show');
-      document.body.style.overflow = '';
-      try { els.trimVideo.pause(); } catch {}
-      updateTimingLabel();
-      updateRunLabel();
-    }
-
     function clearVideoFile() {
       videoFile = null;
       videoDuration = 0;
-      trimStart = 0;
-      trimEnd = 0;
       if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl);
       videoObjectUrl = '';
       els.videoDrop.classList.remove('has-video', 'drag-over');
@@ -1612,6 +1421,7 @@
         return;
       }
       videoFile = file;
+      videoDuration = 0;
       if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl);
       videoObjectUrl = URL.createObjectURL(file);
       els.videoDrop.classList.remove('drag-over');
@@ -1622,17 +1432,15 @@
       probe.preload = 'metadata';
       probe.src = videoObjectUrl;
       probe.onloadedmetadata = () => {
+        if (videoFile !== file) return;
         videoDuration = Number.isFinite(probe.duration) ? probe.duration : 0;
-        if (videoDuration > 180.05) {
+        if (videoDuration < 4 || videoDuration > 30.0001) {
           clearVideoFile();
-          setStatus('Upload a video up to 3 minutes.', 'bad');
+          setStatus('Upload a video 4–30 seconds long.', 'bad');
           return;
         }
-        trimStart = 0;
-        trimEnd = Math.min(30, videoDuration || 30);
         updateTimingLabel();
         updateRunLabel();
-        if (videoDuration > 30.05) openTrimModal();
       };
       probe.onerror = () => setStatus('Could not read this video duration.', 'bad');
       setStatus('');
@@ -1708,8 +1516,8 @@
         setStatus('Write the background prompt first.', 'bad');
         return;
       }
-      if (!trimEnd || selectedLength() < 4 || selectedLength() > 30.0001) {
-        setStatus('Choose a valid video segment first.', 'bad');
+      if (videoDuration < 4 || videoDuration > 30.0001) {
+        setStatus('Upload a video 4–30 seconds long.', 'bad');
         return;
       }
       const { user, token } = await getUserAndToken();
@@ -1730,10 +1538,7 @@
         const runId = `${user.id}-${Date.now()}`;
         const videoUrls = await uploadFiles([videoFile], 'video');
         const imageUrls = imageFiles.length ? await uploadFiles(imageFiles, 'reference images') : [];
-        const start = Number(trimStart.toFixed(3));
-        const ends = Number(trimEnd.toFixed(3));
-        const length = ends - start;
-        const duration = Math.ceil(length - 1e-7);
+        const duration = Math.ceil(videoDuration - 1e-7);
         setStatus('Submitting background change request...');
         const body = {
           uid:user.id,
@@ -1747,10 +1552,7 @@
           duration,
           image_urls:imageUrls,
           video_url:videoUrls[0],
-          video_original_duration:Number((videoDuration || 0).toFixed(3)),
-          video_start:start,
-          video_end:ends,
-          video_list:[{ url:videoUrls[0], start, ends }]
+          source_video_duration:videoDuration
         };
         const res = await fetch('/.netlify/functions/run-background-change-gemini-omni', {
           method:'POST',
@@ -1819,44 +1621,11 @@
     });
     wireDrop(els.videoDrop, els.sourceVideo, (files) => setVideoFile(Array.from(files || [])[0]));
     wireDrop(els.imageDrop, els.referenceImages, addReferenceImages);
-    els.changeTrim.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openTrimModal();
-    });
     els.clearVideo.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
       clearVideoFile();
     });
-    els.trimStrip.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      if (event.target === els.trimStartHandle) activeTrimDrag = 'start';
-      else if (event.target === els.trimEndHandle) activeTrimDrag = 'end';
-      else activeTrimDrag = 'window';
-      els.trimStrip.setPointerCapture && els.trimStrip.setPointerCapture(event.pointerId);
-      moveTrimHandle(activeTrimDrag, secondsFromPointer(event));
-    });
-    els.trimStrip.addEventListener('pointermove', (event) => {
-      if (!activeTrimDrag) return;
-      event.preventDefault();
-      moveTrimHandle(activeTrimDrag, secondsFromPointer(event));
-    });
-    ['pointerup','pointercancel','lostpointercapture'].forEach((name) => {
-      els.trimStrip.addEventListener(name, () => { activeTrimDrag = ''; });
-    });
-    ['dragstart','selectstart'].forEach((name) => {
-      els.trimStrip.addEventListener(name, (event) => event.preventDefault());
-      els.trimFilm.addEventListener(name, (event) => event.preventDefault());
-    });
-    els.trimVideo.addEventListener('timeupdate', () => {
-      if (els.trimOverlay.classList.contains('show') && els.trimVideo.currentTime >= trimEnd) {
-        els.trimVideo.currentTime = trimStart;
-        els.trimVideo.pause();
-      }
-    });
-    els.trimCancel.addEventListener('click', () => closeTrimModal({ restore:true }));
-    els.trimConfirm.addEventListener('click', () => closeTrimModal());
     document.querySelectorAll('#aspectRow button').forEach((button) => {
       button.addEventListener('click', () => {
         document.querySelectorAll('#aspectRow button').forEach((item) => item.classList.remove('active'));
@@ -1879,7 +1648,6 @@
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && document.getElementById('previewOverlay').classList.contains('show')) closePreview();
-      if (event.key === 'Escape' && els.trimOverlay.classList.contains('show')) closeTrimModal({ restore:true });
     });
 
     updateRunLabel();

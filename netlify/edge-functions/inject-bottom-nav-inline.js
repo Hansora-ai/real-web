@@ -2,6 +2,15 @@
 // Injects the shared mobile bottom navigation into HTML responses.
 
 export default async (request, context) => {
+  const requestUrl = new URL(request.url);
+  const retiredEditor = requestUrl.pathname.match(/^\/video-edit(_ru|_arm)?(?:\.html)?\/?$/i);
+  if (retiredEditor) {
+    // Old phone menus and bookmarks can still contain the retired URL. Resolve
+    // it before serving any legacy editor HTML, on every device and language.
+    const target = new URL(`/henshin${(retiredEditor[1] || '').toLowerCase()}.html`, requestUrl.origin);
+    target.searchParams.set('mode', 'edit');
+    return new Response(null, { status: 302, headers: { Location: target.href, 'Cache-Control': 'no-store' } });
+  }
   const res = await context.next();
   const requestPath = new URL(request.url).pathname.toLowerCase();
 
