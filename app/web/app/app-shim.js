@@ -177,9 +177,23 @@
   // ---------- 6. Moving around like an app ----------
   // Slide direction: going back slides the other way.
   window.addEventListener('pagereveal', function (event) {
-    if (event.viewTransition) root.classList.add('app-vt');
+    if (event.viewTransition) {
+      root.classList.add('app-vt');
+      // A page that sends you straight on (e.g. to the login screen) interrupts the slide; that's fine.
+      ['ready', 'finished', 'updateCallbackDone'].forEach(function (key) { var promise = event.viewTransition[key]; if (promise && promise.catch) promise.catch(function () {}); });
+    }
     var type = window.navigation && window.navigation.activation && window.navigation.activation.navigationType;
     root.classList.toggle('app-going-back', type === 'traverse');
+  });
+
+  // Only this harmless notice is ignored (a slide interrupted by a page that moves on straight away).
+  window.addEventListener('unhandledrejection', function (event) {
+    var reason = event.reason;
+    if (reason && reason.name === 'InvalidStateError' && /Transition was aborted|ViewTransition/i.test(String(reason.message))) event.preventDefault();
+  });
+  window.addEventListener('pageswap', function (event) {
+    var vt = event.viewTransition;
+    if (vt) ['ready', 'finished', 'updateCallbackDone'].forEach(function (key) { if (vt[key] && vt[key].catch) vt[key].catch(function () {}); });
   });
 
   // Back arrow on inner pages. Main pages (the bottom-bar tabs) have none, like an app.
