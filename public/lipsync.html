@@ -272,7 +272,6 @@
         <span class="label">Model</span>
         <div class="model-grid">
           <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>7⚡ / second</span></button>
-          <button id="modelAvatarIII" class="choice" type="button" data-model="avatar_iii"><strong>Avatar III</strong><span>3⚡ / second</span></button>
         </div>
       </section>
 
@@ -1044,7 +1043,6 @@
     }
 
     $('modelAvatarV').addEventListener('click', () => setModel('avatar_v'));
-    $('modelAvatarIII').addEventListener('click', () => setModel('avatar_iii'));
     $('imageBtn').addEventListener('click', () => $('imageInput').click());
     $('audioBtn').addEventListener('click', () => { if (!$('audioBtn').disabled) $('audioInput').click(); });
     bindDrop($('imageDrop'), $('imageInput'), (file) => {
