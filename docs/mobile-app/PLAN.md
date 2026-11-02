@@ -72,3 +72,7 @@ the reference for features, prices, credits and wording.
 - Russian users: Apple/Google payments may not work in Russia; they keep buying on the website (check before step 4).
 - Google sign-in inside the app opens the system browser and returns via `co.hansora.app://` — must be tested on real phones.
 - Apple "Hide my email" creates a new empty account; the login screen tells people to sign in the same way they signed up.
+
+## Before merging
+
+- Remove the `[context.deploy-preview]` block from `netlify.toml` (it only exists so the PR preview link shows the app).
