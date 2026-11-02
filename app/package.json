@@ -4,10 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "node scripts/sync-models.mjs && vite",
+    "sync:models": "node scripts/sync-models.mjs",
+    "build": "node scripts/sync-models.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --test test/*.test.mjs",
+    "test": "node scripts/sync-models.mjs --check && node --test test/*.test.mjs",
     "cap:sync": "npm run build && cap sync"
   },
   "dependencies": {

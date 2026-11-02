@@ -120,3 +120,7 @@
   --ion-text-color-step-400: #51535c;
   --ion-text-color-step-600: #8b8d96;
 }
+
+/* Creative colors from the website's Create page (search-models.html). */
+:root { --h-violet: #6366f1; --h-violet-2: #8b5cf6; --h-lime: #ddff37; --h-sky: #38bdf8; --h-pink: #fb7185; }
+:root[data-theme='light'] { --h-lime: #84cc16; }

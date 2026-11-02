@@ -8,6 +8,8 @@ const config: CapacitorConfig = {
   backgroundColor: '#08090b',
   ios: { contentInset: 'never', scheme: 'Hansora' },
   plugins: {
+    // Requests to hansora.co go through the phone's native HTTP, so the website's server needs no changes.
+    CapacitorHttp: { enabled: true },
     SplashScreen: { launchShowDuration: 0, backgroundColor: '#08090b' },
   },
 };

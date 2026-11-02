@@ -6,6 +6,12 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos and videos to use in your creations.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo to use in your creations.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save your creations to Photos.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

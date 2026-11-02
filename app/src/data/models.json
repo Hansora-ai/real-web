@@ -1,0 +1,1299 @@
+[
+  {
+    "id": "nano-banana",
+    "name": "Nano Banana",
+    "emoji": "🍌",
+    "subtitle": "Image → Image",
+    "category": "image",
+    "description": "Fast image-to-image edits with up to 4 input images.",
+    "endpoint": "/.netlify/functions/run-nano-banana",
+    "needsImage": true,
+    "maxFiles": 4,
+    "aspectOptions": [
+      "auto",
+      "1:1",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "auto",
+    "durations": null,
+    "costLabel": "0.5⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "nano-banana-pro",
+    "name": "Nano Banana Pro",
+    "emoji": "🍌",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Studio-grade quality with multi-image fusion.",
+    "endpoint": "/.netlify/functions/run-nano-banana-pro",
+    "needsImage": false,
+    "maxFiles": 8,
+    "aspectOptions": [
+      "1:1",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": null,
+    "costLabel": "12⚡–15⚡ per job",
+    "minCredits": 1.2
+  },
+  {
+    "id": "nano-banana-2-1",
+    "name": "Nano Banana 2.1",
+    "emoji": "🍌",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Nano Banana 2.1 image generation and editing.",
+    "endpoint": "/.netlify/functions/run-nano-banana-2-1",
+    "needsImage": false,
+    "maxFiles": 10,
+    "uploadMaxMB": 30,
+    "resolutionOptions": [
+      "1K",
+      "2K",
+      "4K"
+    ],
+    "defaultResolution": "1K",
+    "aspectOptions": [
+      "auto",
+      "1:1",
+      "1:4",
+      "1:8",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "8:1",
+      "9:16",
+      "16:9",
+      "21:9"
+    ],
+    "defaultAspect": "auto",
+    "durations": null,
+    "costLabel": "3⚡–7⚡ per job",
+    "minCredits": 0.3
+  },
+  {
+    "id": "nano-banana-2",
+    "name": "Nano Banana 2",
+    "emoji": "🍌",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Flash-speed generation with Pro-level quality (supports Google Search grounding).",
+    "endpoint": "/.netlify/functions/run-nano-banana-2",
+    "needsImage": false,
+    "maxFiles": 14,
+    "aspectOptions": [
+      "auto",
+      "1:1",
+      "1:4",
+      "1:8",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "8:1",
+      "9:16",
+      "16:9",
+      "21:9"
+    ],
+    "defaultAspect": "auto",
+    "durations": null,
+    "costLabel": "5⚡–13⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "nano-banana-2-lite",
+    "name": "Nano Banana 2 Lite",
+    "emoji": "🍌",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Fast low-cost 1K image generation and editing.",
+    "endpoint": "/.netlify/functions/run-nano-banana-2-lite",
+    "needsImage": false,
+    "maxFiles": 10,
+    "uploadMaxMB": 30,
+    "aspectOptions": [
+      "auto",
+      "1:1",
+      "1:4",
+      "1:8",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:1",
+      "4:3",
+      "4:5",
+      "5:4",
+      "8:1",
+      "9:16",
+      "16:9",
+      "21:9"
+    ],
+    "defaultAspect": "auto",
+    "resolutionOptions": [
+      "1K"
+    ],
+    "defaultResolution": "1K",
+    "durations": null,
+    "costLabel": "3⚡ per job",
+    "minCredits": 0.3
+  },
+  {
+    "id": "seedream-4-5",
+    "name": "Seedream 4.5",
+    "emoji": "🎨",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Seedream 4.5 creative image generator.",
+    "endpoint": "/.netlify/functions/run-seedream-4-5",
+    "needsImage": false,
+    "maxFiles": 8,
+    "aspectOptions": [
+      "1:1",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": null,
+    "costLabel": "0.5⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "gpt-image-1.5",
+    "name": "GPT-Image-1.5",
+    "emoji": "🧠",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "OpenAI GPT-Image-1.5 for sharp, detailed visuals.",
+    "endpoint": "/.netlify/functions/run-gpt-image-1-5",
+    "needsImage": false,
+    "maxFiles": 3,
+    "aspectOptions": [
+      "1:1",
+      "2:3",
+      "3:2"
+    ],
+    "defaultAspect": "1:1",
+    "durations": null,
+    "costLabel": "1.5⚡ per job",
+    "minCredits": 1.5
+  },
+  {
+    "id": "gpt-image-2-5",
+    "name": "GPT Image 2.5",
+    "emoji": "🧠",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "GPT Image 2.5 Sunburst for text-to-image and image editing.",
+    "endpoint": "/.netlify/functions/run-gpt-image-2-5",
+    "needsImage": false,
+    "maxFiles": 16,
+    "uploadMaxMB": 10,
+    "aspectOptions": [
+      "auto",
+      "1:1",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "21:9",
+      "27:16",
+      "16:27",
+      "9:8",
+      "8:9"
+    ],
+    "defaultAspect": "auto",
+    "durations": null,
+    "costLabel": "5⚡–12⚡ per job",
+    "minCredits": 0.5,
+    "isNew": true
+  },
+  {
+    "id": "gpt-image-2",
+    "name": "GPT Image 2.0",
+    "emoji": "🧠",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "GPT Image 2.0 with Kie resolution rules.",
+    "endpoint": "/.netlify/functions/run-gpt-image-2",
+    "needsImage": false,
+    "maxFiles": 4,
+    "uploadMaxMB": 10,
+    "aspectOptions": [
+      "auto",
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "21:9"
+    ],
+    "defaultAspect": "auto",
+    "durations": null,
+    "costLabel": "5⚡–12⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "seedream-5-lite",
+    "name": "Seedream 5.0 Lite",
+    "emoji": "🎨",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Seedream 5.0 Lite with high quality enabled.",
+    "endpoint": "/.netlify/functions/run-seedream-5-lite",
+    "needsImage": false,
+    "maxFiles": 8,
+    "uploadMaxMB": 10,
+    "aspectOptions": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "21:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": null,
+    "costLabel": "0.5⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "seedream-5-flash",
+    "name": "Seedream 5 Flash",
+    "emoji": "🎨",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Fast Seedream image generation and editing.",
+    "endpoint": "/.netlify/functions/run-seedream-5-flash",
+    "needsImage": false,
+    "maxFiles": 10,
+    "uploadMaxMB": 30,
+    "aspectOptions": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9"
+    ],
+    "defaultAspect": "1:1",
+    "resolutionOptions": [
+      "1K",
+      "2K"
+    ],
+    "defaultResolution": "1K",
+    "durations": null,
+    "costLabel": "3⚡ per job",
+    "minCredits": 0.3
+  },
+  {
+    "id": "seedream-5-pro",
+    "name": "Seedream 5.0 Pro",
+    "emoji": "🎨",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Seedream 5.0 Pro for controlled generation and precise edits.",
+    "endpoint": "/.netlify/functions/run-seedream-5-pro",
+    "needsImage": false,
+    "maxFiles": 10,
+    "uploadMaxMB": 10,
+    "aspectOptions": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "resolutionOptions": [
+      "1K",
+      "2K"
+    ],
+    "defaultResolution": "1K",
+    "durations": null,
+    "costLabel": "0.5⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "grok-image",
+    "name": "Grok Image",
+    "emoji": "𝕏",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Grok image generation at fixed 720p.",
+    "endpoint": "/.netlify/functions/run-grok-image",
+    "needsImage": false,
+    "maxFiles": 4,
+    "uploadMaxMB": 10,
+    "aspectOptions": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": null,
+    "costLabel": "0.5⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "wan-2-7-image",
+    "name": "Wan 2.7 Image",
+    "emoji": "W",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Wan 2.7 Image with Normal / Pro quality.",
+    "endpoint": "/.netlify/functions/run-wan-2-7-image",
+    "needsImage": false,
+    "maxFiles": 4,
+    "uploadMaxMB": 10,
+    "aspectOptions": [
+      "1:1",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": null,
+    "costLabel": "0.5⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "qwen-2",
+    "name": "Qwen 2",
+    "emoji": "Q",
+    "subtitle": "Text / (Image) → Image",
+    "category": "image",
+    "description": "Qwen image generation with PNG output.",
+    "endpoint": "/.netlify/functions/run-qwen-2",
+    "needsImage": false,
+    "maxFiles": 4,
+    "uploadMaxMB": 10,
+    "aspectOptions": [
+      "1:1",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": null,
+    "costLabel": "0.5⚡ per job",
+    "minCredits": 0.5
+  },
+  {
+    "id": "z-image",
+    "name": "Z-Image",
+    "emoji": "Z",
+    "subtitle": "Text → Image",
+    "category": "image",
+    "description": "Lightweight text-to-image generation.",
+    "endpoint": "/.netlify/functions/run-z-image",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 10,
+    "aspectOptions": [
+      "1:1",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": null,
+    "costLabel": "0.2⚡ per job",
+    "minCredits": 0.2
+  },
+  {
+    "id": "midjourney",
+    "name": "MidJourney Image",
+    "emoji": "🌀",
+    "subtitle": "Text / Image → Image",
+    "category": "image",
+    "description": "MidJourney-style image generation.",
+    "hidden": true,
+    "endpoint": "/.netlify/functions/run-midjourney",
+    "needsImage": false,
+    "maxFiles": 1,
+    "aspectOptions": [
+      "2:3",
+      "3:2",
+      "1:1",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "2:3",
+    "durations": null,
+    "costLabel": "1⚡ per job",
+    "minCredits": 1
+  },
+  {
+    "id": "mj-video",
+    "name": "MidJourney Video",
+    "emoji": "🎬",
+    "subtitle": "Image → Video",
+    "category": "video",
+    "description": "Turn an image into a MidJourney-style motion.",
+    "hidden": true,
+    "endpoint": "/.netlify/functions/run-mj-video",
+    "needsImage": true,
+    "maxFiles": 1,
+    "aspectOptions": [],
+    "defaultAspect": "",
+    "durations": [
+      5
+    ],
+    "costLabel": "2⚡ per job",
+    "minCredits": 2
+  },
+  {
+    "id": "veo3-fast",
+    "name": "Veo 3 Fast",
+    "emoji": "🎥",
+    "subtitle": "Text / (Image) → Video",
+    "category": "video",
+    "description": "Veo 3 Fast — 8s only, vertical/horizontal only.",
+    "hidden": true,
+    "endpoint": "/.netlify/functions/run-veo3",
+    "needsImage": false,
+    "maxFiles": 1,
+    "aspectOptions": [
+      "16:9",
+      "9:16"
+    ],
+    "defaultAspect": "16:9",
+    "durations": [
+      8
+    ],
+    "costLabel": "Credits 7⚡-20⚡",
+    "minCredits": 5
+  },
+  {
+    "id": "veo3",
+    "name": "Veo 3 Quality",
+    "emoji": "🎥",
+    "subtitle": "Text / (Image) → Video",
+    "category": "video",
+    "description": "Veo 3 — 8s only, vertical/horizontal only.",
+    "hidden": true,
+    "endpoint": "/.netlify/functions/run-veo3",
+    "needsImage": false,
+    "maxFiles": 1,
+    "aspectOptions": [
+      "16:9",
+      "9:16"
+    ],
+    "defaultAspect": "16:9",
+    "durations": [
+      8
+    ],
+    "costLabel": "Credits 7⚡-20⚡",
+    "minCredits": 5
+  },
+  {
+    "id": "sora2",
+    "name": "Sora 2",
+    "emoji": "🎞️",
+    "subtitle": "Text / (Image) → Video",
+    "category": "video",
+    "description": "Sora 2 video generation (10s / 15s).",
+    "hidden": true,
+    "endpoint": "/.netlify/functions/run-sora2",
+    "needsImage": false,
+    "maxFiles": 1,
+    "aspectOptions": [
+      "16:9",
+      "9:16"
+    ],
+    "defaultAspect": "16:9",
+    "durations": [
+      10,
+      15
+    ],
+    "costLabel": "Credits Sora -3⚡ Pro 20-25⚡",
+    "minCredits": 7
+  },
+  {
+    "id": "veo31-lite",
+    "name": "Veo 3.1 Lite",
+    "emoji": "🎥",
+    "subtitle": "Text → Video (start / last frames optional)",
+    "category": "video",
+    "description": "Veo 3.1 Lite — 8s only, 720p / 1080p.",
+    "endpoint": "/.netlify/functions/run-veo31",
+    "needsImage": false,
+    "maxFiles": 0,
+    "useFrames": true,
+    "startOptional": true,
+    "aspectOptions": [
+      "16:9",
+      "9:16"
+    ],
+    "defaultAspect": "16:9",
+    "durations": [
+      8
+    ],
+    "resolutionOptions": [
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "720p",
+    "costLabel": "Credits Lite 720p 2⚡ / 1080p 2.5⚡",
+    "minCredits": 2
+  },
+  {
+    "id": "veo31-fast",
+    "name": "Veo 3.1 Fast",
+    "emoji": "🎥",
+    "subtitle": "Text → Video (start / last frames optional)",
+    "category": "video",
+    "description": "Veo 3.1 Fast — 8s only, vertical/horizontal only.",
+    "endpoint": "/.netlify/functions/run-veo31",
+    "needsImage": false,
+    "maxFiles": 0,
+    "useFrames": true,
+    "startOptional": true,
+    "aspectOptions": [
+      "16:9",
+      "9:16"
+    ],
+    "defaultAspect": "16:9",
+    "durations": [
+      8
+    ],
+    "resolutionOptions": [
+      "1080p",
+      "4K"
+    ],
+    "defaultResolution": "1080p",
+    "costLabel": "Credits Fast 5⚡ / 4K 12⚡",
+    "minCredits": 5
+  },
+  {
+    "id": "veo31",
+    "name": "Veo 3.1 Quality",
+    "emoji": "🎥",
+    "subtitle": "Text → Video (start / last frames optional)",
+    "category": "video",
+    "description": "Veo 3.1 — 8s only, vertical/horizontal only.",
+    "endpoint": "/.netlify/functions/run-veo31",
+    "needsImage": false,
+    "maxFiles": 0,
+    "useFrames": true,
+    "startOptional": true,
+    "aspectOptions": [
+      "16:9",
+      "9:16"
+    ],
+    "defaultAspect": "16:9",
+    "durations": [
+      8
+    ],
+    "resolutionOptions": [
+      "1080p",
+      "4K"
+    ],
+    "defaultResolution": "1080p",
+    "costLabel": "Credits Quality 17⚡ / 4K 22⚡",
+    "minCredits": 17
+  },
+  {
+    "id": "seedance25",
+    "name": "Seedance 2.5",
+    "emoji": "🌱",
+    "subtitle": "Text / media references → Video",
+    "category": "video",
+    "description": "Seedance 2.5 with first/last frame, image, video, and audio references.",
+    "endpoint": "/.netlify/functions/run-seedance-25",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 200,
+    "uploadLimitsMB": {
+      "image": 30,
+      "video": 200,
+      "audio": 15
+    },
+    "referenceLimits": {
+      "image": 30,
+      "video": 10,
+      "audio": 10
+    },
+    "specificUpload": "seedance",
+    "aspectOptions": [
+      "16:9",
+      "9:16",
+      "1:1",
+      "4:3",
+      "3:4"
+    ],
+    "defaultAspect": "1:1",
+    "resolutionOptions": [
+      "480p",
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "costLabel": "",
+    "minCredits": 5.9
+  },
+  {
+    "id": "kling40",
+    "name": "Kling 4.0",
+    "emoji": "K4",
+    "subtitle": "Text / Image / Video / Voice → Video",
+    "category": "video",
+    "description": "Kling 4.0 with image, video and voice references, native audio, and 3–30 second videos.",
+    "endpoint": "/.netlify/functions/run-kling-40",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 10,
+    "uploadLimitsMB": {
+      "image": 10,
+      "video": 10,
+      "audio": 10
+    },
+    "specificUpload": "kling40",
+    "aspectOptions": [
+      "auto",
+      "16:9",
+      "9:16",
+      "1:1",
+      "21:9"
+    ],
+    "defaultAspect": "auto",
+    "resolutionOptions": [
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "costLabel": "",
+    "minCredits": 5.7,
+    "isNew": true
+  },
+  {
+    "id": "henshin",
+    "name": "Henshin",
+    "emoji": "H",
+    "category": "video",
+    "subtitle": "Transform the scene. Keep the motion.",
+    "__navTo": "/henshin.html",
+    "isTop": true
+  },
+  {
+    "id": "seedance20",
+    "name": "Seedance 2.0",
+    "emoji": "🌱",
+    "subtitle": "Text / media references → Video",
+    "category": "video",
+    "description": "Seedance 2.0 / Fast with first/last frame, image, video, and audio references.",
+    "endpoint": "/.netlify/functions/run-seedance-2",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 50,
+    "uploadLimitsMB": {
+      "image": 30,
+      "video": 50,
+      "audio": 50
+    },
+    "specificUpload": "seedance",
+    "aspectOptions": [
+      "16:9",
+      "9:16",
+      "1:1",
+      "4:3",
+      "3:4"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "480p",
+      "720p",
+      "1080p",
+      "4K"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "costLabel": "",
+    "minCredits": 3.6
+  },
+  {
+    "id": "seedance20-mini",
+    "name": "Seedance 2.0 Mini",
+    "emoji": "🌱",
+    "subtitle": "Text / media references → Video",
+    "category": "video",
+    "description": "Seedance 2.0 Mini with first/last frame, image, video, and audio references.",
+    "endpoint": "/.netlify/functions/run-seedance-2-mini",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 50,
+    "uploadLimitsMB": {
+      "image": 30,
+      "video": 50,
+      "audio": 50
+    },
+    "specificUpload": "seedance",
+    "aspectOptions": [
+      "16:9",
+      "9:16",
+      "1:1",
+      "4:3",
+      "3:4"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "480p",
+      "720p"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "costLabel": "Mini 1.3⚡/s",
+    "minCredits": 5.2
+  },
+  {
+    "id": "gemini-omni-flash-1-1",
+    "name": "Gemini Omni 1.1 Flash",
+    "emoji": "GF",
+    "subtitle": "Text / Frames / Image / Video → Video",
+    "category": "video",
+    "description": "Gemini Omni 1.1 Flash with first/last frame, optional references, voice presets, and source-video trimming.",
+    "endpoint": "/.netlify/functions/run-gemini-omni-flash-1-1",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 100,
+    "specificUpload": "geminiOmni",
+    "aspectOptions": [
+      "16:9",
+      "9:16"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "720p",
+      "1080p",
+      "4K"
+    ],
+    "defaultResolution": "1080p",
+    "durations": [
+      4,
+      6,
+      8,
+      10
+    ],
+    "costLabel": "No video 720p/1080p: 4s-4⚡ 6s-5.5⚡ 8s-6.9⚡ 10s-8.3⚡ / No video 4K: 4s-10⚡ 6s-11⚡ 8s-12⚡ 10s-14⚡ / Video: 720p/1080p 11⚡ 4K 16⚡",
+    "minCredits": 4
+  },
+  {
+    "id": "gemini-omni-video",
+    "name": "Gemini Omni",
+    "emoji": "GO",
+    "subtitle": "Text / Image / Video → Video",
+    "category": "video",
+    "description": "Gemini Omni Video with prompt, optional image references, and optional source video.",
+    "endpoint": "/.netlify/functions/run-gemini-omni-video",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 50,
+    "specificUpload": "geminiOmni",
+    "aspectOptions": [
+      "16:9",
+      "9:16"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "1080p",
+      "4K"
+    ],
+    "defaultResolution": "1080p",
+    "durations": [
+      4,
+      6,
+      8,
+      10
+    ],
+    "costLabel": "No video 1080p: 4s-4.5⚡ 6s-6⚡ 8s-7.5⚡ 10s-9⚡ / No video 4K: 4s-9⚡ 6s-11⚡ 8s-12⚡ 10s-13⚡ / Video: 1080p 11⚡ 4K 16⚡",
+    "minCredits": 4.5
+  },
+  {
+    "id": "wan-3",
+    "name": "Wan 3.0",
+    "emoji": "W3",
+    "subtitle": "Text / Frames / Media refs → Video",
+    "category": "video",
+    "description": "Wan 3.0 with first/last frame and optional image, video, or audio references.",
+    "endpoint": "/.netlify/functions/run-wan-3",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 100,
+    "specificUpload": "wan30",
+    "aspectOptions": [
+      "adaptive",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+    ],
+    "defaultAspect": "adaptive",
+    "resolutionOptions": [
+      "480p",
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "1080p",
+    "durations": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "costLabel": "480p 6⚡/s · 720p 10⚡/s · 1080p 20⚡/s",
+    "minCredits": 1.2
+  },
+  {
+    "id": "wan27-video",
+    "name": "Wan 2.7",
+    "emoji": "W",
+    "subtitle": "Text / Image / Video refs → Video",
+    "category": "video",
+    "description": "Wan 2.7 video with first/last frame, source video, image/video/audio references.",
+    "endpoint": "/.netlify/functions/run-wan-27-video",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 50,
+    "specificUpload": "wan27",
+    "aspectOptions": [
+      "16:9",
+      "9:16",
+      "1:1"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      5,
+      10
+    ],
+    "costLabel": "720p 1.5⚡/s · 1080p 2⚡/s",
+    "minCredits": 7.5
+  },
+  {
+    "id": "happyhorse10",
+    "name": "HappyHorse 1.1",
+    "emoji": "HH",
+    "subtitle": "Text / Image / Reference → Video",
+    "category": "video",
+    "description": "HappyHorse 1.1 video with first frame and reference images.",
+    "endpoint": "/.netlify/functions/run-happyhorse-1",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 50,
+    "specificUpload": "happyhorse",
+    "aspectOptions": [
+      "16:9",
+      "9:16",
+      "1:1"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      5,
+      10
+    ],
+    "costLabel": "720p 1.5⚡/s · 1080p 1.8⚡/s",
+    "minCredits": 7.5
+  },
+  {
+    "id": "grok-video",
+    "name": "Grok",
+    "emoji": "𝕏",
+    "subtitle": "Text / Image → Video",
+    "category": "video",
+    "description": "Grok video in normal mode with optional image input.",
+    "endpoint": "/.netlify/functions/run-grok-video",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 20,
+    "specificUpload": "grokVideo",
+    "aspectOptions": [
+      "16:9",
+      "9:16",
+      "1:1"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24,
+      26,
+      28,
+      30
+    ],
+    "costLabel": "720p 3⚡/s · 1080p 6⚡/s",
+    "minCredits": 1.8
+  },
+  {
+    "id": "kling25",
+    "name": "Kling 2.5 Turbo",
+    "emoji": "⚡",
+    "subtitle": "Text / Image → Video",
+    "category": "video",
+    "description": "Fast Kling 2.5 text & image to video.",
+    "endpoint": "/.netlify/functions/run-kling",
+    "needsImage": false,
+    "maxFiles": 0,
+    "useFrames": true,
+    "startOptional": true,
+    "aspectOptions": [
+      "1:1",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": [
+      5,
+      10
+    ],
+    "costLabel": "Credits 5s-3⚡ 10s-6⚡",
+    "minCredits": 3
+  },
+  {
+    "id": "kling26",
+    "name": "Kling 2.6",
+    "emoji": "🎧",
+    "subtitle": "Text / Image → Video (sound optional)",
+    "category": "video",
+    "description": "Kling 2.6 high-quality video (sound optional).",
+    "endpoint": "/.netlify/functions/run-kling-26",
+    "needsImage": false,
+    "maxFiles": 1,
+    "aspectOptions": [
+      "1:1",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": [
+      5,
+      10
+    ],
+    "costLabel": "Credits 5s-4⚡ 10s-8⚡",
+    "minCredits": 4
+  },
+  {
+    "id": "kling30",
+    "name": "Kling 3.0",
+    "emoji": "K3",
+    "subtitle": "Text / elements → Video (sound optional)",
+    "category": "video",
+    "description": "Kling 3.0 with optional image elements and sound generation.",
+    "endpoint": "/.netlify/functions/run-kling-30",
+    "needsImage": false,
+    "maxFiles": 0,
+    "uploadMaxMB": 50,
+    "specificUpload": "kling30",
+    "aspectOptions": [
+      "1:1",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "720p",
+      "1080p",
+      "4K"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "costLabel": "720p 1⚡/s · 720p sound 1.3⚡/s · 1080p 1.3⚡/s · 1080p sound 1.8⚡/s · 4K 4⚡/s",
+    "minCredits": 3
+  },
+  {
+    "id": "kling3-turbo",
+    "name": "Kling 3 Turbo",
+    "emoji": "KT",
+    "subtitle": "Text / Image → Video",
+    "category": "video",
+    "description": "Kling V3 Turbo text-to-video or image-to-video. No references.",
+    "endpoint": "/.netlify/functions/run-kling-3-turbo",
+    "needsImage": false,
+    "maxFiles": 1,
+    "uploadMaxMB": 10,
+    "acceptTypes": "image/*",
+    "aspectOptions": [
+      "1:1",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "16:9",
+    "resolutionOptions": [
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "720p",
+    "durations": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "costLabel": "720p 1.2⚡/s · 1080p 1.5⚡/s",
+    "minCredits": 3.6
+  },
+  {
+    "id": "kling21",
+    "name": "Kling v2.1 Pro",
+    "emoji": "🖼️",
+    "subtitle": "Image → Video (start / end frames)",
+    "category": "video",
+    "description": "Kling 2.1 Pro image-to-video with optional last frame.",
+    "hidden": true,
+    "endpoint": "/.netlify/functions/run-kling21",
+    "needsImage": true,
+    "maxFiles": 0,
+    "useFrames": true,
+    "startOptional": false,
+    "aspectOptions": [
+      "1:1",
+      "9:16",
+      "16:9"
+    ],
+    "defaultAspect": "1:1",
+    "durations": [
+      5,
+      10
+    ],
+    "costLabel": "Credits 5s-5⚡ 10s-9⚡",
+    "minCredits": 5
+  },
+  {
+    "id": "kling-motion-control",
+    "name": "Kling Motion Control",
+    "emoji": "K",
+    "subtitle": "Motion transfer from video",
+    "category": "video",
+    "description": "Kling motion control with source video and optional reference image.",
+    "endpoint": "/.netlify/functions/run-kling-motion-control",
+    "needsImage": false,
+    "maxFiles": 0,
+    "needsMotionVideo": true,
+    "allowOptionalImage": true,
+    "uploadMaxMB": 100,
+    "uploadLimitsMB": {
+      "image": 10,
+      "video": 100
+    },
+    "aspectOptions": [],
+    "resolutionOptions": [
+      "720p",
+      "1080p"
+    ],
+    "defaultResolution": "720p",
+    "durations": null,
+    "costLabel": "Kling 2.6: 720p 0.7⚡/s, 1080p 1.2⚡/s · Kling 3.0: 720p 1.3⚡/s, 1080p 1.8⚡/s",
+    "minCredits": 0.7
+  },
+  {
+    "id": "aleph",
+    "name": "Aleph",
+    "emoji": "🧪",
+    "subtitle": "Video → Video (optional image)",
+    "category": "video",
+    "description": "Aleph video-to-video transformations (video required).",
+    "endpoint": "/.netlify/functions/run-aleph",
+    "needsImage": false,
+    "maxFiles": 0,
+    "needsVideo": true,
+    "allowOptionalImage": true,
+    "aspectOptions": [],
+    "durations": [
+      5
+    ],
+    "costLabel": "Credits 8⚡",
+    "minCredits": 8
+  }
+]
