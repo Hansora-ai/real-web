@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { automationDb, supabase } from './supabase';
 
 export type Profile = { user_id: string; email: string | null; credits: number | null; language: string | null };
 export type AiEmployee = { id: string; name: string; instagram: string };
@@ -26,7 +26,7 @@ export async function getOrCreateProfile(user: User): Promise<Profile> {
 
 // Same query and naming as the website's AI-employee switcher (public/automation-header.js).
 export async function listAiEmployees(): Promise<AiEmployee[]> {
-  const { data, error } = await supabase.from('automation_businesses')
+  const { data, error } = await automationDb.from('automation_businesses')
     .select('id,name,updated_at,automation_agents(display_name),automation_channel_connections(channel_type,status,connected_account_label)')
     .order('updated_at', { ascending: false });
   if (error) throw error;

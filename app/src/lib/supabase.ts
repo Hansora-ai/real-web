@@ -19,3 +19,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: Capacitor.isNativePlatform() ? nativeStorage : undefined,
   },
 });
+
+// Automation tables live in their own "automation" schema (same as public/automation-client.js);
+// profiles and credits stay in public.
+export const automationDb = supabase.schema('automation');
