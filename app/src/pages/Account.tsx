@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   IonContent, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonPage, IonRefresher,
   IonRefresherContent, IonSkeletonText, IonTitle, IonToolbar, useIonActionSheet, useIonAlert,
@@ -11,8 +11,7 @@ import {
 import { useAuth } from '../lib/auth';
 import { useI18n, LANGUAGES } from '../i18n';
 import { formatCredits } from '../lib/credits';
-import { listAiEmployees, type AiEmployee } from '../lib/account';
-import { getPref, setPref } from '../lib/prefs';
+import { useBusiness } from '../automation/business';
 import { loadTheme, saveTheme, type ThemeChoice } from '../lib/theme';
 import { openSite } from './Login';
 
@@ -23,22 +22,13 @@ export default function Account() {
   const auth = useAuth();
   const [sheet] = useIonActionSheet();
   const [alert] = useIonAlert();
-  const [employees, setEmployees] = useState<AiEmployee[] | null>(null);
-  const [businessId, setBusinessId] = useState<string>('');
+  const { employees, businessId, choose, reload } = useBusiness();
   const [theme, setTheme] = useState<ThemeChoice>('dark');
 
-  const load = useCallback(async () => {
-    const [list, saved] = await Promise.all([listAiEmployees().catch(() => [] as AiEmployee[]), getPref('business')]);
-    setEmployees(list);
-    const chosen = list.find(item => item.id === saved)?.id || list[0]?.id || '';
-    setBusinessId(chosen);
-    if (chosen !== saved) await setPref('business', chosen || null);
-  }, []);
-
-  useEffect(() => { void load(); void loadTheme().then(setTheme); }, [load]);
+  useEffect(() => { void loadTheme().then(setTheme); }, []);
 
   async function refresh(event: CustomEvent<RefresherEventDetail>) {
-    await Promise.all([load(), auth.refreshProfile().catch(() => undefined)]);
+    await Promise.all([reload(), auth.refreshProfile().catch(() => undefined)]);
     event.detail.complete();
   }
 
@@ -54,7 +44,7 @@ export default function Account() {
       buttons: [
         ...employees.map(item => ({
           text: `${item.id === businessId ? '✓ ' : ''}${item.name}${item.instagram ? ` · ${item.instagram}` : ''}`,
-          handler: () => { setBusinessId(item.id); void setPref('business', item.id); },
+          handler: () => choose(item.id),
         })),
         { text: t('common.cancel'), role: 'cancel' },
       ],
