@@ -269,13 +269,6 @@
       <p class="panel-subtitle">Ստեղծեք խոսող ավատար՝ օգտագործելով մեկ պատկեր և մեկ աուդիոֆայլ։ Աուդիոյի տևողությունը պետք է լինի 5–90 վայրկյան։</p>
 
       <section class="section">
-        <span class="label">Մոդել</span>
-        <div class="model-grid">
-          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>7⚡ / վայրկյան</span></button>
-        </div>
-      </section>
-
-      <section class="section">
         <span class="label">Մուտքային պատկեր</span>
         <div id="imageDrop" class="drop-card">
           <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
@@ -1036,7 +1029,6 @@
       document.body.style.overflow = '';
     }
 
-    $('modelAvatarV').addEventListener('click', () => setModel('avatar_v'));
     $('imageBtn').addEventListener('click', () => $('imageInput').click());
     $('audioBtn').addEventListener('click', () => { if (!$('audioBtn').disabled) $('audioInput').click(); });
     bindDrop($('imageDrop'), $('imageInput'), (file) => {
