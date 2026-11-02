@@ -145,7 +145,7 @@
       startCreating: 'Start creating', profile: 'Profile', history: 'History', credits: 'Credits', aiCourse: 'AI Course', logout: 'Logout', language: 'Language',
       closeCourse: 'Close course selection', courseEyebrow: 'Hansora AI Course', courseTitle: 'Choose your course language', courseIntro: 'Select the language in which you would like to study.',
       closeLanguage: 'Close language selection', languageEyebrow: 'Hansora language', languageTitle: 'Choose website language', languageIntro: 'Select the language for this page and every Hansora menu and popup.', current: 'Current',
-      logIn: 'Log in', createAccount: 'Create your account', google: 'Continue with Google', telegram: 'Continue with Telegram', secureAuth: 'Continue securely with Google, Telegram, or email and password.',
+      logIn: 'Log in', createAccount: 'Create your account', google: 'Continue with Google', telegram: 'Continue with Telegram', secureAuth: 'Continue securely with Google, Apple, or email and password.',
       or: 'or', email: 'Email', password: 'Password', signUp: 'Sign up', analyticsAria: 'Analytics preferences', analyticsQuestion: 'Allow anonymous analytics?', analyticsNotice: 'We use anonymous analytics. Reject to stop.',
       reject: 'Reject', acceptAnalytics: 'Accept analytics', continue: 'Continue', telegramFailure: 'Telegram login was not completed', telegramCancelled: 'Telegram login was cancelled or not completed. Please try again.',
       creatorOffer: 'Creator discount offer', pricingOffer: 'Hansora pricing offer', closeOffer: 'Close offer', openingGoogle: 'Opening Google login…', googleFailed: 'Google login failed.',
@@ -3102,9 +3102,9 @@
                   <img alt="G" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
                   <span>${copy('google')}</span>
                 </button>
-                <button class="btn hansora-telegram-btn" id="btnTelegramLogin" type="button">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.8 3.2 18.6 20c-.24 1.19-.88 1.48-1.78.92l-4.87-3.59-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.96 9.02-8.15c.39-.35-.09-.55-.61-.2L6.23 13.78l-4.8-1.5c-1.04-.33-1.06-1.04.22-1.54L20.4 3.52c.87-.32 1.63.2 1.4-.32Z"/></svg>
-                  <span>${copy('telegram')}</span>
+                <button class="btn hansora-apple-btn" id="btnAppleLogin" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M16.37 12.62c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.38-3.69ZM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.01.61-2.66 1.37-.58.67-1.1 1.76-.96 2.8 1.01.08 2.05-.52 2.68-1.28Z"/></svg>
+                  <span>Continue with Apple</span>
                 </button>
               </div>
               <div class="hansora-auth-divider"><span>${copy('orEmail')}</span></div>
@@ -3561,6 +3561,16 @@
   }
 
   function openAuth(mode) {
+    // App: logging in happens on the app's own login screen (app/login.html), then returns to this page.
+    {
+      const params = new URLSearchParams(location.search);
+      let back = params.get('returnTo') || '';
+      if (!back) { params.delete('login'); const query = params.toString(); back = location.pathname + (query ? `?${query}` : '') + location.hash; }
+      const target = new URLSearchParams({ returnTo: back });
+      if (mode === 'signup') target.set('mode', 'signup');
+      location.href = `/app/login.html?${target}`;
+      return;
+    }
     rememberCourseAuthReturn(location.pathname);
     const savedVerification = readPendingEmailVerification();
     const requestedSignup = mode === 'signup';
@@ -4756,6 +4766,21 @@
         } finally {
           btnResendCode.disabled = false;
           btnResendCode.removeAttribute('aria-busy');
+        }
+      });
+    }
+
+    // App: Sign in with Apple (required by Apple next to Google). Same flow as Google.
+    const btnAppleLogin = el('btnAppleLogin');
+    if (btnAppleLogin) {
+      btnAppleLogin.addEventListener('click', async function () {
+        setAuthMessage('Opening Apple login…', 'info');
+        try {
+          rememberSignupOfferOAuthStart();
+          const { error } = await sb.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: oauthReturnUrl() } });
+          if (error) throw error;
+        } catch (error) {
+          setAuthMessage(error.message || 'Apple login failed.', 'error');
         }
       });
     }

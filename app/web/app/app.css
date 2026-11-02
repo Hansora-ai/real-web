@@ -47,3 +47,10 @@ html.hansora-app * { -webkit-tap-highlight-color: transparent; }
 .app-delete button.danger { color: #ff6b6b; border-color: rgba(255,107,107,.45); background: rgba(255,107,107,.08); }
 .app-delete button:disabled { opacity: .5; }
 .app-delete .app-delete-status { margin: 4px 0 0; min-height: 18px; }
+
+/* Sign in with Apple (Apple's style: white button, black logo and text, same size as Google). */
+.hansora-auth-form .hansora-apple-btn, #btnAppleLogin {
+  display: flex !important; align-items: center; justify-content: center; gap: 10px; min-height: 48px;
+  background: #fff !important; color: #000 !important; border: 1px solid #fff !important; font-weight: 700;
+}
+#btnAppleLogin svg { width: 20px; height: 20px; flex: 0 0 20px; }
