@@ -954,13 +954,13 @@
           <p class="sub">Загрузите видео, выберите нужный фрагмент, при желании добавьте изображения-референсы и опишите новый фон.</p>
 
           <div class="section">
-            <div class="section-head"><label for="sourceVideo">Загрузка видео</label><span class="hint">Выберите 10 секунд из видео</span></div>
+            <div class="section-head"><label for="sourceVideo">Загрузка видео</label><span class="hint">Выберите 4–30 секунд</span></div>
             <input id="sourceVideo" type="file" accept="video/*" hidden />
             <div id="videoDrop" class="dropzone" role="button" tabindex="0" aria-label="Загрузить видео">
               <div class="empty-upload">
                 <span class="drop-icon" aria-hidden="true">+</span>
                 <strong>Загрузить видео</strong>
-                <small>Загрузите видео длительностью до 3 минут и выберите точные 10 секунд, в которых нужно заменить фон.</small>
+                <small>Загрузите видео до 3 минут и выберите фрагмент длительностью 4–30 секунд.</small>
               </div>
               <div class="video-preview-wrap">
                 <div class="video-thumb"><video id="videoThumb" muted playsinline preload="metadata"></video></div>
@@ -1045,7 +1045,7 @@
     <div class="trim-modal">
       <div class="trim-head">
         <strong id="trimTitle">Выберите фрагмент видео</strong>
-        <span>Выберите 10 секунд для обработки</span>
+        <span>Выберите 4–30 секунд</span>
       </div>
       <div class="trim-video"><video id="trimVideo" controls playsinline preload="metadata"></video></div>
       <div class="trim-controls">
@@ -1054,7 +1054,7 @@
           <div id="trimSelection" class="trim-selection">
             <span id="trimStartHandle" class="trim-handle left" aria-hidden="true"></span>
             <span id="trimEndHandle" class="trim-handle right" aria-hidden="true"></span>
-            <span id="trimBubble" class="trim-bubble">10.0s</span>
+            <span id="trimBubble" class="trim-bubble">30.0s</span>
           </div>
         </div>
         <div class="trim-summary">
@@ -1454,17 +1454,17 @@
     }
 
     function setTrimWindow(start, end) {
-      const max = Math.max(1, videoDuration || 10);
+      const max = Math.max(1, videoDuration || 30);
       start = Number(start || 0);
       end = Number(end || 0);
       if (!Number.isFinite(start)) start = 0;
-      if (!Number.isFinite(end)) end = start + 10;
+      if (!Number.isFinite(end)) end = start + 30;
       start = Math.max(0, Math.min(start, Math.max(0, max - 4)));
       end = Math.max(start + 4, Math.min(end, max));
-      if (end - start > 10) end = start + 10;
+      if (end - start > 30) end = start + 30;
       if (end > max) {
         end = max;
-        start = Math.max(0, end - 10);
+        start = Math.max(0, end - 30);
       }
       trimStart = Number(start.toFixed(1));
       trimEnd = Number(end.toFixed(1));
@@ -1472,13 +1472,13 @@
     }
 
     function updateTrimUi() {
-      const max = Math.max(1, videoDuration || 10);
+      const max = Math.max(1, videoDuration || 30);
       const left = Math.max(0, Math.min(100, (trimStart / max) * 100));
       const width = Math.max(0, Math.min(100 - left, ((trimEnd - trimStart) / max) * 100));
       els.trimSelection.style.left = `${left}%`;
       els.trimSelection.style.width = `${width}%`;
       els.trimWindow.textContent = `${fmt(trimStart)} -> ${fmt(trimEnd)}`;
-      els.trimLength.textContent = `${fmt(Math.min(10, Math.max(0, selectedLength())))} из видео`;
+      els.trimLength.textContent = `${fmt(Math.min(30, Math.max(0, selectedLength())))} из видео`;
       els.trimBubble.textContent = fmt(selectedLength());
       updateTimingLabel();
       updateRunLabel();
@@ -1488,7 +1488,7 @@
       const rect = els.trimStrip.getBoundingClientRect();
       const clientX = event.clientX || (event.touches && event.touches[0] && event.touches[0].clientX) || 0;
       const pct = rect.width ? (clientX - rect.left) / rect.width : 0;
-      const max = Math.max(1, videoDuration || 10);
+      const max = Math.max(1, videoDuration || 30);
       return Math.max(0, Math.min(max, pct * max));
     }
 
@@ -1498,9 +1498,9 @@
       } else if (kind === 'end') {
         setTrimWindow(trimStart, Math.max(seconds, trimStart + 4));
       } else {
-        const length = Math.min(10, Math.max(4, selectedLength() || 10));
+        const length = Math.min(30, Math.max(4, selectedLength() || 10));
         let start = seconds - length / 2;
-        start = Math.max(0, Math.min(start, Math.max(0, (videoDuration || 10) - length)));
+        start = Math.max(0, Math.min(start, Math.max(0, (videoDuration || 30) - length)));
         setTrimWindow(start, start + length);
       }
       try { els.trimVideo.currentTime = trimStart; } catch {}
@@ -1629,10 +1629,10 @@
           return;
         }
         trimStart = 0;
-        trimEnd = Math.min(10, videoDuration || 10);
+        trimEnd = Math.min(30, videoDuration || 30);
         updateTimingLabel();
         updateRunLabel();
-        if (videoDuration > 10.05) openTrimModal();
+        if (videoDuration > 30.05) openTrimModal();
       };
       probe.onerror = () => setStatus('Не удалось определить длительность видео.', 'bad');
       setStatus('');
@@ -1708,7 +1708,7 @@
         setStatus('Сначала опишите желаемый фон.', 'bad');
         return;
       }
-      if (!trimEnd || selectedLength() < 4 || selectedLength() > 10.0001) {
+      if (!trimEnd || selectedLength() < 4 || selectedLength() > 30.0001) {
         setStatus('Сначала выберите корректный фрагмент видео.', 'bad');
         return;
       }

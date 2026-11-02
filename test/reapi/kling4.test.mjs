@@ -242,3 +242,21 @@ test('features reject unsupported quality, short selections and stale prices wit
  }
  assert.equal(posts.length,0);assert.equal(await balance(),1000);
 });
+
+test('Relight and Background Change accept a 30-second source at the shared Lite prices',async()=>{
+ const media=require('../../lib/henshin/server-media.cjs');
+ await media.withCore(async core=>{
+  core.FS.writeFile('short.mp4',fixture);core.reset();assert.equal(core.exec('-stream_loop','5','-i','short.mp4','-t','30','-c','copy','long.mp4'),0);
+  inputFixture=Buffer.from(core.FS.readFile('long.mp4'));
+ });
+ for(const [feature,resolution,credits] of [['video-relight','720p',660],['background-change','1080p',1020]]){
+  const launch=require(`../../netlify/functions/run-${feature}-gemini-omni.js`).handler;
+  const response=await launch(event({video_url:source,video_start:0,video_end:30,image_urls:[],resolution,expected_credits:credits}));
+  assert.equal(response.statusCode,201,response.body);const submitted=posts.at(-1);
+  assert.equal(submitted.input.duration,30);assert.equal(submitted.input.resolution,resolution);
+ }
+ assert.equal(await balance(),832);
+ const before=posts.length;
+ const rejected=await require('../../netlify/functions/run-video-relight-gemini-omni.js').handler(event({video_url:source,video_start:0,video_end:30.1,image_urls:[],expected_credits:682}));
+ assert.equal(rejected.statusCode,400);assert.equal(posts.length,before);assert.equal(await balance(),832);
+});

@@ -20,7 +20,10 @@ for(const feature of ['video-relight','background-change'])for(const locale of [
  for(const name of ['selectedLength','runCost','setTrimWindow'])vm.runInContext(functions[name],context);
  assert.equal(vm.runInContext('runCost()*10',context),220);
  vm.runInContext("resolution='1080p'",context);assert.equal(vm.runInContext('runCost()*10',context),340);
- vm.runInContext('setTrimWindow(12,100)',context);assert.equal(vm.runInContext('selectedLength()',context),10);
+ vm.runInContext('setTrimWindow(12,100)',context);assert.equal(vm.runInContext('selectedLength()',context),30);
+ assert.equal(vm.runInContext('runCost()*10',context),1020);
+ vm.runInContext("resolution='720p'",context);assert.equal(vm.runInContext('runCost()*10',context),660);
+ vm.runInContext("resolution='1080p'",context);
  vm.runInContext('setTrimWindow(12,13)',context);assert.equal(vm.runInContext('selectedLength()',context),4);
  assert.equal(vm.runInContext('runCost()*10',context),136);
 });
