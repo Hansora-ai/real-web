@@ -15,6 +15,20 @@
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
 
+  // ---------- 0. No ad tracking inside the app (Apple App Tracking Transparency) ----------
+  // Facebook Pixel and Google Ads track people across apps and websites, which needs Apple's permission prompt.
+  // The app doesn't use them: their scripts never load and calls to them do nothing. Hansora's own anonymous
+  // analytics (with its consent banner) stay as on the website.
+  var TRACKERS = /^(https?:)?\/\/(connect\.facebook\.net|www\.googletagmanager\.com|www\.google-analytics\.com|googleads\.g\.doubleclick\.net)\//i;
+  var srcProp = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+  Object.defineProperty(HTMLScriptElement.prototype, 'src', {
+    configurable: true, enumerable: srcProp.enumerable, get: srcProp.get,
+    set: function (value) { if (TRACKERS.test(String(value))) { this.type = 'javascript/blocked'; return; } srcProp.set.call(this, value); }
+  });
+  var noop = function () {};
+  window.fbq = noop; window._fbq = noop; window.gtag = noop;
+  try { Object.defineProperty(window, 'fbq', { configurable: true, get: function () { return noop; }, set: function () {} }); } catch (_) {}
+
   // ---------- 1. Same server as the website ----------
   // Pages call "/.netlify/functions/…"; inside the app those live on hansora.co.
   function serverUrl(url) {
@@ -115,6 +129,15 @@
       a.href = '/automation-dashboard.html';
       a.innerHTML = '<span><b>Hansora Automation</b><small>Your AI employee: chats, orders, bookings</small></span><i>→</i>';
       links.insertBefore(a, links.firstChild);
+      // The footer's Terms and Privacy links, at the end of the menu (footers are hidden in the app).
+      [['/termsofuse.html', 'Terms of use'], ['/policy.html', 'Privacy policy']].forEach(function (item) {
+        if (links.querySelector('a[href="' + item[0] + '"]')) return;
+        var link = document.createElement('a');
+        link.href = item[0];
+        link.className = 'app-legal';
+        link.textContent = item[1];
+        links.appendChild(link);
+      });
     }
   }
   if (!isAutomation) {

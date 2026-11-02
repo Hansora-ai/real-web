@@ -4,6 +4,11 @@
 html.hansora-app a[href*="pricing"],
 html.hansora-app #hansoraSignupOffer { display: none !important; }
 
+/* English first: the language choice comes back when the Russian and Armenian pages are added.
+   AI Course: a paid course can't be sold inside the app without Apple's payment system. */
+html.hansora-app #btnLanguage, html.hansora-app #languageModal,
+html.hansora-app #btnAiCourse, html.hansora-app a[href*="course_"] { display: none !important; }
+
 /* Behave like an app: no text-size jumps, no rubber-band page, 16px inputs (no zoom on focus). */
 html.hansora-app { -webkit-text-size-adjust: 100%; overscroll-behavior-y: none; }
 html.hansora-app body { -webkit-touch-callout: none; }
@@ -20,3 +25,13 @@ html.hansora-app input, html.hansora-app textarea, html.hansora-app select { fon
 .app-door b { font-size: 16px; font-weight: 800; }
 .app-door small { font-size: 12.5px; color: #51535c; font-weight: 500; }
 .app-door i { margin-left: auto; font-style: normal; font-size: 18px; font-weight: 800; }
+
+/* An app has no page footers; Terms and Privacy are in the menu instead. */
+html.hansora-app footer { display: none !important; }
+
+/* No white flash between pages; each page fades in like an app screen. */
+html.hansora-app { background: #08090c; }
+html.hansora-app body { animation: hansoraAppIn .18s ease-out both; }
+@keyframes hansoraAppIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { html.hansora-app body { animation: none; } }
+html.hansora-app * { -webkit-tap-highlight-color: transparent; }
