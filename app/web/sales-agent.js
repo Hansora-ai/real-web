@@ -18,7 +18,6 @@
         { question: 'How can I create an English-speaking video?', answer: 'All major Hansora video models support English, so you have several strong options depending on the video you want to create. For generated speech, you can use models such as Gemini Omni or Veo 3.1. For a longer speaking video with minimal extra movement, use Lipsync Avatar: upload the character or model image and an audio file. No prompt is required.' },
         { question: 'I have an idea, but I do not know which model or tool to use. Can you help me?', answer: 'Yes. Tell me what you want to create—for example, an advertisement, product video, talking character, realistic image, cinematic scene, or something else. I will recommend the most suitable Hansora model or tool and explain exactly what you need to upload or write.' },
         { question: 'What is the most affordable but still powerful video model?', answer: 'Grok Video is one of the most affordable and most-used video models on Hansora while still being very powerful. It can generate videos from around 6 to 30 seconds. It is a strong choice for good quality without spending too many credits and offers a good balance of price, speed, and quality.' },
-        { question: 'How do I buy credits on Hansora AI?', answer: 'Hansora uses a credit system. On the Pricing page, you can choose a credit package and use those credits whenever you want across Hansora tools and models. Different models use different amounts of credits depending on the generation type, duration, and quality.' }
       ]
     },
     hy: {

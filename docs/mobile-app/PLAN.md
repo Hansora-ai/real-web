@@ -24,7 +24,7 @@ the reference for features, prices, credits and wording.
 | Buying credits | **Option A**: Apple / Google in-app purchases for the same packages, and website purchases still count |
 | Orders & bookings | **Option B**: everything like the website — orders, bookings and leads, every status |
 | Notifications | For each business owner about their own business: AI needs you, new order/sale, new booking, other alerts. Tapping opens the item |
-| Delete account | The user chooses: delete only business (Automation) data, or the whole Hansora account (with a warning that credits are lost) |
+| Delete account | In the app's profile page. The user chooses Automation data only, or the whole Hansora account. The app records a request (`account-deletion-request` function, `public.account_deletion_requests`); the owner gets a Telegram message and completes it within 30 days (allowed by Apple 5.1.1(v)) |
 | Face ID | Not wanted |
 | Setup | Creating AI employees and connecting channels stays on the website for now |
 | Channels | Generic list (Instagram, TikTok, WhatsApp, Messenger, Telegram, Phone, unknown → "Other"). WhatsApp (Meta review since 2026-10-28) and phone calls appear without app changes. No "coming soon" screens |
@@ -55,6 +55,8 @@ the reference for features, prices, credits and wording.
 12. Screenshots must not show paid features without explaining in-app purchase.
 
 ## Things the owner sets up (never paste keys in chat)
+
+- Supabase → SQL editor: run `supabase/migrations/20261102150000_account_deletion_requests.sql` once (deletion requests table).
 
 - Supabase → Authentication → URL configuration: add `co.hansora.app://auth/callback` to Redirect URLs.
 - Supabase → Authentication → Providers → Apple: enable, using a Services ID + key from the Apple Developer account.

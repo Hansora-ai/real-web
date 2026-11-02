@@ -318,7 +318,7 @@
         }
         const response = await api.authenticatedFetch('/.netlify/functions/automation-test-chat', {method:'POST', body:JSON.stringify({business_id:business.id, message:question, session, ...(engineChoice() === 'compare' ? { compare:true } : engineChoice() ? { engine:engineChoice() } : {})})});
         const result = await response.json().catch(() => ({}));
-        if (response.status === 402) { dots.remove(); append('You’re out of credits. Buy credits to keep testing — your AI employee also stops answering customers at 0⚡.', 'action'); return; }
+        if (response.status === 402) { dots.remove(); append('You’re out of credits. Your AI employee also stops answering customers at 0⚡.', 'action'); return; }
         if (!response.ok || !result.reply) throw new Error(result.error || 'test_chat_failed');
         dots.remove();
         // Test chat runs actions in test mode; show which ones the AI used so owners can check the behaviour.

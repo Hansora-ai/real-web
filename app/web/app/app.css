@@ -2,7 +2,7 @@
 
 /* Store rules: no website checkout inside the app. */
 html.hansora-app a[href*="pricing"],
-html.hansora-app #hansoraSignupOffer { display: none !important; }
+html.hansora-app #hansoraSignupOffer, html.hansora-app #btnBuyCredits, html.hansora-app #subscriptionUpgradeLink { display: none !important; }
 
 /* English first: the language choice comes back when the Russian and Armenian pages are added.
    AI Course: a paid course can't be sold inside the app without Apple's payment system. */
@@ -35,3 +35,14 @@ html.hansora-app body { animation: hansoraAppIn .18s ease-out both; }
 @keyframes hansoraAppIn { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { html.hansora-app body { animation: none; } }
 html.hansora-app * { -webkit-tap-highlight-color: transparent; }
+
+/* Delete account (profile page). */
+.app-delete { margin: 24px 0 0; padding: 20px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); font-family: Inter, -apple-system, sans-serif; }
+.app-delete h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: #fff; }
+.app-delete p { margin: 0 0 14px; font-size: 14px; line-height: 1.45; color: rgba(255,255,255,.7); }
+.app-delete button { display: block; width: 100%; text-align: left; margin: 0 0 10px; padding: 14px 16px; min-height: 48px; border-radius: 14px; cursor: pointer;
+  font: 700 15px Inter, -apple-system, sans-serif; color: #fff; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); }
+.app-delete button small { display: block; margin-top: 4px; font-weight: 500; font-size: 12.5px; line-height: 1.4; color: rgba(255,255,255,.6); }
+.app-delete button.danger { color: #ff6b6b; border-color: rgba(255,107,107,.45); background: rgba(255,107,107,.08); }
+.app-delete button:disabled { opacity: .5; }
+.app-delete .app-delete-status { margin: 4px 0 0; min-height: 18px; }

@@ -118,7 +118,52 @@
     if (m && m[1] !== 'app') a.setAttribute('href', '/' + m[1] + '.html' + (m[2] || '') + (m[3] || ''));
   }, true);
 
-  // ---------- 5. Doors between Creative and Automation ----------
+  // ---------- 5. Delete account (Apple 5.1.1(v), Google Play) — on the profile page ----------
+  function addDeleteAccount() {
+    if (!/\/profile(\.html)?$/i.test(location.pathname) || document.getElementById('appDeleteAccount')) return;
+    var main = document.querySelector('main');
+    if (!main) return;
+    var box = document.createElement('section');
+    box.id = 'appDeleteAccount';
+    box.className = 'app-delete';
+    box.innerHTML = '<h2>Delete account</h2>' +
+      '<p>Choose what to delete. We complete the deletion within 30 days.</p>' +
+      '<button type="button" data-scope="automation">Delete my Automation data<small>AI employees, chats, contacts, orders and bookings. Your Hansora account and credits stay.</small></button>' +
+      '<button type="button" data-scope="account" class="danger">Delete my whole Hansora account<small>Everything, including your creations and remaining credits. This can\'t be undone.</small></button>' +
+      '<p class="app-delete-status" role="status"></p>';
+    main.appendChild(box);
+    box.addEventListener('click', async function (event) {
+      var button = event.target.closest('button[data-scope]');
+      if (!button) return;
+      var scope = button.dataset.scope;
+      var question = scope === 'account'
+        ? 'Delete your whole Hansora account?\n\nYour creations and remaining credits will be deleted. This can\'t be undone.'
+        : 'Delete your Automation data?\n\nYour AI employees, chats, contacts, orders and bookings will be deleted.';
+      if (!window.confirm(question)) return;
+      var status = box.querySelector('.app-delete-status');
+      var sb = window.__HANSORA_SB__;
+      var session = sb && (await sb.auth.getSession()).data.session;
+      if (!session) { status.textContent = 'Please log in first.'; return; }
+      box.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+      status.textContent = 'Sending…';
+      try {
+        var response = await fetch('/.netlify/functions/account-deletion-request', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+          body: JSON.stringify({ scope: scope })
+        });
+        if (!response.ok) throw new Error('request_failed');
+        window.alert('Your request was received. We will delete ' + (scope === 'account' ? 'your Hansora account' : 'your Automation data') + ' within 30 days.');
+        if (scope === 'account') { await sb.auth.signOut(); location.replace('/'); return; }
+        status.textContent = 'Request received.';
+      } catch (_) {
+        status.textContent = 'Something went wrong. Please try again.';
+        box.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+      }
+    });
+  }
+  onReady(addDeleteAccount);
+
+  // ---------- 6. Doors between Creative and Automation ----------
   var isAutomation = /^\/automation/i.test(location.pathname);
   function addDoors() {
     // Creative: top of the bottom-bar Menu.
