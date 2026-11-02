@@ -269,13 +269,6 @@
       <p class="panel-subtitle">Create a talking avatar from exactly one image and one audio file. Audio length must be 5–90 seconds.</p>
 
       <section class="section">
-        <span class="label">Model</span>
-        <div class="model-grid">
-          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>7⚡ / second</span></button>
-        </div>
-      </section>
-
-      <section class="section">
         <span class="label">Image input</span>
         <div id="imageDrop" class="drop-card">
           <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
@@ -1042,7 +1035,6 @@
       document.body.style.overflow = '';
     }
 
-    $('modelAvatarV').addEventListener('click', () => setModel('avatar_v'));
     $('imageBtn').addEventListener('click', () => $('imageInput').click());
     $('audioBtn').addEventListener('click', () => { if (!$('audioBtn').disabled) $('audioInput').click(); });
     bindDrop($('imageDrop'), $('imageInput'), (file) => {

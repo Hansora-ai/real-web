@@ -269,13 +269,6 @@
       <p class="panel-subtitle">Создайте говорящий аватар из одного изображения и одного аудиофайла. Длительность аудио должна составлять от 5 до 90 секунд.</p>
 
       <section class="section">
-        <span class="label">Модель</span>
-        <div class="model-grid">
-          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>7⚡ / секунду</span></button>
-        </div>
-      </section>
-
-      <section class="section">
         <span class="label">Исходное изображение</span>
         <div id="imageDrop" class="drop-card">
           <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
@@ -1036,7 +1029,6 @@
       document.body.style.overflow = '';
     }
 
-    $('modelAvatarV').addEventListener('click', () => setModel('avatar_v'));
     $('imageBtn').addEventListener('click', () => $('imageInput').click());
     $('audioBtn').addEventListener('click', () => { if (!$('audioBtn').disabled) $('audioInput').click(); });
     bindDrop($('imageDrop'), $('imageInput'), (file) => {
