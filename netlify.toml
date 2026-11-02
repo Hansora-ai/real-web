@@ -7,6 +7,10 @@
 [build.environment]
   NODE_VERSION = "22.22.0"
 
+# PR previews only: show the phone-app version of the pages (app/additions). Production (hansora.co) is unchanged.
+[context.deploy-preview]
+  command = "npm run build:functions && node app/scripts/preview-site.mjs"
+
 [functions]
   node_bundler = "esbuild"
 

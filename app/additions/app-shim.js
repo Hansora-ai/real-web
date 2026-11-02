@@ -18,6 +18,7 @@
   // ---------- 1. Same server as the website ----------
   // Pages call "/.netlify/functions/…"; inside the app those live on hansora.co.
   function serverUrl(url) {
+    if (!native) return url; // browser preview: the functions are on the same site
     var s = String(url);
     if (s.indexOf('/.netlify/') === 0) return SITE + s;
     if (s.indexOf(location.origin + '/.netlify/') === 0) return SITE + s.slice(location.origin.length);
