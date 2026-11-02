@@ -56,6 +56,10 @@ the reference for features, prices, credits and wording.
 
 ## Things the owner sets up (never paste keys in chat)
 
+- **Accounts (2026-11-02):** no Apple Developer account yet. Testing uses Xcode with a free Apple ID (own iPhone,
+  re-install every 7 days). Create the Apple Developer Program account ($99/year, verification can take days)
+  before Sign in with Apple, push notifications, TestFlight or App Store submission. Google Play: $25 once, later.
+
 - Supabase → SQL editor: run `supabase/migrations/20261102150000_account_deletion_requests.sql` once (deletion requests table).
 
 - Supabase → Authentication → URL configuration: add `co.hansora.app://auth/callback` to Redirect URLs.
