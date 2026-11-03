@@ -37,23 +37,22 @@ html.hansora-app input, html.hansora-app textarea, html.hansora-app select { fon
 /* An app has no page footers; Terms and Privacy are in the menu instead. */
 html.hansora-app footer { display: none !important; }
 
-/* Moving between pages like an app: the new page slides in from the right (back: from the left),
-   the bottom bars stay still. Phones without page transitions get a short fade instead. */
 html.hansora-app { background: #08090c; }
-@view-transition { navigation: auto; }
-::view-transition-old(root) { animation: .28s cubic-bezier(.2,.7,.2,1) both appOutLeft; }
-::view-transition-new(root) { animation: .28s cubic-bezier(.2,.7,.2,1) both appInRight; }
-html.app-going-back::view-transition-old(root) { animation-name: appOutRight; }
-html.app-going-back::view-transition-new(root) { animation-name: appInLeft; }
-.hs-bottom-nav, .auto-bottom-nav { view-transition-name: app-tabbar; }
-::view-transition-group(app-tabbar) { animation: none; }
-@keyframes appInRight { from { transform: translateX(100%); } }
-@keyframes appOutLeft { to { transform: translateX(-28%); opacity: .6; } }
-@keyframes appInLeft { from { transform: translateX(-28%); opacity: .6; } }
-@keyframes appOutRight { to { transform: translateX(100%); } }
-html.hansora-app:not(.app-vt) body { animation: hansoraAppIn .18s ease-out both; }
-@keyframes hansoraAppIn { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } html.hansora-app body { animation: none; } }
+/* Page changes: the app's own slide (no blank screen while the next page loads).
+   Leaving: a panel in the page's colour slides in from the right (from the left when going back).
+   Arriving: the new page starts covered and the cover fades away, so loading is never seen as black. */
+.app-curtain { position: fixed; inset: 0; z-index: 2147483600; pointer-events: none; background: var(--app-curtain, #08090c);
+  transform: translateX(100%); transition: transform .24s cubic-bezier(.2,.8,.2,1); display: grid; place-items: center; }
+.app-curtain.back { transform: translateX(-100%); }
+.app-curtain.in { transform: none; }
+.app-curtain::after { content: ''; width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid rgba(139,92,246,.25); border-top-color: #8b5cf6; opacity: 0; animation: appSpin .7s linear .3s infinite; }
+html.app-arriving::after { content: ''; position: fixed; inset: 0; z-index: 2147483600; pointer-events: none; background: var(--app-curtain, #08090c); transition: opacity .22s ease; }
+html.app-arriving.app-arrived::after { opacity: 0; }
+html.app-arriving::before { content: ''; position: fixed; left: 50%; top: 50%; z-index: 2147483601; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; pointer-events: none;
+  border: 2.5px solid rgba(139,92,246,.25); border-top-color: #8b5cf6; opacity: 0; animation: appSpin .7s linear .35s infinite; }
+html.app-arriving.app-arrived::before { display: none; }
+@keyframes appSpin { from { opacity: 1; } to { opacity: 1; transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .app-curtain { transition: none; } }
 
 /* Back arrow on inner pages (in the page's own header). */
 .app-back-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; margin-right: 6px; flex: none; border: 0; border-radius: 12px;
@@ -186,3 +185,26 @@ html.hansora-app #automation-nav { top: 100% !important; left: 0 !important; rig
 
 /* Creative menu: opens over the top bar (its own ✕ at the top), starting under the status bar. */
 html.hansora-app #hs-overlay { top: env(safe-area-inset-top) !important; z-index: 10050 !important; }
+
+/* Automation menu (signed in): every link clearly readable; the current page in blue. */
+html.hansora-app #automation-nav > a:not(.app-door) { color: #e8e8ec !important; opacity: 1 !important; }
+html.hansora-app #automation-nav > a[aria-current="page"] { color: #4c8dff !important; }
+
+/* ================= Automation in light mode: light bars, readable text ================= */
+html.hansora-app[data-theme="light"] { --app-bar-bg: rgba(255, 255, 255, .86); --app-line: rgba(15, 23, 42, .1); }
+html.hansora-app[data-theme="light"] body:has(.auto-header)::before { background: #f4f5f8; }
+html.hansora-app[data-theme="light"] .auto-header { background: var(--app-bar-bg) !important; border-bottom-color: var(--app-line) !important; }
+html.hansora-app[data-theme="light"] .auto-header .app-title { color: #0f172a; }
+html.hansora-app[data-theme="light"] .auto-header .app-back-btn { background: rgba(15, 23, 42, .06) !important; color: #0f172a !important; }
+html.hansora-app[data-theme="light"] .auto-header .auto-menu-toggle span { background: #0f172a !important; }
+html.hansora-app[data-theme="light"] .auto-header .auto-credits { background: #fff !important; color: #0f172a !important; border-color: var(--app-line) !important; }
+html.hansora-app[data-theme="light"] .auto-bottom-nav { background: var(--app-bar-bg) !important; border-top-color: var(--app-line) !important; }
+html.hansora-app[data-theme="light"] .auto-bottom-nav .auto-tab { color: #6b7280 !important; }
+html.hansora-app[data-theme="light"] .auto-bottom-nav .auto-tab.active { color: #0f172a !important; }
+html.hansora-app[data-theme="light"] .auto-bottom-nav .auto-tab.active svg { color: #2563eb !important; stroke: #2563eb !important; }
+html.hansora-app[data-theme="light"] .auto-tab-burger i { background: currentColor !important; }
+html.hansora-app[data-theme="light"] #automation-nav { background: #ffffff !important; box-shadow: 0 24px 50px -20px rgba(15, 23, 42, .35) !important; }
+html.hansora-app[data-theme="light"] #automation-nav > a:not(.app-door) { color: #0f172a !important; }
+html.hansora-app[data-theme="light"] #automation-nav > a[aria-current="page"] { color: #2563eb !important; }
+html.hansora-app[data-theme="light"] .app-skip { background: #fff; border-color: rgba(15, 23, 42, .12); color: #475569; }
+html.hansora-app[data-theme="light"] .app-skip b { color: #0f172a; }

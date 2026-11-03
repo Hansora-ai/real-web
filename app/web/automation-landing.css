@@ -366,7 +366,7 @@ html:has(body.lx), body.lx { overflow-x: clip; }
 .lx-final h2, .lx-final p { text-shadow: 0 2px 24px var(--bg); }
 
 @media (max-width: 1000px) {
-  .lx-creative, .lx-price { grid-template-columns: 1fr; }
+  .lx-creative, .lx-price { grid-template-columns: minmax(0, 1fr); }
   .lx-float-d { left: 0; }
   .lx-proof { justify-content: center; }
 }

@@ -182,25 +182,64 @@
   });
 
   // ---------- 6. Moving around like an app ----------
-  // Slide direction: going back slides the other way.
-  window.addEventListener('pagereveal', function (event) {
-    if (event.viewTransition) {
-      root.classList.add('app-vt');
-      // A page that sends you straight on (e.g. to the login screen) interrupts the slide; that's fine.
-      ['ready', 'finished', 'updateCallbackDone'].forEach(function (key) { var promise = event.viewTransition[key]; if (promise && promise.catch) promise.catch(function () {}); });
-    }
-    var type = window.navigation && window.navigation.activation && window.navigation.activation.navigationType;
-    root.classList.toggle('app-going-back', type === 'traverse');
+  // Tapping a link: a panel in the page's colour slides in from the right (from the left for Back), then the next
+  // page opens. The next page starts covered by the same colour and fades in when it is ready, so the time it takes
+  // to load is never a black screen. Swiping back (iPhone gesture) shows the previous page directly.
+  var CURTAIN_KEY = 'hansora.app.curtain';
+  var navEntry = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+  var saved = null;
+  try {
+    saved = JSON.parse(sessionStorage.getItem(CURTAIN_KEY) || 'null');
+    sessionStorage.removeItem(CURTAIN_KEY);
+    if (saved && saved.color) root.style.setProperty('--app-curtain', saved.color);
+    if (saved && saved.back) root.classList.add('app-going-back');
+  } catch (_) {}
+  // Covered on arrival after a tap in the app (or a normal page open); not after the iPhone's swipe-back gesture.
+  if (saved || navEntry.type !== 'back_forward') {
+    root.classList.add('app-arriving');
+    var reveal = function () { requestAnimationFrame(function () { root.classList.add('app-arrived'); }); setTimeout(function () { root.classList.remove('app-arriving', 'app-arrived'); }, 400); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(reveal, 40); }); else reveal();
+    setTimeout(reveal, 2500); // never stay covered
+  }
+  // Coming back to a page kept in memory: never show a leftover panel.
+  window.addEventListener('pageshow', function (event) {
+    if (!event.persisted) return;
+    var old = document.querySelector('.app-curtain'); if (old) old.remove();
+    root.classList.remove('app-arriving', 'app-arrived');
+  });
+  function pageColor() {
+    var bg = getComputedStyle(document.body || root).backgroundColor;
+    if (!bg || bg === 'transparent' || /rgba\(0, 0, 0, 0\)/.test(bg)) bg = root.getAttribute('data-theme') === 'light' ? '#f4f5f8' : '#08090c';
+    return bg;
+  }
+  window.HansoraLeave = function (go, back) {
+    try { sessionStorage.setItem(CURTAIN_KEY, JSON.stringify({ color: pageColor(), back: !!back })); } catch (_) {}
+    var curtain = document.createElement('div');
+    curtain.className = 'app-curtain' + (back ? ' back' : '');
+    curtain.style.setProperty('--app-curtain', pageColor());
+    (document.body || root).appendChild(curtain);
+    void curtain.offsetWidth;
+    curtain.classList.add('in');
+    setTimeout(go, 200);
+  };
+  document.addEventListener('click', function (event) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    var a = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+    if (!a || a.hasAttribute('download') || (a.target && a.target !== '_self')) return;
+    var raw = a.getAttribute('href') || '';
+    if (!raw || raw.charAt(0) === '#' || /^(javascript|mailto|tel|sms):/i.test(raw)) return;
+    var url;
+    try { url = new URL(a.href, location.href); } catch (_) { return; }
+    if (url.origin !== location.origin) return;
+    if (url.pathname === location.pathname && url.search === location.search && url.hash) return; // same page, another section
+    event.preventDefault();
+    window.HansoraLeave(function () { location.href = url.href; }, false);
   });
 
-  // Only this harmless notice is ignored (a slide interrupted by a page that moves on straight away).
+  // Only this harmless notice is ignored (a page slide interrupted by a page that moves on straight away).
   window.addEventListener('unhandledrejection', function (event) {
     var reason = event.reason;
     if (reason && reason.name === 'InvalidStateError' && /Transition was aborted|ViewTransition/i.test(String(reason.message))) event.preventDefault();
-  });
-  window.addEventListener('pageswap', function (event) {
-    var vt = event.viewTransition;
-    if (vt) ['ready', 'finished', 'updateCallbackDone'].forEach(function (key) { if (vt[key] && vt[key].catch) vt[key].catch(function () {}); });
   });
 
   // Back arrow on inner pages. Main pages (the bottom-bar tabs) have none, like an app.
@@ -216,8 +255,8 @@
     button.textContent = '‹';
     button.addEventListener('click', function () {
       var cameFromApp = document.referrer && document.referrer.indexOf(location.origin) === 0;
-      if (cameFromApp && history.length > 1) history.back();
-      else location.href = isAutomation ? '/automation-dashboard.html' : '/index.html';
+      var go = (cameFromApp && history.length > 1) ? function () { history.back(); } : function () { location.href = isAutomation ? '/automation-dashboard.html' : '/index.html'; };
+      if (window.HansoraLeave) window.HansoraLeave(go, true); else go();
     });
     brand.parentNode.insertBefore(button, brand);
   }
@@ -345,6 +384,14 @@
           target = await Plugins.Filesystem.writeFile({ path: name, data: await blobToBase64(blob), directory: 'CACHE' });
         } else {
           var url = new URL(href, location.href).href;
+          // The website's download helper (/.netlify/functions/download-proxy?url=…&name=…): fetch the file itself.
+          var parsed = new URL(url);
+          if (/\/\.netlify\/functions\/download-proxy$/.test(parsed.pathname) && parsed.searchParams.get('url')) {
+            filename = filename || parsed.searchParams.get('name');
+            url = new URL(parsed.searchParams.get('url'), SITE).href;
+          } else {
+            url = serverUrl(url); // other server addresses live on hansora.co, not inside the app
+          }
           name += '.' + extFrom(filename || url, '');
           var where = await Plugins.Filesystem.getUri({ path: name, directory: 'CACHE' });
           if (Plugins.FileTransfer) { await Plugins.FileTransfer.downloadFile({ url: url, path: where.uri }); target = where; }

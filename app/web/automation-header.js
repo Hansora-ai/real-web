@@ -11,7 +11,7 @@
   const sun = '<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
   const themeButton = `<button class="auto-theme" type="button" data-theme-toggle aria-label="Switch to light mode">${moon}${sun}</button>`;
   const mainLinks = appPage
-    ? `<a href="automation-dashboard.html${previewQuery}"${page === 'dashboard' ? ' aria-current="page"' : ''}>AI employees</a><a href="automation.html${previewQuery}">Product</a><a href="automation-contact.html${previewQuery}">Contact</a>`
+    ? `<a href="automation-dashboard.html${previewQuery}"${page === 'dashboard' ? ' aria-current="page"' : ''}>AI employees</a><a href="automation-profile.html${previewQuery}"${page === 'profile' ? ' aria-current="page"' : ''}>Profile</a><a href="automation-contact.html${previewQuery}">Contact us</a>`
     : page === 'landing' ? `<a href="#channels">Channels</a><a href="#how-it-works">How it works</a><a href="automation-pricing.html${previewQuery}">Pricing</a><a href="#faq">FAQ</a><a href="automation-contact.html${previewQuery}">Contact</a>` : `<a href="automation.html${previewQuery}#channels">Channels</a><a href="automation.html${previewQuery}#how-it-works">How it works</a><a href="automation-pricing.html${previewQuery}"${page === 'pricing' ? ' aria-current="page"' : ''}>Pricing</a><a href="automation.html${previewQuery}#faq">FAQ</a><a href="automation-contact.html${previewQuery}"${page === 'contact' ? ' aria-current="page"' : ''}>Contact</a>`;
   // Account area: the same login window, credits and photo as the Hansora Creative header (header.js fills these ids).
   const realSite = !api?.isLocalPreview;
@@ -203,6 +203,14 @@
         if (!cta || !user) return;
         cta.textContent = 'Dashboard';
         cta.href = 'automation-dashboard.html';
+        // App: people who already have AI employees go to them, not to "How do you want to start?".
+        if (api.db) api.db.from('automation_businesses').select('id', { count: 'exact', head: true }).then(result => {
+          if (result.error || !result.count) return;
+          document.querySelectorAll('a[href="automation-setup.html"]').forEach(link => {
+            link.href = 'automation-dashboard.html';
+            if (link.matches('[data-start]')) link.innerHTML = 'Open my AI employees <b aria-hidden="true">→</b>';
+          });
+        }).catch(() => {});
       }).catch(() => {});
     }
   }
