@@ -22,7 +22,7 @@
   const COMING_SOON = new Set('AM RU BR CH CZ DO EE HK ID IT KR LT LV NZ PL RO SE SG SI SK TH TR ZA'.split(' '));
   // Same codes as the AI's language list (lib/automation/instructions.mjs).
   const LANGUAGES = { en:'English', hy:'Armenian', ru:'Russian', es:'Spanish', fr:'French', de:'German', it:'Italian', pt:'Portuguese', uk:'Ukrainian', pl:'Polish', nl:'Dutch', tr:'Turkish', ar:'Arabic', ka:'Georgian', zh:'Chinese', ja:'Japanese', ko:'Korean', hi:'Hindi' };
-  const CONTACT_METHODS = { whatsapp:['WhatsApp', '+374 91 123456'], telegram:['Telegram', '@username or +374 91 123456'], email:['Email', 'name@example.com'] };
+  const CONTACT_METHODS = { whatsapp:['WhatsApp', '+374 91 123456'], telegram:['Telegram', '@username or +374 91 123456'] };
   let agentLanguages = ['en'];
   if (api.isLocalPreview) { try { saved = JSON.parse(localStorage.getItem(STORAGE) || '{}'); } catch (_) {} agentLanguages = ['hy', 'ru', 'en']; }
   else if (/^[0-9a-f-]{36}$/i.test(businessId)) {
@@ -47,7 +47,7 @@
   document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', syncForward));
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   document.querySelectorAll('input[name="language-mode"]').forEach(input => input.addEventListener('change', renderLanguages));
-  for (const box of ['#phone-line', '#phone-live', '#line-numbers', '#line-whatsapp']) $(box).addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
+  for (const box of ['#line-contact', '#option-detail', '#phone-live', '#line-numbers']) $(box).addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
   // The contact field's hint follows the chosen method.
   document.addEventListener('change', event => { if (event.target.matches('[data-contact-method]')) event.target.closest('.contact-box').querySelector('[data-contact-value]').placeholder = CONTACT_METHODS[event.target.value][1]; });
   $('#celebrate-done').addEventListener('click', () => { $('#phone-celebrate').hidden = true; });
@@ -158,7 +158,7 @@
   function renderReview() {
     const data = collect();
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
-    const numbers = line.numbers.map(item => item.e164).join(', ') || 'Not set up yet';
+    const numbers = line.numbers.map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
     $('#phone-review').innerHTML = [['Number', numbers], ['Voice', 'Leda'], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
@@ -167,7 +167,7 @@
       : '';
     const next = line.numbers.length ? ''
       : canGetNumber() ? `<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> Click <strong>${escapeHtml(getNumberLabel())}</strong> below and your number is ready in seconds. The test above already works.</div>`
-        : line.where ? `<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> The test above already works.<div style="margin-top:12px">${lineOffer()}</div></div>`
+        : line.where ? `<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> The test above already works.<div style="margin-top:12px">${notLiveOffer()}</div></div>`
           : '<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> Choose where your business is in step 1. <button class="ui-btn ghost" type="button" id="phone-go-number" style="border:1px solid var(--border);margin-top:10px">Choose your country</button></div>';
     $('#phone-live').innerHTML = live + next;
     $('#phone-go-number')?.addEventListener('click', () => { step = 1; render(); });
@@ -201,36 +201,49 @@
     if (!line.numbers.length && !line.error) recordCountry();
   }
   function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
-  const readyCountries = () => new Set(line.countries.map(item => item.country));
-  const numberIn = country => line.numbers.find(item => item.country === country);
-  const fallbackCountry = () => ['US', 'CA'].find(code => readyCountries().has(code));
+  function readyCountries() { return new Set(line.countries.map(item => item.country)); }
+  function numberIn(country) { return line.numbers.find(item => item.country === country); }
+  function fallbackCountry() { return ['US', 'CA'].find(code => readyCountries().has(code)); }
   // The country the last step's button gets a number in: the business's own country, or a
   // US/Canada number to forward to when there are no local numbers yet.
   function targetCountry() {
-    if (!line.where) return '';
+    if (!line.where || mode() === 'whatsapp') return '';
     if (readyCountries().has(line.where)) return line.where;
     return mode() === 'forward' ? fallbackCountry() || '' : '';
   }
   function canGetNumber() { const country = targetCountry(); return line.loaded && !line.error && Boolean(country) && !numberIn(country); }
   function getNumberLabel() { const country = targetCountry(); return country === line.where ? `Save and get my ${countryName(country)} number` : `Save and get a ${countryName(country)} number to forward to`; }
   function renderLine() {
-    const box = $('#phone-line'); if (!box || !line.loaded) return;
-    if (line.error) { box.innerHTML = '<p class="ui-hint">Phone numbers could not be loaded. Refresh the page to try again.</p>'; return; }
-    const where = line.where;
-    // A new number is only offered where Hansora has local numbers; elsewhere the owner forwards.
+    if (!line.loaded) return;
+    if (line.error) { $('#option-detail').innerHTML = '<p class="ui-hint">Phone numbers could not be loaded. Refresh the page to try again.</p>'; return; }
+    const where = line.where, name = escapeHtml(countryName(where));
+    const local = !where || readyCountries().has(where);
+    // Where Hansora has no numbers yet, only forwarding and WhatsApp are offered.
     const newOption = document.querySelector('input[name="number-mode"][value="new"]');
-    const canBuy = !where || readyCountries().has(where);
-    newOption.disabled = !canBuy;
-    newOption.closest('.ui-option').style.opacity = canBuy ? '' : '.45';
-    newOption.closest('.ui-option').querySelector('small').textContent = canBuy ? 'You get it on the last step, with one click' : `Not available in ${countryName(where)} yet`;
-    if (!canBuy && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
+    newOption.disabled = !local;
+    newOption.closest('.ui-option').style.display = local ? '' : 'none';
+    if (!local && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
     // Numbers the business already has come first; adding another country comes below them.
     const numbers = line.numbers;
     $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · Live</small><strong class="big">${escapeHtml(number.e164)}</strong>${forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
     $('#line-title').textContent = numbers.length ? 'Add another number' : 'How customers reach you';
     $('#line-subtitle').textContent = numbers.length ? 'Get a number in another country, or change how calls reach you.' : 'Pick one. You can change it later.';
-    box.innerHTML = lineOffer();
-    $('#line-whatsapp').innerHTML = whatsappCard();
+    $('#line-contact').innerHTML = where && !local ? contactCard() : '';
+    // Each option's details sit right under the options.
+    const fallback = fallbackCountry();
+    $('#forward-info').innerHTML = !where ? ''
+      : local ? `You get a local ${name} number on the last step. Then forward your business phone to it, at local rates.`
+        : fallback ? `On the last step you get a ${escapeHtml(countryName(fallback))} number, and your business phone forwards calls to it. <strong style="color:var(--text)">Each forwarded call goes abroad, so your operator charges international rates.</strong> Check the price with your operator first.` : '';
+    const detail = mode() === 'whatsapp' ? whatsappDetail()
+      : mode() === 'new' ? (!where ? '<p class="ui-hint" style="margin:0">Choose where your business is first.</p>'
+        : numberIn(where) ? `<p class="ui-hint" style="margin:0">You already have a ${name} number (above). Choose another country to add one more.</p>`
+          : `<p class="ui-hint" style="margin:0">Your ${name} number is ready on the last step, with one click. Customers call it and your AI answers right away.</p>`)
+      : '';
+    $('#option-detail').innerHTML = detail;
+    $('#option-detail').hidden = !detail;
+    // The chosen option's details go right under that option.
+    const chosen = document.querySelector('input[name="number-mode"]:checked')?.closest('.ui-option');
+    chosen?.after?.(mode() === 'forward' ? $('#forward-field') : $('#option-detail'));
   }
   // The codes that send the owner's business calls to the Hansora number.
   function forwardingHtml(number) {
@@ -246,40 +259,22 @@
     const codes = [['All calls', `**21*${dial}#`], ['Only when you don’t answer, are busy or unreachable', `**004*${dial}#`]];
     return `<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Also forward your existing phone to this number</summary><p class="ui-hint" style="margin:6px 0 8px">Your old customers keep calling the number they know, and your AI answers them too. On the phone with your existing number, dial one of these codes and press call:</p>${codes.map(([label, code]) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:15px;user-select:all">${code}</code></div>`).join('')}<span class="ui-hint">Works on most mobile operators. To stop forwarding, dial <code>##002#</code>.${line.where && line.where !== number.country ? ' This number is in another country, so your operator charges you for each forwarded call.' : ''}</span></details>`;
   }
-  const requestFor = country => line.requests.find(item => item.country === country);
-  const lastContact = () => line.requests.find(item => item.contact_value) || null;
-  // A small "leave your contact" form; once sent it shows where Hansora will reach the owner.
-  function contactForm(wants, intro) {
+  function requestFor(country) { return line.requests.find(item => item.country === country); }
+  function lastContact() { return line.requests.find(item => item.contact_value) || null; }
+  // One clear box for countries without numbers: the owner leaves WhatsApp or Telegram, and Hansora sets it up with them.
+  function contactCard() {
+    const name = escapeHtml(countryName(line.where));
     const request = requestFor(line.where);
-    const flags = { local_number:'wants_local_number', whatsapp_calls:'wants_whatsapp_calls', forwarding_help:'wants_forwarding_help' };
-    if (request?.contact_value && wants.every(item => request[flags[item]])) return `<p class="ui-hint" style="margin:8px 0 0"><strong style="color:var(--text)">Thanks!</strong> We’ll contact you on ${escapeHtml(CONTACT_METHODS[request.contact_method]?.[0] || 'your contact')} at <strong style="color:var(--text)">${escapeHtml(request.contact_value)}</strong> within a day.</p>`;
+    if (request?.contact_value && request.wants_local_number) return `<div class="ui-note" style="margin:0 0 18px;border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Thanks! We’ll contact you within a day</strong> on ${escapeHtml(CONTACT_METHODS[request.contact_method]?.[0] || 'your contact')} at <strong style="color:var(--text)">${escapeHtml(request.contact_value)}</strong> to set up your ${name} number.</div>`;
     const known = lastContact();
-    const method = known?.contact_method || 'whatsapp';
-    return `<div class="contact-box" data-wants="${wants.join(',')}" style="margin-top:10px;padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm)"><p class="ui-hint" style="margin:0 0 10px">${intro}</p><div style="display:flex;gap:8px;flex-wrap:wrap"><select class="ui-input" data-contact-method style="width:auto;min-width:130px">${Object.entries(CONTACT_METHODS).map(([value, [label]]) => `<option value="${value}"${value === method ? ' selected' : ''}>${label}</option>`).join('')}</select><input class="ui-input" data-contact-value value="${escapeHtml(known?.contact_value || '')}" placeholder="${escapeHtml(CONTACT_METHODS[method][1])}" style="flex:1;min-width:180px"><button class="ui-btn primary" type="button" data-line-action="contact">Contact me</button></div></div>`;
+    const method = CONTACT_METHODS[known?.contact_method] ? known.contact_method : 'whatsapp';
+    return `<div class="contact-box" data-wants="local_number" style="margin:0 0 18px;padding:18px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)"><strong style="display:block;font-size:15px">Want a local ${name} number?</strong><p class="ui-hint" style="margin:4px 0 12px">Leave your WhatsApp or Telegram and we’ll set it up with you, usually within a day.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><select class="ui-input" data-contact-method style="width:auto;min-width:130px">${Object.entries(CONTACT_METHODS).map(([value, [label]]) => `<option value="${value}"${value === method ? ' selected' : ''}>${label}</option>`).join('')}</select><input class="ui-input" data-contact-value value="${escapeHtml(known?.contact_value || '')}" placeholder="${escapeHtml(CONTACT_METHODS[method][1])}" style="flex:1;min-width:180px"><button class="ui-btn primary" type="button" data-line-action="contact">Contact me</button></div></div>`;
   }
-  // What the owner can do in the chosen country. The number itself is got on the last step.
-  function lineOffer() {
-    const where = line.where;
-    if (!where) return '<p class="ui-hint">Choose where your business is to see your phone options.</p>';
-    const name = escapeHtml(countryName(where));
-    if (readyCountries().has(where)) {
-      if (numberIn(where)) return `<p class="ui-hint" style="margin:0">You already have a ${name} number (above). Choose another country to add one more.</p>`;
-      const forward = mode() === 'forward';
-      return `<p class="ui-hint" style="margin:0"><strong style="color:var(--text)">Your ${name} number is one click away.</strong> Finish the steps, then click <strong style="color:var(--text)">Save and get my ${name} number</strong> on the last step.${forward ? ' Then forward your business phone to it, at local rates.' : ' Customers call it and your AI answers right away.'}</p>${forward ? contactForm(['forwarding_help'], 'Need help turning on forwarding? Leave your contact and we’ll help you.') : ''}`;
-    }
-    // No local numbers here yet: Hansora follows up by hand, and the owner can start now by forwarding to a number abroad.
-    const fallback = fallbackCountry();
-    const status = COMING_SOON.has(where) ? `<strong style="color:var(--text)">Local numbers in ${name} are coming soon.</strong>` : `<strong style="color:var(--text)">Local numbers in ${name} are not available yet.</strong>`;
-    const wants = mode() === 'forward' ? ['local_number', 'forwarding_help'] : ['local_number'];
-    const contact = contactForm(wants, `Want a local ${name} number? Leave your contact and we’ll set it up with you, usually within a day.`);
-    const abroad = fallback ? `<div style="margin-top:16px"><strong>Start now with forwarding</strong><p class="ui-hint" style="margin:4px 0 0">${mode() === 'forward' ? '' : 'Choose <strong style="color:var(--text)">Forward your existing number</strong> above. '}On the last step you get a ${escapeHtml(countryName(fallback))} number, and your business phone forwards calls to it. <strong style="color:var(--text)">Every forwarded call goes abroad, so your operator charges international call rates.</strong> Check the price with your operator first. Some operators also don’t support forwarding codes; leave your contact above and we’ll help you.</p></div>` : '';
-    return `<p class="ui-hint" style="margin:0">${status}</p>${contact}${abroad}`;
+  // WhatsApp: the business connects its WhatsApp; calls on it are answered once WhatsApp calling opens.
+  function whatsappDetail() {
+    return `<div style="display:flex;gap:14px;align-items:flex-start;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:50%;background:#25d366;color:#fff;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5.1 5.24-1.37A9.9 9.9 0 1 0 12.04 2Zm4.5 11.95c-.25-.12-1.46-.72-1.69-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.79.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.32-2.9c-.25-.43.25-.4.71-1.33.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.41-.56-.42h-.48a.92.92 0 0 0-.66.31 2.78 2.78 0 0 0-.87 2.07 4.83 4.83 0 0 0 1.01 2.56 11.05 11.05 0 0 0 4.23 3.74c.59.26 1.05.41 1.41.52a3.4 3.4 0 0 0 1.56.1c.48-.07 1.46-.6 1.67-1.18.2-.58.2-1.07.14-1.18-.06-.1-.22-.16-.47-.29Z"/></svg></span><div style="flex:1"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong>Connect your WhatsApp</strong><span class="ui-badge amber">Calls coming soon</span></div><p class="ui-hint" style="margin:4px 0 12px">Connect your WhatsApp number to your AI employee. It answers your WhatsApp messages, and WhatsApp calls as soon as they open, in any country, with no phone number to buy.</p><a class="ui-btn primary" href="automation-connect.html?channel=whatsapp&business=${encodeURIComponent(businessId)}${previewSuffix}">Connect WhatsApp</a></div></div>`;
   }
-  // WhatsApp calls: customers call the business's WhatsApp and the AI answers, in any country.
-  function whatsappCard() {
-    if (!line.loaded || line.error || !line.where) return '';
-    return `<div style="padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong>Answer WhatsApp calls</strong><span class="ui-badge amber">Coming soon</span></div><p class="ui-hint" style="margin:6px 0 0">Customers tap <strong style="color:var(--text)">Call</strong> in WhatsApp and your AI employee answers, in any country, with no phone number to buy.</p>${contactForm(['whatsapp_calls'], 'Leave your contact and we’ll turn it on for you first.')}</div>`;
-  }
+  function notLiveOffer() { return mode() === 'whatsapp' ? whatsappDetail() : line.where && !readyCountries().has(line.where) ? contactCard() : ''; }
   function showCelebration(number) {
     $('#celebrate-number').textContent = number.e164;
     $('#celebrate-country').textContent = `${countryName(number.country)} number`;
@@ -295,7 +290,7 @@
       const box = button.closest('.contact-box');
       const method = box.querySelector('[data-contact-method]').value, value = box.querySelector('[data-contact-value]').value.trim();
       if (!value) { showError(`Enter your ${CONTACT_METHODS[method][0]}.`); return; }
-      extra = { method, value, wants:box.dataset.wants.split(','), country:line.where };
+      extra = { method, value, wants:[...box.dataset.wants.split(','), ...(mode() === 'forward' ? ['forwarding_help'] : [])], country:line.where };
     }
     button.disabled = true; $('#phone-error').hidden = true;
     try {
