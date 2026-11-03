@@ -78,10 +78,17 @@
       var url = String((event && event.url) || '');
       if (url.indexOf(CALLBACK) !== 0) return;
       try { if (Plugins.Browser) await Plugins.Browser.close(); } catch (_) {}
-      var code = new URL(url.replace('co.hansora.app://', 'https://app.invalid/')).searchParams.get('code');
-      if (code && client) {
-        var done = await client.auth.exchangeCodeForSession(code);
-        if (done.error) { alert(done.error.message || 'Login failed'); return; }
+      // Supabase answers with ?code=… (PKCE) or #access_token=…&refresh_token=… (implicit), or an error.
+      var parsed = new URL(url.replace('co.hansora.app://', 'https://app.invalid/'));
+      var hash = new URLSearchParams(parsed.hash.replace(/^#/, ''));
+      var get = function (k) { return parsed.searchParams.get(k) || hash.get(k); };
+      var failure = get('error_description') || get('error');
+      if (failure) { alert('Login failed: ' + failure.replace(/\+/g, ' ')); return; }
+      if (client) {
+        var done = null;
+        if (get('code')) done = await client.auth.exchangeCodeForSession(get('code'));
+        else if (get('access_token') && get('refresh_token')) done = await client.auth.setSession({ access_token: get('access_token'), refresh_token: get('refresh_token') });
+        if (done && done.error) { alert(done.error.message || 'Login failed'); return; }
       }
       var back = '/';
       try { back = localStorage.getItem(RETURN_KEY) || '/'; localStorage.removeItem(RETURN_KEY); } catch (_) {}
@@ -388,7 +395,7 @@
       var a = document.createElement('a');
       a.className = 'app-door automation';
       a.href = '/automation.html';
-      a.innerHTML = '<span><b>Hansora Automation</b><small>Your AI employee: chats, orders, bookings</small></span><i>→</i>';
+      a.innerHTML = '<em aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg></em><span><b>Hansora Automation</b><small>Your AI employee: chats, orders, bookings</small></span><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></i>';
       links.insertBefore(a, links.firstChild);
       // The footer's Terms and Privacy links, at the end of the menu (footers are hidden in the app).
       [['/termsofuse.html', 'Terms of use'], ['/policy.html', 'Privacy policy']].forEach(function (item) {
@@ -401,14 +408,14 @@
       });
     }
   }
-  // Automation: the same white door, back to Creative, at the top of its Menu.
+  // Automation: the same kind of door, back to Creative, at the top of its Menu.
   function addCreativeDoor() {
     var nav = document.getElementById('automation-nav');
     if (!nav || nav.querySelector('.app-door')) return;
     var a = document.createElement('a');
     a.className = 'app-door creative';
     a.href = '/index.html';
-    a.innerHTML = '<span><b>Hansora Creative</b><small>Images, videos, audio &amp; more</small></span><i>→</i>';
+    a.innerHTML = '<em aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></em><span><b>Hansora Creative</b><small>Images, videos, audio &amp; more</small></span><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></i>';
     nav.insertBefore(a, nav.firstChild);
   }
   var addAnyDoor = isAutomation ? addCreativeDoor : addDoors;

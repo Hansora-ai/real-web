@@ -19,7 +19,7 @@
   .glow { position: absolute; inset: -20% -30% auto; height: 70%; pointer-events: none; filter: blur(10px);
     background: radial-gradient(40% 45% at 30% 40%, color-mix(in srgb, var(--from) 22%, transparent), transparent 70%), radial-gradient(45% 50% at 72% 30%, color-mix(in srgb, var(--to) 24%, transparent), transparent 70%); }
   .wrap { position: relative; min-height: 100svh; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; padding: calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 16px); }
-  .close { position: absolute; z-index: 5; top: calc(env(safe-area-inset-top) + 16px); right: 16px; width: 40px; height: 40px; border-radius: 20px; border: 0; background: rgba(255,255,255,.08); color: var(--text); font-size: 20px; display: grid; place-items: center; cursor: pointer; }
+  .close { position: absolute; z-index: 5; top: calc(env(safe-area-inset-top) + 16px); right: 16px; width: 40px; height: 40px; border-radius: 20px; border: 0; background: rgba(255,255,255,.08); color: var(--text); padding: 0; display: grid; place-items: center; cursor: pointer; }
   .back { width: 44px; height: 44px; margin: -8px 0 12px -12px; border: 0; background: none; color: var(--text); font-size: 28px; cursor: pointer; }
   .hero { padding: 8px 0 24px; animation: rise .45s ease both; }
   .hero img { display: block; width: 44px; height: 44px; margin-bottom: 20px; filter: drop-shadow(0 8px 24px rgba(76,141,255,.18)); }
@@ -59,7 +59,7 @@
 <body>
   <div class="glow" aria-hidden="true"></div>
   <main class="wrap">
-    <button class="close" id="close" type="button" aria-label="Close">✕</button>
+    <button class="close" id="close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <header class="hero">
       <button class="back" id="back" type="button" aria-label="Back" hidden>‹</button>
       <img id="logo" src="/hansora-logo.png" alt="">

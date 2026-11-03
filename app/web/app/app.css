@@ -16,18 +16,23 @@ html.hansora-app { -webkit-text-size-adjust: 100%; overscroll-behavior-y: none; 
 html.hansora-app body { -webkit-touch-callout: none; }
 html.hansora-app input, html.hansora-app textarea, html.hansora-app select { font-size: max(16px, 1em); }
 
-/* Door to Automation at the top of Creative's menu. */
+/* Doors between Creative and Automation (top of each menu): colourful gradient cards. */
 #hs-overlay .links a.app-door, #automation-nav a.app-door, .app-door {
-  display: flex !important; align-items: center; gap: 12px; margin: 0 0 12px; padding: 14px 16px; border-radius: 16px;
-  text-decoration: none !important; color: #0a0a0b !important; background: #fff !important; border-color: #fff !important; font-family: Inter, -apple-system, sans-serif;
+  position: relative; overflow: hidden; display: flex !important; align-items: center; gap: 12px; margin: 0 0 14px; padding: 14px 14px 14px 12px; border-radius: 18px;
+  text-decoration: none !important; color: #fff !important; border: 1px solid rgba(255,255,255,.18) !important; font-family: Inter, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #2fd3fb 0%, #6366f1 48%, #a855f7 100%) !important; box-shadow: 0 12px 30px -12px rgba(99,102,241,.85), inset 0 1px 0 rgba(255,255,255,.25) !important;
 }
-#hs-overlay .links a.app-door b, #hs-overlay .links a.app-door i, #automation-nav a.app-door b, #automation-nav a.app-door i { color: #0a0a0b !important; }
-#hs-overlay .links a.app-door small, #automation-nav a.app-door small { color: #51535c !important; }
-#automation-nav a.app-door { margin: 4px 0 12px !important; width: auto; }
-.app-door span { display: flex; flex-direction: column; gap: 2px; text-align: left; }
-.app-door b { font-size: 16px; font-weight: 800; }
-.app-door small { font-size: 12.5px; color: #51535c; font-weight: 500; }
-.app-door i { margin-left: auto; font-style: normal; font-size: 18px; font-weight: 800; }
+.app-door.creative { background: linear-gradient(135deg, #f472b6 0%, #a855f7 50%, #6366f1 100%) !important; box-shadow: 0 12px 30px -12px rgba(168,85,247,.85), inset 0 1px 0 rgba(255,255,255,.25) !important; }
+.app-door::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 90% at 0% 0%, rgba(255,255,255,.22), transparent 55%); pointer-events: none; }
+.app-door:active { transform: scale(.98); }
+#automation-nav a.app-door { margin: 4px 0 14px !important; width: auto; }
+.app-door em { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.25); }
+.app-door em svg { width: 21px; height: 21px; }
+.app-door span { display: flex; flex-direction: column; gap: 2px; text-align: left; min-width: 0; }
+#hs-overlay .links a.app-door b, #automation-nav a.app-door b, .app-door b { font-size: 16px; font-weight: 800; color: #fff !important; }
+#hs-overlay .links a.app-door small, #automation-nav a.app-door small, .app-door small { font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,.82) !important; }
+#hs-overlay .links a.app-door i, #automation-nav a.app-door i, .app-door i { margin-left: auto; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 14px; display: grid; place-items: center; background: rgba(255,255,255,.22); color: #fff !important; }
+.app-door i svg { width: 16px; height: 16px; }
 
 /* An app has no page footers; Terms and Privacy are in the menu instead. */
 html.hansora-app footer { display: none !important; }
@@ -104,38 +109,39 @@ html.hansora-app #siteHeader .btn, html.hansora-app #siteHeader .credits-pill { 
 
 /* Bottom: flat iPhone tab bar (Creative). */
 @media (max-width: 768px) {
-  html.hansora-app body { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
+  html.hansora-app body { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
   html.hansora-app .hs-bottom-nav {
     background: var(--app-bar-bg) !important; backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
     border-top: .5px solid var(--app-line) !important; border-radius: 0 !important; box-shadow: none !important;
-    padding: 4px 6px calc(4px + env(safe-area-inset-bottom)) !important;
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom)) !important;
   }
-  html.hansora-app .hs-bottom-rail { height: 52px !important; padding: 0 !important; gap: 0 !important; }
-  html.hansora-app .hs-btn { height: 50px !important; gap: 3px !important; border-radius: 10px !important; font: 600 10.5px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important; color: #8e8e93 !important; }
-  html.hansora-app .hs-btn svg { width: 24px !important; height: 24px !important; }
+  html.hansora-app .hs-bottom-rail { height: 60px !important; padding: 0 !important; gap: 0 !important; }
+  html.hansora-app .hs-btn { height: 58px !important; gap: 5px !important; border-radius: 10px !important; font: 600 11px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important; color: #8e8e93 !important; }
+  html.hansora-app .hs-btn svg { width: 26px !important; height: 26px !important; }
   html.hansora-app .hs-btn.is-active { color: #fff !important; }
   html.hansora-app .hs-btn.is-active svg { color: var(--app-accent) !important; stroke: var(--app-accent) !important; }
   html.hansora-app .hs-btn.is-active::after, html.hansora-app .hs-btn.is-active::before { display: none !important; }
-  html.hansora-app .hs-fab-wrap { height: 52px !important; justify-content: center; gap: 3px !important; padding: 0 6px; }
-  html.hansora-app .hs-fab { width: 44px !important; height: 34px !important; border-radius: 12px !important; margin: 0 !important; transform: none !important; box-shadow: 0 6px 16px -6px rgba(139,92,246,.7) !important; }
+  html.hansora-app .hs-fab-wrap { height: 60px !important; justify-content: center; gap: 3px !important; padding: 0 6px; }
+  html.hansora-app .hs-fab { width: 48px !important; height: 38px !important; border-radius: 12px !important; margin: 0 !important; transform: none !important; box-shadow: 0 6px 16px -6px rgba(139,92,246,.7) !important; }
   html.hansora-app .hs-fab svg { width: 20px !important; height: 20px !important; }
-  html.hansora-app .hs-fab-label { font: 600 10.5px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important; color: #fff !important; }
+  html.hansora-app .hs-fab-label { font: 600 11px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important; color: #fff !important; }
 }
 
 /* Bottom: the same tab bar for Automation. */
 html.hansora-app .auto-bottom-nav {
   background: var(--app-bar-bg) !important; backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-top: .5px solid var(--app-line) !important; box-shadow: none !important;
-  padding: 4px 6px calc(4px + env(safe-area-inset-bottom)) !important; min-height: 0 !important;
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom)) !important; min-height: 0 !important;
 }
-html.hansora-app .auto-bottom-nav .auto-tab { height: 50px !important; min-height: 0 !important; gap: 3px !important; border: 0 !important; border-radius: 10px !important; box-shadow: none !important; outline: none !important;
-  font: 600 10.5px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important; color: #8e8e93 !important; background: transparent !important; }
-html.hansora-app .auto-bottom-nav .auto-tab svg { width: 24px !important; height: 24px !important; }
+html.hansora-app .auto-bottom-nav .auto-tab { height: 58px !important; min-height: 0 !important; gap: 3px !important; border: 0 !important; border-radius: 10px !important; box-shadow: none !important; outline: none !important;
+  font: 600 11px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif !important; color: #8e8e93 !important; background: transparent !important; }
+html.hansora-app .auto-bottom-nav .auto-tab svg { width: 26px !important; height: 26px !important; }
 html.hansora-app .auto-bottom-nav .auto-tab.active { color: #fff !important; }
 html.hansora-app .auto-bottom-nav .auto-tab.active svg { color: #4c8dff !important; stroke: #4c8dff !important; }
 
 /* The analytics notice sits above the tab bar instead of covering it. */
-@media (max-width: 768px) { html.hansora-app #hansoraAnalyticsConsent { bottom: calc(66px + env(safe-area-inset-bottom)) !important; } }
+/* No website cookie/analytics bar in the app (where consent is required, analytics simply stays off). */
+html.hansora-app #hansoraAnalyticsConsent { display: none !important; }
 
 /* No internet message (app only). */
 .app-offline { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 60px); z-index: 2147483001; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
@@ -150,7 +156,12 @@ html.hansora-app body:has(.generation-action-buttons) .hsa-launcher { bottom: ca
 /* iPhone notch / status bar: a solid strip so nothing shows through when scrolling; pages start below it. */
 html.hansora-app body { padding-top: env(safe-area-inset-top) !important; }
 html.hansora-app body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: #07070a; z-index: 2147482000; pointer-events: none; }
-html.hansora-app #siteHeader, html.hansora-app .auto-header { top: env(safe-area-inset-top) !important; }
+html.hansora-app .auto-header { top: env(safe-area-inset-top) !important; }
+/* Creative pages: the website's fixed header box (#sharedHeader) sits right under the status bar, and the page starts
+   below it (the website reserves 64px for it with body padding; the app reserves status bar + 50px bar). */
+html.hansora-app #sharedHeader { top: env(safe-area-inset-top) !important; min-height: 0 !important; background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.hansora-app #siteHeader { position: relative !important; top: 0 !important; }
+html.hansora-app body:has(#sharedHeader) { padding-top: calc(env(safe-area-inset-top) + 51px) !important; }
 
 /* Automation: one dark/light button, at the top, in Hansora colours; none inside the menu. */
 html.hansora-app #automation-nav .auto-theme, html.hansora-app #automation-nav .auto-back { display: none !important; }
@@ -167,3 +178,11 @@ html.hansora-app .auto-header-tools .auto-theme svg { width: 17px !important; he
 html.hansora-app .auto-header { justify-content: flex-start !important; }
 html.hansora-app .auto-header .auto-header-tools { margin-left: auto !important; }
 html.hansora-app .auto-header .app-back-btn + .auto-brand { margin-left: 0 !important; }
+
+/* Automation menu: a solid sheet from under the top bar to the bottom of the screen (nothing shows through). */
+html.hansora-app #automation-nav { top: 100% !important; left: 0 !important; right: 0 !important; margin-top: 0 !important; border-radius: 0 0 20px 20px !important;
+  background: #0b0c10 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  max-height: calc(100vh - env(safe-area-inset-top) - 50px); max-height: calc(100dvh - env(safe-area-inset-top) - 50px); overflow-y: auto; }
+
+/* Creative menu: opens over the top bar (its own ✕ at the top), starting under the status bar. */
+html.hansora-app #hs-overlay { top: env(safe-area-inset-top) !important; z-index: 10050 !important; }

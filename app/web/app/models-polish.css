@@ -14,7 +14,10 @@ html.hansora-app #promptMentionEditor#promptMentionEditor { font-size: 17px !imp
 html.hansora-app #modelButton#modelButton { justify-content: space-between !important; height: 58px !important; padding: 0 16px !important; border-radius: 18px !important;
   background: #121218 !important; border: 1px solid #26262e !important; font-size: 16px !important; font-weight: 800 !important; }
 html.hansora-app #modelButton#modelButton::before { content: 'Model'; color: #8e8e98; font-size: 13px; font-weight: 600; margin-right: auto; }
-html.hansora-app #modelButtonLabel { max-width: 60% !important; margin-right: 8px; }
+/* Model name in the middle of the row, "Model" on the left, chevron on the right (all on one line). */
+html.hansora-app #modelButton#modelButton { position: relative !important; align-items: center !important; }
+html.hansora-app #modelButtonLabel#modelButtonLabel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 52% !important; line-height: 1.2 !important; text-align: center; }
+html.hansora-app #modelButton#modelButton > span[aria-hidden="true"]:last-child { font-size: 0 !important; width: 9px; height: 9px; margin-left: auto !important; border-right: 2.2px solid #a1a1aa; border-top: 2.2px solid #a1a1aa; transform: rotate(45deg); }
 /* Upload: a slim row instead of the big dashed box */
 html.hansora-app #uploadBtn#uploadBtn { height: 58px !important; min-height: 0 !important; flex-direction: row !important; justify-content: flex-start !important; gap: 12px !important;
   padding: 0 14px !important; border-radius: 18px !important; border: 1px dashed #34343f !important; background: #0f0f14 !important; }
