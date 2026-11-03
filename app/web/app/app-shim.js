@@ -276,6 +276,13 @@
     }).observe(document.body, { childList: true, subtree: true });
   });
 
+  // Models page: clear names for the settings.
+  if (/search-models/i.test(location.pathname)) onReady(function () {
+    [['#resolutionBlock > span', 'Quality'], ['#aspectBlock > span', 'Aspect ratio']].forEach(function (pair) {
+      var label = document.querySelector(pair[0]); if (label && label.children.length === 0) label.textContent = pair[1];
+    });
+  });
+
   // Section name in the middle of the app's top bar.
   function addTitle() {
     var bar = document.querySelector('#siteHeader .shell.nav, .auto-header');

@@ -143,3 +143,6 @@ html.hansora-app .auto-bottom-nav .auto-tab.active svg { color: #4c8dff !importa
 .app-offline b { width: 100%; color: #fff; font-size: 14px; }
 .app-offline span { flex: 1; min-width: 60%; }
 .app-offline button { border: 0; border-radius: 10px; padding: 8px 12px; background: #fff; color: #0a0a0b; font: 700 13px -apple-system, Inter, sans-serif; }
+
+/* The ✦ assistant bubble sits above a fixed Generate button on create pages, never on top of it. */
+html.hansora-app body:has(.generation-action-buttons) .hsa-launcher { bottom: calc(150px + env(safe-area-inset-bottom)) !important; }
