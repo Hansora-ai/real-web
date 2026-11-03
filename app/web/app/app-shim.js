@@ -127,9 +127,9 @@
     if (m && m[1] !== 'app') a.setAttribute('href', '/' + m[1] + '.html' + (m[2] || '') + (m[3] || ''));
   }, true);
 
-  // ---------- 5. Delete account (Apple 5.1.1(v), Google Play) — on the profile page ----------
+  // ---------- 5. Delete account (Apple 5.1.1(v), Google Play) — on the Creative and Automation profile pages ----------
   function addDeleteAccount() {
-    if (!/\/profile(\.html)?$/i.test(location.pathname) || document.getElementById('appDeleteAccount')) return;
+    if (!/\/(automation-)?profile(\.html)?$/i.test(location.pathname) || document.getElementById('appDeleteAccount')) return;
     var main = document.querySelector('main');
     if (!main) return;
     var box = document.createElement('section');
