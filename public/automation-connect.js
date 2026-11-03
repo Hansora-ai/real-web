@@ -257,6 +257,13 @@
       const saved = result.data?.settings || {};
       const replies = document.querySelector('#automatic-replies');
       if (replies && saved.automatic_replies !== undefined) replies.checked = saved.automatic_replies !== false;
+      // Comments-only accounts have no business details yet, so the AI does not answer messages unless the owner turns it on.
+      const mode = await api.db.from('automation_businesses').select('setup_mode').eq('id', businessId).maybeSingle();
+      if (replies && !mode.error && mode.data?.setup_mode === 'comments') {
+        if (saved.automatic_replies === undefined) replies.checked = false;
+        const help = document.querySelector('#primary-reply-help');
+        if (help) help.textContent = 'Off for comments only. Create your AI employee first so it knows your business.';
+      }
       const delay = document.querySelector('#reply-delay');
       if (saved.reply_delay !== undefined && [...delay.options].some(option => option.value === String(saved.reply_delay))) delay.value = String(saved.reply_delay);
       return;

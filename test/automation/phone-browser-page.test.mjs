@@ -32,7 +32,7 @@ async function page(inline = false) {
     db:{from:()=>({select(){return this;},eq(){return this;},order(){return this;},limit:async()=>({data:[]}),maybeSingle:async()=>({data:null}),update(){throw Error('A test must not save number setup');}})},
     authenticatedFetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return{ok:true,json:async()=>({url:'wss://voice.test',token:'test-token',max_seconds:300})};},displayError:error=>error.message};
   const sandbox={window:{addEventListener(){},HansoraAutomation:api,HansoraUI:{toast(){}},LivekitClient:{Room,Track:{Kind:{Audio:'audio'}},RoomEvent:{TrackSubscribed:'track',ParticipantAttributesChanged:'attributes',TrackUnsubscribed:'untrack',TranscriptionReceived:'transcript',Disconnected:'disconnected',MediaDevicesError:'devices',AudioPlaybackStatusChanged:'playback'}}},
-    document:{querySelector:element,querySelectorAll:selector=>selector==='.phone-step'?steps:selector==='.ui-stepper li'?tabs:[],body:{appendChild(){}}},
+    document:{addEventListener(){},querySelector:element,querySelectorAll:selector=>selector==='.phone-step'?steps:selector==='.ui-stepper li'?tabs:[],body:{appendChild(){}}},
     location:{pathname:'/automation-phone.html',search:'?business=123e4567-e89b-42d3-a456-426614174000&test=1',protocol:'https:'},URLSearchParams,Date,console,
     setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),setInterval:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearInterval:id=>timers.delete(id)};
   vm.runInNewContext(controller,sandbox);

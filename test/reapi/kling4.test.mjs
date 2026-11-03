@@ -209,3 +209,68 @@ test('a genuine Lite provider failure still fails and refunds exactly once',asyn
  const out=JSON.parse((await checker(polling(row))).body);assert.equal(out.failed,true);assert.equal(out.result_url,null);assert.equal(await balance(),1000);
  await checker(polling(row));assert.equal(await balance(),1000);assert.equal(posts.length,1);
 });
+
+for(const feature of ['video-relight','background-change'])test(`${feature} uses Lite billing, signed polling, silent input and original-audio completion`,async()=>{
+ const launch=require(`../../netlify/functions/run-${feature}-gemini-omni.js`).handler;
+ const check=require(`../../netlify/functions/${feature}-check.js`).handler;
+ const run=randomUUID(),request=event({video_url:source,source_video_duration:5,image_urls:[],expected_credits:110},run);
+ const response=await launch(request);assert.equal(response.statusCode,201,response.body);
+ assert.equal(posts.length,1);assert.equal(posts[0].model,'kling-4.0/reference-to-video');assert.equal(posts[0].input.duration,5);
+ assert.equal(posts[0].input.keep_original_sound,false);assert.match(posts[0].input.video_urls[0],/silent-source/);
+ assert.match(posts[0].input.prompt,feature==='video-relight'?/Relight @video_1 only/:/Change only the background of @video_1/);
+ assert.equal(await balance(),989);let row=(await saved())[0];assert.equal(row.meta.tool_feature,feature);assert.equal(row.meta.refund_amount,11);
+ assert.equal((await check(polling(row,{headers:{authorization:'Bearer other'}}))).statusCode,403);
+ assert.equal((await launch(request)).statusCode,200);assert.equal(posts.length,1);
+ tasks.get(row.meta.task_id).state='success';tasks.get(row.meta.task_id).resultJson=JSON.stringify({resultUrls:['https://cdn.kie.ai/result.mp4']});
+ const out=JSON.parse((await check(polling(row))).body);assert.equal(out.status,'restoring_audio');assert.equal(out.result_url,null);
+ const worker=require('../../netlify/functions/henshin-finish-background.js'),jobs=require('../../lib/henshin/jobs.cjs');
+ const final=await worker.handler({httpMethod:'POST',headers:{'x-henshin-internal':jobs.internalToken()},body:JSON.stringify({id:row.id})});
+ assert.equal(JSON.parse(final.body).ok,true,final.body);
+ const ready=JSON.parse((await check(polling(row))).body);assert.equal(ready.status,'done');assert.match(ready.result_url,/henshin-final.mp4/);assert.equal(await balance(),989);
+});
+test('old segment fields cannot trim a valid upload or reduce its verified price',async()=>{
+ const launch=require('../../netlify/functions/run-video-relight-gemini-omni.js').handler;
+ const request=event({video_url:source,source_video_duration:5,video_start:1,video_end:5,image_urls:[],expected_credits:110});
+ const response=await launch(request);assert.equal(response.statusCode,201,response.body);assert.equal(posts[0].input.duration,5);assert.equal(await balance(),989);
+ const bytes=stored.find(file=>file.url.endsWith('/silent-source.mp4')).bytes;
+ const media=require('../../lib/henshin/server-media.cjs');await media.withCore(async core=>{core.FS.writeFile('clip.mp4',bytes);const report=media.probe(core,'clip.mp4');assert.ok(Math.abs(Number(report.format.duration)-5)<.1);assert.deepEqual(report.streams.map(s=>s.codec_type),['video']);});
+});
+test('features reject unsupported quality, invalid upload lengths and stale prices without submitting or charging',async()=>{
+ const launch=require('../../netlify/functions/run-background-change-gemini-omni.js').handler;
+ for(const patch of [{resolution:'4k'},{source_video_duration:3},{expected_credits:1}]){
+  const response=await launch(event({video_url:source,source_video_duration:5,image_urls:[],expected_credits:110,...patch}));assert.ok([400,409].includes(response.statusCode),response.body);
+ }
+ assert.equal(posts.length,0);assert.equal(await balance(),1000);
+});
+
+test('Relight and Background Change accept a 30-second source at the shared Lite prices',async()=>{
+ const media=require('../../lib/henshin/server-media.cjs');
+ await media.withCore(async core=>{
+  core.FS.writeFile('short.mp4',fixture);core.reset();assert.equal(core.exec('-stream_loop','5','-i','short.mp4','-t','30','-c:v','libx264','-preset','ultrafast','-c:a','aac','long.mp4'),0);
+  inputFixture=Buffer.from(core.FS.readFile('long.mp4'));
+ });
+ for(const [feature,resolution,credits] of [['video-relight','720p',660],['background-change','1080p',1020]]){
+  const launch=require(`../../netlify/functions/run-${feature}-gemini-omni.js`).handler;
+  const response=await launch(event({video_url:source,source_video_duration:30,image_urls:[],resolution,expected_credits:credits}));
+  assert.equal(response.statusCode,201,response.body);const submitted=posts.at(-1);
+  assert.equal(submitted.input.duration,30);assert.equal(submitted.input.resolution,resolution);
+ }
+ assert.equal(await balance(),832);
+ const before=posts.length;
+ const rejected=await require('../../netlify/functions/run-video-relight-gemini-omni.js').handler(event({video_url:source,source_video_duration:30.1,image_urls:[],expected_credits:682}));
+ assert.equal(rejected.statusCode,400);assert.equal(posts.length,before);assert.equal(await balance(),832);
+});
+
+test('the server rejects a full video above 30 seconds even when a client claims a short clip',async()=>{
+ const media=require('../../lib/henshin/server-media.cjs');
+ await media.withCore(async core=>{
+  core.FS.writeFile('short.mp4',fixture);core.reset();assert.equal(core.exec('-stream_loop','6','-i','short.mp4','-t','31','-c','copy','long.mp4'),0);
+  inputFixture=Buffer.from(core.FS.readFile('long.mp4'));
+ });
+ for(const feature of ['video-relight','background-change']){
+  const launch=require(`../../netlify/functions/run-${feature}-gemini-omni.js`).handler;
+  const response=await launch(event({video_url:source,source_video_duration:5,video_start:0,video_end:5,image_urls:[],expected_credits:110}));
+  assert.equal(response.statusCode,400,response.body);assert.match(JSON.parse(response.body).error,/4–30/);
+ }
+ assert.equal(posts.length,0);assert.equal(await balance(),1000);assert.equal(stored.length,0);
+});

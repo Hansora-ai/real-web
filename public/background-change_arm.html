@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="./header.js"></script>
   <script defer src="./kie-upload-bridge.js"></script>
+  <script src="./kling4-pricing.js"></script>
   <style>
     :root{
       --bg:#060712;
@@ -956,16 +957,16 @@
       <section class="panel composer">
         <div class="panel-pad">
           <h1 class="title">Background Change</h1>
-          <p class="sub">Վերբեռնեք տեսանյութ, ընտրեք օգտագործվող հատվածը, ցանկության դեպքում ավելացրեք հղումային պատկերներ և նկարագրեք նոր ֆոնը։</p>
+          <p class="sub">Վերբեռնեք 4–30 վայրկյան տևողությամբ տեսանյութ, ցանկության դեպքում ավելացրեք հղումային պատկերներ և նկարագրեք նոր ֆոնը։</p>
 
           <div class="section">
-            <div class="section-head"><label for="sourceVideo">Տեսանյութի վերբեռնում</label><span class="hint">Ընտրեք 10 վայրկյան</span></div>
+            <div class="section-head"><label for="sourceVideo">Տեսանյութի վերբեռնում</label><span class="hint">4–30 վայրկյան</span></div>
             <input id="sourceVideo" type="file" accept="video/*" hidden />
             <div id="videoDrop" class="dropzone" role="button" tabindex="0" aria-label="Վերբեռնել տեսանյութ">
               <div class="empty-upload">
                 <span class="drop-icon" aria-hidden="true">+</span>
                 <strong>Վերբեռնել տեսանյութ</strong>
-                <small>Վերբեռնեք մինչև 3 րոպե տևողությամբ տեսանյութ և ընտրեք ֆոնը փոխելու ճշգրիտ 10 վայրկյանը։</small>
+                <small>Վերբեռնեք 4–30 վայրկյան տևողությամբ տեսանյութ։</small>
               </div>
               <div class="video-preview-wrap">
                 <div class="video-thumb"><video id="videoThumb" muted playsinline preload="metadata"></video></div>
@@ -973,7 +974,6 @@
                   <strong id="videoName">Վերբեռնված տեսանյութ</strong>
                   <span id="videoTiming">0.0s - 0.0s</span>
                 </div>
-                <button id="changeTrimBtn" class="small-btn" type="button">Փոխել</button>
                 <button id="clearVideoBtn" class="clear-video" type="button" aria-label="Հեռացնել տեսանյութը"></button>
               </div>
             </div>
@@ -998,23 +998,15 @@
           </div>
 
           <div class="field">
-            <div class="label"><span>Չափս</span></div>
-            <div class="pill-row" id="aspectRow">
-              <button type="button" data-aspect="16:9" class="active">16:9</button>
-              <button type="button" data-aspect="9:16">9:16</button>
-            </div>
-          </div>
-
-          <div class="field">
             <div class="label"><span>Որակ</span></div>
             <div class="pill-row" id="resolutionRow">
-              <button type="button" data-resolution="1080p" class="active">1080p</button>
-              <button type="button" data-resolution="4K">4K</button>
+              <button type="button" data-resolution="720p" class="active">720p</button>
+              <button type="button" data-resolution="1080p">1080p</button>
             </div>
           </div>
 
           <p id="status" class="status"></p>
-          <button id="runBtn" class="run" type="button">Գեներացնել 11 ⚡</button>
+          <button id="runBtn" class="run" type="button">Գեներացնել 220 ⚡</button>
         </div>
       </section>
 
@@ -1054,34 +1046,6 @@
     </div>
   </main>
 
-  <div id="trimOverlay" class="trim-overlay" role="dialog" aria-modal="true" aria-labelledby="trimTitle">
-    <div class="trim-modal">
-      <div class="trim-head">
-        <strong id="trimTitle">Ընտրեք տեսանյութի հատվածը</strong>
-        <span>Ընտրեք մշակման ենթակա 10 վայրկյանը</span>
-      </div>
-      <div class="trim-video"><video id="trimVideo" controls playsinline preload="metadata"></video></div>
-      <div class="trim-controls">
-        <div id="trimStrip" class="trim-strip" aria-label="Ընտրել տեսանյութի հատվածը">
-          <div id="trimFilm" class="trim-film" aria-hidden="true"></div>
-          <div id="trimSelection" class="trim-selection">
-            <span id="trimStartHandle" class="trim-handle left" aria-hidden="true"></span>
-            <span id="trimEndHandle" class="trim-handle right" aria-hidden="true"></span>
-            <span id="trimBubble" class="trim-bubble">10.0s</span>
-          </div>
-        </div>
-        <div class="trim-summary">
-          <span id="trimWindow">0.0s -> 0.0s</span>
-          <span id="trimLength">10.0s տեսանյութից</span>
-        </div>
-      </div>
-      <div class="trim-actions">
-        <button id="trimCancel" class="trim-cancel" type="button">Չեղարկել</button>
-        <button id="trimConfirm" class="trim-confirm" type="button">Հաստատել</button>
-      </div>
-    </div>
-  </div>
-
   <div id="previewOverlay" class="preview-overlay">
     <div class="preview-box">
       <button id="previewClose" class="preview-close" type="button" aria-label="Փակել նախադիտումը">x</button>
@@ -1101,7 +1065,6 @@
       videoThumb: document.getElementById('videoThumb'),
       videoName: document.getElementById('videoName'),
       videoTiming: document.getElementById('videoTiming'),
-      changeTrim: document.getElementById('changeTrimBtn'),
       clearVideo: document.getElementById('clearVideoBtn'),
       referenceImages: document.getElementById('referenceImages'),
       imageDrop: document.getElementById('imageDrop'),
@@ -1111,32 +1074,14 @@
       run: document.getElementById('runBtn'),
       emptyResults: document.getElementById('emptyResults'),
       resultsList: document.getElementById('resultsList'),
-      trimOverlay: document.getElementById('trimOverlay'),
-      trimVideo: document.getElementById('trimVideo'),
-      trimStrip: document.getElementById('trimStrip'),
-      trimFilm: document.getElementById('trimFilm'),
-      trimSelection: document.getElementById('trimSelection'),
-      trimStartHandle: document.getElementById('trimStartHandle'),
-      trimEndHandle: document.getElementById('trimEndHandle'),
-      trimBubble: document.getElementById('trimBubble'),
-      trimWindow: document.getElementById('trimWindow'),
-      trimLength: document.getElementById('trimLength'),
-      trimCancel: document.getElementById('trimCancel'),
-      trimConfirm: document.getElementById('trimConfirm')
     };
 
     let videoFile = null;
     let videoObjectUrl = '';
     let videoDuration = 0;
-    let trimStart = 0;
-    let trimEnd = 0;
-    let trimStartBeforeModal = 0;
-    let trimEndBeforeModal = 0;
-    let activeTrimDrag = '';
-    let filmRenderToken = 0;
     let imageFiles = [];
     let aspectRatio = '16:9';
-    let resolution = '1080p';
+    let resolution = '720p';
     const activePolls = new Map();
 
     function fmt(value) {
@@ -1144,12 +1089,8 @@
       return `${num.toFixed(1)}s`;
     }
 
-    function selectedLength() {
-      return Math.max(0, trimEnd - trimStart);
-    }
-
     function runCost() {
-      return resolution === '4K' ? 16 : 11;
+      return window.Kling4Pricing.quote({resolution, inputSeconds:videoDuration || 10, lite:true}).internalCredits;
     }
 
     function displayedRunCost() {
@@ -1170,7 +1111,7 @@
         els.videoTiming.textContent = 'Տեսանյութ ընտրված չէ';
         return;
       }
-      els.videoTiming.textContent = `${fmt(trimStart)} - ${fmt(trimEnd)} ընտրված է (${fmt(selectedLength())})`;
+      els.videoTiming.textContent = fmt(videoDuration);
     }
 
     function getResultUrl(payload) {
@@ -1292,7 +1233,7 @@
       const status = String(data.status || '').toLowerCase();
       const url = data.result_url || '';
       const ready = !!url;
-      const failed = !ready && /fail|error|cancel|reject/i.test(status);
+      const failed = !ready && (!/^audio_/.test(status) && /fail|error|cancel|reject/i.test(status));
       const mobile = usesMobileCard();
       const chip = card.querySelector('.result-chip');
       const media = card.querySelector('.result-media');
@@ -1380,7 +1321,7 @@
         meta: { run_id: runId, task_id: taskId, status: 'processing' }
       });
       els.resultsList.prepend(card);
-      if (userId && runId && taskId) startPoll({ userId, runId, taskId, card });
+      if (userId && runId) startPoll({ userId, runId, taskId, card });
       return card;
     }
 
@@ -1392,13 +1333,13 @@
       const res = await fetch('/.netlify/functions/background-change-check?' + qs.toString(), {
         method: 'GET',
         cache: 'no-store',
-        headers: { Accept:'application/json', 'Cache-Control':'no-cache' }
+        headers: { Accept:'application/json', 'Cache-Control':'no-cache', Authorization:'Bearer ' + (await getUserAndToken()).token }
       });
       return res.json().catch(() => ({}));
     }
 
     async function startPoll({ userId, runId, taskId, card }) {
-      if (!userId || !runId || !taskId || activePolls.has(runId)) return;
+      if (!userId || !runId || activePolls.has(runId)) return;
       const token = { cancelled:false };
       activePolls.set(runId, token);
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1414,7 +1355,7 @@
               setStatus('Background Change-ը պատրաստ է։', 'good');
               return;
             }
-            if (checked.failed || /fail|error|cancel|reject/i.test(status)) {
+            if (checked.failed || (!/^audio_/.test(status) && /fail|error|cancel|reject/i.test(status))) {
               applyResultCard(card, { status:'failed', result_url:'' });
               setStatus(checked.error || 'Գեներացիան ձախողվեց։', 'bad');
               return;
@@ -1432,7 +1373,7 @@
       const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
       const engine = String(meta.engine || '').toLowerCase();
       const sourceFeature = String(meta.source_feature || '').toLowerCase();
-      return sourceFeature === 'background-change' || provider === 'background change' || engine === 'background-change-gemini-omni';
+      return meta.tool_feature === 'background-change' || sourceFeature === 'background-change' || provider === 'background change' || engine === 'background-change-gemini-omni';
     }
 
     async function loadRecentGenerations() {
@@ -1466,146 +1407,9 @@
       }
     }
 
-    function setTrimWindow(start, end) {
-      const max = Math.max(1, videoDuration || 10);
-      start = Number(start || 0);
-      end = Number(end || 0);
-      if (!Number.isFinite(start)) start = 0;
-      if (!Number.isFinite(end)) end = start + 10;
-      start = Math.max(0, Math.min(start, Math.max(0, max - 1)));
-      end = Math.max(start + 1, Math.min(end, max));
-      if (end - start > 10) end = start + 10;
-      if (end > max) {
-        end = max;
-        start = Math.max(0, end - 10);
-      }
-      trimStart = Number(start.toFixed(1));
-      trimEnd = Number(end.toFixed(1));
-      updateTrimUi();
-    }
-
-    function updateTrimUi() {
-      const max = Math.max(1, videoDuration || 10);
-      const left = Math.max(0, Math.min(100, (trimStart / max) * 100));
-      const width = Math.max(0, Math.min(100 - left, ((trimEnd - trimStart) / max) * 100));
-      els.trimSelection.style.left = `${left}%`;
-      els.trimSelection.style.width = `${width}%`;
-      els.trimWindow.textContent = `${fmt(trimStart)} -> ${fmt(trimEnd)}`;
-      els.trimLength.textContent = `${fmt(Math.min(10, Math.max(0, selectedLength())))} տեսանյութից`;
-      els.trimBubble.textContent = fmt(selectedLength());
-      updateTimingLabel();
-    }
-
-    function secondsFromPointer(event) {
-      const rect = els.trimStrip.getBoundingClientRect();
-      const clientX = event.clientX || (event.touches && event.touches[0] && event.touches[0].clientX) || 0;
-      const pct = rect.width ? (clientX - rect.left) / rect.width : 0;
-      const max = Math.max(1, videoDuration || 10);
-      return Math.max(0, Math.min(max, pct * max));
-    }
-
-    function moveTrimHandle(kind, seconds) {
-      if (kind === 'start') {
-        setTrimWindow(Math.min(seconds, trimEnd - 1), trimEnd);
-      } else if (kind === 'end') {
-        setTrimWindow(trimStart, Math.max(seconds, trimStart + 1));
-      } else {
-        const length = Math.min(10, Math.max(1, selectedLength() || 10));
-        let start = seconds - length / 2;
-        start = Math.max(0, Math.min(start, Math.max(0, (videoDuration || 10) - length)));
-        setTrimWindow(start, start + length);
-      }
-      try { els.trimVideo.currentTime = trimStart; } catch {}
-    }
-
-    async function renderTrimFilmstrip() {
-      const token = ++filmRenderToken;
-      els.trimFilm.innerHTML = '';
-      const count = 9;
-      for (let i = 0; i < count; i++) {
-        const frame = document.createElement('div');
-        frame.className = 'trim-frame';
-        els.trimFilm.appendChild(frame);
-      }
-      if (!videoObjectUrl || !videoDuration) return;
-
-      const snap = document.createElement('video');
-      snap.src = videoObjectUrl;
-      snap.muted = true;
-      snap.playsInline = true;
-      snap.preload = 'auto';
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const waitFor = (name) => new Promise((resolve, reject) => {
-        const ok = () => { cleanup(); resolve(); };
-        const bad = () => { cleanup(); reject(new Error(name)); };
-        const cleanup = () => {
-          snap.removeEventListener(name, ok);
-          snap.removeEventListener('error', bad);
-        };
-        snap.addEventListener(name, ok, { once:true });
-        snap.addEventListener('error', bad, { once:true });
-      });
-      try {
-        if (!snap.readyState) await waitFor('loadedmetadata');
-        canvas.width = 180;
-        canvas.height = 104;
-        const frames = Array.from(els.trimFilm.children);
-        for (let i = 0; i < frames.length; i++) {
-          if (token !== filmRenderToken) return;
-          const time = Math.min(videoDuration - 0.05, (videoDuration * (i + 0.5)) / frames.length);
-          snap.currentTime = Math.max(0, time);
-          await waitFor('seeked');
-          if (token !== filmRenderToken) return;
-          ctx.fillStyle = '#11141c';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          const scale = Math.max(canvas.width / snap.videoWidth, canvas.height / snap.videoHeight);
-          const width = snap.videoWidth * scale;
-          const height = snap.videoHeight * scale;
-          ctx.drawImage(snap, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
-          const img = document.createElement('img');
-          img.alt = '';
-          img.draggable = false;
-          img.src = canvas.toDataURL('image/jpeg', .68);
-          frames[i].innerHTML = '';
-          frames[i].appendChild(img);
-        }
-      } catch {
-        // Thumbnail generation is only visual; timing still works if the browser cannot sample frames.
-      } finally {
-        snap.removeAttribute('src');
-        snap.load();
-      }
-    }
-
-    function openTrimModal() {
-      if (!videoFile || !videoObjectUrl) return;
-      trimStartBeforeModal = trimStart;
-      trimEndBeforeModal = trimEnd;
-      els.trimVideo.src = videoObjectUrl;
-      els.trimVideo.currentTime = trimStart || 0;
-      updateTrimUi();
-      renderTrimFilmstrip();
-      els.trimOverlay.classList.add('show');
-      document.body.style.overflow = 'hidden';
-      setTimeout(() => {
-        try { els.trimVideo.currentTime = trimStart || 0; } catch {}
-      }, 80);
-    }
-
-    function closeTrimModal({ restore = false } = {}) {
-      if (restore) setTrimWindow(trimStartBeforeModal, trimEndBeforeModal);
-      els.trimOverlay.classList.remove('show');
-      document.body.style.overflow = '';
-      try { els.trimVideo.pause(); } catch {}
-      updateTimingLabel();
-    }
-
     function clearVideoFile() {
       videoFile = null;
       videoDuration = 0;
-      trimStart = 0;
-      trimEnd = 0;
       if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl);
       videoObjectUrl = '';
       els.videoDrop.classList.remove('has-video', 'drag-over');
@@ -1614,6 +1418,7 @@
       els.videoName.textContent = 'Վերբեռնված տեսանյութ';
       els.videoTiming.textContent = '0.0s - 0.0s';
       setStatus('');
+      updateRunLabel();
     }
 
     function setVideoFile(file) {
@@ -1622,6 +1427,7 @@
         return;
       }
       videoFile = file;
+      videoDuration = 0;
       if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl);
       videoObjectUrl = URL.createObjectURL(file);
       els.videoDrop.classList.remove('drag-over');
@@ -1632,16 +1438,15 @@
       probe.preload = 'metadata';
       probe.src = videoObjectUrl;
       probe.onloadedmetadata = () => {
+        if (videoFile !== file) return;
         videoDuration = Number.isFinite(probe.duration) ? probe.duration : 0;
-        if (videoDuration > 180.05) {
+        if (videoDuration < 4 || videoDuration > 30.0001) {
           clearVideoFile();
-          setStatus('Վերբեռնեք մինչև 3 րոպե տևողությամբ տեսանյութ։', 'bad');
+          setStatus('Վերբեռնեք 4–30 վայրկյան տևողությամբ տեսանյութ։', 'bad');
           return;
         }
-        trimStart = 0;
-        trimEnd = Math.min(10, videoDuration || 10);
         updateTimingLabel();
-        if (videoDuration > 10.05) openTrimModal();
+        updateRunLabel();
       };
       probe.onerror = () => setStatus('Չհաջողվեց որոշել տեսանյութի տևողությունը։', 'bad');
       setStatus('');
@@ -1717,8 +1522,8 @@
         setStatus('Նախ նկարագրեք ցանկալի ֆոնը։', 'bad');
         return;
       }
-      if (!trimEnd || trimEnd <= trimStart) {
-        setStatus('Նախ ընտրեք տեսանյութի ճիշտ հատվածը։', 'bad');
+      if (videoDuration < 4 || videoDuration > 30.0001) {
+        setStatus('Վերբեռնեք 4–30 վայրկյան տևողությամբ տեսանյութ։', 'bad');
         return;
       }
       const { user, token } = await getUserAndToken();
@@ -1739,10 +1544,7 @@
         const runId = `${user.id}-${Date.now()}`;
         const videoUrls = await uploadFiles([videoFile], 'տեսանյութը');
         const imageUrls = imageFiles.length ? await uploadFiles(imageFiles, 'հղումային պատկերները') : [];
-        const start = Number(trimStart.toFixed(3));
-        const ends = Number(trimEnd.toFixed(3));
-        const length = Math.max(1, ends - start);
-        const duration = [4, 6, 8, 10].find((value) => value >= length) || 10;
+        const duration = Math.ceil(videoDuration - 1e-7);
         setStatus('Ֆոնի փոփոխման հարցումն ուղարկվում է...');
         const body = {
           uid:user.id,
@@ -1751,14 +1553,12 @@
           source_feature:'background-change',
           prompt,
           aspect_ratio:aspectRatio,
-          resolution:resolution === '4K' ? '4k' : '1080p',
+          resolution,
+          expected_credits:Math.round(runCost() * 10),
           duration,
           image_urls:imageUrls,
           video_url:videoUrls[0],
-          video_original_duration:Number((videoDuration || 0).toFixed(3)),
-          video_start:start,
-          video_end:ends,
-          video_list:[{ url:videoUrls[0], start, ends }]
+          source_video_duration:videoDuration
         };
         const res = await fetch('/.netlify/functions/run-background-change-gemini-omni', {
           method:'POST',
@@ -1827,44 +1627,11 @@
     });
     wireDrop(els.videoDrop, els.sourceVideo, (files) => setVideoFile(Array.from(files || [])[0]));
     wireDrop(els.imageDrop, els.referenceImages, addReferenceImages);
-    els.changeTrim.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openTrimModal();
-    });
     els.clearVideo.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
       clearVideoFile();
     });
-    els.trimStrip.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      if (event.target === els.trimStartHandle) activeTrimDrag = 'start';
-      else if (event.target === els.trimEndHandle) activeTrimDrag = 'end';
-      else activeTrimDrag = 'window';
-      els.trimStrip.setPointerCapture && els.trimStrip.setPointerCapture(event.pointerId);
-      moveTrimHandle(activeTrimDrag, secondsFromPointer(event));
-    });
-    els.trimStrip.addEventListener('pointermove', (event) => {
-      if (!activeTrimDrag) return;
-      event.preventDefault();
-      moveTrimHandle(activeTrimDrag, secondsFromPointer(event));
-    });
-    ['pointerup','pointercancel','lostpointercapture'].forEach((name) => {
-      els.trimStrip.addEventListener(name, () => { activeTrimDrag = ''; });
-    });
-    ['dragstart','selectstart'].forEach((name) => {
-      els.trimStrip.addEventListener(name, (event) => event.preventDefault());
-      els.trimFilm.addEventListener(name, (event) => event.preventDefault());
-    });
-    els.trimVideo.addEventListener('timeupdate', () => {
-      if (els.trimOverlay.classList.contains('show') && els.trimVideo.currentTime >= trimEnd) {
-        els.trimVideo.currentTime = trimStart;
-        els.trimVideo.pause();
-      }
-    });
-    els.trimCancel.addEventListener('click', () => closeTrimModal({ restore:true }));
-    els.trimConfirm.addEventListener('click', () => closeTrimModal());
     document.querySelectorAll('#aspectRow button').forEach((button) => {
       button.addEventListener('click', () => {
         document.querySelectorAll('#aspectRow button').forEach((item) => item.classList.remove('active'));
@@ -1876,7 +1643,7 @@
       button.addEventListener('click', () => {
         document.querySelectorAll('#resolutionRow button').forEach((item) => item.classList.remove('active'));
         button.classList.add('active');
-        resolution = button.dataset.resolution || '1080p';
+        resolution = button.dataset.resolution || '720p';
         updateRunLabel();
       });
     });
@@ -1887,7 +1654,6 @@
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && document.getElementById('previewOverlay').classList.contains('show')) closePreview();
-      if (event.key === 'Escape' && els.trimOverlay.classList.contains('show')) closeTrimModal({ restore:true });
     });
 
     updateRunLabel();

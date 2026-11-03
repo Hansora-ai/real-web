@@ -6,6 +6,8 @@ import { buyTwilioNumber, twilioConfigured } from '../../lib/automation/twilio.m
 const HEADERS = {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'GET, POST, OPTIONS'};
 const json = (statusCode, body) => ({ statusCode, headers: HEADERS, body: JSON.stringify(body) });
 const publicNumber = row => row?.e164 ? { e164: row.e164, country: row.country, assigned_at: row.assigned_at } : null;
+const CONTACT_METHODS = new Set(['whatsapp', 'telegram', 'email']);
+const CONTACT_WANTS = { local_number: 'wants_local_number', whatsapp_calls: 'wants_whatsapp_calls', forwarding_help: 'wants_forwarding_help' };
 // Providers that can buy a number on demand, in order of preference, each with
 // the countries it is allowed to buy in (no paperwork needed there) and the
 // LiveKit inbound trunk its calls arrive on.
@@ -16,8 +18,9 @@ const numberProviders = () => [
 ].filter(Boolean);
 const buyableCountries = () => [...new Set(numberProviders().flatMap(provider => provider.countries))];
 
-// The owner's phone line: which Hansora number the business has, which countries
-// still have free numbers, and turning the line on (assign) or off (release).
+// The owner's phone lines: which Hansora numbers the business has (one per
+// country), which countries still have free numbers, turning a number on
+// (assign) or off (release), and contact requests for countries without numbers.
 // Numbers are only ever assigned here, with the service role.
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return json(204, {});
@@ -32,27 +35,48 @@ export async function handler(event) {
     const business = await first(`/rest/v1/automation_businesses?id=eq.${encodeURIComponent(businessId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&select=id,automation_agents(id),automation_business_knowledge(id)&limit=1`);
     if (!business) return json(404, { error: 'business_not_found' });
 
-    const assigned = () => first(`/rest/v1/automation_phone_numbers?business_id=eq.${encodeURIComponent(businessId)}&status=eq.assigned&select=e164,country,assigned_at&limit=1`);
+    const assignedNumbers = async () => rows(await supabaseRequest(`/rest/v1/automation_phone_numbers?business_id=eq.${encodeURIComponent(businessId)}&status=eq.assigned&select=e164,country,assigned_at&order=assigned_at.asc&limit=50`)).map(publicNumber).filter(Boolean);
+    // The phone channel is connected while the business has at least one number.
+    const syncChannel = async numbers => serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone`, numbers.length
+      ? { status: 'connected', connected_account_label: numbers.map(item => item.e164).join(', ').slice(0, 200), last_error_code: null }
+      : { status: 'not_connected', connected_account_label: null });
     if (event.httpMethod === 'GET') {
       const free = rows(await supabaseRequest('/rest/v1/automation_phone_numbers?status=eq.available&select=country&limit=1000'));
       const counts = free.reduce((all, row) => ({ ...all, [row.country]: (all[row.country] || 0) + 1 }), {});
       for (const country of buyableCountries()) counts[country] = counts[country] || 0;
       const countries = Object.entries(counts).map(([country, available]) => ({ country, available }));
-      const requested = rows(await supabaseRequest(`/rest/v1/automation_phone_country_requests?user_id=eq.${encodeURIComponent(user.id)}&wants_email=is.true&select=country&limit=300`).catch(() => [])).map(row => row.country);
-      return json(200, { number: publicNumber(await assigned()), countries, requested });
+      const requests = rows(await supabaseRequest(`/rest/v1/automation_phone_country_requests?user_id=eq.${encodeURIComponent(user.id)}&select=country,contact_method,contact_value,wants_local_number,wants_whatsapp_calls,wants_forwarding_help&limit=300`).catch(() => []));
+      const numbers = await assignedNumbers();
+      return json(200, { numbers, number: numbers[0] || null, countries, requests });
     }
 
-    // "pick" records that the owner looked at a country; "notify" also asks to be emailed when it opens.
-    if (body.action === 'pick' || body.action === 'notify') {
+    // "pick" records that the owner looked at a country, so Hansora sees demand even if they leave.
+    if (body.action === 'pick') {
       const country = String(body.country || '').toUpperCase();
       if (!/^[A-Z]{2}$/.test(country)) return json(400, { error: 'invalid_country' });
-      const notify = body.action === 'notify';
       await supabaseRequest('/rest/v1/automation_phone_country_requests?on_conflict=user_id,country', {
         method: 'POST',
-        body: { user_id: user.id, email: user.email, business_id: businessId, country, ...(notify ? { wants_email: true } : {}) },
-        prefer: `resolution=${notify ? 'merge' : 'ignore'}-duplicates,return=representation`
+        body: { user_id: user.id, email: user.email, business_id: businessId, country },
+        prefer: 'resolution=ignore-duplicates,return=representation'
       });
-      return json(200, { country, wants_email: notify });
+      return json(200, { country });
+    }
+
+    // "contact": the owner leaves a WhatsApp, Telegram or email so Hansora can set things up with them.
+    if (body.action === 'contact') {
+      const country = String(body.country || '').toUpperCase();
+      const method = String(body.method || '');
+      const value = String(body.value || '').trim().slice(0, 200);
+      const flags = [].concat(body.wants || []).map(item => CONTACT_WANTS[item]).filter(Boolean);
+      if (!/^[A-Z]{2}$/.test(country) || !CONTACT_METHODS.has(method) || !flags.length) return json(400, { error: 'invalid_contact' });
+      const valid = method === 'email' ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) : method === 'whatsapp' ? /^\+?[\d\s()-]{7,20}$/.test(value) : /^@?[A-Za-z0-9_]{4,32}$|^\+?[\d\s()-]{7,20}$/.test(value);
+      if (!valid) return json(400, { error: 'invalid_contact' });
+      await supabaseRequest('/rest/v1/automation_phone_country_requests?on_conflict=user_id,country', {
+        method: 'POST',
+        body: { user_id: user.id, email: user.email, business_id: businessId, country, contact_method: method, contact_value: value, ...Object.fromEntries(flags.map(item => [item, true])), updated_at: new Date().toISOString() },
+        prefer: 'resolution=merge-duplicates,return=representation'
+      });
+      return json(200, { country, method, value, wants: body.wants });
     }
 
     if (body.action === 'activate') {
@@ -80,14 +104,20 @@ export async function handler(event) {
         }
       }
       if (!number?.e164) return json(409, { error: 'no_number_available', ...(failures.length ? { detail: failures.join('; ').slice(0, 300) } : {}) });
-      await serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone`, { status: 'connected', provider: number.provider || 'phone', connected_account_label: number.e164, connected_at: new Date().toISOString(), last_error_code: null });
-      return json(200, { number: publicNumber(number) });
+      const numbers = await assignedNumbers();
+      await syncChannel(numbers);
+      await serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone&connected_at=is.null`, { provider: number.provider || 'phone', connected_at: new Date().toISOString() });
+      return json(200, { number: publicNumber(number), numbers });
     }
 
+    // Turns off one number (body.e164), or every number of the business when none is named.
     if (body.action === 'release') {
-      await supabaseRequest('/rest/v1/rpc/automation_release_phone_number', { method: 'POST', body: { p_business: businessId } });
-      await serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone`, { status: 'not_connected', connected_account_label: null });
-      return json(200, { number: null });
+      const e164 = body.e164 ? String(body.e164).trim() : null;
+      if (e164 && !/^\+[1-9][0-9]{7,14}$/.test(e164)) return json(400, { error: 'invalid_number' });
+      await supabaseRequest('/rest/v1/rpc/automation_release_phone_number', { method: 'POST', body: { p_business: businessId, p_e164: e164 } });
+      const numbers = await assignedNumbers();
+      await syncChannel(numbers);
+      return json(200, { number: numbers[0] || null, numbers });
     }
     return json(400, { error: 'invalid_action' });
   } catch (error) {
