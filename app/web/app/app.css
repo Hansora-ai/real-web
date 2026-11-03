@@ -146,3 +146,24 @@ html.hansora-app .auto-bottom-nav .auto-tab.active svg { color: #4c8dff !importa
 
 /* The ✦ assistant bubble sits above a fixed Generate button on create pages, never on top of it. */
 html.hansora-app body:has(.generation-action-buttons) .hsa-launcher { bottom: calc(150px + env(safe-area-inset-bottom)) !important; }
+
+/* iPhone notch / status bar: a solid strip so nothing shows through when scrolling; pages start below it. */
+html.hansora-app body { padding-top: env(safe-area-inset-top) !important; }
+html.hansora-app body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: #07070a; z-index: 2147482000; pointer-events: none; }
+html.hansora-app #siteHeader, html.hansora-app .auto-header { top: env(safe-area-inset-top) !important; }
+
+/* Automation: one dark/light button, at the top, in Hansora colours; none inside the menu. */
+html.hansora-app #automation-nav .auto-theme, html.hansora-app #automation-nav .auto-back { display: none !important; }
+html.hansora-app .auto-header-tools .auto-theme { width: 34px !important; height: 34px !important; border-radius: 12px !important; border: 0 !important; color: #fff !important;
+  background: linear-gradient(135deg, #6366f1, #a855f7) !important; box-shadow: 0 6px 16px -6px rgba(139,92,246,.8) !important; }
+html.hansora-app .auto-header-tools .auto-theme svg { width: 17px !important; height: 17px !important; }
+
+/* Setup: Skip */
+.app-skip { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; text-decoration: none;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: #c9c9d2; font: 500 14px Inter, -apple-system, sans-serif; }
+.app-skip b { color: #fff; font-weight: 700; }
+
+/* Automation header: logo always on the left, buttons on the right (also on pages without buttons). */
+html.hansora-app .auto-header { justify-content: flex-start !important; }
+html.hansora-app .auto-header .auto-header-tools { margin-left: auto !important; }
+html.hansora-app .auto-header .app-back-btn + .auto-brand { margin-left: 0 !important; }

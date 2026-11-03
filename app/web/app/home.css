@@ -1,6 +1,5 @@
 /* Hansora app home (approved design, 2026-11-02). */
 body.ah { margin: 0; background: #07070a; color: #f5f5f7; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-body.ah #sharedHeader { display: none !important; } /* header.js still runs (login, credits); this screen has its own top bar */
 .ah svg { width: 20px; height: 20px; }
 .ah a { color: inherit; text-decoration: none; }
 .ah [hidden] { display: none !important; }
@@ -12,20 +11,20 @@ body.ah #sharedHeader { display: none !important; } /* header.js still runs (log
 .ah-avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #fff;
   background: linear-gradient(135deg, #6366f1, #ec4899) center / cover; overflow: hidden; }
 .ah-login { height: 34px; padding: 0 16px; border-radius: 17px; display: inline-flex; align-items: center; font-weight: 700; font-size: 14px; background: #fff; color: #0a0a0b !important; }
-.ah-main { padding-bottom: 20px; max-width: 680px; margin: 0 auto; }
+.ah-main { padding: 12px 0 20px; max-width: 680px; margin: 0 auto; }
 
 /* Create box */
 .ah-create { margin: 4px 16px 0; padding: 16px; border-radius: 26px; background: linear-gradient(160deg, #1a1630, #111018 60%); border: 1px solid #2a2540; box-shadow: 0 30px 60px -30px rgba(124,58,237,.6); }
 .ah-tagline { margin: 0 0 6px; font-size: 13px; font-weight: 700; background: linear-gradient(90deg, #38bdf8, #8b5cf6, #f472b6); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .ah-create textarea { width: 100%; border: 0; outline: none; resize: none; background: transparent; color: #f5f5f7; font: 400 17px/1.4 Inter, sans-serif; padding: 0; min-height: 70px; }
 .ah-create textarea::placeholder { color: #7d7d88; }
-.ah-create-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.ah-create-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
 .ah-seg { display: flex; background: #0b0b10; border-radius: 12px; padding: 3px; border: 1px solid #23232c; }
 .ah-seg button { border: 0; background: none; color: #9a9aa5; padding: 8px 11px; border-radius: 9px; font: 700 13.5px Inter, sans-serif; cursor: pointer; }
 .ah-seg button.on { background: #26233d; color: #fff; }
 .ah-attach { width: 38px; height: 38px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #0b0b10; border: 1px solid #23232c; color: #cfcfe0; }
 .ah-attach svg { width: 18px; height: 18px; }
-.ah-go { margin-left: auto; flex: none; height: 42px; padding: 0 16px; border: 0; border-radius: 14px; white-space: nowrap; color: #fff; font: 800 15px Inter, sans-serif; cursor: pointer;
+.ah-go { flex: 1 0 100%; height: 48px; padding: 0 16px; border: 0; border-radius: 14px; white-space: nowrap; color: #fff; font: 800 15px Inter, sans-serif; cursor: pointer;
   background: linear-gradient(135deg, #6366f1, #a855f7); box-shadow: 0 10px 24px -10px #8b5cf6; }
 .ah-chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px 0; scrollbar-width: none; }
 .ah-chips::-webkit-scrollbar { display: none; }
@@ -79,10 +78,22 @@ body.ah #sharedHeader { display: none !important; } /* header.js still runs (log
 @keyframes ahBubble { 0% { opacity: 0; transform: translateY(6px); } 6%, 80% { opacity: 1; transform: none; } 90%, 100% { opacity: 0; transform: none; } }
 
 /* Made with Hansora: smaller, in each video's own shape (no cropping) */
-.ah-shots { columns: 3; column-gap: 8px; padding: 0 16px; }
+.ah-shots-unused { columns: 3; column-gap: 8px; padding: 0 16px; }
 .ah-shots .shot { display: block; break-inside: avoid; margin-bottom: 8px; border-radius: 14px; overflow: hidden; background: #121218; }
 .ah-shots video { width: 100%; height: auto; display: block; }
 .ah-create textarea, .ah-go, .ah-seg button, .ah-chips button { -webkit-tap-highlight-color: transparent; }
 .ah .tool:active, .ah .model:active, .ah .news:active, .ah-auto:active, .ah .shot:active { transform: scale(.97); }
 .ah .tool, .ah .model, .ah .news, .ah-auto, .ah .shot { transition: transform .15s ease; }
 @media (prefers-reduced-motion: reduce) { .ah-phone .b, .ah-phone .call { animation: none; opacity: 1; transform: none; } }
+
+/* Made with Hansora — the website's showcase style: the model card, then labelled video tiles */
+.sc-hero { display: block; position: relative; margin: 0 16px 10px; border-radius: 24px; overflow: hidden; border: 1px solid #23232c; }
+.sc-hero img { display: block; width: 100%; height: auto; }
+.sc-hero-cta { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); padding: 11px 18px; border-radius: 14px; white-space: nowrap;
+  background: linear-gradient(135deg, #22d3ee, #3b82f6); color: #fff; font-weight: 800; font-size: 14.5px; box-shadow: 0 10px 24px -10px #3b82f6; }
+.sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
+.sc-tile { position: relative; aspect-ratio: 4 / 5; border-radius: 20px; overflow: hidden; background: #121218; border: 1px solid #1f1f27; }
+.sc-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sc-tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,.78)); pointer-events: none; }
+.sc-label { position: absolute; left: 12px; right: 10px; bottom: 10px; z-index: 1; display: flex; flex-direction: column; gap: 1px; }
+.sc-label b { font-size: 14px; font-weight: 800; } .sc-label small { font-size: 11.5px; color: #c9c9d2; }

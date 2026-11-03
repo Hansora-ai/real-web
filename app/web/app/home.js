@@ -42,7 +42,7 @@
   var io = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
     entries.forEach(function (en) { play(en.target, en.isIntersecting && en.intersectionRatio > 0.6); });
   }, { threshold: [0, 0.6] }) : null;
-  document.querySelectorAll('.ah-news video, .ah-shots video').forEach(function (v) {
+  document.querySelectorAll('.ah-news video, .sc-grid video').forEach(function (v) {
     if (io) io.observe(v); else { v.src = v.dataset.src; }
   });
   function syncDots() {
@@ -51,25 +51,4 @@
   }
   if (news && news.firstElementChild) { news.addEventListener('scroll', syncDots, { passive: true }); syncDots(); }
 
-  // ---- Credits and photo (same account and tables as the website).
-  function waitForClient(tries) {
-    if (window.__HANSORA_SB__) return Promise.resolve(window.__HANSORA_SB__);
-    if (tries <= 0) return Promise.resolve(null);
-    return new Promise(function (r) { setTimeout(r, 100); }).then(function () { return waitForClient(tries - 1); });
-  }
-  waitForClient(80).then(async function (sb) {
-    if (!sb) return;
-    var session = (await sb.auth.getSession()).data.session;
-    if (!session) return;
-    var user = session.user, meta = user.user_metadata || {};
-    $('ahLogin').hidden = true; $('ahCredits').hidden = false; $('ahAvatar').hidden = false;
-    var photo = meta.avatar_url || meta.picture || '';
-    if (/^https:\/\//.test(photo)) $('ahAvatar').style.backgroundImage = 'url("' + photo.replace(/"/g, '') + '")';
-    else $('ahAvatar').textContent = (String(meta.full_name || meta.name || user.email || 'H').trim()[0] || 'H').toUpperCase();
-    var profile = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-    if (profile.data) {
-      var n = Number((Number(profile.data.credits || 0) * 10).toFixed(2)); // shown ×10 with ⚡, like the website
-      $('ahCreditsValue').textContent = Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(2);
-    }
-  }).catch(function () {});
 })();

@@ -107,7 +107,7 @@
     // No accidental zooming, like an app.
     var viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) { viewport = document.createElement('meta'); viewport.name = 'viewport'; document.head.appendChild(viewport); }
-    viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+    viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
   });
 
   // Website links without ".html" (e.g. /policy) open the packaged page.
@@ -283,6 +283,27 @@
     });
   });
 
+  // Automation: "Home" opens the Automation home page (what it is, how it works), like the logo does.
+  if (/^\/automation/i.test(location.pathname)) {
+    var fixHome = function () {
+      var home = document.querySelector('.auto-bottom-nav a.auto-tab');
+      if (home && home.getAttribute('href') !== '/automation.html') home.setAttribute('href', '/automation.html');
+      var brand = document.querySelector('.auto-brand');
+      if (brand && brand.getAttribute('href') !== '/automation.html') brand.setAttribute('href', '/automation.html');
+    };
+    onReady(fixHome);
+    new MutationObserver(fixHome).observe(root, { childList: true, subtree: true });
+  }
+  // Setup: people who only want comment automations (or just to look around) can skip creating an AI employee.
+  if (/automation-setup/i.test(location.pathname)) onReady(function () {
+    var main = document.querySelector('main');
+    if (!main || document.querySelector('.app-skip')) return;
+    var skip = document.createElement('a');
+    skip.className = 'app-skip'; skip.href = '/automation-dashboard.html';
+    skip.innerHTML = '<span>Not now</span><b>Skip and open my account →</b>';
+    main.insertBefore(skip, main.firstChild);
+  });
+
   // Section name in the middle of the app's top bar.
   function addTitle() {
     var bar = document.querySelector('#siteHeader .shell.nav, .auto-header');
@@ -366,7 +387,7 @@
     if (links && !links.querySelector('.app-door')) {
       var a = document.createElement('a');
       a.className = 'app-door automation';
-      a.href = '/automation-dashboard.html';
+      a.href = '/automation.html';
       a.innerHTML = '<span><b>Hansora Automation</b><small>Your AI employee: chats, orders, bookings</small></span><i>→</i>';
       links.insertBefore(a, links.firstChild);
       // The footer's Terms and Privacy links, at the end of the menu (footers are hidden in the app).

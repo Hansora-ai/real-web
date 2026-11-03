@@ -10,7 +10,7 @@ const config: CapacitorConfig = {
   webDir: 'web',
   backgroundColor: '#08090c',
   appendUserAgent: 'HansoraApp',
-  ios: { contentInset: 'always', scheme: 'Hansora' },
+  ios: { contentInset: 'never', scheme: 'Hansora' },
   android: { adjustMarginsForEdgeToEdge: 'auto' },
   plugins: {
     // Server calls go through the phone's native HTTP, so hansora.co needs no changes.
