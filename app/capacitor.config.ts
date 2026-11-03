@@ -16,6 +16,8 @@ const config: CapacitorConfig = {
     // Server calls go through the phone's native HTTP, so hansora.co needs no changes.
     CapacitorHttp: { enabled: true },
     SplashScreen: { launchShowDuration: 0, backgroundColor: '#08090c' },
+    // White time and battery on Hansora's dark background.
+    StatusBar: { style: 'DARK', backgroundColor: '#08090c', overlaysWebView: false },
   },
 };
 

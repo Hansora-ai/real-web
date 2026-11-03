@@ -288,6 +288,69 @@
   onReady(addTitle);
   new MutationObserver(addTitle).observe(root, { childList: true, subtree: true });
 
+  // ---------- 8. Saving creations: the phone's share sheet (Save Image / Save Video, AirDrop, apps) ----------
+  // Inside an iPhone app the website's download buttons do nothing, so the app downloads the file itself
+  // and opens the share sheet. Only in the installed app; the website is unchanged.
+  if (native && Plugins.Filesystem && Plugins.Share) {
+    var saving = false;
+    var extFrom = function (name, type) {
+      var m = String(name || '').match(/\.([a-z0-9]{2,5})(?:$|[?#])/i);
+      if (m) return m[1].toLowerCase();
+      return /video/.test(type) ? 'mp4' : /png/.test(type) ? 'png' : /webp/.test(type) ? 'webp' : /gif/.test(type) ? 'gif' : /audio|mpeg/.test(type) ? 'mp3' : 'jpg';
+    };
+    var blobToBase64 = function (blob) { return new Promise(function (resolve, reject) { var r = new FileReader(); r.onload = function () { resolve(String(r.result).split(',')[1] || ''); }; r.onerror = reject; r.readAsDataURL(blob); }); };
+    window.HansoraSave = async function (href, filename) {
+      if (saving) return; saving = true;
+      try {
+        var name = 'hansora-' + Date.now();
+        var target;
+        if (/^(blob|data):/i.test(href)) {
+          var blob = await (await (window.CapacitorWebFetch || nativeFetch)(href)).blob();
+          name += '.' + extFrom(filename, blob.type);
+          target = await Plugins.Filesystem.writeFile({ path: name, data: await blobToBase64(blob), directory: 'CACHE' });
+        } else {
+          var url = new URL(href, location.href).href;
+          name += '.' + extFrom(filename || url, '');
+          var where = await Plugins.Filesystem.getUri({ path: name, directory: 'CACHE' });
+          if (Plugins.FileTransfer) { await Plugins.FileTransfer.downloadFile({ url: url, path: where.uri }); target = where; }
+          else { var b = await (await nativeFetch(url)).blob(); target = await Plugins.Filesystem.writeFile({ path: name, data: await blobToBase64(b), directory: 'CACHE' }); }
+        }
+        await Plugins.Share.share({ files: [target.uri] });
+      } catch (error) {
+        if (!/cancel/i.test(String(error && error.message))) alert('Could not save the file. Please try again.');
+      } finally { saving = false; }
+    };
+    var isDownload = function (a) { return a && a.hasAttribute && a.hasAttribute('download') && a.getAttribute('href'); };
+    document.addEventListener('click', function (event) {
+      var a = event.target && event.target.closest ? event.target.closest('a[download]') : null;
+      if (!isDownload(a)) return;
+      event.preventDefault(); event.stopPropagation();
+      window.HansoraSave(a.href, a.getAttribute('download'));
+    }, true);
+    // Pages that create a hidden download link and click it from code.
+    var anchorClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+      if (isDownload(this)) return window.HansoraSave(this.href, this.getAttribute('download'));
+      return anchorClick.apply(this, arguments);
+    };
+  }
+
+  // ---------- 9. No internet: a clear app message instead of broken pages ----------
+  (function () {
+    var bar = null;
+    function update() {
+      var offline = navigator.onLine === false;
+      if (offline && !bar) {
+        bar = document.createElement('div'); bar.className = 'app-offline'; bar.setAttribute('role', 'status');
+        bar.innerHTML = '<b>No internet connection</b><span>Hansora needs the internet. Check your connection.</span><button type="button">Try again</button>';
+        bar.querySelector('button').addEventListener('click', function () { location.reload(); });
+        (document.body || root).appendChild(bar);
+      } else if (!offline && bar) { bar.remove(); bar = null; }
+    }
+    window.addEventListener('offline', update); window.addEventListener('online', update);
+    onReady(update);
+  })();
+
   // ---------- 7. Doors between Creative and Automation ----------
   var isAutomation = /^\/automation/i.test(location.pathname);
   function addDoors() {

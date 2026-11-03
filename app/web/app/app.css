@@ -136,3 +136,10 @@ html.hansora-app .auto-bottom-nav .auto-tab.active svg { color: #4c8dff !importa
 
 /* The analytics notice sits above the tab bar instead of covering it. */
 @media (max-width: 768px) { html.hansora-app #hansoraAnalyticsConsent { bottom: calc(66px + env(safe-area-inset-bottom)) !important; } }
+
+/* No internet message (app only). */
+.app-offline { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 60px); z-index: 2147483001; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+  padding: 12px 14px; border-radius: 16px; background: #2a1215; border: 1px solid rgba(255,107,107,.45); color: #ffd6d6; font: 500 13px/1.35 -apple-system, Inter, sans-serif; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.app-offline b { width: 100%; color: #fff; font-size: 14px; }
+.app-offline span { flex: 1; min-width: 60%; }
+.app-offline button { border: 0; border-radius: 10px; padding: 8px 12px; background: #fff; color: #0a0a0b; font: 700 13px -apple-system, Inter, sans-serif; }
