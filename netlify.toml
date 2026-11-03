@@ -10,6 +10,9 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."business-dashboard"]
+  timeout = 60
+
 # (kept) Function-specific settings
 [functions."run-heygen-avatar"]
   timeout = 60
@@ -18,6 +21,14 @@
   timeout = 60
 
 [functions."run-henshin"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
+[functions."run-video-relight-gemini-omni"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
+[functions."run-background-change-gemini-omni"]
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
 
@@ -147,3 +158,13 @@ function = "inject-bottom-nav-inline"
   from = "/mcp-setup_arm.html"
   to = "/mcp-setup.html"
   status = 200
+
+# Financial data is fetched only through a verified owner API; never cache reports.
+[[headers]]
+  for = "/business.html"
+  [headers.values]
+    Cache-Control = "private, no-store"
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
+    X-Content-Type-Options = "nosniff"

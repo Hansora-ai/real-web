@@ -523,7 +523,7 @@ const $navAvatarImg = null;
     // Logout
     const legacyLogout = document.getElementById('btnLogout');
     if(legacyLogout) legacyLogout.addEventListener('click', async ()=>{
-      await sb.auth.signOut();
+      await sb.auth.signOut({ scope: 'local' });
       showLoggedOutUI();
     });
     

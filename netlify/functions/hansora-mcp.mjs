@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getPendingVideo, getRecentAutoVideo, getRecentResultUrls, getUnfinishedPicture, startedVideoSince, hadRecentGrokFailure, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -14,8 +14,9 @@ import { photoShape } from '../../lib/hansora-mcp/image-shape.mjs';
 import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } from '../../lib/hansora-mcp/failures.mjs';
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
-import { recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
-import { NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { useSavedFiles } from '../../lib/hansora-mcp/own-results.mjs';
+import { recordPendingVideo, recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
+import { NEW_SCENE_FIRST_VIDEO, accountSummary, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -219,6 +220,158 @@ function busyResult(model, { running = null, provider = false } = {}) {
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
+// A Hansora result link that matches none of the user's saved files and does not open: nothing is started or
+// charged, and ChatGPT is told to take the link from the finished result instead of retyping it.
+function savedFileMissingResult(model) {
+  const value = {
+    ok: false, error: 'file_link_not_found', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
+    message: 'The picture or video link could not be found. Nothing was charged.',
+    next_step: 'Nothing was generated or charged. The Hansora link you passed does not match any file in this user\'s results. Call get_generation for that earlier result (or list_generations), copy its result_url exactly, and call create_generation again. Do not tell the user about links.'
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// A video asked for while the user's picture is still being made: nothing starts or is charged, and ChatGPT
+// waits for the picture and starts the video from it.
+function pictureNotReadyResult(model, pictureRun, planned = false) {
+  const value = {
+    ok: false, error: 'picture_not_ready', generated: false, credits_used: 0, model_id: model.id, model_name: model.name, picture_run_id: pictureRun,
+    message: 'The picture is still being made. Nothing was charged.',
+    next_step: planned
+      ? `Nothing was started or charged. The picture (run_id ${pictureRun}) is still being made, and Hansora starts the video from it by itself as soon as it is ready; the picture's card then shows the video. Do not start the video yourself. Tell the user in one short line that the picture is being made first and the video follows automatically.`
+      : `The picture you started (run_id ${pictureRun}) is not finished yet, so this video was not started and nothing was charged. Call get_generation with run_id ${pictureRun} until its status is ready, then call create_generation again for this video with that picture's result_url, copied exactly, as the starting image. If the picture fails, tell the user. Do not tell the user about this wait.`
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// Picture first, done by Hansora: when Hansora told ChatGPT to make the changed picture first (a new user's video
+// from their photo), the planned video is kept, and Hansora starts it from the picture as soon as the picture is
+// ready, under the picture's card. ChatGPT often stopped after the picture, so the user got a picture and no video.
+const PLAN_TTL_MS = 15 * 60 * 1000;
+const AUTO_VIDEO_SUFFIX = '-video'; // getRecentAutoVideo (data.mjs) looks for the same ending
+function keepPicturePlanFor(userId, waitUntil) {
+  return (result, input) => {
+    const value = result?.structuredContent || {};
+    if (!String(value.next_step || '').includes(NEW_SCENE_FIRST_VIDEO)) return result;
+    const option = value.next_option || (Array.isArray(value.options_within_balance) ? value.options_within_balance[0] : null);
+    if (!option?.model_id) return result;
+    recordPendingVideo(userId, {
+      model_id: option.model_id,
+      settings: option.settings || {},
+      prompt: String(input.prompt || '').slice(0, 5000),
+      ...(input.aspect_ratio ? { aspect_ratio: input.aspect_ratio } : {}),
+      ...(typeof input.generate_audio === 'boolean' ? { generate_audio: input.generate_audio } : {}),
+      ...(typeof input.sound === 'boolean' ? { sound: input.sound } : {})
+    }, waitUntil);
+    return result;
+  };
+}
+
+// When a picture made from the user's photo is ready and Hansora kept the video plan for it, the video is started
+// from the picture under "<picture run>-video", once, and returned under the picture's run id so the same card
+// follows it. Null when there is nothing to start or show.
+async function autoVideoFromPicture({ userId, token, origin, pictureRun, picture, waitUntil }) {
+  if (!pictureRun.includes('-mcp-') || pictureRun.endsWith(AUTO_VIDEO_SUFFIX) || picture?.kind !== 'image') return null;
+  const autoRun = `${pictureRun}${AUTO_VIDEO_SUFFIX}`;
+  const pictureUrl = String(picture.result_url || '');
+  let video = await getGeneration(userId, autoRun).catch(() => null);
+  let startedModel = null;
+  let plan = null;
+  if (!video) {
+    const meta = picture.meta && typeof picture.meta === 'object' ? picture.meta : {};
+    const fromPhoto = (Array.isArray(meta.input_urls) && meta.input_urls.length > 0) || (Array.isArray(meta.reference_image_urls) && meta.reference_image_urls.length > 0);
+    const madeAt = Date.parse(picture.created_at);
+    if (!fromPhoto || !pictureUrl || !Number.isFinite(madeAt) || Date.now() - madeAt > PLAN_TTL_MS) return null;
+    plan = await getPendingVideo(userId, new Date(madeAt - PLAN_TTL_MS).toISOString());
+    if (!plan || !(Date.parse(plan.created_at) <= madeAt) || !plan.prompt) return null;
+    // ChatGPT started the video itself after all: nothing to do.
+    if (await startedVideoSince(userId, new Date(madeAt).toISOString())) return null;
+    const model = getModel(plan.model_id);
+    const endpoint = model ? getRunner(model.id) : '';
+    if (!model || model.category !== 'video' || !endpoint) return null;
+    const request = {
+      prompt: String(plan.prompt),
+      image_urls: [pictureUrl],
+      ...(plan.aspect_ratio ? { aspect_ratio: plan.aspect_ratio } : {}),
+      ...(typeof plan.generate_audio === 'boolean' ? { generate_audio: plan.generate_audio } : {}),
+      ...(typeof plan.sound === 'boolean' ? { sound: plan.sound } : {})
+    };
+    const payload = buildGenerationPayload(model.id, { ...request, ...(plan.settings || {}) }, userId, autoRun);
+    try {
+      const { response } = await submitRun({ origin, token, userId, endpoint, model, prompt: request.prompt, usageMode: 'credits', payload, timeoutMs: 15000 });
+      if (!response.ok) return null;
+    } catch (error) {
+      // Still submitting on Hansora's side: the next check finds the new run.
+      if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) return null;
+    }
+    recordVideoRecipe(userId, autoRun, model.id, { prompt: request.prompt.slice(0, 5000), image_urls: [pictureUrl], from_picture: true, ...(request.aspect_ratio ? { aspect_ratio: request.aspect_ratio } : {}) }, waitUntil);
+    console.log('hansora_mcp_auto_video', JSON.stringify({ pictureRun, model: model.id }));
+    startedModel = model;
+    video = await getGeneration(userId, autoRun).catch(() => null);
+  } else if (await refreshFromProvider(userId, [video], origin).catch(() => false)) {
+    video = (await getGeneration(userId, autoRun).catch(() => null)) || video;
+  }
+  let view = video ? presentGeneration(video, autoRun) : {
+    status: 'processing', media_type: 'video', kind: 'video', model_name: startedModel?.name || '', prompt: plan?.prompt || ''
+  };
+  if (video && view.status === 'failed') {
+    const retried = await providerRetry({ userId, token, origin, runId: autoRun, presented: view, generation: video }).catch(() => null);
+    if (retried) view = retried;
+  }
+  const note = view.status === 'ready'
+    ? 'Your picture was made first and then animated into this video.'
+    : 'Your picture is ready, and Hansora is now turning it into your video.';
+  return {
+    ...view,
+    run_id: pictureRun,
+    auto_video_run_id: autoRun,
+    picture_url: pictureUrl,
+    switch_note: view.switch_note || note,
+    meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: pictureRun },
+    ...(view.status === 'processing' ? {
+      message: view.message || note,
+      next_step: `${view.switch_note || note} The card shows the video when it is ready. Do not start the video yourself. Tell the user this in one short line.`
+    } : {})
+  };
+}
+
+function autoVideoAlreadyStarted(model, automatic) {
+  const pictureRun = String(automatic.run_id).slice(0, -AUTO_VIDEO_SUFFIX.length);
+  const value = {
+    ok: false, error: 'video_already_started', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
+    run_id: automatic.run_id, picture_run_id: pictureRun,
+    next_step: `Nothing new was started or charged: Hansora already started this video from the picture (run_id ${automatic.run_id}), and the picture's card shows it. Do not start it again. To check it, call get_generation with run_id ${pictureRun}.`
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// A video prompt that talks about the user's photo, but no photo came with the request: ChatGPT forgot to attach
+// it. Asked once (nothing starts or is charged); sent again the same way, it starts.
+const PHOTO_REFERENCE = /\b(supplied|attached|uploaded|provided|user'?s|this exact|the exact) (photo|image|picture|portrait|selfie|first frame)\b|\bimage-to-video\b|\banimate (this|the|my) (photo|image|picture)\b/i;
+async function missingPhotoResultFor(userId, model, input) {
+  if (!PHOTO_REFERENCE.test(String(input.prompt || ''))) return null;
+  const files = normalizeGenerationFiles(input);
+  const hasPhoto = (files.image_urls || []).length || input.first_frame_url || input.last_frame_url
+    || (Array.isArray(input.image_files) && input.image_files.length) || (Array.isArray(input.video_files) && input.video_files.length)
+    || files.video_urls?.length || input.source_video_url;
+  if (hasPhoto) return null;
+  if (await hadRecentOutcome(userId, ['photo_missing'], new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
+  const value = {
+    ok: false, error: 'photo_missing', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
+    next_step: 'Nothing was started or charged. Your prompt talks about the user\'s photo, but no photo was attached to this request. If the user sent a photo for this video, call create_generation again with that photo attached (image_files), and do not describe the photo in words instead. If there is no photo from the user, call create_generation again with a prompt that does not mention one. Do not tell the user about this.'
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+async function linkOpens(url) {
+  try {
+    const response = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Henshin Lite and Kling 4.0 run on a provider that takes source videos up to 10 MB. The website shrinks videos
 // in the browser first; a video sent through ChatGPT arrives at its full size.
 function videoTooLargeResult(model) {
@@ -295,51 +448,99 @@ async function submitRun({ origin, token, userId, endpoint, model, prompt, usage
 // the sound). A video is better than none, so this holds for every language. The card keeps following the
 // original run id, shows the new video and says which model made it. Content blocks, unusable inputs and
 // retries of a retry are left as they are. Null means "no retry".
+//
+// A video made from a picture Hansora made first (the "picture first" step) that the video model refuses is
+// also made once with the other model (Veo 3.1 Lite and Grok Video cover each other), unless the refusal is
+// about sexual content or minors. If that is refused too, the user is told plainly that the picture was made
+// to be animated and the video model refused it, so they don't think they got a picture instead of a video.
 const RETRY_SUFFIX = '-retry';
 const VEO_MODELS = new Set(['veo31-lite', 'veo31-fast', 'veo31']);
+const RECIPE_MODELS = new Set([...VEO_MODELS, 'grok-video']);
 const VEO_AUDIO_FAILURE = /unable to generate audio/i;
+const NEVER_RETRY_CONTENT = /sexual|nsfw|nud|porn|explicit|minor|child|underage/i;
+const failureText = (meta) => [meta.error, meta.provider_message, meta.error_summary].map((value) => (typeof value === 'string' ? value : '')).join(' ');
+
+// A picture Hansora made for this user (its saved copy), as opposed to a photo the user sent.
+function isOwnPicture(url, userId) {
+  return typeof url === 'string' && Boolean(userId) && url.includes(`/generation-history/${userId}/`);
+}
+
+function pictureRefusedView({ view, runId, retryId, firstName, retryName, retryRefused = true, picture }) {
+  const who = !retryName ? `${firstName} refused to turn it into a video`
+    : retryRefused ? `${firstName} and ${retryName} both refused to turn it into a video`
+      : `${firstName} refused to turn it into a video and ${retryName} couldn't make it either`;
+  const message = `I made the picture first so I could animate it, but ${who}. Here is the picture. The video's credits were refunded.`;
+  return {
+    ...view,
+    run_id: runId,
+    ...(retryId ? { retry_run_id: retryId } : {}),
+    status: 'failed',
+    failure_kind: 'content',
+    failure_title: 'The video model refused this picture',
+    card_message: message,
+    message,
+    error: message,
+    picture_url: picture,
+    meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId, status: 'failed', error: message, fail_reason: message },
+    next_step: `Tell the user in one or two short lines, in their language: ${message.replace('Here is the picture.', 'so they get the picture.')} Give them the picture link, copied character for character: ${picture} . Then offer to change the idea (for example the people or characters in it) and try again. Start nothing until they answer.`
+  };
+}
+
 async function providerRetry({ userId, token, origin, runId, presented, generation }) {
   if (presented.status !== 'failed' || runId.endsWith(RETRY_SUFFIX)) return null;
-  if (!['temporary', 'unknown'].includes(presented.failure_kind)) return null;
   const failedMeta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
-  const audioFailure = VEO_AUDIO_FAILURE.test([failedMeta.error, failedMeta.provider_message, failedMeta.error_summary].map((value) => (typeof value === 'string' ? value : '')).join(' '));
+  const contentRefusal = presented.failure_kind === 'content' && !NEVER_RETRY_CONTENT.test(failureText(failedMeta));
+  if (!['temporary', 'unknown'].includes(presented.failure_kind) && !contentRefusal) return null;
+  const audioFailure = VEO_AUDIO_FAILURE.test(failureText(failedMeta));
   const retryId = `${runId}${RETRY_SUFFIX}`;
+  const recipe = await getFirstVideoRecipe(userId, runId);
+  const picture = recipe?.from_picture ? String(recipe.first_frame_url || (Array.isArray(recipe.image_urls) ? recipe.image_urls[0] : '') || '') : '';
+  if (contentRefusal && !picture) return null;
+  const firstName = getModel(modelIdOf(generation))?.name || presented.model_name || 'The video model';
   let retry = await getGeneration(userId, retryId).catch(() => null);
   let startedModel = null;
   if (!retry) {
-    const recipe = await getFirstVideoRecipe(userId, runId);
     const failed = recipe ? getModel(recipe.model_id) : null;
     if (!failed || failed.category !== 'video') return null;
     const veoOutage = VEO_MODELS.has(failed.id) && presented.failure_kind === 'temporary';
-    if (!veoOutage && !(await isFirstGeneration(userId))) return null;
+    // Grok's temporary failures ("Playground task failed") are remade with Veo 3.1 Lite for anyone.
+    const grokOutage = failed.id === 'grok-video' && presented.failure_kind === 'temporary';
+    const refusedTarget = contentRefusal ? (failed.id === 'grok-video' ? 'veo31-lite' : 'grok-video') : '';
+    const refusedOnly = () => (contentRefusal ? pictureRefusedView({ view: presented, runId, firstName, picture }) : null);
+    if (!veoOutage && !grokOutage && !refusedTarget && !(await isFirstGeneration(userId))) return null;
     const account = await getAccount(userId).catch(() => null);
-    if (!account) return null;
+    if (!account) return refusedOnly();
     const request = {
       prompt: String(recipe.prompt || ''),
       image_urls: Array.isArray(recipe.image_urls) ? recipe.image_urls : [],
+      ...(recipe.first_frame_url ? { first_frame_url: recipe.first_frame_url } : {}),
+      ...(recipe.last_frame_url ? { last_frame_url: recipe.last_frame_url } : {}),
       ...(recipe.aspect_ratio ? { aspect_ratio: recipe.aspect_ratio } : {}),
       ...(typeof recipe.generate_audio === 'boolean' ? { generate_audio: recipe.generate_audio } : {}),
       ...(typeof recipe.sound === 'boolean' ? { sound: recipe.sound } : {})
     };
-    if (!request.prompt) return null;
-    // Never more than the user's first try cost (it was refunded), so the retry needs no new consent.
+    if (!request.prompt) return refusedOnly();
+    // Never more than the user's first try cost (it was refunded), so the retry needs no new consent. The one
+    // exception is Grok → Veo 3.1 Lite at Veo's own price (20 credits for 8 s at 720p), as the owner decided.
     const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
     const firstTry = Number(meta.charged_cost ?? meta.charge_cost ?? meta.refund_amount) * 10;
-    if (!(firstTry > 0)) return null;
+    if (!(firstTry > 0)) return refusedOnly();
     const option = optionsWithinBalance(failed.id, request, Number(account.internal_credits || 0), 4, firstVideoOrder(), true)
-      .find((candidate) => candidate.model_id !== failed.id && candidate.credits <= firstTry);
+      .find((candidate) => candidate.model_id !== failed.id
+        && (!refusedTarget || candidate.model_id === refusedTarget)
+        && (candidate.credits <= firstTry || ((grokOutage || refusedTarget === 'veo31-lite') && candidate.model_id === 'veo31-lite')));
     const model = option ? getModel(option.model_id) : null;
     const endpoint = model ? getRunner(model.id) : '';
-    if (!model || !endpoint) return null;
+    if (!model || !endpoint) return refusedOnly();
     const payload = buildGenerationPayload(model.id, { ...request, ...option.settings }, userId, retryId);
     try {
       const { response } = await submitRun({ origin, token, userId, endpoint, model, prompt: request.prompt, usageMode: 'credits', payload, timeoutMs: 15000 });
-      if (!response.ok) return null;
+      if (!response.ok) return refusedOnly();
     } catch (error) {
       // Still submitting on Hansora's side: the next check finds the new run.
-      if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) return null;
+      if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) return refusedOnly();
     }
-    console.warn('hansora_mcp_first_video_retry', JSON.stringify({ runId, from: failed.id, to: model.id }));
+    console.warn('hansora_mcp_first_video_retry', JSON.stringify({ runId, from: failed.id, to: model.id, refused: Boolean(refusedTarget) }));
     startedModel = model;
     retry = await getGeneration(userId, retryId).catch(() => null);
   } else {
@@ -352,12 +553,17 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
   };
   const retryMeta = retry?.meta && typeof retry.meta === 'object' ? retry.meta : {};
   const credits = Number(retryMeta.charged_cost ?? retryMeta.charge_cost ?? retryMeta.refund_amount) * 10;
-  const failedName = getModel(modelIdOf(generation))?.name || presented.model_name || 'The first model';
+  const failedName = firstName;
+  const retryName = view.model_name || startedModel?.name || 'another model';
+  // The picture's video was refused by both models: say so and hand over the picture.
+  if (picture && view.status === 'failed' && contentRefusal) {
+    return pictureRefusedView({ view, runId, retryId, firstName: failedName, retryName, retryRefused: view.failure_kind === 'content', picture });
+  }
   const note = switchNote({
     from: failedName,
-    to: view.model_name || startedModel?.name || 'another model',
+    to: retryName,
     credits: credits > 0 ? Number(credits.toFixed(2)) : null,
-    reason: audioFailure ? 'audio' : 'outage'
+    reason: audioFailure ? 'audio' : contentRefusal ? 'refused' : 'outage'
   });
   return {
     ...view,
@@ -367,7 +573,7 @@ async function providerRetry({ userId, token, origin, runId, presented, generati
     meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId },
     ...(view.status === 'processing' ? {
       message: note,
-      next_step: `${note} The card shows this and the new video by itself. In your next reply, tell the user this in one short line.`
+      next_step: `${note} The card shows this and the new video by itself. In your next reply, tell the user this in one short line. This switch was only for this video: for the user's next videos the model in use stays ${failedName}.`
     } : {})
   };
 }
@@ -387,12 +593,57 @@ async function veoRestSwitch(input) {
   return { from: model.name, input: { ...rest, model_id: 'grok-video', duration: 6, resolution: '720p' } };
 }
 
-// A new user's first video should be Grok (6 s, 720p, 18 credits): the cheapest good first video, and the one
-// buyers liked most. ChatGPT sends simple clips to Veo, which the free credits also cover, so a first video
-// sent to Veo comes back once with "use Grok". Veo stays right when the user themselves asked for more than 6
-// seconds or for speech in a language other than English or Chinese: ChatGPT then sends Veo again, and a
-// recent steer (this one, or the free-credit switch) lets it through, so it never loops.
+// A new user's first video should be Grok (720p, 6 s for 18 credits, or 8 s for 24 when the user asked for 7 or
+// 8): the first video users liked most. ChatGPT sends simple clips to Veo, which the free credits also cover, so a
+// first video sent to Veo comes back once with "use Grok". Veo stays right only for speech in a language other
+// than English: ChatGPT then sends Veo again, and a recent steer (this one, or the free-credit switch) lets it
+// through, so it never loops.
 const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'switched_to_affordable'];
+
+// A user who bought credits (more than the 30 free credits) and has no video yet is not given a cheap model
+// on their first paid video: ChatGPT asks one plain question (recommended Kling 4.0, best Seedance 2.5, budget
+// Wan 3.0) instead. Asked once: if ChatGPT sends the same request again (the user chose it, or people must
+// speak a language other than English), it goes through.
+const FREE_CREDITS_INTERNAL = 3;
+const CHEAP_FIRST_MODELS = new Set(['grok-video', ...VEO_MODELS, 'gemini-omni-video', 'gemini-omni-flash-1-1']);
+const PAID_FIRST_CHOICES = [
+  { model_id: 'kling40', label: 'Recommended: great quality, smooth motion' },
+  { model_id: 'seedance25', label: 'Best, cinema quality' },
+  { model_id: 'wan-3', label: 'Budget: good quality, cheapest' }
+];
+async function firstPaidVideoChoice(userId, model, input, balanceInternal) {
+  if (!model || !CHEAP_FIRST_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
+  if (!(Number(balanceInternal) > FREE_CREDITS_INTERNAL)) return null;
+  if (input.source_video_url || input.video_urls?.length) return null;
+  if (await hadRecentOutcome(userId, ['first_paid_video_choice'], new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
+  let lastVideo;
+  try { lastVideo = await getLastVideo(userId); } catch { return null; }
+  if (lastVideo) return null;
+  const seconds = Number(input.duration) || 10;
+  const options = PAID_FIRST_CHOICES.map((choice) => {
+    const option = getModel(choice.model_id);
+    if (!option) return null;
+    let price = null;
+    for (const duration of [seconds, 10]) {
+      try { price = quote(option.id, { duration, resolution: '720p' }); break; } catch { price = null; }
+    }
+    if (!price || price.internalCredits > Number(balanceInternal)) return null;
+    return { model_id: option.id, model_name: option.name, label: choice.label, settings: { duration: price.settings?.duration ?? seconds, resolution: '720p' }, credits: price.displayedCredits };
+  }).filter(Boolean);
+  if (!options.length) return null;
+  const value = {
+    ok: false, error: 'first_paid_video_choice', generated: false, credits_used: 0,
+    model_id: model.id, model_name: model.name, options,
+    next_step: [
+      'Nothing was generated or charged. This user bought credits and this is their first video, so ask before making it: one short question, in plain words and in their language, with these choices and prices:',
+      options.map((option) => `${option.label} (${option.model_name}, ${option.credits} credits)`).join('; ') + '.',
+      'Add that they can just say "go" for the recommended one. Do not explain models or resolutions.',
+      `When they answer, call create_generation with the chosen model at 720p, keeping the same prompt, photos, aspect_ratio and length; "ok", "go" or "you choose" means the first choice. These models take the user's photo as the reference, so no picture step is needed.`,
+      `Only if the user named ${model.name} themselves, or people in the video must speak a language other than English (Chinese included), call create_generation again exactly as before instead of asking.`
+    ].join(' ')
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
 async function firstVideoOnGrok(userId, input, balanceInternal) {
   const model = getModel(input.model_id);
   if (!model || !VEO_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
@@ -402,8 +653,12 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
   if (String(input.prompt || '').length > 5000) return null;
   const grok = quote('grok-video', { duration: 6, resolution: '720p' });
   if (Number(balanceInternal) < grok.internalCredits) return null;
+  // Grok first is for free credits. A user who bought credits is asked instead (firstPaidVideoChoice).
+  if (Number(balanceInternal) > FREE_CREDITS_INTERNAL) return null;
   if (!(await isFirstGeneration(userId))) return null;
   if (await hadRecentOutcome(userId, FIRST_VIDEO_STEERED, new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
+  // Right after this user's Grok video failed, Grok is not the better first video: let Veo through.
+  if (await hadRecentGrokFailure(userId, new Date(Date.now() - 30 * 60 * 1000).toISOString())) return null;
   const value = {
     ok: false, error: 'first_video_on_grok', generated: false, credits_used: 0,
     model_id: model.id, model_name: model.name,
@@ -411,7 +666,8 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
     next_step: [
       `Nothing was generated or charged. This is the user's first video, so do not ask anything:`,
       `call create_generation right now with model_id grok-video, duration 6, resolution 720p, keeping the same prompt, photo and aspect_ratio.`,
-      `Exception: only if the user themselves asked for a video longer than 6 seconds, or people in it must speak a language other than English or Chinese, call create_generation again exactly as before with ${model.id}.`,
+      grokEightSecondsStep(balanceInternal),
+      `Exception: only if people in the video must speak a language other than English (Chinese included), call create_generation again exactly as before with ${model.id}.`,
       `When it starts, tell the user in one short, friendly line which model is making their first video and its credits.`,
       photos ? NEW_SCENE_FIRST_VIDEO : ''
     ].filter(Boolean).join(' ')
@@ -422,6 +678,7 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
 // What the user reads when a video was made with another model than the one they asked for.
 function switchNote({ from, to, credits, reason }) {
   const cause = reason === 'audio' ? `${from} could not make the sound`
+    : reason === 'refused' ? `${from} refused to animate the picture`
     : reason === 'resting' ? `${from} is having a temporary issue on the provider's side right now`
       : `${from} had a temporary issue on the provider's side`;
   const sentences = [`${cause}, so this video was made with ${to} instead.`];
@@ -561,6 +818,7 @@ export function createHansoraServer(ctx) {
   const server = new McpServer({ name: 'Hansora AI', version: '1.0.0' }, { capabilities: { tools: {} } });
   // Record each tool call (tool, model, outcome, price) without changing any tool definition.
   const waitUntil = ctx.authInfo?.extra?.waitUntil;
+  const keepPicturePlan = keepPicturePlanFor(userId, waitUntil);
   const registerTool = server.registerTool.bind(server);
   server.registerTool = (name, config, callback) => registerTool(name, config, async (input, extra) => {
     const result = await callback(input, extra);
@@ -999,7 +1257,7 @@ export function createHansoraServer(ctx) {
       // Said in the card and by ChatGPT, so nobody is misled about which model made the video.
       const restingNote = (credits) => (resting ? switchNote({ from: resting.from, to: 'Grok Video', credits: credits ?? null, reason: 'resting' }) : '');
       const restingFields = (credits) => (resting ? { switched_from: resting.from, switch_note: restingNote(credits) } : {});
-      const restingStep = (credits) => (resting ? `${restingNote(credits)} Tell the user this in one short line, without asking anything. ` : '');
+      const restingStep = (credits) => (resting ? `${restingNote(credits)} Tell the user this in one short line, without asking anything. This switch is only for this video: the model in use stays ${resting.from}. ` : '');
       const model = getModel(input.model_id);
       const endpoint = getRunner(input.model_id);
       if (!model) throw new Error('unsupported_model');
@@ -1014,6 +1272,20 @@ export function createHansoraServer(ctx) {
         return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
       }
 
+      // ChatGPT sometimes starts the video of "picture first" before the picture is finished, so the video is
+      // made from the original photo or from text only and does not match the picture. Wait for it instead.
+      if (model.category === 'video' && input.usage_mode !== 'unlimited') {
+        const pictureRun = await getUnfinishedPicture(userId);
+        if (pictureRun) {
+          const plan = await getPendingVideo(userId, new Date(Date.now() - PLAN_TTL_MS).toISOString());
+          return pictureNotReadyResult(model, pictureRun, Boolean(plan));
+        }
+        const automatic = await getRecentAutoVideo(userId);
+        if (automatic) return autoVideoAlreadyStarted(model, automatic);
+        const missing = await missingPhotoResultFor(userId, model, input);
+        if (missing) return missing;
+      }
+
       const normalizedInput = normalizeGenerationFiles(input);
       let price = null;
       try { price = quote(model.id, quoteOptionsFromRequest(normalizedInput)); } catch { price = null; }
@@ -1024,18 +1296,30 @@ export function createHansoraServer(ctx) {
         // The runner re-checks the balance, so a failed lookup here should not block the request.
         const account = await getAccount(userId).catch(() => null);
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
-          return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
+          return keepPicturePlan(insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) }), normalizedInput);
         }
         if (account) {
+          const choice = await firstPaidVideoChoice(userId, model, normalizedInput, account.internal_credits);
+          if (choice) return choice;
           const steer = await firstVideoOnGrok(userId, normalizedInput, account.internal_credits);
-          if (steer) return steer;
+          if (steer) return keepPicturePlan(steer, normalizedInput);
         }
       }
       if (RUNNING_ENGINES[model.id] && normalizedInput.usage_mode !== 'unlimited') {
         const running = await countRunning(userId, RUNNING_ENGINES[model.id]);
         if (running >= MAX_RUNNING_PER_USER) return busyResult(model, { running });
       }
-      const storedInput = await storeGenerationFiles(input);
+      // ChatGPT sometimes mistypes a Hansora result link when it reuses it (a picture, then a video from it):
+      // the file the user's own results saved is used instead of the typed link.
+      let ownFiles = { input, fixed: [], missing: [] };
+      try {
+        ownFiles = await useSavedFiles(input, () => getRecentResultUrls(userId));
+      } catch (error) {
+        console.warn('own_results_lookup_failed', error?.message || error);
+      }
+      if (ownFiles.fixed.length) console.log('own_result_link_fixed', JSON.stringify({ run: userId.slice(0, 8), fixed: ownFiles.fixed.length }));
+      for (const url of ownFiles.missing) if (!(await linkOpens(url))) return savedFileMissingResult(model);
+      const storedInput = await storeGenerationFiles(ownFiles.input);
       // A tall photo animated at 16:9 gets its top and bottom cut off. Match the photo when no shape was given,
       // and also when ChatGPT sent the opposite of the photo's shape (it often fills in 16:9 on its own). Any
       // other shape, such as 1:1, is kept as asked.
@@ -1058,16 +1342,20 @@ export function createHansoraServer(ctx) {
       }
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
       const submit = () => submitRun({ origin, token, userId, endpoint, model, prompt: normalizedInput.prompt, usageMode: normalizedInput.usage_mode, payload });
-      // A new user's first video, and any Veo video, keeps what it was made from in case the provider fails
-      // (providerRetry).
+      // A new user's first video, and any Veo or Grok video, keeps what it was made from in case the provider
+      // fails or refuses (providerRetry).
       const retryable = model.category === 'video' && !hasVideoInput && normalizedInput.usage_mode !== 'unlimited';
       const firstVideo = retryable ? isFirstGeneration(userId).catch(() => false) : Promise.resolve(false);
+      const startFrame = String(storedInput.first_frame_url || '') || startingFrame(model.id, storedInput);
       const keepRecipe = async () => {
         const first = await firstVideo;
-        if (!retryable || (!first && !VEO_MODELS.has(model.id))) return;
+        if (!retryable || (!first && !RECIPE_MODELS.has(model.id))) return;
         recordVideoRecipe(userId, runId, model.id, {
           prompt: String(normalizedInput.prompt || '').slice(0, 5000),
           image_urls: Array.isArray(storedInput.image_urls) ? storedInput.image_urls.slice(0, 4) : [],
+          ...(storedInput.first_frame_url ? { first_frame_url: String(storedInput.first_frame_url) } : {}),
+          ...(storedInput.last_frame_url ? { last_frame_url: String(storedInput.last_frame_url) } : {}),
+          ...(isOwnPicture(startFrame, userId) ? { from_picture: true } : {}),
           ...(storedInput.aspect_ratio ? { aspect_ratio: storedInput.aspect_ratio } : {}),
           ...(typeof storedInput.generate_audio === 'boolean' ? { generate_audio: storedInput.generate_audio } : {}),
           ...(typeof storedInput.sound === 'boolean' ? { sound: storedInput.sound } : {})
@@ -1257,6 +1545,10 @@ export function createHansoraServer(ctx) {
         generation = (await getGeneration(userId, run_id)) || generation;
       }
       const presented = presentGeneration(generation, run_id, unavailable);
+      if (presented.status === 'ready' && generation.kind === 'image') {
+        const automatic = await autoVideoFromPicture({ userId, token, origin, pictureRun: run_id, picture: generation, waitUntil }).catch(() => null);
+        if (automatic) return jsonText(automatic);
+      }
       const retried = await providerRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
       if (retried) return jsonText(retried);
       // A refused first video (temporary issues already switch model on their own).

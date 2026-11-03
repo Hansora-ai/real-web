@@ -3528,6 +3528,26 @@
     clearAuthMessage();
   }
 
+  // Someone connecting Hansora to ChatGPT (or Claude) who is not signed in yet: the login window says why, covers
+  // the home page completely and has no close button, so they do not end up on the website instead of connecting.
+  function showMcpConnectMode() {
+    if (!getPendingMcpAuthReturn()) return;
+    document.documentElement.classList.add('hansora-mcp-connect');
+    if (authMode === 'chooser') {
+      const title = el('authTitle');
+      if (title) title.textContent = 'Sign in to connect Hansora';
+    }
+    const card = el('authCard');
+    if (card && !el('authMcpNote')) {
+      const note = document.createElement('p');
+      note.id = 'authMcpNote';
+      note.className = 'hansora-auth-mcp-note';
+      note.textContent = 'Free credits included for new accounts. After signing in you go straight back to connect Hansora to your AI assistant.';
+      const head = card.querySelector('.hansora-auth-head');
+      if (head) head.insertAdjacentElement('afterend', note);
+    }
+  }
+
   function openPasswordRecovery() {
     window.__HANSORA_PASSWORD_RECOVERY_RETURN__ = true;
     pendingVerificationEmail = '';
@@ -3562,6 +3582,7 @@
       modal.classList.add('is-open');
       modal.setAttribute('aria-hidden', 'false');
     }
+    showMcpConnectMode();
     setTimeout(function () {
       const focusTarget = authMode === 'signup' || authMode === 'email-login'
         ? el('authEmail')
@@ -4792,7 +4813,7 @@
 
     if (btnLogout) {
       btnLogout.addEventListener('click', async function () {
-        if (sb) await sb.auth.signOut();
+        if (sb) await sb.auth.signOut({ scope: 'local' });
         window.location.replace(localizedHref('/index.html'));
       });
     }

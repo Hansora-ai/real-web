@@ -4,6 +4,7 @@
 
 import { createHash, createHmac } from "node:crypto";
 import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
+import { notifySale } from "../../lib/business/sale-alert.mjs";
 
 // Label credits → expected ruble amount and the credits actually granted. 150 and 265 are the Hansora
 // Automation Starter and Growth packs. The Creative packs give 90 / 200 / 510 / 1050 since 2026-10-25; labels
@@ -179,6 +180,7 @@ export async function handler(event) {
         return json(500, { error: "profiles update failed", detail });
       }
       credited = true;
+      await notifySale({ uid, transactionId: transaction_id, provider: "yoomoney", amountCents: amount_cents, currency, credits }, { supabaseUrl: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_ROLE_KEY });
     }
 
     const purchaseAttribution = await attributePurchaseToChat({

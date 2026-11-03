@@ -47,7 +47,7 @@
     if (!user) return null;
     client.auth.getUser().then(result => {
       if (result.error && [401, 403].includes(Number(result.error.status))) {
-        client.auth.signOut().catch(() => {}).finally(() => window.location.replace('/automation.html?login=1&returnTo=' + encodeURIComponent(safeReturnPath(window.location.pathname + window.location.search))));
+        client.auth.signOut({ scope: 'local' }).catch(() => {}).finally(() => window.location.replace('/automation.html?login=1&returnTo=' + encodeURIComponent(safeReturnPath(window.location.pathname + window.location.search))));
       }
     }).catch(() => {});
     return user;

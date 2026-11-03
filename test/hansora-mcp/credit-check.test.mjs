@@ -153,7 +153,8 @@ test('a new user\'s 10-second request still starts on Grok; ChatGPT uses Veo 3.1
   assert.deepEqual(value.options_within_balance[1].settings, { duration: 8, resolution: '720p' });
   assert.equal(value.options_within_balance[1].credits, 20);
   assert.match(value.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
-  assert.match(value.next_step, /use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if the user themselves asked for a video longer than 6 seconds/);
+  assert.match(value.next_step, /If the user themselves asked for 7 or 8 seconds, use duration 8 instead \(24 credits\)/);
+  assert.match(value.next_step, /use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if people in the video must speak a language other than English \(Chinese included\)/);
 });
 
 test('if the first video is refused by its model, the next model in line is started without a question', async () => {
@@ -223,11 +224,13 @@ test('a new user\'s first video starts on Grok; Veo 3.1 Lite 720p only when the 
   const short = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 }, firstGeneration: true }).structuredContent;
   assert.deepEqual(short.options_within_balance[0], { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18, same_model: false });
   assert.match(short.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
-  assert.match(short.next_step, /Exception: use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if the user themselves asked for a video longer than 6 seconds, or if people in the video must speak a language other than English or Chinese\. A length you picked yourself does not count\. In that case name Veo 3\.1 Lite and its credits in your line\./);
+  assert.match(short.next_step, /Exception: use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if people in the video must speak a language other than English \(Chinese included\)\. A language you picked yourself does not count\. In that case name Veo 3\.1 Lite and its credits in your line\./);
+  assert.match(short.next_step, /If the user themselves asked for 7 or 8 seconds, use duration 8 instead \(24 credits\); a length you picked yourself does not count\./);
+  assert.doesNotMatch(short.next_step, /longer than 6 seconds/);
   const long = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 10 }, firstGeneration: true }).structuredContent;
   assert.equal(long.options_within_balance[0].model_id, 'grok-video');
   assert.match(long.next_step, /Call create_generation right now with model_id grok-video and duration 6, resolution 720p/);
-  assert.match(long.next_step, /only if the user themselves asked for a video longer than 6 seconds/);
+  assert.match(long.next_step, /use model_id veo31-lite with duration 8, resolution 720p \(20 credits\) instead only if people in the video must speak a language other than English \(Chinese included\)/);
   // A returning user's choices are not reordered for the first video.
   const returning = insufficientCreditsResult({ model: seedance, price: { displayedCredits: 380 }, balanceInternal: 3, input: { duration: 5 } }).structuredContent;
   assert.equal(returning.options_within_balance[0].model_id, 'veo31-lite');
@@ -326,7 +329,7 @@ test('a provider refusal reaches ChatGPT with its reason, both at submit and on 
   const row = { id: 'r', provider: 'Kling-5s', kind: 'video', prompt: 'x', result_url: null, created_at: new Date().toISOString(),
     meta: { run_id: 'u-mcp-7', status: 'failed', error_summary: 'provider_rejected', provider_message: 'Image not allowed' } };
   const status = await callTool('get_generation', { run_id: 'u-mcp-7' }, { credits: 30, generations: [row] });
-  assert.match(status.result.structuredContent.message, /^Kling 2\.5 Turbo can't create this content \(Image not allowed\)\. No credits were used\./);
+  assert.match(status.result.structuredContent.message, /^Kling 2\.5 Turbo's safety filter blocked this\. No credits were used\. You can try again, change the image or prompt, or try Veo 3\.1 Lite/);
 });
 
 test('a run stuck on processing is checked with KIE, so a failed Veo job stops spinning', async () => {
@@ -364,14 +367,15 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /only Veo 3\.1 Lite \(8 seconds\), Gemini Omni Flash and Gemini Omni \(up to 10 seconds\) can speak it/);
   assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
   assert.match(guide, /not from how long or detailed your own prompt is/);
-  assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - A new user's first video \(no video yet\): Grok Video, 6 seconds, 720p\. Use Veo 3\.1 Lite only if the user asked for 7 or 8 seconds or for speech in a language other than English or Chinese\.\n   - Up to 8 seconds: Veo 3\.1 Lite, 1080p\.\n   - 9 to 10 seconds: Gemini Omni Flash, 1080p\..*\n   - 11 to 30 seconds: Wan 3\.0, 720p\./);
+  assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - A new user's first video \(no video yet\): Grok Video, 720p, 6 seconds, or 8 seconds if the user asked for 7 or 8 seconds\. Use Veo 3\.1 Lite \(8 seconds, 720p\) only if people in the video must speak a language other than English \(Chinese included\)\./);
+  assert.match(guide, /7\. Only when the user sent their own photo and wants it changed .*Grok Video and Veo 3\.1 Lite use a photo only as the first frame, so with them first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\).*Without a photo from the user, never make a picture first, neither with Hansora nor with your own image tool: send the text straight to the video model\..*Start the video as soon as the picture is ready \(get_generation\), without asking.*Models that take reference images \(Seedance 2\.5, Kling 4\.0, Wan 3\.0, Gemini Omni Flash, Gemini Omni\) get the photo as the character reference instead, with no picture step\./);
   assert.match(guide, /If you are not sure, treat it as complex/);
   // One short question with plain choices, so users who know no model names can pick. The model of
   // the user's last video comes first, so "ok" keeps the price they already know.
   assert.match(guide, /4\. Complex: first call get_account to see the balance and last_video \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with these options/);
   assert.match(guide, /If the balance covers none of the options, do not ask and do not show their prices/);
   assert.match(guide, /   - Same quality as your last video: .*it always comes first and is the default\.\n   - Our best, cinema quality: Seedance 2\.5, 720p\n   - High quality, lower price: Kling 4\.0, 720p\n   - Good quality, budget: Wan 3\.0, 720p\n/);
-  assert.match(guide, /list it only once, first, as "Same quality as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, add \(recommended\) to Seedance 2\.5\./);
+  assert.match(guide, /list it only once, first, as "Same quality as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, list Kling 4\.0 first as "Recommended: great quality, smooth motion", then Seedance 2\.5, then Wan 3\.0\./);
   assert.match(guide, /1080p \(sharpest, only when the user asks for 1080p or the best possible quality; never pick it on your own\)/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
@@ -434,10 +438,19 @@ test('failures are explained by kind: temporary issues switch to another model, 
   const invalid = await ask(row({ source: 'reapi', engine: 'wan-3', error: 'Invalid Wan 3.0 video duration.' }, 'Wan 3.0'));
   assert.equal(invalid.failure_kind, 'input');
 
-  const policy = await ask(row({ model: 'veo3_lite', error: 'Your prompt was flagged by the content policy', charged: 'true', refunded: true, refunded_cost: 2 }));
+  // A strict filter (not sexual content, minors, real people or violence): the user picks one of three choices.
+  const policy = await ask(row({ model: 'veo3_lite', error: 'Request blocked: The input content was flagged by safety filters for involving restricted third-party content.', charged: 'true', refunded: true, refunded_cost: 2 }));
   assert.equal(policy.failure_kind, 'content');
-  assert.equal('alternative' in policy, false);
-  assert.match(policy.next_step, /do not switch to another model to get around the refusal/);
+  assert.equal(policy.failure_title, "Veo 3.1 Lite's safety filter blocked this");
+  assert.equal(policy.alternative.model_id, 'grok-video');
+  assert.match(policy.message, /^Veo 3\.1 Lite's safety filter blocked this\. Your 20 credits were refunded\. You can try again, change the image or prompt, or try Grok Video \(18 credits\), which is less strict\.$/);
+  assert.match(policy.next_step, /ask one question with these choices: try again with Veo 3\.1 Lite, change the image or prompt, or try Grok Video \(18 credits\), which is less strict\. If people in the video must speak a language other than English, add that Grok Video speaks it with some mistakes\. Start nothing until they choose\./);
+  for (const error of ['Request blocked: The input content was flagged for containing a prominent public figure.', 'Sexual content detected', 'Content involving a minor is not allowed']) {
+    const hard = await ask(row({ model: 'veo3_lite', error, charged: 'true', refunded: true, refunded_cost: 2 }));
+    assert.equal(hard.failure_kind, 'content', error);
+    assert.equal('alternative' in hard, false, error);
+    assert.match(hard.next_step, /do not switch to another model to get around the refusal/, error);
+  }
 
   const file = await ask(row({ engine: 'kling25', error_summary: 'provider_rejected', provider_message: 'image_input file type not supported', refund_skipped_reason: 'not_charged' }, 'Kling-5s'));
   assert.equal(file.failure_kind, 'input');
@@ -554,7 +567,7 @@ test('Henshin never asks about price: it starts and reports what the uploaded vi
 
 test('a sexual request is refused once, with no model switching, and ChatGPT offers a clean version', async () => {
   const { result, submitted } = await callTool('create_generation', { model_id: 'grok-video', prompt: 'she will suck me off', duration: 6 }, {
-    credits: 30, runner: () => ({ status: 422, body: { ok: false, code: 'CONTENT_POLICY_BLOCKED', category: 'nsfw_sexual_content', message: 'blocked' } })
+    credits: 30, rest: returningUser, runner: () => ({ status: 422, body: { ok: false, code: 'CONTENT_POLICY_BLOCKED', category: 'nsfw_sexual_content', message: 'blocked' } })
   });
   assert.equal(submitted.length, 1);
   const value = result.structuredContent;
@@ -630,7 +643,7 @@ test('when the database stays down, the user gets a calm message instead of a ra
 
 test('a slow submission answers in time with the run id instead of letting ChatGPT show server error', async () => {
   const { result } = await callTool('create_generation', { model_id: 'grok-video', prompt: 'waves at sunset', duration: 6 }, {
-    credits: 30, runner: () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); }
+    credits: 30, rest: returningUser, runner: () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); }
   });
   assert.equal(result.isError, undefined);
   assert.equal(result.structuredContent.status, 'queued');
@@ -855,10 +868,14 @@ test('a new user\'s first video that fails on the provider\'s side is started on
   assert.equal(content.submitted.length, 0);
   assert.equal(content.result.structuredContent.failure_kind, 'content');
   const retryFailed = { ...failedRow, meta: { ...failedRow.meta, run_id: `${old}-retry` } };
-  // Grok failing first: Veo would cost more than the first try (20 > 18), so nothing is started.
+  // Grok failing on the provider's side: remade with Veo 3.1 Lite 720p at Veo's own price (20 credits), as the owner decided.
   const grokFailed = { ...failedRow, provider: 'Grok', meta: { ...failedRow.meta, model: 'grok-imagine/image-to-video', engine: 'grok', charged_cost: 1.8, refund_amount: 1.8 } };
-  const pricier = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('first_video_recipe') ? reply([{ model_id: 'grok-video', details: recipe.details }]) : world({ failure: grokFailed })(href)) });
-  assert.equal(pricier.submitted.length, 0);
+  const toVeo = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('first_video_recipe') ? reply([{ model_id: 'grok-video', details: recipe.details }]) : world({ failure: grokFailed })(href)) });
+  assert.equal(toVeo.submitted.length, 1);
+  assert.equal(toVeo.submitted[0].model_id, 'veo31-lite');
+  assert.match(JSON.stringify(toVeo.submitted[0]), /720p/);
+  assert.match(toVeo.result.structuredContent.switch_note, /^Grok Video had a temporary issue on the provider's side, so this video was made with Veo 3\.1 Lite instead\./);
+  assert.match(toVeo.result.structuredContent.next_step, /This switch was only for this video: for the user's next videos the model in use stays Grok Video\./);
   const twice = await callTool('get_generation', { run_id: `${old}-retry` }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && !href.includes('not.is.null') ? reply([retryFailed]) : world()(href)) });
   assert.equal(twice.submitted.length, 0);
 });
@@ -895,7 +912,7 @@ test('a Veo video Google could not make the sound for is made with Grok instead,
   const old = 'user-1-mcp-1793126174728-d2f6ce69';
   const prompt = 'A silent listener reaction close-up. No speech or vocal sounds, no music.';
 
-  // A returning user's Veo video keeps its recipe; another model's video does not.
+  // A returning user's Veo and Grok videos keep their recipe.
   const saved = [];
   const keep = (href, options) => {
     if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
@@ -905,7 +922,7 @@ test('a Veo video Google could not make the sound for is made with Grok instead,
   await callTool('create_generation', { model_id: 'grok-video', prompt, duration: 6, resolution: '720p' }, { credits: 100, rest: keep });
   await new Promise((resolve) => setTimeout(resolve, 20));
   const recipes = saved.filter((row) => /recipe/.test(row.tool));
-  assert.deepEqual(recipes.map((row) => [row.tool, row.model_id]), [['video_recipe', 'veo31-lite']]);
+  assert.deepEqual(recipes.map((row) => [row.tool, row.model_id]), [['video_recipe', 'veo31-lite'], ['video_recipe', 'grok-video']]);
 
   const failed = (error) => ({ id: 'g-old', kind: 'video', provider: 'veo3.1lite', created_at: '2026-10-27T18:36:16Z', result_url: null,
     meta: { run_id: old, model: 'veo3_lite', status: 'failed', error, charged_cost: 2, refund_amount: 2, refunded: true } });
@@ -1035,7 +1052,8 @@ test('a new user\'s first video sent to Veo is made with Grok, unless ChatGPT th
   assert.equal(value.credits_used, 0);
   assert.deepEqual(value.next_option, { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18 });
   assert.match(value.next_step, /do not ask anything: call create_generation right now with model_id grok-video, duration 6, resolution 720p/);
-  assert.match(value.next_step, /only if the user themselves asked for a video longer than 6 seconds, or people in it must speak a language other than English or Chinese, call create_generation again exactly as before with veo31-lite/);
+  assert.match(value.next_step, /If the user themselves asked for 7 or 8 seconds, use duration 8 instead \(24 credits\)/);
+  assert.match(value.next_step, /only if people in the video must speak a language other than English \(Chinese included\), call create_generation again exactly as before with veo31-lite/);
   const { eventRow } = await import('../../lib/hansora-mcp/events.mjs');
   assert.equal(eventRow('u', 'create_generation', request, steered.result).outcome, 'first_video_on_grok');
 
@@ -1043,6 +1061,11 @@ test('a new user\'s first video sent to Veo is made with Grok, unless ChatGPT th
   const chosen = await callTool('create_generation', request, { credits: 3, veoChosen: true });
   assert.equal(chosen.submitted.length, 1);
   assert.equal(chosen.submitted[0].model_id, 'veo31-lite');
+
+  // Right after this user's Grok video failed, Veo goes through instead of being sent back to Grok.
+  const grokJustFailed = await callTool('create_generation', request, { credits: 3, rest: (href) => (href.includes('provider=eq.Grok') && href.includes('meta->>status=eq.failed') ? new Response(JSON.stringify([{ id: 'g' }]), { status: 200, headers: { 'Content-Type': 'application/json' } }) : undefined) });
+  assert.equal(grokJustFailed.submitted.length, 1);
+  assert.equal(grokJustFailed.submitted[0].model_id, 'veo31-lite');
 
   // Returning users, and requests Grok cannot take as they are, keep Veo.
   const returning = await callTool('create_generation', request, { credits: 100, rest: returningUser });
@@ -1058,13 +1081,13 @@ test('a new user\'s first video from a photo explains how to put the person into
   const viaSwitch = (await callTool('create_generation', { model_id: 'seedance25', prompt: scene, duration: 10, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
   const viaSteer = (await callTool('create_generation', { model_id: 'veo31-lite', prompt: scene, duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 3, files })).result.structuredContent;
   for (const value of [viaSwitch, viaSteer]) {
-    assert.match(value.next_step, /If the user's photo is a person or object to put into a new scene .*call create_generation with model_id nano-banana-2-1, resolution 1K, the user's photo and a prompt describing that scene \(3 credits\)\. When the picture is ready \(get_generation\), call create_generation with model_id grok-video, duration 6, resolution 720p, that picture as the photo/);
+    assert.match(value.next_step, /If the user wants their photo changed \(a new outfit, place, atmosphere or style, or added people or things\), not just animated as it is, do this instead: first call create_generation with model_id nano-banana-2-1, resolution 1K, the user's photo and a prompt describing the changed picture \(3 credits\)\. When the picture is ready, Hansora starts the video from it by itself with the video model and settings above, and the same card shows it: do not start the video yourself\..*Without a photo from the user, never make a picture first\./);
   }
   // Without a photo there is nothing to place, so no such instruction.
   const noPhoto = (await callTool('create_generation', { model_id: 'seedance25', prompt: 'A knight at sunset', duration: 10, resolution: '720p' }, { credits: 3 })).result.structuredContent;
-  assert.doesNotMatch(noPhoto.next_step, /new scene/);
+  assert.doesNotMatch(noPhoto.next_step, /nano-banana-2-1/);
   const list = await callTool('list_models', { category: 'video' }, { credits: 30 });
-  assert.match(list.result.structuredContent.video_selection_guide, /A new user's first video that puts the person or object from their photo into a new scene: first make the scene as a picture with Nano Banana 2\.1/);
+  assert.match(list.result.structuredContent.video_selection_guide, /first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\) from the user's photo, then animate that picture with the video model/);
 });
 
 test('a ChatGPT video over 10 MB for Henshin Lite or Kling 4.0 gets a clear way on instead of a raw error', async () => {
@@ -1080,4 +1103,261 @@ test('a ChatGPT video over 10 MB for Henshin Lite or Kling 4.0 gets a clear way 
     assert.match(value.next_step, alternative);
     assert.match(value.next_step, /start only after they choose/);
   }
+});
+
+test('a mistyped Hansora picture link is replaced by the saved picture before the video starts', async () => {
+  const base = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/';
+  const real = `${base}e2099428-36e4-4c4a-a42c-b1a8bb698d8a/2f89142f-99d4-8112-b105-b02b9cd39b23.png`;
+  const typed = `${base}e2099428-36e4-4c4a-a42c-b1a8bb698a/2f89142f-99d4-8112-b105-b02b9cd39b23.png`;
+  const saved = (href) => (href.includes('select=result_url,meta->result_urls')
+    ? new Response(JSON.stringify([{ result_url: real }]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    : returningUser(href));
+  const fixed = await callTool('create_generation', { model_id: 'grok-video', prompt: 'animate', duration: 6, resolution: '720p', aspect_ratio: '9:16', image_urls: [typed] }, { credits: 300, rest: saved });
+  assert.equal(fixed.submitted.length, 1);
+  const sent = JSON.stringify(fixed.submitted[0]);
+  assert.ok(sent.includes(real), 'the saved picture is sent');
+  assert.ok(!sent.includes(typed), 'the mistyped link is never sent');
+
+  const unknown = `${base}aaaaaaaa-0000-4000-8000-000000000000/ffffffff-0000-4000-8000-000000000000.png`;
+  const missing = await callTool('create_generation', { model_id: 'grok-video', prompt: 'animate', duration: 6, resolution: '720p', aspect_ratio: '9:16', image_urls: [unknown] }, { credits: 300, rest: saved });
+  assert.equal(missing.submitted.length, 0, 'nothing starts or is charged');
+  assert.equal(missing.result.structuredContent.error, 'file_link_not_found');
+  assert.match(missing.result.structuredContent.next_step, /copy its result_url exactly/);
+});
+
+test('model names ChatGPT writes its own way still find the model', async () => {
+  const { getModel } = await import('../../lib/hansora-mcp/registry.mjs');
+  for (const [name, id] of [['kling-4', 'kling40'], ['seedance-2-5', 'seedance25'], ['veo3.1lite', 'veo31-lite'], ['elevenlabs_tts_multilingual_v2', 'voice'], ['Nano Banana 2.1', 'nano-banana-2-1'], ['wan 3', 'wan-3']])
+    assert.equal(getModel(name)?.id, id, name);
+  assert.equal(getModel('made-up-model'), null);
+});
+
+test('the last video ChatGPT keeps using ignores a video Hansora remade after a temporary issue', async () => {
+  const { getLastVideo } = await import('../../lib/hansora-mcp/data.mjs');
+  let asked = '';
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url) => { asked = decodeURIComponent(String(url)); return new Response('[]', { status: 200 }); };
+  try { await getLastVideo('u'); } finally { globalThis.fetch = original; }
+  assert.match(asked, /or=\(meta->>run_id\.is\.null,meta->>run_id\.not\.like\.\*-retry\)/);
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.match(VIDEO_SELECTION_GUIDE, /does not change the model in use: the next videos use the model the user had before/);
+});
+
+test('a video from a picture Hansora made that the video model refuses is tried once on the other model, then the user is told and gets the picture', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const old = 'user-1-mcp-1793529277293-5bf9776c';
+  const picture = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/2b767f9d.png';
+  const prompt = 'The boy juggles the ball, then two footballers greet him.';
+
+  // 1. The picture is the first frame: the recipe keeps it and knows Hansora made it.
+  const saved = [];
+  const created = await callTool('create_generation', { model_id: 'veo31-lite', prompt, duration: 8, resolution: '720p', first_frame_url: picture }, {
+    credits: 100, veoChosen: true,
+    rest: (href, options) => {
+      if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
+      if (href.includes('result_url=not.is.null')) return reply([{ id: 'the-picture', result_url: picture }]);
+      return undefined;
+    }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const recipe = saved.find((row) => /recipe/.test(row.tool));
+  assert.ok(recipe, `recipe saved ${JSON.stringify(created.result.structuredContent).slice(0, 400)}`);
+  assert.equal(recipe.details.first_frame_url, picture);
+  assert.equal(recipe.details.from_picture, true);
+
+  const refused = (error, extra = {}) => ({ id: 'g-old', kind: 'video', provider: 'veo3.1lite', created_at: '2026-11-01T10:34:40Z', result_url: null,
+    meta: { run_id: old, model: 'veo3_lite', status: 'failed', error, charged_cost: 2, refund_amount: 2, refunded: true, ...extra } });
+  const world = ({ failure, retryRow = null, details = recipe.details, modelId = 'veo31-lite' }) => (href) => {
+    if (href.includes('/rest/v1/chatgpt_events') && href.includes('recipe')) return reply([{ model_id: modelId, details }]);
+    if (href.includes('result_url=not.is.null')) return reply([{ id: 'the-picture' }]);
+    if (href.includes('/rest/v1/user_generations') && href.includes(encodeURIComponent(`${old}-retry`))) return reply(retryRow ? [retryRow] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`)) return reply([failure]);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const publicFigure = refused('Request blocked: The input content was flagged for containing a prominent public figure.');
+
+  // 2. Veo refuses it: started once on Grok, with the picture as the first frame, under the same card.
+  const first = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure }) });
+  assert.equal(first.submitted.length, 1);
+  assert.equal(first.submitted[0].model_id, 'grok-video');
+  assert.equal(first.submitted[0].payload.run_id, `${old}-retry`);
+  assert.match(JSON.stringify(first.submitted[0].payload), new RegExp(picture.replace(/[.]/g, '\\.')));
+  assert.equal(first.result.structuredContent.run_id, old);
+  assert.match(first.result.structuredContent.switch_note, /^Veo 3\.1 Lite refused to animate the picture, so this video was made with Grok Video instead\./);
+
+  // 3. Grok makes it: the video is shown.
+  const made = { id: 'g-new', kind: 'video', provider: 'Grok', created_at: '2026-11-01T10:37:00Z',
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/new.mp4',
+    meta: { run_id: `${old}-retry`, engine: 'grok', status: 'done' } };
+  const ok = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure, retryRow: made }) });
+  assert.equal(ok.submitted.length, 0);
+  assert.equal(ok.result.structuredContent.status, 'ready');
+
+  // 4. Grok refuses it too: the user is told plainly and gets the picture.
+  const grokRefused = { id: 'g-new', kind: 'video', provider: 'Grok', created_at: '2026-11-01T10:37:00Z', result_url: null,
+    meta: { run_id: `${old}-retry`, engine: 'grok', status: 'failed', error: 'Content flagged by moderation', charged_cost: 1.8, refund_amount: 1.8, refunded: true } };
+  const both = (await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure, retryRow: grokRefused }) })).result.structuredContent;
+  assert.equal(both.status, 'failed');
+  assert.equal(both.run_id, old);
+  assert.equal(both.picture_url, picture);
+  assert.equal(both.card_message, 'I made the picture first so I could animate it, but Veo 3.1 Lite and Grok Video both refused to turn it into a video. Here is the picture. The video\'s credits were refunded.');
+  assert.ok(both.next_step.includes(picture));
+
+  // 5. Grok fails for another reason: said as it is.
+  const grokBroke = { ...grokRefused, meta: { ...grokRefused.meta, error: 'Internal Error, Please try again later.' } };
+  const broke = (await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure, retryRow: grokBroke }) })).result.structuredContent;
+  assert.match(broke.card_message, /Veo 3\.1 Lite refused to turn it into a video and Grok Video couldn't make it either\./);
+
+  // 6. Grok refuses first: Veo 3.1 Lite (20 credits) is tried.
+  const grokFirst = refused('Content flagged by moderation', { model: 'grok-imagine/image-to-video', engine: 'grok', charged_cost: 1.8, refund_amount: 1.8 });
+  const toVeo = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: { ...grokFirst, provider: 'Grok' }, modelId: 'grok-video' }) });
+  assert.equal(toVeo.submitted.length, 1);
+  assert.equal(toVeo.submitted[0].model_id, 'veo31-lite');
+
+  // 7. Not enough credits for the other model: the picture message straight away, nothing started.
+  const poor = (await callTool('get_generation', { run_id: old }, { credits: 0, rest: world({ failure: publicFigure }) }));
+  assert.equal(poor.submitted.length, 0);
+  assert.match(poor.result.structuredContent.card_message, /^I made the picture first so I could animate it, but Veo 3\.1 Lite refused to turn it into a video\./);
+
+  // 8. Never retried: sexual content or minors, or a photo the user sent (not a Hansora picture).
+  const sexual = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: refused('Flagged: sexual content') }) });
+  assert.equal(sexual.submitted.length, 0);
+  assert.equal(sexual.result.structuredContent.picture_url, undefined);
+  const ownPhoto = { ...recipe.details, from_picture: undefined, first_frame_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/me.jpg' };
+  const photo = await callTool('get_generation', { run_id: old }, { credits: 100, rest: world({ failure: publicFigure, details: ownPhoto }) });
+  assert.equal(photo.submitted.length, 0);
+  assert.equal(photo.result.structuredContent.failure_kind, 'content');
+});
+
+test('a video is not started while the user\'s ChatGPT picture is still being made, so it is made from the picture', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const pictureRun = 'user-1-mcp-1793328296061-9f44ffd5';
+  const pictures = (rows) => (href) => (href.includes('/rest/v1/user_generations') && href.includes('kind=eq.image') ? reply(rows) : returningUser(href));
+
+  const waiting = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The four friends press the buttons', duration: 6, resolution: '720p' }, { credits: 100, rest: pictures([{ run_id: pictureRun, status: 'processing' }]) });
+  assert.equal(waiting.submitted.length, 0);
+  assert.equal(waiting.result.structuredContent.error, 'picture_not_ready');
+  assert.equal(waiting.result.structuredContent.credits_used, 0);
+  assert.ok(waiting.result.structuredContent.next_step.includes(`get_generation with run_id ${pictureRun}`));
+
+  // A failed picture does not hold the video back, and pictures themselves are never held back.
+  const failed = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The four friends press the buttons', duration: 6, resolution: '720p' }, { credits: 100, rest: pictures([{ run_id: pictureRun, status: 'failed' }]) });
+  assert.equal(failed.result.structuredContent.error, undefined);
+  assert.equal(failed.submitted.length, 1);
+  const picture = await callTool('create_generation', { model_id: 'nano-banana-2-1', prompt: 'A second picture', resolution: '1K' }, { credits: 100, rest: pictures([{ run_id: pictureRun, status: 'processing' }]) });
+  assert.equal(picture.submitted.length, 1);
+});
+
+test('a user who bought credits and has no video yet is asked once, in plain words, instead of getting a cheap model', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const noVideo = (href) => (href.includes('/rest/v1/user_generations') ? reply([]) : undefined);
+  for (const model_id of ['grok-video', 'veo31-lite']) {
+    const asked = await callTool('create_generation', { model_id, prompt: 'The van drives along the square', duration: model_id === 'veo31-lite' ? 8 : 6, resolution: '720p' }, { credits: 1050, rest: noVideo });
+    assert.equal(asked.submitted.length, 0, model_id);
+    const value = asked.result.structuredContent;
+    assert.equal(value.error, 'first_paid_video_choice', model_id);
+    assert.deepEqual(value.options.map((option) => option.model_id), ['kling40', 'seedance25', 'wan-3']);
+    assert.match(value.next_step, /^Nothing was generated or charged\. This user bought credits and this is their first video/);
+    assert.match(value.next_step, /Recommended: great quality, smooth motion \(Kling 4\.0, \d+ credits\); Best, cinema quality \(Seedance 2\.5, \d+ credits\); Budget: good quality, cheapest \(Wan 3\.0, \d+ credits\)\./);
+  }
+  // Asked once: sent again (the user chose it), it starts.
+  const again = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The van drives along the square', duration: 6, resolution: '720p' }, {
+    credits: 1050, rest: (href) => (href.includes('/rest/v1/chatgpt_events') && href.includes('first_paid_video_choice') ? reply([{ id: 'asked' }]) : noVideo(href))
+  });
+  assert.equal(again.submitted.length, 1);
+  assert.equal(again.submitted[0].model_id, 'grok-video');
+  // The strong models start right away; a user with a video, or on free credits, is not asked.
+  const kling = await callTool('create_generation', { model_id: 'kling40', prompt: 'The van drives along the square', duration: 10, resolution: '720p' }, { credits: 1050, rest: noVideo });
+  assert.equal(kling.submitted.length, 1);
+  const returning = await callTool('create_generation', { model_id: 'grok-video', prompt: 'The van drives along the square', duration: 6, resolution: '720p' }, { credits: 1050, rest: returningUser });
+  assert.equal(returning.submitted.length, 1);
+  const free = await callTool('create_generation', { model_id: 'veo31-lite', prompt: 'The van drives along the square', duration: 8, resolution: '720p' }, { credits: 3, rest: noVideo });
+  assert.equal(free.result.structuredContent.error, 'first_video_on_grok');
+});
+
+test('picture first: Hansora starts the planned video from the picture itself, under the picture\'s card, once', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const photo = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/me.jpg';
+
+  // 1. A new user's first video from their photo, steered to picture first: the planned video is kept.
+  const saved = [];
+  const keep = (href, options) => {
+    if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const steered = await callTool('create_generation', { model_id: 'seedance25', prompt: 'She walks on a beach at sunset in a red dress', duration: 8, resolution: '720p', image_urls: [photo] }, { credits: 3, rest: keep });
+  assert.equal(steered.submitted.length, 0);
+  assert.match(steered.result.structuredContent.next_step, /Hansora starts the video from it by itself/);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const plan = saved.find((row) => row.tool === 'pending_video');
+  assert.ok(plan, 'plan kept');
+  assert.equal(plan.model_id, 'grok-video');
+  assert.equal(plan.details.prompt, 'She walks on a beach at sunset in a red dress');
+
+  // 2. The picture is ready: the video starts from it, and the picture's card follows the video.
+  const pictureRun = 'user-1-mcp-1793603000000-a1b2c3d4';
+  const picture = { id: 'p1', kind: 'image', provider: 'Nano Banana 2.1', created_at: new Date(Date.now() - 60000).toISOString(),
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/pic.png',
+    meta: { run_id: pictureRun, status: 'done', model_id: 'nano-banana-2-1', input_urls: [photo] } };
+  const world = ({ video = null, planned = true, startedSince = [] } = {}) => (href, options) => {
+    if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') return reply({});
+    if (href.includes('tool=eq.pending_video')) return reply(planned ? [{ model_id: 'grok-video', details: plan.details, created_at: new Date(Date.now() - 120000).toISOString() }] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(encodeURIComponent(`${pictureRun}-video`))) return reply(video ? [video] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes('kind=eq.video') && href.includes('created_at=gt.')) return reply(startedSince);
+    if (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(pictureRun)}`)) return reply([picture]);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const started = await callTool('get_generation', { run_id: pictureRun }, { credits: 2.7, rest: world() });
+  assert.equal(started.submitted.length, 1);
+  assert.equal(started.submitted[0].model_id, 'grok-video');
+  assert.equal(started.submitted[0].payload.run_id, `${pictureRun}-video`);
+  assert.ok(JSON.stringify(started.submitted[0].payload).includes(picture.result_url));
+  const shown = started.result.structuredContent;
+  assert.equal(shown.run_id, pictureRun);
+  assert.equal(shown.status, 'processing');
+  assert.equal(shown.switch_note, 'Your picture is ready, and Hansora is now turning it into your video.');
+
+  // 3. Later checks follow that video and never start another one.
+  const done = { id: 'v1', kind: 'video', provider: 'Grok', created_at: new Date().toISOString(),
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/v.mp4',
+    meta: { run_id: `${pictureRun}-video`, engine: 'grok', status: 'done' } };
+  const later = await callTool('get_generation', { run_id: pictureRun }, { credits: 0.9, rest: world({ video: done }) });
+  assert.equal(later.submitted.length, 0);
+  assert.equal(later.result.structuredContent.status, 'ready');
+  assert.equal(later.result.structuredContent.result_url, done.result_url);
+  assert.equal(later.result.structuredContent.picture_url, picture.result_url);
+
+  // 4. ChatGPT starting the video itself meanwhile: nothing new starts.
+  const again = await callTool('create_generation', { model_id: 'grok-video', prompt: 'She walks on a beach', duration: 6, resolution: '720p', image_urls: [picture.result_url] }, {
+    credits: 0.9, rest: (href) => (href.includes('like.*-mcp-*-video') ? reply([{ run_id: `${pictureRun}-video`, status: 'processing' }]) : returningUser(href))
+  });
+  assert.equal(again.submitted.length, 0);
+  assert.equal(again.result.structuredContent.error, 'video_already_started');
+
+  // 5. No plan, or a video ChatGPT already started: the picture is just shown.
+  const plain = await callTool('get_generation', { run_id: pictureRun }, { credits: 2.7, rest: world({ planned: false }) });
+  assert.equal(plain.submitted.length, 0);
+  assert.equal(plain.result.structuredContent.status, 'ready');
+  assert.equal(plain.result.structuredContent.result_url, picture.result_url);
+  const manual = await callTool('get_generation', { run_id: pictureRun }, { credits: 2.7, rest: world({ startedSince: [{ id: 'v0' }] }) });
+  assert.equal(manual.submitted.length, 0);
+});
+
+test('a video prompt about the user\'s photo with no photo attached is sent back once, nothing charged', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const prompt = 'Animate the supplied photo: the two foxes play in the meadow.';
+  const missing = await callTool('create_generation', { model_id: 'grok-video', prompt, duration: 6, resolution: '720p' }, { credits: 100, rest: returningUser });
+  assert.equal(missing.submitted.length, 0);
+  assert.equal(missing.result.structuredContent.error, 'photo_missing');
+  assert.match(missing.result.structuredContent.next_step, /call create_generation again with that photo attached \(image_files\)/);
+  // Sent again the same way: it starts. A prompt without a photo reference starts right away.
+  const again = await callTool('create_generation', { model_id: 'grok-video', prompt, duration: 6, resolution: '720p' }, {
+    credits: 100, rest: (href) => (href.includes('photo_missing') ? reply([{ id: 'asked' }]) : returningUser(href))
+  });
+  assert.equal(again.submitted.length, 1);
+  const text = await callTool('create_generation', { model_id: 'grok-video', prompt: 'Two foxes play in a meadow at dawn.', duration: 6, resolution: '720p' }, { credits: 100, rest: returningUser });
+  assert.equal(text.submitted.length, 1);
 });

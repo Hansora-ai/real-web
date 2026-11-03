@@ -62,7 +62,7 @@ test('Netlify never overlays its site navigation on any editor locale', async ()
     assert.equal(await inject(new Request('https://example.com' + path), {next: async () => response}), response, path);
   }
   const response = new Response('<html><body>Page</body></html>', {headers: {'content-type': 'text/html'}});
-  const ordinaryPage = await inject(new Request('https://example.com/video-edit_arm.html'), {next: async () => response});
+  const ordinaryPage = await inject(new Request('https://example.com/background-change_arm.html'), {next: async () => response});
   assert.match(await ordinaryPage.text(), /class="hs-bottom-nav"/, 'ordinary site pages still receive navigation');
 });
 

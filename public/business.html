@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Hansora · Profit</title>
+    <link rel="icon" href="/favicon.png" />
+    <link rel="stylesheet" href="/business/profit.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand"><img src="/hansora-logo.png" alt="" /><span>Hansora <b>Profit</b></span></div>
+      <div class="top-actions">
+        <button class="ghost" id="refresh" type="button" title="Refresh">↻</button>
+        <button class="ghost" id="signout" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <nav class="ranges" aria-label="Period">
+      <button data-range="today">Today</button>
+      <button data-range="yesterday">Yesterday</button>
+      <button data-range="2d">2 days</button>
+      <button data-range="7d">7 days</button>
+      <button data-range="30d">30 days</button>
+      <button data-range="month">This month</button>
+      <button data-range="lastmonth">Last month</button>
+      <span class="custom"><input type="date" id="from" aria-label="From" /> – <input type="date" id="to" aria-label="To" /><button id="apply" type="button">Show</button></span>
+    </nav>
+    <div class="subbar">
+      <p class="period" id="period"></p>
+      <nav class="tabs" aria-label="View">
+        <button data-tab="profit" class="on">Profit</button>
+        <button data-tab="traffic">Traffic</button>
+        <button data-tab="people">People</button>
+      </nav>
+    </div>
+    <p class="status" id="status" role="status"></p>
+    <p class="warning" id="warning" hidden></p>
+
+    <main id="page" hidden>
+      <div class="view" data-view="traffic" hidden>
+        <section class="live" id="live"></section>
+        <section class="grid2">
+          <article class="panel">
+            <h2>Is today normal?</h2>
+            <p class="hint">Today so far against the same hours of yesterday and of the last 7 days (UTC).</p>
+            <div class="table-wrap"><table id="compare"></table></div>
+          </article>
+          <article class="panel">
+            <h2>Where people come from</h2>
+            <div id="surfaces" class="split"></div>
+          </article>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>Hour by hour</h2><div class="legend"><i class="l-in"></i>Generations <i class="l-signup"></i>Sign-ups <i class="l-sale"></i>Sales</div></div>
+          <p class="hint" id="hours-day"></p>
+          <div id="hours" class="chart"></div>
+        </section>
+        <section class="grid2">
+          <article class="panel">
+            <h2>Ratings</h2>
+            <div id="rating-score" class="score"></div>
+            <div class="table-wrap"><table id="rating-models"></table></div>
+          </article>
+          <article class="panel">
+            <h2>Latest feedback</h2>
+            <div id="rating-comments" class="comments"></div>
+          </article>
+        </section>
+      </div>
+
+      <div class="view" data-view="people" hidden>
+        <section class="panel">
+          <div class="panel-head"><h2>Everyone active in this period</h2><input id="people-search" class="search" placeholder="Search email…" /></div>
+          <p class="hint">Newest activity first: what they made, whether they rated it and whether they bought.</p>
+          <div class="table-wrap"><table id="users"></table></div>
+        </section>
+      </div>
+
+      <div class="view" data-view="profit">
+      <section class="hero">
+        <article class="tile profit" id="tile-profit"></article>
+        <article class="tile" id="tile-in"></article>
+        <article class="tile" id="tile-cost"></article>
+        <article class="tile" id="tile-exp"></article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Every day</h2><div class="legend"><i class="l-in"></i>Money in <i class="l-cost"></i>Costs <i class="l-profit"></i>Profit</div></div>
+        <div id="chart" class="chart"></div>
+        <div class="table-wrap"><table id="days"></table></div>
+      </section>
+
+      <section class="grid2">
+        <article class="panel">
+          <h2>Credits</h2>
+          <p class="hint">Bought credits buyers haven't used yet are money you received for work not done yet.</p>
+          <div class="kv" id="credits"></div>
+        </article>
+        <article class="panel">
+          <h2>People</h2>
+          <div class="kv" id="people"></div>
+        </article>
+      </section>
+
+      <section class="grid2">
+        <article class="panel">
+          <h2>What they did right before buying</h2>
+          <p class="hint">New buyers in this period, by the last thing they made before paying.</p>
+          <div id="lastmodels" class="bars"></div>
+        </article>
+        <article class="panel">
+          <h2>Where the cost goes</h2>
+          <div class="table-wrap"><table id="models"></table></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>New buyers</h2>
+        <div class="table-wrap"><table id="journeys"></table></div>
+      </section>
+
+      <section class="panel">
+        <h2>Sales</h2>
+        <div class="table-wrap"><table id="sales"></table></div>
+      </section>
+
+      <section class="panel">
+        <h2>Profit by buyer</h2>
+        <p class="hint">Used credits: what they paid per credit minus what their generations really cost (last 30 days). Unused credits: expected at the average cost per credit.</p>
+        <div class="table-wrap"><table id="buyers"></table></div>
+      </section>
+
+      <section class="grid2">
+        <article class="panel">
+          <h2>Expenses</h2>
+          <p class="hint">Monthly bills are spread over the days of the month, so each day carries its share.</p>
+          <div class="table-wrap"><table id="expenses"></table></div>
+          <form id="expense-form" class="form">
+            <input id="e-name" placeholder="Name, e.g. Supabase" required maxlength="140" />
+            <input id="e-amount" placeholder="Amount" inputmode="decimal" required />
+            <select id="e-currency"><option>USD</option><option>RUB</option><option>EUR</option><option>AMD</option></select>
+            <select id="e-recurrence"><option value="monthly">Every month</option><option value="none">One time</option><option value="yearly">Every year</option></select>
+            <label>From <input type="date" id="e-start" required /></label>
+            <button type="submit">Add expense</button>
+            <p class="form-msg" id="e-msg"></p>
+          </form>
+        </article>
+        <article class="panel">
+          <h2>Settings</h2>
+          <form id="settings-form" class="form">
+            <label>1 RUB = <input id="s-rub" inputmode="decimal" placeholder="automatic" /> USD</label>
+            <p class="form-msg">YooMoney: rubles are converted automatically at each day's official rate, and its real fee (what the buyer paid − what you received) is used. Type a rate only to override it.</p>
+            <button type="submit">Save</button>
+            <p class="form-msg" id="s-msg"></p>
+          </form>
+          <h3>How it's counted</h3>
+          <ul class="notes">
+            <li><b>Money in</b> = what Dodo and YooMoney received, minus tax, refunds and fees. Dodo's fee is its standard 4% + 1.5% (outside US) + $0.40 per payment; YooMoney's is the real fee it kept (about 3%), converted at that day's ruble rate.</li>
+            <li><b>Credits sold cost</b> = credits sold that day × what one credit costs on average (measured from buyers' generations of the last 30 days), counted on the day of the sale.</li>
+            <li><b>Real-use correction</b> = on the days buyers generate: the average cost of the credits they used minus what those generations really cost. Negative when they use thin-margin models (e.g. Seedance 2.5 1080p), positive for cheap ones (Wan, Grok). When a buyer has used everything, their profit is exactly what they paid minus what they really cost.</li>
+            <li><b>Free users</b> and <b>your own use</b> = the real provider cost of their generations that day.</li>
+            <li><b>Profit</b> = Money in − Credits sold cost − Free users − Own use − Expenses.</li>
+            <li><b>Provider spending</b> (grey) = what all generations that day really cost at the providers, for reference.</li>
+            <li>Days are UTC days, the same as Dodo's "Today" and payment list (Armenia is UTC+4, so 00:00–04:00 Armenia time belongs to the day before).</li>
+            <li id="quality-note"></li>
+          </ul>
+        </article>
+      </section>
+      </div>
+    </main>
+
+    <dialog id="login">
+      <form id="login-form">
+        <h2>Sign in</h2>
+        <p class="hint">Owner account only.</p>
+        <input id="login-email" type="email" placeholder="Email" autocomplete="username" required />
+        <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" required />
+        <button type="submit">Sign in</button>
+        <button type="button" class="ghost" id="google">Continue with Google</button>
+        <p class="form-msg" id="login-msg"></p>
+      </form>
+    </dialog>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js" defer></script>
+    <script type="module" src="/business/profit.mjs"></script>
+  </body>
+</html>

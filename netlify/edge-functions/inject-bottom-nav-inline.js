@@ -2,6 +2,15 @@
 // Injects the shared mobile bottom navigation into HTML responses.
 
 export default async (request, context) => {
+  const requestUrl = new URL(request.url);
+  const retiredEditor = requestUrl.pathname.match(/^\/video-edit(_ru|_arm)?(?:\.html)?\/?$/i);
+  if (retiredEditor) {
+    // Old phone menus and bookmarks can still contain the retired URL. Resolve
+    // it before serving any legacy editor HTML, on every device and language.
+    const target = new URL(`/henshin${(retiredEditor[1] || '').toLowerCase()}.html`, requestUrl.origin);
+    target.searchParams.set('mode', 'edit');
+    return new Response(null, { status: 302, headers: { Location: target.href, 'Cache-Control': 'no-store' } });
+  }
   const res = await context.next();
   const requestPath = new URL(request.url).pathname.toLowerCase();
 
@@ -611,7 +620,7 @@ export default async (request, context) => {
         <a href="${localizedPath('/prompt-builder.html')}">Cartoon Prompt Builder</a>
         <a href="${localizedPath('/kid-cartoon.html')}">Kid Cartoon</a>
         <a href="${localizedPath('/henshin.html')}">Henshin</a>
-        <a href="${localizedPath('/video-edit.html')}">Video Edit</a>
+        <a href="${localizedPath('/henshin.html?mode=edit')}">Video Edit</a>
         <a href="${localizedPath('/background-change.html')}">Background Change</a>
         <a href="${localizedPath('/video-relight.html')}">Video Relight</a>
         <a href="${localizedPath('/upscale.html?mode=video')}">Video upscale</a>

@@ -325,7 +325,7 @@ function showLoggedOutUI(){try{$btnLoginNav.classList.add('hidden');$btnGetStart
 
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await sb.auth.signOut();showLoggedOutUI();});
+$btnLogout?.addEventListener('click',async()=>{await sb.auth.signOut({ scope: 'local' });showLoggedOutUI();});
 
 async function getOrCreateProfile(user){const r=await sb.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await sb.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 

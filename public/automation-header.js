@@ -174,7 +174,7 @@
     const destination = () => safePath(params.get('returnTo')) || (page === 'landing' || page === 'legal' ? '/automation-dashboard.html' : location.pathname + location.search);
     root.querySelector('#btnLoginSignup')?.addEventListener('click', () => remember(destination()));
     root.querySelector('#autoLogout')?.addEventListener('click', async () => {
-      try { await window.__HANSORA_SB__?.auth.signOut(); } catch (_) {}
+      try { await window.__HANSORA_SB__?.auth.signOut({ scope: 'local' }); } catch (_) {}
       try { localStorage.setItem('hansora.header.loggedIn', '0'); } catch (_) {}
       location.href = 'automation.html';
     });

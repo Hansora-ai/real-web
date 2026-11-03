@@ -44,13 +44,15 @@
     .approve{background:linear-gradient(110deg,var(--accent2),var(--accent));color:#fff;box-shadow:0 10px 30px rgba(56,200,248,.25)}
     .status{min-height:20px;margin:14px 0 0;color:#ff9a9a;font-size:14px}
     .status.busy{color:var(--muted)}
+    /* Until Hansora knows whether the visitor is signed in, show no buttons (they used to flash and vanish). */
+    body.checking .actions,body.checking .account{visibility:hidden}
     .fine{margin:8px 0 0;font-size:12px;line-height:1.55;color:#7f8798}
     .fine a{color:#aab2c3}
     @media (prefers-reduced-motion:reduce){.link::before{animation:none}}
     @media(max-width:420px){.card{padding:28px 20px 22px;border-radius:24px}.tile{width:64px;height:64px;border-radius:19px}.tile.hansora img{width:44px;height:44px}.tile svg{width:36px;height:36px}.link{width:70px}h1{font-size:21px}.actions{grid-template-columns:1fr}.actions .approve{order:-1}}
   </style>
 </head>
-<body>
+<body class="checking">
   <main class="card">
     <div class="pair" aria-hidden="true">
       <div class="tile client generic" id="clientLogo"><svg viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9z"/></svg></div>
@@ -70,7 +72,7 @@
       <button class="deny" id="deny" type="button">Cancel</button>
       <button class="approve" id="approve" type="button">Connect Hansora</button>
     </div>
-    <p class="status" id="status" role="alert"></p>
+    <p class="status busy" id="status" role="alert">Checking your Hansora account…</p>
     <p class="fine">The assistant never sees your password. Every generation uses Hansora's safety and billing checks. <a href="/termsofuse.html" target="_blank" rel="noopener">Terms</a> · <a href="/policy.html" target="_blank" rel="noopener">Privacy</a></p>
   </main>
 
@@ -98,6 +100,7 @@
     }
 
     function fail(message) {
+      document.body.classList.remove('checking');
       statusEl.classList.remove('busy');
       statusEl.textContent = message;
       approveButton.disabled = false;
@@ -110,6 +113,7 @@
     }
 
     function redirectToLogin() {
+      busy('Sign in to Hansora (free credits included) and you will come right back here to connect…');
       const returnTo = `${location.pathname}${location.search}`;
       location.replace(`/index.html?mcp_return_to=${encodeURIComponent(returnTo)}`);
     }
@@ -117,7 +121,7 @@
     async function initialize() {
       if (!authorizationId) return fail('This connection request is missing its authorization ID. Please start again from your AI assistant.');
       const { data: sessionData } = await sb.auth.getSession();
-      if (!sessionData || !sessionData.session) return redirectToLogin();
+      if (!sessionData || !sessionData.session) return setTimeout(redirectToLogin, 900);
       const email = sessionData.session.user && sessionData.session.user.email;
       if (email) {
         document.getElementById('accountEmail').textContent = `Signed in as ${email}`;
@@ -136,10 +140,14 @@
         scopeEl.hidden = false;
         scopeEl.textContent = `Requested account permissions: ${scopes.join(', ')}`;
       }
+      document.body.classList.remove('checking');
+      statusEl.classList.remove('busy');
+      statusEl.textContent = '';
     }
 
     document.getElementById('switchAccount').addEventListener('click', async () => {
-      await sb.auth.signOut().catch(() => {});
+      // Only this browser: a global sign-out would also end the user's connected assistants.
+      await sb.auth.signOut({ scope: 'local' }).catch(() => {});
       redirectToLogin();
     });
 
