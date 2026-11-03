@@ -85,6 +85,15 @@
     aside.innerHTML = `<nav>${items.map(link).join('')}</nav><div class="auto-side-foot">${link(['dashboard', 'AI employees', 'user', `automation-dashboard.html${api?.isLocalPreview && location.protocol !== 'file:' ? '?preview=1' : ''}`])}${businessId && businessId !== 'preview' || api?.isLocalPreview ? link(['setup', 'Edit AI employee', 'edit', `automation-setup.html?id=${encodeURIComponent(businessId)}${preview}`]) : ''}${link(['contact', 'Contact us', 'send', `automation-contact.html${api?.isLocalPreview && location.protocol !== 'file:' ? '?preview=1' : ''}`])}<button class="auto-side-link auto-side-collapse" type="button" aria-label="Collapse sidebar">${icon('chevron')}<span>Collapse</span></button></div>`;
     document.body.appendChild(aside);
     document.body.classList.add('has-auto-sidebar');
+    // A comments-only account has no AI employee yet, so the link adds one instead of editing it.
+    if (api?.db && businessId && businessId !== 'preview' && !api.isLocalPreview) {
+      Promise.resolve(api.db.from('automation_businesses').select('setup_mode').eq('id', businessId).maybeSingle()).then(result => {
+        if (result?.error || result?.data?.setup_mode !== 'comments') return;
+        const setupLink = aside.querySelector('a[href^="automation-setup.html?id="]');
+        if (!setupLink) return;
+        setupLink.title = 'Add AI employee'; setupLink.querySelector('span:last-child').textContent = 'Add AI employee';
+      }).catch(() => {});
+    }
     let collapsed = false;
     try { collapsed = localStorage.getItem('hansora_automation_sidebar') === 'collapsed'; } catch (_) {}
     const applyCollapsed = () => { document.body.classList.toggle('auto-sidebar-collapsed', collapsed); aside.querySelector('.auto-side-collapse span').textContent = collapsed ? 'Expand' : 'Collapse'; };
