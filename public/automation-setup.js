@@ -58,9 +58,59 @@
     fillExisting(result.data);
     document.querySelector('#setup-title').textContent = 'Edit your AI employee';
   }
+  // A comments-only account that now gets its business details becomes a full AI employee on save.
+  let setupMode = 'full';
+  if (businessId && !api.isLocalPreview) {
+    const mode = await api.db.from('automation_businesses').select('setup_mode').eq('id', businessId).maybeSingle();
+    if (!mode.error && mode.data?.setup_mode) setupMode = mode.data.setup_mode;
+  }
+  if (setupMode === 'comments') document.querySelector('#setup-title').textContent = 'Create your AI employee';
   loading.hidden = true;
-  form.hidden = false;
-  showStep(0);
+  // A new owner first picks a version: the full AI employee, or comment automations only (AI employee later).
+  const choice = document.querySelector('#setup-choice');
+  const head = document.querySelector('.ui-center-head');
+  const headText = head.querySelector('p').textContent;
+  const showForm = () => { choice.hidden = true; form.hidden = false; document.querySelector('#setup-title').textContent = businessId ? document.querySelector('#setup-title').textContent : 'Create your AI employee'; head.querySelector('p').textContent = headText; showStep(0); };
+  if (!businessId && params.get('start') !== 'full') {
+    document.querySelector('#setup-title').textContent = 'How do you want to start?';
+    head.querySelector('p').textContent = 'Pick what you need now. You can add the rest later.';
+    choice.hidden = false;
+  } else showForm();
+  choice.addEventListener('click', event => {
+    const card = event.target.closest('[data-choice]'); if (!card) return;
+    if (card.dataset.choice === 'full') { showForm(); return; }
+    document.querySelector('#comments-start').hidden = false;
+    document.querySelector('#comments-name').focus();
+  });
+  document.querySelector('#comments-start').addEventListener('submit', async event => {
+    event.preventDefault();
+    const name = document.querySelector('#comments-name').value.trim();
+    if (!name) { document.querySelector('#comments-name').setAttribute('aria-invalid', 'true'); inlineError('Enter your brand or account name.'); return; }
+    errorBox.hidden = true;
+    const button = document.querySelector('#comments-create'); button.disabled = true;
+    window.HansoraUI.busy('Setting up your comment automations…');
+    try { await createCommentsOnly(name); } finally { button.disabled = false; window.HansoraUI.busy(false); }
+  });
+  // Comments only: an account with just a name. The AI does not answer messages on its own until the
+  // owner creates the AI employee (every channel starts with automatic replies off).
+  async function createCommentsOnly(name) {
+    const preview = window.location.protocol === 'file:' ? '' : '&preview=1';
+    if (api.isLocalPreview) { window.location.href = `automation-agent.html?id=preview${preview}`; return; }
+    const language = ['hy', 'ru', 'en'].includes(api.browserLanguage()) ? api.browserLanguage() : 'en';
+    const result = await api.db.rpc('automation_save_agent', {
+      p_business_id: null, p_business_name: name, p_category: '', p_description: '', p_contact_phone: '', p_contact_email: '',
+      p_display_name: `${name} assistant`.slice(0, 120), p_primary_language: language, p_supported_languages: [language], p_tone: 'friendly',
+      p_business_profile: {}, p_custom_instructions: '', p_prohibited_instructions: ''
+    });
+    if (result.error) { inlineError(api.displayError(result.error)); return; }
+    const id = result.data;
+    const replies = await api.db.from('automation_channel_connections').update({ settings: { automatic_replies: false } }).eq('business_id', id);
+    if (replies.error) console.warn('automatic replies default failed', replies.error);
+    await api.db.from('automation_businesses').update({ timezone: api.browserTimezone() }).eq('id', id);
+    const mode = await api.db.from('automation_businesses').update({ setup_mode: 'comments' }).eq('id', id);
+    if (mode.error) console.warn('setup mode not saved', mode.error);
+    window.location.href = `automation-agent.html?id=${encodeURIComponent(id)}`;
+  }
 
   nextButton.addEventListener('click', () => {
     if (!validateStep(currentStep)) return;
@@ -321,6 +371,7 @@
       return;
     }
     if (!businessId) await api.db.from('automation_businesses').update({ timezone: api.browserTimezone() }).eq('id', result.data);
+    if (businessId && setupMode === 'comments') { await finishCommentsOnly(businessId); setupMode = 'full'; }
     saveState.textContent = stay ? 'Saving…' : 'Preparing your AI employee…';
     if (!stay) window.HansoraUI.busy('Preparing your AI employee…');
     try {
@@ -408,6 +459,15 @@
     return false;
   }
 
+  // The owner of a comments-only account created the AI employee: ask once whether it may answer messages now.
+  async function finishCommentsOnly(id) {
+    const answer = window.confirm('Your AI employee is ready.\n\nLet it answer new messages on your connected channels now? You can change this for each channel later.');
+    if (answer) {
+      const rows = await api.db.from('automation_channel_connections').select('id,settings').eq('business_id', id);
+      for (const row of rows.data || []) await api.db.from('automation_channel_connections').update({ settings: { ...(row.settings || {}), automatic_replies: true } }).eq('id', row.id);
+    }
+    await api.db.from('automation_businesses').update({ setup_mode: 'full' }).eq('id', id);
+  }
   function inlineError(message) { errorBox.textContent = message; errorBox.hidden = false; errorBox.scrollIntoView({behavior:'smooth',block:'center'}); return false; }
   function fail(message) { loading.hidden = true; form.hidden = true; inlineError(message); }
   function capitalize(value) { return String(value || '').replace(/^./, character => character.toUpperCase()); }

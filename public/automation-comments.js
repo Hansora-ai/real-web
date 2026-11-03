@@ -40,6 +40,9 @@
   let state=structuredClone(defaults);let posts=[];let saveTimer=null;let pendingConnection=null;
   // Canvas camera (pan/zoom), ManyChat-style view vs edit mode, per-step results, and undo for deletes.
   let camera={x:40,y:24,z:1};let mode='edit';let stats=null;let editSnapshot=null;let lastDeleted=null;let currentLayout=null;let suppressClick=false;
+  // Comments-only accounts have no business details yet, so ready-made automations skip the AI step.
+  let commentsOnly=false;
+  if(!api.isLocalPreview){const mode=await api.db.from('automation_businesses').select('setup_mode').eq('id',businessId).maybeSingle();commentsOnly=!mode.error&&mode.data?.setup_mode==='comments';}
   if(!await loadFlow())return;
   normalizeFlow();lastSnapshot=snapshot();loading.hidden=true;builder.hidden=false;
   mode=state.workflowId&&['active','paused'].includes(state.status)&&!createNew?'view':'edit';
@@ -489,7 +492,14 @@
   }
   function mergePreviewState(saved){return{...structuredClone(defaults),...saved,trigger:{...structuredClone(defaults.trigger),...(saved.trigger||{})},nodes:Array.isArray(saved.nodes)?saved.nodes:structuredClone(defaults.nodes),selected:null}}
   function stateFromRow(row){return{workflowId:row.id,folder:row.safety_config?.folder||'',name:row.name,status:row.status,selected:null,createdAt:row.created_at,updatedAt:row.updated_at,metrics:{runs:Number(row.triggered_count||0)},trigger:{type:row.safety_config?.trigger_type||'comment',ref:row.safety_config?.trigger?.ref||'',question:row.safety_config?.trigger?.question||'',scope:row.post_scope,postIds:row.selected_post_ids||[],postPreviews:row.safety_config?.post_previews||{},match:row.match_type,keywords:row.keywords||[],exclude:row.safety_config?.exclude_keywords||[],publicEnabled:row.safety_config?.public_reply_enabled!==false,variations:row.public_reply_variations||[],firstCommentOnly:row.safety_config?.first_comment_only!==false,ignoreOwn:row.safety_config?.ignore_own!==false},triggerPos:row.safety_config?.layout?.trigger||null,nodes:Array.isArray(row.dm_steps)?row.dm_steps:structuredClone(defaults.nodes)}}
-  function templateState(template){
+  function templateState(template){const next=baseTemplateState(template);if(commentsOnly)next.nodes=withoutAiSteps(next.nodes);return next}
+  // Drops AI steps and every link that pointed to one.
+  function withoutAiSteps(nodes){
+    const removed=new Set(nodes.filter(node=>node.type==='ai').map(node=>node.id));
+    const clean=id=>removed.has(id)?null:id;
+    return nodes.filter(node=>!removed.has(node.id)).map(node=>({...node,...('nextId' in node?{nextId:clean(node.nextId)}:{}),...('replyNextId' in node?{replyNextId:clean(node.replyNextId)}:{}),...(Array.isArray(node.actions)?{actions:node.actions.filter(action=>!(action.type!=='website'&&removed.has(action.nextId)&&action.nextId)).map(action=>('nextId' in action?{...action,nextId:clean(action.nextId)}:action))}:{})}));
+  }
+  function baseTemplateState(template){
     const next=structuredClone(defaults);next.workflowId=null;next.status='draft';next.createdAt=new Date().toISOString();next.updatedAt=next.createdAt;
     // Like ManyChat: a new automation starts empty ("When…" plus "Choose first step"); templates are optional.
     if(!['send-link','prices','lead','follow-link'].includes(template)){next.name='Untitled automation';next.nodes=[];next.selected=null;return next}

@@ -51,6 +51,18 @@
   list.hidden = false;
   ui.stagger(document);
   if (!api.isLocalPreview) loadInstagramCards();
+  if (!api.isLocalPreview) markCommentsOnly();
+
+  // Comments-only accounts are labelled, so owners see which ones have no AI employee yet.
+  async function markCommentsOnly() {
+    const result = await api.db.from('automation_businesses').select('id,setup_mode').eq('setup_mode', 'comments');
+    if (result.error) return;
+    (result.data || []).forEach(row => {
+      const card = list.querySelector(`[data-business="${CSS.escape(row.id)}"]`);
+      const badge = card?.querySelector('.ui-employee-top .ui-badge');
+      if (badge) { badge.className = 'ui-badge dot amber'; badge.textContent = 'Comments only'; }
+    });
+  }
 
   // Connected Instagram photo + @name on each card, so several AI employees are easy to tell apart.
   async function loadInstagramCards() {
