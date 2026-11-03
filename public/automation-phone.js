@@ -226,7 +226,7 @@
     if (!canBuy && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
     // Numbers the business already has come first; adding another country comes below them.
     const numbers = line.numbers;
-    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · Live</small><strong class="big">${escapeHtml(number.e164)}</strong>${forwardingHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
+    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · Live</small><strong class="big">${escapeHtml(number.e164)}</strong>${forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
     $('#line-title').textContent = numbers.length ? 'Add another number' : 'How customers reach you';
     $('#line-subtitle').textContent = numbers.length ? 'Get a number in another country, or change how calls reach you.' : 'Pick one. You can change it later.';
     box.innerHTML = lineOffer();
@@ -239,6 +239,12 @@
       ? [['When you don’t answer, are busy or unreachable', `**004*${dial}#`]]
       : [['All calls', `**21*${dial}#`]];
     return mode() !== 'forward' ? '' : `<div style="margin-top:14px"><strong>Turn on forwarding</strong><p class="ui-hint" style="margin:4px 0 8px">On the phone with your business number, dial this code and press call:</p>${codes.map(([label, code]) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:15px;user-select:all">${code}</code></div>`).join('')}<span class="ui-hint">Works on most mobile operators. To stop forwarding, dial <code>##002#</code>. Then call your business number from another phone to check.${line.where && line.where !== number.country ? ' This number is in another country, so your operator charges you for each forwarded call.' : ''}</span></div>`;
+  }
+  // A new number can take forwarded calls too: old customers keep calling the business's own phone, and it forwards here.
+  function alsoForwardHtml(number) {
+    const dial = escapeHtml(number.e164);
+    const codes = [['All calls', `**21*${dial}#`], ['Only when you don’t answer, are busy or unreachable', `**004*${dial}#`]];
+    return `<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Also forward your existing phone to this number</summary><p class="ui-hint" style="margin:6px 0 8px">Your old customers keep calling the number they know, and your AI answers them too. On the phone with your existing number, dial one of these codes and press call:</p>${codes.map(([label, code]) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:15px;user-select:all">${code}</code></div>`).join('')}<span class="ui-hint">Works on most mobile operators. To stop forwarding, dial <code>##002#</code>.${line.where && line.where !== number.country ? ' This number is in another country, so your operator charges you for each forwarded call.' : ''}</span></details>`;
   }
   const requestFor = country => line.requests.find(item => item.country === country);
   const lastContact = () => line.requests.find(item => item.contact_value) || null;
