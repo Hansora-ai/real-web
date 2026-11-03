@@ -29,6 +29,22 @@
   workspace.hidden = false;
   render(result.data);
   showInstagramIdentity(result.data);
+  showCommentsOnlyBanner();
+
+  // Comments-only accounts: invite the owner to create the AI employee when they want it to answer messages and calls.
+  async function showCommentsOnlyBanner() {
+    const mode = await api.db.from('automation_businesses').select('setup_mode').eq('id', id).maybeSingle();
+    if (mode.error || mode.data?.setup_mode !== 'comments') return;
+    const banner = document.createElement('div');
+    banner.className = 'ui-card';
+    banner.style.cssText = 'display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:18px 20px;margin:0 0 18px;border-color:rgba(59,130,246,.45)';
+    banner.innerHTML = '<div style="flex:1;min-width:220px"><strong style="display:block">You’re using comment automations only</strong><span class="ui-hint">The AI doesn’t answer messages on its own. Want it to answer Instagram, WhatsApp and Telegram messages and phone calls too?</span></div>';
+    const link = document.createElement('a');
+    link.className = 'ui-btn primary'; link.textContent = 'Create my AI employee';
+    link.href = `automation-setup.html?id=${encodeURIComponent(id)}`;
+    banner.append(link);
+    workspace.prepend(banner);
+  }
 
   // The connected Instagram photo and @name replace the letter, so each AI employee is easy to recognise.
   async function showInstagramIdentity(business) {

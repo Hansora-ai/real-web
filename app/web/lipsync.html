@@ -269,14 +269,6 @@
       <p class="panel-subtitle">Create a talking avatar from exactly one image and one audio file. Audio length must be 5–90 seconds.</p>
 
       <section class="section">
-        <span class="label">Model</span>
-        <div class="model-grid">
-          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>7⚡ / second</span></button>
-          <button id="modelAvatarIII" class="choice" type="button" data-model="avatar_iii"><strong>Avatar III</strong><span>3⚡ / second</span></button>
-        </div>
-      </section>
-
-      <section class="section">
         <span class="label">Image input</span>
         <div id="imageDrop" class="drop-card">
           <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
@@ -1043,8 +1035,6 @@
       document.body.style.overflow = '';
     }
 
-    $('modelAvatarV').addEventListener('click', () => setModel('avatar_v'));
-    $('modelAvatarIII').addEventListener('click', () => setModel('avatar_iii'));
     $('imageBtn').addEventListener('click', () => $('imageInput').click());
     $('audioBtn').addEventListener('click', () => { if (!$('audioBtn').disabled) $('audioInput').click(); });
     bindDrop($('imageDrop'), $('imageInput'), (file) => {
@@ -1581,7 +1571,7 @@
         <a href="/prompt-builder.html">Cartoon Prompt Builder</a>
         <a href="/kid-cartoon.html">Kid Cartoon</a>
         <a href="/henshin.html">Henshin</a>
-        <a href="/video-edit.html">Video Edit</a>
+        <a href="/henshin.html?mode=edit">Video Edit</a>
         <a href="/background-change.html">Background Change</a>
         <a href="/video-relight.html">Video Relight</a>
         <a href="/upscale.html?mode=video">Video upscale</a>

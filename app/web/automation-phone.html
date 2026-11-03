@@ -29,14 +29,17 @@
       </ol>
       <section class="ui-card">
         <div class="ui-step phone-step" data-phone-step="1">
-          <div class="ui-step-head"><h2>How customers reach you</h2><p>Pick one. You can change it later.</p></div>
+          <div id="line-numbers"></div>
+          <div class="ui-step-head"><h2 id="line-title">How customers reach you</h2><p id="line-subtitle">Pick one. You can change it later.</p></div>
           <div class="ui-field" style="margin-bottom:18px"><label class="ui-label" for="line-where">Where is your business?</label><div style="position:relative"><input class="ui-input" id="line-where" placeholder="Type your country" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="line-where-menu"><div id="line-where-menu" role="listbox" hidden style="position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;max-height:280px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 12px 32px rgba(0,0,0,.35);padding:6px"></div></div></div>
+          <div id="line-contact"></div>
           <div class="ui-options">
-            <label class="ui-option"><input type="radio" name="number-mode" value="new" checked><span class="ui-option-mark" data-icon="sparkle"></span><span class="ui-option-text"><strong>Get a new phone number</strong><small>We assign it when you go live</small></span><span class="ui-option-radio"></span></label>
+            <label class="ui-option"><input type="radio" name="number-mode" value="new" checked><span class="ui-option-mark" data-icon="sparkle"></span><span class="ui-option-text"><strong>Get a new phone number</strong><small>A number only for your AI, ready in one click</small></span><span class="ui-option-radio"></span></label>
             <label class="ui-option"><input type="radio" name="number-mode" value="forward"><span class="ui-option-mark" data-icon="phone"></span><span class="ui-option-text"><strong>Forward your existing number</strong><small>Customers keep calling the number they know</small></span><span class="ui-option-radio"></span></label>
+            <label class="ui-option"><input type="radio" name="number-mode" value="whatsapp"><span class="ui-option-mark" style="background:#25d366;color:#fff;display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5.1 5.24-1.37A9.9 9.9 0 1 0 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-3.1.81.83-3.03-.2-.31a8.22 8.22 0 1 1 6.95 3.85Zm4.5-6.15c-.25-.12-1.46-.72-1.69-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.79.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.32-2.9c-.25-.43.25-.4.71-1.33.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.41-.56-.42h-.48a.92.92 0 0 0-.66.31 2.78 2.78 0 0 0-.87 2.07 4.83 4.83 0 0 0 1.01 2.56 11.05 11.05 0 0 0 4.23 3.74c.59.26 1.05.41 1.41.52a3.4 3.4 0 0 0 1.56.1c.48-.07 1.46-.6 1.67-1.18.2-.58.2-1.07.14-1.18-.06-.1-.22-.16-.47-.29Z"/></svg></span><span class="ui-option-text"><strong>Answer WhatsApp calls</strong><small>Connect your WhatsApp, and your AI answers its calls</small></span><span class="ui-option-radio"></span></label>
           </div>
-          <div class="ui-field" id="forward-field" hidden style="margin-top:16px"><label class="ui-label" for="phone-number">Your business number</label><input class="ui-input" id="phone-number" type="tel" placeholder="+1 555 010 0000"></div>
-          <div class="phone-line" id="phone-line" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px"></div>
+          <div id="option-detail" style="margin-top:14px"></div>
+          <div class="ui-field" id="forward-field" hidden style="margin-top:14px"><label class="ui-label" for="phone-number">Your business number</label><input class="ui-input" id="phone-number" type="tel" placeholder="+1 555 010 0000"><p class="ui-hint" id="forward-info" style="margin:8px 0 0"></p></div>
         </div>
         <div class="ui-step phone-step" data-phone-step="2" hidden>
           <div class="ui-step-head"><h2>Voice</h2><p>A natural voice that speaks your customers’ language.</p></div>
@@ -47,6 +50,10 @@
           <div class="ui-step-head"><h2>When it answers</h2><p>Bookings, orders and handoff rules come from Business tools.</p></div>
           <div class="ui-segmented" id="answer-mode-field" style="margin-bottom:18px"><label><input type="radio" name="answer-mode" value="always" checked><span>Every call</span></label><label><input type="radio" name="answer-mode" value="no_answer"><span>If I don't answer or I'm busy</span></label></div>
           <div class="ui-field"><label class="ui-label" for="transfer-number">Transfer to a person <span class="ui-faint">· optional</span></label><input class="ui-input" id="transfer-number" type="tel" placeholder="+1 555 010 0001"><span class="ui-hint">When a caller asks for a person. If nobody answers, the AI takes a callback request and notifies you. Works on real phone calls, not in the browser test.</span></div>
+          <div class="ui-field" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px"><label class="ui-label">Languages the AI speaks</label>
+            <div class="ui-segmented" style="margin-bottom:10px"><label><input type="radio" name="language-mode" value="auto" checked><span>The caller's language</span></label><label><input type="radio" name="language-mode" value="only"><span>Only languages I choose</span></label></div>
+            <div id="language-list" hidden style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px"></div>
+            <span class="ui-hint" id="language-hint">The AI answers in the language the caller speaks and keeps it for the whole call.</span></div>
           <div class="ui-setting" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px"><span><strong>Save call transcripts</strong><small>Shown in the inbox next to messages</small></span><input class="ui-switch" id="save-transcripts" type="checkbox" checked></div>
         </div>
         <div class="ui-step phone-step" data-phone-step="4" hidden>
@@ -63,6 +70,31 @@
         </div>
         <footer class="ui-card-foot setup-actions"><button class="ui-btn ghost" id="phone-previous" type="button" hidden>Back</button><span class="ui-save-state" id="phone-save-state">Settings save as you go</span><button class="ui-btn primary" id="phone-next" type="button">Continue</button></footer>
       </section>
+      <div id="phone-celebrate" hidden role="dialog" aria-modal="true" aria-labelledby="celebrate-title" style="position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.6)">
+        <div class="ui-card" style="max-width:440px;width:100%;padding:28px 24px;text-align:center;position:relative;overflow:hidden">
+          <div class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="celebrate-ring" aria-hidden="true"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+          <h2 id="celebrate-title" style="margin:18px 0 6px;font-size:22px">Congratulations! You're live.</h2>
+          <p class="ui-hint" style="margin:0 0 14px">Your AI employee now answers calls to</p>
+          <strong id="celebrate-number" style="display:block;font-size:30px;letter-spacing:.02em;user-select:all"></strong>
+          <p class="ui-hint" id="celebrate-country" style="margin:6px 0 0"></p>
+          <div id="celebrate-forward" style="text-align:left;margin-top:16px"></div>
+          <p style="margin:18px 0 0;font-weight:600">Give it a try: call it from any phone.</p>
+          <button class="ui-btn primary" type="button" id="celebrate-done" style="margin-top:18px;width:100%">Done</button>
+        </div>
+      </div>
+      <style>
+        .celebrate-ring{width:84px;height:84px;margin:6px auto 0;border-radius:50%;display:grid;place-items:center;background:var(--accent,#3b82f6);color:#fff;font-size:30px;animation:celebrate-pop .5s ease-out both,celebrate-pulse 1.6s ease-out .5s infinite}
+        .celebrate-burst i{position:absolute;top:70px;left:50%;width:8px;height:8px;border-radius:2px;opacity:0;animation:celebrate-fly 1.1s ease-out .15s both}
+        .celebrate-burst i:nth-child(1){background:#f59e0b;--x:-120px;--y:-40px}.celebrate-burst i:nth-child(2){background:#10b981;--x:120px;--y:-30px}.celebrate-burst i:nth-child(3){background:#ef4444;--x:-80px;--y:60px}.celebrate-burst i:nth-child(4){background:#3b82f6;--x:90px;--y:70px}
+        .celebrate-burst i:nth-child(5){background:#a855f7;--x:-150px;--y:20px}.celebrate-burst i:nth-child(6){background:#ec4899;--x:150px;--y:30px}.celebrate-burst i:nth-child(7){background:#22d3ee;--x:-30px;--y:-70px}.celebrate-burst i:nth-child(8){background:#84cc16;--x:40px;--y:-75px}
+        @keyframes celebrate-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+        @keyframes celebrate-pulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.45)}100%{box-shadow:0 0 0 22px rgba(59,130,246,0)}}
+        @keyframes celebrate-fly{0%{opacity:1;transform:translate(-50%,0) rotate(0)}100%{opacity:0;transform:translate(calc(-50% + var(--x)),var(--y)) rotate(200deg)}}
+        @media (prefers-reduced-motion:reduce){.celebrate-ring,.celebrate-burst i{animation:none}.celebrate-burst{display:none}}
+        .line-number-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px;margin-bottom:12px;background:var(--surface-2)}
+        .line-number-card strong.big{display:block;font-size:26px;letter-spacing:.02em;user-select:all;margin:4px 0}
+      </style>
       <section class="ui-card" id="phone-calls" style="margin-top:18px"><div class="ui-step"><div class="ui-step-head"><h2>Recent calls</h2><p>Every call with its transcript. Full conversations are also in the Inbox.</p></div><div id="phone-calls-list"></div></div></section>
       <p class="ui-hint" style="margin-top:14px;text-align:center"><a class="ui-link" id="phone-tools-link" href="automation-tools.html">Bookings, orders and handoff rules →</a> · Billed per connected minute, shown in Usage.</p>
     </div>
