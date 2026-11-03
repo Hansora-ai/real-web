@@ -182,6 +182,9 @@ html.hansora-app .auto-header .app-back-btn + .auto-brand { margin-left: 0 !impo
 html.hansora-app #automation-nav { top: 100% !important; left: 0 !important; right: 0 !important; margin-top: 0 !important; border-radius: 0 0 20px 20px !important;
   background: #0b0c10 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
   max-height: calc(100vh - env(safe-area-inset-top) - 50px); max-height: calc(100dvh - env(safe-area-inset-top) - 50px); overflow-y: auto; }
+/* With the bottom bar, the menu ends right above it and scrolls by itself (iPhone). */
+html.hansora-app body.has-auto-bottom-nav #automation-nav { max-height: calc(100dvh - env(safe-area-inset-top) - 50px - 78px - env(safe-area-inset-bottom)) !important;
+  overflow-y: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding-bottom: 16px !important; }
 
 /* Creative menu: opens over the top bar (its own ✕ at the top), starting under the status bar. */
 html.hansora-app #hs-overlay { top: env(safe-area-inset-top) !important; z-index: 10050 !important; }
@@ -208,3 +211,26 @@ html.hansora-app[data-theme="light"] #automation-nav > a:not(.app-door) { color:
 html.hansora-app[data-theme="light"] #automation-nav > a[aria-current="page"] { color: #2563eb !important; }
 html.hansora-app[data-theme="light"] .app-skip { background: #fff; border-color: rgba(15, 23, 42, .12); color: #475569; }
 html.hansora-app[data-theme="light"] .app-skip b { color: #0f172a; }
+
+/* Profile menus (photo in the top bar), Creative and Automation: one size for every row, Log out in red, under the bar. */
+html.hansora-app .site-header .user-menu, html.hansora-app .auto-user-menu {
+  top: calc(env(safe-area-inset-top) + 56px) !important; right: 12px !important; min-width: 220px !important; padding: 6px !important; border-radius: 16px !important;
+  background: rgba(22, 23, 28, .96) !important; border: 1px solid rgba(255,255,255,.1) !important; box-shadow: 0 24px 50px -16px rgba(0,0,0,.7) !important;
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+html.hansora-app .site-header .user-menu { position: fixed !important; }
+html.hansora-app .site-header .user-menu > a:not([href*="pricing"]), html.hansora-app .site-header .user-menu > button,
+html.hansora-app .auto-user-menu > a:not([href*="pricing"]), html.hansora-app .auto-user-menu > button {
+  display: flex !important; align-items: center; justify-content: space-between; gap: 8px; width: 100% !important; box-sizing: border-box; min-height: 46px; margin: 0 !important;
+  padding: 0 14px !important; border: 0 !important; border-radius: 11px !important; background: transparent !important; color: #f2f2f5 !important;
+  font: 500 15.5px/1.2 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif !important; text-align: left; text-decoration: none !important; }
+html.hansora-app .site-header .user-menu > :is(a, button):active, html.hansora-app .auto-user-menu > :is(a, button):active { background: rgba(255,255,255,.08) !important; }
+html.hansora-app #btnLogout, html.hansora-app #autoLogout { color: #ff6b6b !important; margin-top: 4px !important; border-top: 1px solid rgba(255,255,255,.08) !important; border-radius: 0 0 11px 11px !important; }
+html.hansora-app[data-theme="light"] .auto-user-menu { background: rgba(255,255,255,.97) !important; border-color: rgba(15,23,42,.1) !important; box-shadow: 0 24px 50px -16px rgba(15,23,42,.35) !important; }
+html.hansora-app[data-theme="light"] .auto-user-menu > :is(a, button) { color: #0f172a !important; }
+html.hansora-app[data-theme="light"] #autoLogout { color: #dc2626 !important; border-top-color: rgba(15,23,42,.08) !important; }
+
+/* Automation home, "Your credits also create" demo: always exactly the screen width while prompts are typed. */
+html.hansora-app .lx-creative { grid-template-columns: minmax(0, 1fr) !important; }
+html.hansora-app .lx-creative > *, html.hansora-app .lx-gen-prompt, html.hansora-app .lx-gen-grid > * { min-width: 0 !important; max-width: 100%; }
+html.hansora-app .lx-gen { min-width: 0 !important; max-width: 100%; grid-template-columns: minmax(0, 1fr) !important; contain: inline-size; }
+html.hansora-app .lx-gen-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr) !important; }

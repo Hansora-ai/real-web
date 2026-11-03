@@ -97,3 +97,34 @@ body.ah { margin: 0; background: #07070a; color: #f5f5f7; font-family: Inter, -a
 .sc-tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,.78)); pointer-events: none; }
 .sc-label { position: absolute; left: 12px; right: 10px; bottom: 10px; z-index: 1; display: flex; flex-direction: column; gap: 1px; }
 .sc-label b { font-size: 14px; font-weight: 800; } .sc-label small { font-size: 11.5px; color: #c9c9d2; }
+
+/* Trending now / Motion templates: tall video cards you swipe through. */
+.ah-sub { margin: -6px 18px 12px; color: #9a9aa6; font-size: 14px; line-height: 1.4; }
+.ah-fire { display: inline-block; animation: ahFlicker 1.6s ease-in-out infinite; }
+@keyframes ahFlicker { 50% { transform: scale(1.12) rotate(-6deg); } }
+.ah-reels { display: flex; gap: 10px; overflow-x: auto; padding: 0 16px 4px; scroll-snap-type: x mandatory; scroll-padding: 0 16px; scrollbar-width: none; }
+.ah-reels::-webkit-scrollbar { display: none; }
+.ah-reel { position: relative; flex: 0 0 42%; max-width: 190px; aspect-ratio: 9 / 16; border-radius: 22px; overflow: hidden; scroll-snap-align: start;
+  background: #121218; border: 1px solid #22222c; color: #fff; text-decoration: none; transform: translateZ(0); }
+.ah-reel img, .ah-reel video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.ah-reel video { opacity: 0; transition: opacity .4s; } .ah-reel video.on { opacity: 1; }
+.ah-reel::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.35) 0%, transparent 25%, transparent 55%, rgba(0,0,0,.82)); pointer-events: none; }
+.ah-reel-tag { position: absolute; z-index: 1; top: 10px; left: 10px; padding: 5px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 800;
+  background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.2); }
+.ah-reel-go { position: absolute; z-index: 1; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border-radius: 12px;
+  background: linear-gradient(100deg, #6366f1, #a855f7); font-size: 13.5px; font-weight: 800; box-shadow: 0 8px 20px -8px rgba(139,92,246,.9); }
+.ah-reel:active { transform: scale(.97); }
+.ah-reel.skeleton { background: linear-gradient(110deg, #15151c 30%, #1e1e28 50%, #15151c 70%); background-size: 220% 100%; animation: ahShimmer 1.3s linear infinite; }
+@keyframes ahShimmer { to { background-position: -120% 0; } }
+
+/* Create in 3 steps */
+.ah-steps-sec { margin-bottom: 8px; }
+.ah-steps { list-style: none; margin: 0 16px; padding: 6px; display: grid; gap: 6px; border-radius: 24px; background: linear-gradient(160deg, #17142a, #0f0f15 70%); border: 1px solid #262238; }
+.ah-steps li { display: grid; grid-template-columns: 44px 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center; padding: 12px; border-radius: 18px; }
+.ah-steps li + li { border-top: 1px solid rgba(255,255,255,.05); border-radius: 0 0 18px 18px; }
+.ah-steps i { grid-row: span 2; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 18px;
+  background: linear-gradient(135deg, #2fd3fb, #6366f1 55%, #a855f7); box-shadow: 0 8px 22px -10px rgba(99,102,241,.9); }
+.ah-steps b { font-size: 16px; font-weight: 800; }
+.ah-steps span { color: #a1a1ad; font-size: 13.5px; line-height: 1.35; }
+.ah-steps-cta { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 12px 16px 0; height: 52px; border-radius: 16px; color: #fff; text-decoration: none;
+  font-weight: 800; font-size: 16px; background: linear-gradient(100deg, #6366f1, #a855f7); box-shadow: 0 14px 30px -14px rgba(139,92,246,.9); }

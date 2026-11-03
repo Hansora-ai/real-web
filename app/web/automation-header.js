@@ -59,6 +59,10 @@
     if (!businessId && api?.isLocalPreview) businessId = 'preview';
     try { if (businessId) localStorage.setItem(storeKey, businessId); else businessId = localStorage.getItem(storeKey) || ''; } catch (_) {}
     if (businessId && !/^([0-9a-f-]{36}|preview)$/i.test(businessId)) businessId = '';
+    // App: nothing chosen yet → use the most recent AI employee, so the full menu always works.
+    if (!businessId) {
+      try { const known = JSON.parse(sessionStorage.getItem('hansora_automation_employees') || '[]'); if (known[0]?.id) { businessId = known[0].id; localStorage.setItem(storeKey, businessId); } } catch (_) {}
+    }
     const preview = api?.isLocalPreview && location.protocol !== 'file:' ? '&preview=1' : '';
     const q = businessId ? `business=${encodeURIComponent(businessId)}${preview}` : '';
     const icon = name => window.HansoraUI?.icon(name) || '';
@@ -139,6 +143,14 @@
         return { id: row.id, name: agent?.display_name || row.name || 'AI employee', ig: label ? (label.startsWith('@') ? label : `@${label}`) : '' };
       });
       try { sessionStorage.setItem(CACHE, JSON.stringify(list)); } catch (_) {}
+      // App: first visit without a chosen AI employee → choose the most recent one and rebuild the menu.
+      if (!businessId && list[0] && !renderSwitcher.rebuilt) {
+        renderSwitcher.rebuilt = true;
+        try { localStorage.setItem('hansora_automation_business', list[0].id); } catch (_) {}
+        document.querySelectorAll('.auto-sidebar, .auto-mobile-sections, .auto-bottom-nav').forEach(el => el.remove());
+        renderSidebar();
+        return;
+      }
       render(list);
     }).catch(() => {});
   }
