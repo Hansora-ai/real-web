@@ -7,7 +7,7 @@ import { buildAutomationInstructions, firstMessageFor } from '../../../lib/autom
 import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../../lib/automation/db.mjs';
 import { notifyOwner } from '../../../lib/automation/notify.mjs';
 import { affordableVoiceSeconds, automationPricesFor, canAfford, chargeCredits, handleOutOfCredits, voiceCredits } from '../../../lib/automation/billing.mjs';
-import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, createPhoneMetrics, describePhoneCall, normalizePhoneNumber, parsePhoneMetadata, phoneTestMaxSeconds, phoneTestSettings, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
+import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, createPhoneMetrics, describePhoneCall, normalizePhoneNumber, parsePhoneMetadata, phoneLanguageSettings, phoneTestMaxSeconds, phoneTestSettings, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
 import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs, toolInstructions } from '../../../lib/automation/tools.mjs';
 
 // The Google plugin (1.9.1) reports every model-started generation as caller
@@ -217,7 +217,7 @@ export default defineAgent({
     // on, the live free times and places at the start of the call (it still checks with the tools before confirming).
     const liveBrief = await runTool.liveBrief?.().catch(error => { console.error('phone live brief failed', { message: error?.message }); return ''; }) || '';
     const instructions = voiceInstructions(
-      buildAutomationInstructions({ business, agent, knowledge, channel: 'phone' }),
+      buildAutomationInstructions({ business, agent, knowledge, channel: 'phone', phoneLanguages: phoneLanguageSettings(settings).languages }),
       [toolInstructions(definitions, configs), `Current business date and time: ${businessClock(business.timezone)}.`, liveBrief].filter(Boolean).join('\n\n'),
       settings
     );
