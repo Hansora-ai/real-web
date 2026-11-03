@@ -16,7 +16,7 @@ import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { useSavedFiles } from '../../lib/hansora-mcp/own-results.mjs';
 import { recordPendingVideo, recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
-import { NEW_SCENE_FIRST_VIDEO, accountSummary, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -669,7 +669,8 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
       grokEightSecondsStep(balanceInternal),
       `Exception: only if people in the video must speak a language other than English (Chinese included), call create_generation again exactly as before with ${model.id}.`,
       `When it starts, tell the user in one short, friendly line which model is making their first video and its credits.`,
-      photos ? NEW_SCENE_FIRST_VIDEO : ''
+      firstVideoLengthNote(6),
+      photos ? newSceneStep(balanceInternal) : ''
     ].filter(Boolean).join(' ')
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
