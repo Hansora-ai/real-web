@@ -11,13 +11,52 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261027">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-setup.js?v=20261008-staged"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-setup.js?v=20261104-choice"></script>
 </head>
 <body class="ui" data-automation-page="setup">
   <div data-automation-header></div>
   <main class="ui-page ui-narrow ui-enter">
     <header class="ui-center-head"><h1 id="setup-title">Create your AI employee</h1><p>Teach it about your business once. You can change everything later.</p></header>
     <div id="setup-loading" class="ui-skeleton" style="height:420px;border-radius:16px" aria-label="Loading"></div>
+    <section id="setup-choice" hidden aria-labelledby="choice-title">
+      <style>
+        .choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:8px}
+        .choice-card{position:relative;text-align:left;padding:24px;border:1px solid var(--border);border-radius:16px;background:var(--surface);cursor:pointer;color:var(--text);font:inherit;transition:border-color .15s,transform .15s,box-shadow .15s;display:flex;flex-direction:column;gap:12px}
+        .choice-card:hover,.choice-card:focus-visible{border-color:var(--accent,#3b82f6);transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.25);outline:none}
+        .choice-card h2{margin:0;font-size:19px}
+        .choice-card p{margin:0;color:var(--text-2);font-size:14px;line-height:1.5}
+        .choice-card ul{margin:0;padding:0;list-style:none;display:grid;gap:7px;font-size:14px;color:var(--text-2)}
+        .choice-card li::before{content:"✓";color:#22c55e;font-weight:700;margin-right:8px}
+        .choice-card li.later::before{content:"＋";color:var(--text-3)}
+        .choice-icons{display:flex;gap:8px}
+        .choice-icons span{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;background:var(--surface-2)}
+        .choice-tag{position:absolute;top:18px;right:18px;font-size:12px;padding:4px 9px;border-radius:999px;background:rgba(59,130,246,.15);color:#60a5fa;font-weight:600}
+        .choice-cta{margin-top:auto;font-weight:600;color:var(--accent,#3b82f6)}
+      </style>
+      <div class="choice-grid">
+        <button type="button" class="choice-card" data-choice="full">
+          <span class="choice-tag">Full</span>
+          <div class="choice-icons" aria-hidden="true"><span>💬</span><span>📞</span><span>🗨️</span></div>
+          <h2>AI employee</h2>
+          <p>Your AI learns your business and answers customers everywhere.</p>
+          <ul><li>Instagram, WhatsApp, Telegram, TikTok messages</li><li>Phone calls</li><li>Instagram and TikTok comments</li><li>Orders, bookings and leads</li></ul>
+          <span class="choice-cta">Create my AI employee →</span>
+        </button>
+        <button type="button" class="choice-card" data-choice="comments">
+          <span class="choice-tag" style="background:rgba(34,197,94,.15);color:#4ade80">Quick start</span>
+          <div class="choice-icons" aria-hidden="true"><span>📸</span><span>🎵</span></div>
+          <h2>Comments only</h2>
+          <p>Automate Instagram and TikTok comments. No business details needed.</p>
+          <ul><li>Reply to comments automatically</li><li>Send a DM to people who comment</li><li class="later">AI employee whenever you’re ready</li></ul>
+          <span class="choice-cta">Start with comments →</span>
+        </button>
+      </div>
+      <form id="comments-start" class="ui-card" hidden novalidate style="margin-top:18px;padding:22px">
+        <label class="ui-label" for="comments-name">Your brand or account name</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><input class="ui-input" id="comments-name" maxlength="120" placeholder="For example: Luma Studio" style="flex:1;min-width:200px" autocomplete="organization"><button class="ui-btn primary" type="submit" id="comments-create">Start with comments</button></div>
+        <span class="ui-hint">The AI won’t answer your messages on its own. You can create your AI employee later, and keep everything you set up.</span>
+      </form>
+    </section>
     <div class="ui-alert" id="setup-error" role="alert" hidden></div>
     <form id="setup-form" hidden novalidate>
       <ol class="ui-stepper" aria-label="Setup progress">
