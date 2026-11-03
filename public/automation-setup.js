@@ -64,7 +64,7 @@
     const mode = await api.db.from('automation_businesses').select('setup_mode').eq('id', businessId).maybeSingle();
     if (!mode.error && mode.data?.setup_mode) setupMode = mode.data.setup_mode;
   }
-  if (setupMode === 'comments') document.querySelector('#setup-title').textContent = 'Create your AI employee';
+  if (setupMode === 'comments') { document.querySelector('#setup-title').textContent = 'Add your AI employee'; document.querySelector('.ui-center-head p').textContent = 'Teach it about your business, and it can answer your messages and calls too. Your comment automations stay as they are.'; }
   loading.hidden = true;
   // A new owner first picks a version: the full AI employee, or comment automations only (AI employee later).
   const choice = document.querySelector('#setup-choice');
