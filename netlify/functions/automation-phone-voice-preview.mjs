@@ -72,7 +72,7 @@ export async function handler(event, _context, fetchImpl = fetch) {
   const voice = phoneVoice(event.queryStringParameters?.voice);
   if (!voice) return error(400, 'unknown_voice');
   const lang = SAMPLES[event.queryStringParameters?.lang] ? event.queryStringParameters.lang : 'en';
-  const key = String(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
+  const key = String(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '').trim();
   if (!key) return error(503, 'voice_preview_not_configured');
   const model = String(process.env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-tts').trim();
   const request = { key, model, voice, text: SAMPLES[lang], fetchImpl };

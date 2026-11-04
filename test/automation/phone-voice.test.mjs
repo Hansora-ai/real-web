@@ -21,7 +21,7 @@ test('preview finds audio in an Interactions answer and wraps raw PCM as WAV', (
 
 test('preview rejects unknown voices and returns cached WAV audio', async () => {
   assert.equal((await handler({ httpMethod: 'GET', queryStringParameters: { voice: 'bad' } })).statusCode, 400);
-  process.env.GEMINI_API_KEY = 'test-key';
+  process.env.GOOGLE_API_KEY = 'test-key';
   let sent;
   const fetchImpl = async (url, options) => { sent = { url, body: JSON.parse(options.body) }; return { ok: true, json: async () => ({ steps: [{ type: 'model_output', content: [{ type: 'audio', data: pcmToWav(Buffer.alloc(4)).toString('base64') }] }] }) }; };
   const response = await handler({ httpMethod: 'GET', queryStringParameters: { voice: 'leda', lang: 'hy' } }, {}, fetchImpl);
@@ -29,5 +29,5 @@ test('preview rejects unknown voices and returns cached WAV audio', async () => 
   assert.equal(response.headers['Content-Type'], 'audio/wav');
   assert.match(sent.url, /\/interactions$/);
   assert.equal(sent.body.generation_config.speech_config[0].voice, 'Leda');
-  delete process.env.GEMINI_API_KEY;
+  delete process.env.GOOGLE_API_KEY;
 });
