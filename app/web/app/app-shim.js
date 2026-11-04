@@ -182,45 +182,38 @@
   });
 
   // ---------- 6. Moving around like an app ----------
-  // Tapping a link: a panel in the page's colour slides in from the right (from the left for Back), then the next
-  // page opens. The next page starts covered by the same colour and fades in when it is ready, so the time it takes
-  // to load is never a black screen. Swiping back (iPhone gesture) shows the previous page directly.
-  var CURTAIN_KEY = 'hansora.app.curtain';
+  // Tapping a link: the page's content slides out to the left (to the right for Back), then the next page opens.
+  // The next page's content stays hidden until it is ready, then slides in from the right (from the left for Back),
+  // so you see the real next screen arrive, never a black screen. The top and bottom bars stay still.
+  // Swiping back from the left edge (iPhone gesture) shows the previous page directly.
+  var SLIDE_KEY = 'hansora.app.slide';
   var navEntry = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
-  var saved = null;
-  try {
-    saved = JSON.parse(sessionStorage.getItem(CURTAIN_KEY) || 'null');
-    sessionStorage.removeItem(CURTAIN_KEY);
-    if (saved && saved.color) root.style.setProperty('--app-curtain', saved.color);
-    if (saved && saved.back) root.classList.add('app-going-back');
-  } catch (_) {}
-  // Covered on arrival after a tap in the app (or a normal page open); not after the iPhone's swipe-back gesture.
-  if (saved || navEntry.type !== 'back_forward') {
+  var slide = null;
+  try { slide = sessionStorage.getItem(SLIDE_KEY); sessionStorage.removeItem(SLIDE_KEY); } catch (_) {}
+  var hideSplash = function () { try { if (native && Plugins.SplashScreen) Plugins.SplashScreen.hide({ fadeOutDuration: 250 }); } catch (_) {} };
+  if (slide || navEntry.type !== 'back_forward') {
     root.classList.add('app-arriving');
-    var reveal = function () { requestAnimationFrame(function () { root.classList.add('app-arrived'); }); setTimeout(function () { root.classList.remove('app-arriving', 'app-arrived'); }, 400); };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(reveal, 40); }); else reveal();
-    setTimeout(reveal, 2500); // never stay covered
-  }
-  // Coming back to a page kept in memory: never show a leftover panel.
+    if (slide === 'back') root.classList.add('app-from-left');
+    var revealed = false;
+    var reveal = function () {
+      if (revealed) return; revealed = true;
+      hideSplash();
+      root.classList.add('app-arrived');
+      setTimeout(function () { root.classList.remove('app-arriving', 'app-arrived', 'app-from-left'); }, 450);
+    };
+    var whenReady = function () { setTimeout(function () { requestAnimationFrame(reveal); }, 60); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', whenReady); else whenReady();
+    setTimeout(reveal, 3000); // never stay hidden
+  } else onReady(hideSplash);
+  // A page kept in memory (Back): show it as it is.
   window.addEventListener('pageshow', function (event) {
     if (!event.persisted) return;
-    var old = document.querySelector('.app-curtain'); if (old) old.remove();
-    root.classList.remove('app-arriving', 'app-arrived');
+    root.classList.remove('app-leaving', 'app-leaving-back', 'app-arriving', 'app-arrived', 'app-from-left');
   });
-  function pageColor() {
-    var bg = getComputedStyle(document.body || root).backgroundColor;
-    if (!bg || bg === 'transparent' || /rgba\(0, 0, 0, 0\)/.test(bg)) bg = root.getAttribute('data-theme') === 'light' ? '#f4f5f8' : '#08090c';
-    return bg;
-  }
   window.HansoraLeave = function (go, back) {
-    try { sessionStorage.setItem(CURTAIN_KEY, JSON.stringify({ color: pageColor(), back: !!back })); } catch (_) {}
-    var curtain = document.createElement('div');
-    curtain.className = 'app-curtain' + (back ? ' back' : '');
-    curtain.style.setProperty('--app-curtain', pageColor());
-    (document.body || root).appendChild(curtain);
-    void curtain.offsetWidth;
-    curtain.classList.add('in');
-    setTimeout(go, 200);
+    try { sessionStorage.setItem(SLIDE_KEY, back ? 'back' : 'forward'); } catch (_) {}
+    root.classList.add(back ? 'app-leaving-back' : 'app-leaving');
+    setTimeout(go, 170);
   };
   document.addEventListener('click', function (event) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -231,7 +224,7 @@
     var url;
     try { url = new URL(a.href, location.href); } catch (_) { return; }
     if (url.origin !== location.origin) return;
-    if (url.pathname === location.pathname && url.search === location.search && url.hash) return; // same page, another section
+    if (url.pathname === location.pathname && url.search === location.search) return; // same page
     event.preventDefault();
     window.HansoraLeave(function () { location.href = url.href; }, false);
   });
@@ -465,6 +458,18 @@
     a.innerHTML = '<em aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></em><span><b>Hansora Creative</b><small>Images, videos, audio &amp; more</small></span><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></i>';
     nav.insertBefore(a, nav.firstChild);
   }
+  // Creative: the small profile menu (photo) also opens Automation.
+  function addProfileMenuDoor() {
+    var menu = document.getElementById('navMenu');
+    if (!menu || isAutomation || menu.querySelector('.app-menu-automation')) return;
+    var a = document.createElement('a');
+    a.className = 'app-menu-automation'; a.href = '/automation.html';
+    a.innerHTML = '<span>Hansora Automation</span><i aria-hidden="true">→</i>';
+    var logout = document.getElementById('btnLogout');
+    menu.insertBefore(a, logout || null);
+  }
+  onReady(addProfileMenuDoor);
+  new MutationObserver(addProfileMenuDoor).observe(root, { childList: true, subtree: true });
   var addAnyDoor = isAutomation ? addCreativeDoor : addDoors;
   onReady(addAnyDoor);
   new MutationObserver(addAnyDoor).observe(root, { childList: true, subtree: true });

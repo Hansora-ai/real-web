@@ -106,8 +106,11 @@
     $('password').type = $('repeat').type = shown ? 'password' : 'text';
     $('eye').textContent = shown ? 'Show' : 'Hide';
   });
-  // Logging in is optional: closing goes to the Creative home (it works without an account).
-  $('close').addEventListener('click', function () { location.replace('/'); });
+  // Logging in is optional: closing goes back to the section you came from (Automation or Creative).
+  $('close').addEventListener('click', function () {
+    var fromAutomation = /^\/automation/i.test(returnTo) || /\/automation[^/]*$/i.test(document.referrer.replace(/[?#].*$/, ''));
+    location.replace(fromAutomation ? '/automation.html' : '/');
+  });
 
   // Already signed in (or just returned from Google/Apple): continue.
   sb.auth.getSession().then(function (r) { if (r.data && r.data.session) done(); });
