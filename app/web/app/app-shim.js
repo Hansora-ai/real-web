@@ -50,6 +50,19 @@
     args[1] = serverUrl(url);
     return open.apply(this, args);
   };
+  // Sound and video from the server (e.g. the phone voice ▶ preview): /.netlify/… lives on hansora.co, not in the app.
+  if (native) {
+    var NativeAudio = window.Audio;
+    if (NativeAudio) {
+      window.Audio = function (src) { return arguments.length ? new NativeAudio(serverUrl(src)) : new NativeAudio(); };
+      window.Audio.prototype = NativeAudio.prototype;
+    }
+    var srcDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src');
+    if (srcDesc && srcDesc.set) Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+      configurable: true, enumerable: srcDesc.enumerable, get: srcDesc.get,
+      set: function (value) { srcDesc.set.call(this, serverUrl(value)); }
+    });
+  }
 
   // ---------- 2. Login with Google / Telegram through the phone's browser ----------
   function wrapAuth(sb) {

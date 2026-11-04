@@ -37,12 +37,19 @@
         </header>
         <div class="ui-thread-notice" id="conversation-notice"></div>
         <div class="ui-timeline" id="message-timeline" aria-live="polite"></div>
+        <div id="ai-call-box" hidden style="margin:0 16px 10px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)">
+          <strong id="ai-call-title">Your AI calls this customer</strong>
+          <label class="ui-label" for="ai-call-purpose" style="display:block;margin:10px 0 6px">What should the AI call about?</label>
+          <textarea class="ui-textarea" id="ai-call-purpose" rows="2" maxlength="500"></textarea>
+          <p class="ui-hint" id="ai-call-status" style="margin:8px 0 0">The AI says it is your assistant, explains why it is calling, and the call appears here. Billed per minute like other calls.</p>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="ui-btn ghost sm" id="ai-call-cancel" type="button">Cancel</button><button class="ui-btn accent sm" id="ai-call-start" type="button">Call now</button></div>
+        </div>
         <form class="ui-reply" id="human-composer">
           <p class="wa-window" id="wa-window" hidden></p>
           <div class="ui-reply-box">
             <textarea id="human-message" rows="2" placeholder="Write a reply…" disabled></textarea>
             <div class="template-picker" id="template-picker" hidden><div class="template-picker-head"><label for="template-select">Approved WhatsApp template</label><button class="ui-link" id="template-refresh" type="button">Reload</button></div><select class="ui-select" id="template-select"><option value="">Loading templates…</option></select><div class="template-variables" id="template-variables"></div><p class="template-preview" id="template-preview"></p></div>
-            <div class="ui-reply-foot"><span id="composer-help">Take over to reply yourself.</span><button class="ui-btn secondary sm" id="take-over" type="button">Take over</button><button class="ui-btn accent sm" type="submit" disabled>Send</button></div>
+            <div class="ui-reply-foot"><span id="composer-help">Take over to reply yourself.</span><button class="ui-btn secondary sm" id="ai-call" type="button" hidden>Call with AI</button><button class="ui-btn secondary sm" id="take-over" type="button">Take over</button><button class="ui-btn accent sm" type="submit" disabled>Send</button></div>
           </div>
         </form>
       </section>

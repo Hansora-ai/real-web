@@ -40,16 +40,22 @@
           </div>
           <div id="option-detail" style="margin-top:14px"></div>
           <div class="ui-field" id="forward-field" hidden style="margin-top:14px"><label class="ui-label" for="phone-number">Your business number</label><input class="ui-input" id="phone-number" type="tel" placeholder="+1 555 010 0000"><p class="ui-hint" id="forward-info" style="margin:8px 0 0"></p></div>
+          <div id="sip-import" style="margin-top:18px"></div>
         </div>
         <div class="ui-step phone-step" data-phone-step="2" hidden>
           <div class="ui-step-head"><h2>Voice</h2><p>A natural voice that speaks your customers’ language.</p></div>
-          <div class="ui-voice-card"><span class="ui-voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div><strong>Leda</strong><small>Gemini Live · natural native audio</small></div><span class="ui-badge blue">Selected</span></div>
+          <div id="voice-picker" role="radiogroup" aria-label="Voice">
+            <p class="ui-label" style="margin:0 0 8px">Recommended</p>
+            <div class="ui-voice-grid" id="voice-recommended"></div>
+            <details class="ui-voice-more"><summary>More voices</summary><p class="ui-label" style="margin:14px 0 8px">Female</p><div class="ui-voice-grid" id="voice-female"></div><p class="ui-label" style="margin:14px 0 8px">Male</p><div class="ui-voice-grid" id="voice-male"></div></details>
+            <span class="ui-hint" id="voice-hint">Press ▶ to hear a voice. Every voice speaks all your languages.</span>
+          </div>
           <div class="ui-field" style="margin-top:18px"><label class="ui-label" for="phone-greeting">First sentence on every call</label><textarea class="ui-textarea" id="phone-greeting" rows="2" maxlength="300">Hello! Thanks for calling. How can I help?</textarea><span class="ui-hint">Keep it short. The AI answers in the caller’s language after this.</span></div>
         </div>
         <div class="ui-step phone-step" data-phone-step="3" hidden>
           <div class="ui-step-head"><h2>When it answers</h2><p>Bookings, orders and handoff rules come from Business tools.</p></div>
           <div class="ui-segmented" id="answer-mode-field" style="margin-bottom:18px"><label><input type="radio" name="answer-mode" value="always" checked><span>Every call</span></label><label><input type="radio" name="answer-mode" value="no_answer"><span>If I don't answer or I'm busy</span></label></div>
-          <div class="ui-field"><label class="ui-label" for="transfer-number">Transfer to a person <span class="ui-faint">· optional</span></label><input class="ui-input" id="transfer-number" type="tel" placeholder="+1 555 010 0001"><span class="ui-hint">When a caller asks for a person. If nobody answers, the AI takes a callback request and notifies you. Works on real phone calls, not in the browser test.</span></div>
+          <p class="ui-hint" style="margin:0 0 4px">Transfer to a person, call-backs and reminders are in <strong>Call automations</strong>, below.</p>
           <div class="ui-field" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px"><label class="ui-label">Languages the AI speaks</label>
             <div class="ui-segmented" style="margin-bottom:10px"><label><input type="radio" name="language-mode" value="auto" checked><span>The caller's language</span></label><label><input type="radio" name="language-mode" value="only"><span>Only languages I choose</span></label></div>
             <div id="language-list" hidden style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px"></div>
@@ -95,6 +101,18 @@
         .line-number-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px;margin-bottom:12px;background:var(--surface-2)}
         .line-number-card strong.big{display:block;font-size:26px;letter-spacing:.02em;user-select:all;margin:4px 0}
       </style>
+      <section class="ui-card" id="phone-outgoing" hidden style="margin-top:18px"><div class="ui-step">
+        <div class="flow-top"><div class="ui-step-head" style="margin:0"><h2>Call automations</h2><p>When something happens, your AI makes the call. Billed per minute like other calls.</p></div><button class="ui-btn secondary" id="make-call-open" type="button">Make a call</button></div>
+        <div class="flow-card" id="make-call" hidden>
+          <strong>Make a call now</strong>
+          <input class="ui-input" id="call-now-number" type="tel" placeholder="Number to call, for example +12125550100" style="margin-top:10px">
+          <textarea class="ui-textarea" id="call-now-purpose" rows="2" maxlength="500" placeholder="What should the AI say or ask? For example: Confirm Friday’s 11:30 booking" style="margin-top:8px"></textarea>
+          <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:8px"><span class="ui-hint" id="call-now-status" style="margin:0">The AI says it is your assistant and explains why it is calling.</span><button class="ui-btn primary" id="call-now" type="button">Call now</button></div>
+        </div>
+        <div id="flow-cards"></div>
+        <div class="flow-hours"><span>Automatic calls only between</span><input class="ui-input" id="auto-from" type="time" value="09:00"><span>and</span><input class="ui-input" id="auto-to" type="time" value="20:00"><span class="ui-faint">your business time</span></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="ui-btn primary" id="auto-save" type="button">Save</button></div>
+      </div></section>
       <section class="ui-card" id="phone-calls" style="margin-top:18px"><div class="ui-step"><div class="ui-step-head"><h2>Recent calls</h2><p>Every call with its transcript. Full conversations are also in the Inbox.</p></div><div id="phone-calls-list"></div></div></section>
       <p class="ui-hint" style="margin-top:14px;text-align:center"><a class="ui-link" id="phone-tools-link" href="automation-tools.html">Bookings, orders and handoff rules →</a> · Billed per connected minute, shown in Usage.</p>
     </div>
