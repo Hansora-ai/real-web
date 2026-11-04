@@ -106,49 +106,51 @@
       if (items.length) fill('ahTmplSec', 'ahTemplates', items); else hide('ahTmplSec');
     }).catch(function () { hide('ahTmplSec'); });
 
-  // ---- Last section: a prompt types itself, "Creating…", then a real Hansora video appears. Runs only on screen.
+  // ---- Last section: a prompt types itself, then its result appears as a small tile (the newest first). On screen only.
   (function () {
     var sec = $('ahFinale'); if (!sec) return;
-    var V = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/';
+    var R = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/website%20content/';
+    var size = '?width=420&height=420&resize=cover&quality=85';
     var shots = [
-      ['Woman reading in a vintage car, New York street, film look', V + 'video/images/user-uploads/2026/09/18/8e5cdfb95e664d99-seedance-energy.mp4'],
-      ['Black bull in armour walks out of the smoke, epic slow motion', V + 'website%20content/videos/video-19.mp4'],
-      ['Luxury ad: woman in a white dress beside a classic car', V + 'video/images/user-uploads/2026/09/18/b4fa40090a38edb9-seedance-action.mp4'],
-      ['Street interview with a giant red bucket of popcorn', V + 'video/images/user-uploads/2026/09/18/6e292a2ac3b6facc-seedance-skate.mp4']
+      ['Woman laughing by a Christmas tree, warm light', R + 'Untitled%20design%20(25).png' + size],
+      ['Boy in a magical forest with friendly animals', R + 'Untitled%20design%20(37).png' + size],
+      ['Golden-hour portrait by the window, soft film look', R + 'Untitled%20design%20(44).png' + size],
+      ['Fashion portrait, red glasses and red fur, studio light', R + 'Untitled%20design/7.png' + size]
     ];
-    var text = $('ahfText'), stage = sec.querySelector('.ahf-stage'), vids = [].slice.call(stage.querySelectorAll('video')), go = $('ahfGo');
+    shots.forEach(function (s) { var im = new Image(); im.src = s[1]; }); // ready before they are shown
+    var text = $('ahfText'), row = $('ahfRow'), go = $('ahfGo');
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var visible = false, running = false, i = 0, slot = 0, current = shots[0][0];
+    var visible = false, running = false, i = 0, current = shots[0][0];
     var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
     var untilVisible = function () { return new Promise(function (r) { (function check() { if (visible) r(); else setTimeout(check, 300); })(); }); };
+    function tile(shot, done) {
+      var t = document.createElement('div'); t.className = 'ahf-tile' + (done ? ' done' : '');
+      var img = document.createElement('img'); img.alt = ''; img.src = shot[1]; t.appendChild(img);
+      row.insertBefore(t, row.firstChild);
+      while (row.children.length > 3) row.removeChild(row.lastChild);
+      return t;
+    }
+    // Start with two finished results so the row is never empty.
+    tile(shots[3], true); tile(shots[2], true); i = 0;
     async function loop() {
       if (running) return; running = true;
       for (;;) {
         await untilVisible();
         var shot = shots[i % shots.length]; current = shot[0];
-        var next = vids[slot % 2], prev = vids[(slot + 1) % 2];
-        next.src = shot[1];
-        stage.classList.remove('ready'); stage.classList.remove('gen'); void stage.offsetWidth; stage.classList.add('gen');
-        prev.classList.remove('on');
+        [].forEach.call(row.children, function (c) { c.classList.remove('new'); });
+        var t = tile(shot, false); t.classList.add('new');
         if (reduce) text.textContent = shot[0];
-        else for (var k = 1; k <= shot[0].length; k++) { text.textContent = shot[0].slice(0, k); await wait(26); }
-        await wait(reduce ? 300 : 1400);
-        try { next.currentTime = 0; } catch (_) {}
-        var p = next.play(); if (p && p.catch) p.catch(function () {});
-        next.classList.add('on'); stage.classList.add('ready');
-        setTimeout(function (v) { return function () { v.pause(); }; }(prev), 900);
-        await wait(5200);
-        i++; slot++;
+        else for (var k = 1; k <= shot[0].length; k++) { text.textContent = shot[0].slice(0, k); await wait(30); }
+        await wait(reduce ? 200 : 1300);
+        t.classList.add('done');
+        await wait(3200);
+        i++;
       }
     }
-    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) {
-      visible = es[0].isIntersecting;
-      vids.forEach(function (v) { if (!visible) v.pause(); else if (v.classList.contains('on')) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } });
-      if (visible) loop();
-    }, { threshold: 0.25 }).observe(sec);
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) loop(); }, { threshold: 0.25 }).observe(sec);
     else { visible = true; loop(); }
     // "Try this prompt": the create page opens with the prompt that is on screen.
-    go.addEventListener('click', function () { try { sessionStorage.setItem('hansora:article-preset', JSON.stringify({ prompt: current })); } catch (_) {} go.href = '/search-models.html?type=video&articlePreset=1'; });
+    go.addEventListener('click', function () { try { sessionStorage.setItem('hansora:article-preset', JSON.stringify({ prompt: current })); } catch (_) {} go.href = '/search-models.html?articlePreset=1'; });
   })();
 
 })();
