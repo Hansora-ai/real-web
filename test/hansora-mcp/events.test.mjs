@@ -13,9 +13,13 @@ test('an event row keeps the step, model, outcome and price, never the prompt', 
   assert.deepEqual(row, {
     user_id: 'user-1', tool: 'create_generation', model_id: 'seedance25', outcome: 'switched_to_affordable',
     credits: 318, balance: 30, run_id: null,
-    details: { duration: 10, resolution: '720p', options: ['grok-video'], first_generation: true }
+    details: { duration: 10, resolution: '720p', options: ['grok-video'], first_generation: true, photos: 0 }
   });
   assert.doesNotMatch(JSON.stringify(row), /secret prompt/);
+  // Whether photos came with the request: a dropped photo can be told from none sent.
+  const withPhoto = eventRow('user-1', 'create_generation', { model_id: 'grok-video', image_files: [{ download_url: 'https://f.test/a', file_id: 'a' }], first_frame_url: 'https://f.test/b' }, { structuredContent: { ok: true, run_id: 'r', photo_restored: true } });
+  assert.equal(withPhoto.details.photos, 2);
+  assert.equal(withPhoto.details.photo_restored, true);
   const balance = eventRow('user-1', 'get_account', {}, { structuredContent: { credits: 30 } });
   assert.equal(balance.balance, 30);
   assert.equal(balance.credits, null);
@@ -26,7 +30,7 @@ test('a blocked request keeps its prompt and who blocked it; a plain-text error 
   const blocked = eventRow('user-1', 'create_generation', { model_id: 'veo31-lite', prompt: 'A dog running like a human' },
     { isError: true, structuredContent: { error: 'content_blocked', category: 'nsfw_sexual_content', blocked_by: 'moderation' } });
   assert.equal(blocked.outcome, 'content_blocked');
-  assert.deepEqual(blocked.details, { category: 'nsfw_sexual_content', blocked_by: 'moderation', prompt: 'A dog running like a human' });
+  assert.deepEqual(blocked.details, { photos: 0, category: 'nsfw_sexual_content', blocked_by: 'moderation', prompt: 'A dog running like a human' });
   const failed = eventRow('user-1', 'create_generation', { model_id: 'kling25', prompt: 'secret' }, { isError: true, content: [{ type: 'text', text: 'provider_rejected' }] });
   assert.equal(failed.outcome, 'error');
   assert.equal(failed.details.reason, 'provider_rejected');

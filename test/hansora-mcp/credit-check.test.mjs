@@ -1383,3 +1383,42 @@ test('a new user\'s photo in a new scene starts at once on Wan 3.0, 5 s at 480p,
   assert.equal(submitted[0].payload.first_frame_url, undefined);
   assert.equal(submitted[0].payload.expected_credits, 30);
 });
+
+test('a photo ChatGPT leaves out after Hansora switched the model is put back before the provider gets the request', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const photo = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/me.jpg';
+  const prompt = 'Jonnathan wins the election on a big stage';
+
+  // 1. Kling 4.0 with the photo does not fit the free credits: sent back, and the photo is kept.
+  const saved = [];
+  const first = await callTool('create_generation', { model_id: 'kling40', prompt, duration: 10, resolution: '720p', image_urls: [photo] }, {
+    credits: 3, files: { [photo]: Buffer.alloc(8) },
+    rest: (href, options) => {
+      if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return reply({}); }
+      if (href.includes('/rest/v1/user_generations')) return reply([]);
+      return undefined;
+    }
+  });
+  assert.equal(first.submitted.length, 0);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const kept = saved.find((row) => row.tool === 'pending_photos');
+  assert.ok(kept, 'photos kept');
+  assert.deepEqual(kept.details.image_urls, [photo]);
+
+  // 2. ChatGPT sends the switched request without the photo: the photo goes to the provider anyway.
+  const world = ({ started = [] } = {}) => (href) => {
+    if (href.includes('tool=eq.pending_photos')) return reply([{ details: kept.details, created_at: new Date(Date.now() - 30000).toISOString() }]);
+    if (href.includes('tool=eq.create_generation') && href.includes('outcome=eq.ok')) return reply(started);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const second = await callTool('create_generation', { model_id: 'grok-video', prompt, duration: 6, resolution: '720p' }, { credits: 3, files: { [photo]: Buffer.alloc(8) }, rest: world() });
+  assert.equal(second.submitted.length, 1);
+  assert.ok(JSON.stringify(second.submitted[0].payload).includes(photo), 'the photo reached the provider');
+  assert.equal(second.result.structuredContent.photo_restored, true);
+
+  // 3. Once a generation has started since, an unrelated text request gets no photo.
+  const later = await callTool('create_generation', { model_id: 'grok-video', prompt: 'Two foxes in a meadow', duration: 6, resolution: '720p' }, { credits: 3, rest: world({ started: [{ id: 'g1' }] }) });
+  assert.equal(later.submitted.length, 1);
+  assert.ok(!JSON.stringify(later.submitted[0].payload).includes(photo));
+});
