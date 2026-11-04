@@ -3,6 +3,7 @@ import { first, rows, serviceInsert, serviceUpdate, supabaseRequest } from '../.
 import { acceptOnLiveKitTrunk, buyTelnyxNumber, telnyxConfigured } from '../../lib/automation/telnyx.mjs';
 import { buyTwilioNumber, twilioConfigured } from '../../lib/automation/twilio.mjs';
 import { decryptSecret, encryptSecret } from '../../lib/automation/crypto.mjs';
+import { notifyHansoraTeam } from '../../lib/automation/team-notify.mjs';
 import { countryForNumber } from '../../lib/automation/phone-outgoing.mjs';
 import { createImportTrunk, deleteImportTrunk, newSipCredentials, setTrunkNumbers, sipAddress } from '../../lib/automation/sip-import.mjs';
 
@@ -88,11 +89,22 @@ export async function handler(event) {
       if (!/^[A-Z]{2}$/.test(country) || !CONTACT_METHODS.has(method) || !flags.length) return json(400, { error: 'invalid_contact' });
       const valid = method === 'email' ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) : method === 'whatsapp' ? /^\+?[\d\s()-]{7,20}$/.test(value) : /^@?[A-Za-z0-9_]{4,32}$|^\+?[\d\s()-]{7,20}$/.test(value);
       if (!valid) return json(400, { error: 'invalid_contact' });
+      // The Hansora team gets an email the first time this contact is left for this country (not on every resave).
+      const before = await first(`/rest/v1/automation_phone_country_requests?user_id=eq.${encodeURIComponent(user.id)}&country=eq.${encodeURIComponent(country)}&select=contact_value,contact_method&limit=1`).catch(() => null);
       await supabaseRequest('/rest/v1/automation_phone_country_requests?on_conflict=user_id,country', {
         method: 'POST',
         body: { user_id: user.id, email: user.email, business_id: businessId, country, contact_method: method, contact_value: value, ...Object.fromEntries(flags.map(item => [item, true])), updated_at: new Date().toISOString() },
         prefer: 'resolution=merge-duplicates,return=representation'
       });
+      if (before?.contact_value !== value || before?.contact_method !== method) {
+        const wants = { local_number: 'A local number', whatsapp_calls: 'WhatsApp calls', forwarding_help: 'Help with forwarding' };
+        const countryName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(country) || country; } catch (_) { return country; } })();
+        await notifyHansoraTeam({
+          subject: `Phone request: ${countryName} · ${method === 'whatsapp' ? 'WhatsApp' : method === 'telegram' ? 'Telegram' : 'Email'} ${value}`,
+          rows: [['Country', `${countryName} (${country})`], ['Contact', `${method}: ${value}`], ['Wants', [].concat(body.wants || []).map(item => wants[item]).filter(Boolean).join(', ') || '—'], ['Account email', user.email || '—'], ['Business ID', businessId]],
+          replyTo: method === 'email' ? value : (user.email || '')
+        });
+      }
       return json(200, { country, method, value, wants: body.wants });
     }
 

@@ -53,8 +53,9 @@
   render();
   loadLine();
   loadCalls();
+  preloadVoices();
 
-  document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', syncForward));
+  document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', event => { if (event.isTrusted) line.modeTouched = true; syncForward(); }));
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   document.querySelectorAll('input[name="language-mode"]').forEach(input => input.addEventListener('change', renderLanguages));
   for (const box of ['#line-contact', '#option-detail', '#phone-live', '#line-numbers', '#sip-import']) $(box).addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
@@ -175,6 +176,17 @@
       });
     }
   }
+  function voiceSampleUrl(name) {
+    const lang = ['hy', 'ru', 'en'].find(code => agentLanguages.includes(code)) || 'en';
+    return `/.netlify/functions/automation-phone-voice-preview?voice=${encodeURIComponent(name)}&lang=${lang}&v=1`;
+  }
+  // The first sample of a voice takes a few seconds to make; the four recommended ones are fetched as soon as the
+  // Voice step opens, so ▶ plays at once (they are cached afterwards for everyone).
+  function preloadVoices() {
+    if (preloadVoices.done || api.isLocalPreview || typeof fetch !== 'function') return;
+    preloadVoices.done = true;
+    for (const voice of RECOMMENDED_VOICES) fetch(voiceSampleUrl(voice.name)).catch(() => null);
+  }
   function selectedVoice() { return document.querySelector('input[name="phone-voice"]:checked')?.value || 'Leda'; }
   function stopVoice() {
     if (voicePlayer.audio) { voicePlayer.audio.pause(); voicePlayer.audio = null; }
@@ -184,8 +196,7 @@
     const same = voicePlayer.button === button;
     stopVoice();
     if (same) return;
-    const lang = ['hy', 'ru', 'en'].find(code => agentLanguages.includes(code)) || 'en';
-    const audio = new Audio(`/.netlify/functions/automation-phone-voice-preview?voice=${encodeURIComponent(button.dataset.voicePlay)}&lang=${lang}&v=1`);
+    const audio = new Audio(voiceSampleUrl(button.dataset.voicePlay));
     voicePlayer.audio = audio; voicePlayer.button = button;
     button.classList.add('loading'); button.textContent = '…';
     audio.addEventListener('playing', () => { if (voicePlayer.audio !== audio) return; button.classList.remove('loading'); button.classList.add('playing'); button.textContent = '■'; });
@@ -263,6 +274,7 @@
   }
   function render() {
     stopVoice();
+    if (step === 2) preloadVoices();
     document.querySelectorAll('.phone-step').forEach(pane => { pane.hidden = Number(pane.dataset.phoneStep) !== step; });
     document.querySelectorAll('.ui-stepper li').forEach(item => { const n = Number(item.dataset.step); item.classList.toggle('active', n === step); item.classList.toggle('done', n < step); });
     $('.ui-stepper').style.setProperty('--progress-num', String((step - 1) / 3));
@@ -314,6 +326,7 @@
       const numbers = Array.isArray(payload.numbers) ? payload.numbers : payload.number ? [payload.number] : [];
       line = { ...line, numbers, countries:payload.countries || [], requests:payload.requests || [], sip:payload.sip || null, loaded:true, error:false };
     } catch (_) { line = { ...line, numbers:[], countries:[], loaded:true, error:true }; }
+    keepSipMode();
     renderLine(); setState(); if (step === 4) render();
     if (!line.numbers.length && !line.error) recordCountry();
   }
@@ -322,11 +335,19 @@
   function numberIn(country) { return line.numbers.find(item => item.country === country && !item.imported); }
   // Numbers that really answer calls (an imported SIP number counts once its first call has arrived).
   function liveNumbers() { return line.numbers.filter(item => !item.pending); }
+  // While a SIP number waits for its test call, no other option is chosen (the owner is continuing with SIP).
+  // Choosing an option by hand switches to it; removing the SIP number goes back to "Get a new phone number".
+  function keepSipMode() {
+    const sipRadio = document.querySelector('input[name="number-mode"][value="sip"]');
+    if (line.numbers.some(item => item.pending) && !line.modeTouched) sipRadio.checked = true;
+    else if (sipRadio.checked && !line.numbers.some(item => item.imported)) document.querySelector('input[name="number-mode"][value="new"]').checked = true;
+    $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = mode() !== 'forward';
+  }
   function fallbackCountry() { return ['US', 'CA'].find(code => readyCountries().has(code)); }
   // The country the last step's button gets a number in: the business's own country, or a
   // US/Canada number to forward to when there are no local numbers yet.
   function targetCountry() {
-    if (!line.where || mode() === 'whatsapp') return '';
+    if (!line.where || mode() === 'whatsapp' || mode() === 'sip') return '';
     if (readyCountries().has(line.where)) return line.where;
     return mode() === 'forward' ? fallbackCountry() || '' : '';
   }
@@ -462,14 +483,14 @@
       if (action === 'import_sip') {
         if (!response.ok) throw new Error({ number_in_use:'This number is already used by another Hansora account. Contact us if it is yours.', number_already_added:'This number is already added.', invalid_country:'Choose where your business is (above) first.', invalid_number:'Enter the number in international format, for example +37460000000.', too_many_imported_numbers:'You can add up to 10 SIP numbers.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', phone_line_setup_failed:'The number could not be added right now. Please try again in a few minutes.' }[payload.error] || 'The number could not be added. Please try again.');
         line.numbers = Array.isArray(payload.numbers) ? payload.numbers : line.numbers;
-        line.sip = payload.sip || line.sip; line.sipOpen = true;
+        line.sip = payload.sip || line.sip; line.sipOpen = true; line.modeTouched = false; keepSipMode();
         await save({ quiet:true });
         ui.toast('Added. Enter these settings in your SIP provider, then make a test call.'); renderLine(); setState(); if (step === 4) render(); return;
       }
       if (!response.ok) throw new Error(({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.') + (payload.detail ? ` (${payload.detail})` : ''));
       line.numbers = Array.isArray(payload.numbers) ? payload.numbers : payload.number ? [payload.number] : [];
       if (action === 'activate') { await save({ quiet:true }); if (payload.number) showCelebration(payload.number); }
-      else { if (!line.numbers.some(item => item.imported)) line.sip = null; ui.toast(imported ? 'Number removed.' : 'Number turned off.'); }
+      else { if (!line.numbers.some(item => item.imported)) line.sip = null; keepSipMode(); ui.toast(imported ? 'Number removed.' : 'Number turned off.'); }
       renderLine(); setState(); if (step === 4) render();
     } catch (error) { showError(error.message); }
     finally { button.disabled = false; }
