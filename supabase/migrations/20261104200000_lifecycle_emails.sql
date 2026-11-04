@@ -140,7 +140,8 @@ select jsonb_build_object(
     from clicks c left join profiles pr on pr.user_id = c.user_id), '[]'::jsonb),
   'history', coalesce((select jsonb_agg(jsonb_build_object('email', lower(le.email), 'user_id', le.user_id, 'campaign', le.campaign, 'sent_at', le.sent_at))
     from lifecycle_emails le
-    where le.status = 'sent' and (lower(le.email) in (select email from emails) or le.user_id in (select id from signups))), '[]'::jsonb),
+    where le.status = 'sent' and (lower(le.email) in (select email from emails) or le.user_id in (select id from signups)
+      or le.user_id in (select user_id from checkouts union select user_id from clicks))), '[]'::jsonb),
   'unsubscribed', coalesce((select jsonb_agg(u.email) from lifecycle_unsubscribes u where u.email in (select email from emails)), '[]'::jsonb)
 );
 $$;
