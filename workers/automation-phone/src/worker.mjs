@@ -158,6 +158,11 @@ export default defineAgent({
     if (!business) throw new Error('phone_business_not_found');
     const isTest = descriptor.direction === 'test';
     const isOutbound = descriptor.direction === 'outbound';
+    // The first real call on an imported SIP number proves the owner's provider is set up: it is connected from now on.
+    if (descriptor.direction === 'inbound' && descriptor.calledNumber) {
+      const verified = await serviceUpdate('automation_phone_numbers', `e164=eq.${encodeURIComponent(descriptor.calledNumber)}&business_id=eq.${business.id}&provider=eq.sip&verified_at=is.null`, { verified_at: new Date().toISOString() }).catch(() => []);
+      if (verified?.length) await serviceUpdate('automation_channel_connections', `business_id=eq.${business.id}&channel_type=eq.phone`, { status: 'connected', last_error_code: null }).catch(() => null);
+    }
     if (isTest && (!descriptor.ownerUserId || descriptor.ownerUserId !== business.owner_user_id)) throw new Error('phone_test_owner_mismatch');
     const agent = one(business.automation_agents);
     const knowledge = one(business.automation_business_knowledge);
