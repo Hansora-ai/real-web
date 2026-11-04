@@ -27,11 +27,11 @@
   const VOICES = [['Leda','female','Youthful'],['Callirrhoe','female','Easy-going'],['Schedar','male','Even'],['Sadachbia','male','Lively'],['Zephyr','female','Bright'],['Kore','female','Firm'],['Aoede','female','Breezy'],['Autonoe','female','Bright'],['Despina','female','Smooth'],['Erinome','female','Clear'],['Laomedeia','female','Upbeat'],['Achernar','female','Soft'],['Gacrux','female','Mature'],['Pulcherrima','female','Forward'],['Vindemiatrix','female','Gentle'],['Sulafat','female','Warm'],['Puck','male','Upbeat'],['Charon','male','Informative'],['Fenrir','male','Excitable'],['Orus','male','Firm'],['Enceladus','male','Breathy'],['Iapetus','male','Clear'],['Umbriel','male','Easy-going'],['Algieba','male','Smooth'],['Algenib','male','Gravelly'],['Rasalgethi','male','Informative'],['Alnilam','male','Firm'],['Achird','male','Friendly'],['Zubenelgenubi','male','Casual'],['Sadaltager','male','Knowledgeable']].map(([name, gender, style]) => ({ name, gender, style }));
   const RECOMMENDED_VOICES = VOICES.slice(0, 4);
   const voicePlayer = { audio:null, button:null };
-  // Automatic outgoing calls (same defaults as lib/automation/phone-auto-calls.mjs).
-  const AUTO_RULES = [
-    { id:'callback', title:'Call back callback requests', help:'When a caller asked for a person and nobody answered.', unit:'delay_minutes', unitLabel:'minutes after', min:1, max:1440, value:5, purpose:'Call back the customer who asked to talk to a person, and help them with their request.' },
-    { id:'order', title:'Confirm new orders', help:'When your AI takes an order or a request with a phone number, in any chat or call.', unit:'delay_minutes', unitLabel:'minutes after', min:1, max:1440, value:10, purpose:'Confirm the customer’s order and answer their questions.' },
-    { id:'reminder', title:'Booking reminders', help:'Before each booking that has a phone number.', unit:'hours_before', unitLabel:'hours before', min:1, max:72, value:24, purpose:'Remind the customer about their booking and ask them to confirm they are coming.' }
+  // Call automations ("when … → the AI calls …"). Defaults match lib/automation/phone-auto-calls.mjs.
+  const FLOWS = [
+    { id:'transfer', icon:'🙋', when:'A caller wants a real person', then:'Your AI calls you, tells you who it is and connects you' },
+    { id:'order', icon:'🛍️', when:'Your AI takes a new order or request', then:'Your AI calls the customer to confirm it', unit:'delay_minutes', unitLabel:'minutes after', min:1, max:1440, value:10, purpose:'Confirm the customer’s order and answer their questions.', outgoing:true },
+    { id:'reminder', icon:'📅', when:'A booking is coming up', then:'Your AI calls the customer to remind them', unit:'hours_before', unitLabel:'hours before', min:1, max:72, value:24, purpose:'Remind the customer about their booking and ask them to confirm they are coming.', outgoing:true }
   ];
   let agentLanguages = ['en'];
   if (api.isLocalPreview) { try { saved = JSON.parse(localStorage.getItem(STORAGE) || '{}'); } catch (_) {} agentLanguages = ['hy', 'ru', 'en']; }
@@ -62,7 +62,10 @@
   document.addEventListener('change', event => { if (event.target.matches('[data-contact-method]')) event.target.closest('.contact-box').querySelector('[data-contact-value]').placeholder = CONTACT_METHODS[event.target.value][1]; });
   $('#celebrate-done').addEventListener('click', () => { $('#phone-celebrate').hidden = true; });
   $('#call-now').addEventListener('click', callNow);
-  $('#auto-save').addEventListener('click', async event => { const button = event.currentTarget; button.disabled = true; try { if (await save({ quiet:true })) ui.toast('Automatic calls saved.'); } finally { button.disabled = false; } });
+  $('#make-call-open').addEventListener('click', () => { $('#make-call').hidden = !$('#make-call').hidden; if (!$('#make-call').hidden) $('#call-now-number').focus(); });
+  $('#auto-save').addEventListener('click', async event => { const button = event.currentTarget; button.disabled = true; try { if (await save({ quiet:true })) ui.toast('Call automations saved.'); } finally { button.disabled = false; } });
+  // A card opens when it is switched on.
+  $('#flow-cards').addEventListener('change', event => { const card = event.target.closest('.flow-card'); if (event.target.matches('[data-flow-on]') && card) { card.classList.toggle('on', event.target.checked); card.querySelector('.flow-body').hidden = !event.target.checked; } });
   // Keeps the SIP import box open or closed across re-renders (toggle does not bubble, so listen while capturing).
   $('#sip-import').addEventListener('toggle', event => { if (event.target.matches('details[data-sip]')) line.sipOpen = event.target.open; }, true);
   document.addEventListener('keydown', event => { if (event.key === 'Escape') $('#phone-celebrate').hidden = true; });
@@ -133,7 +136,7 @@
   function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = mode() !== 'forward'; renderLine(); }
   function collect() {
     const languages = languageMode() === 'only' ? chosenLanguages() : [];
-    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', auto_calls:readAutoCalls(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
+    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_on:flowOn('transfer'), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', auto_calls:readAutoCalls(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
   }
   function applySaved(data) {
     if (data.number_mode) document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
@@ -145,6 +148,7 @@
     if (data.answer_mode) { const input = document.querySelector(`input[name="answer-mode"][value="${data.answer_mode}"]`); if (input) input.checked = true; }
     if (data.transfer_number) $('#transfer-number').value = data.transfer_number;
     if (data.transfer_mode === 'direct') $('#transfer-warm').checked = false;
+    setFlowOn('transfer', data.transfer_on !== false && Boolean(data.transfer_number));
     if (data.save_transcripts === false) $('#save-transcripts').checked = false;
     if (data.language_mode === 'only' && Array.isArray(data.languages) && data.languages.length) document.querySelector('input[name="language-mode"][value="only"]').checked = true;
     renderLanguages(Array.isArray(data.languages) && data.languages.length ? data.languages : agentLanguages);
@@ -189,33 +193,45 @@
     audio.addEventListener('error', () => { if (voicePlayer.audio !== audio) return; stopVoice(); $('#voice-hint').textContent = 'This sample could not play right now. Please try again in a moment.'; });
     audio.play().catch(() => { if (voicePlayer.audio === audio) stopVoice(); });
   }
-  // Outgoing calls: one switch, timing and "what to say" per automatic call.
+  // Call automations: one card per "when → then", switched on and off, opened when on.
   function renderAutoCalls(saved = {}) {
-    $('#auto-call-rules').innerHTML = AUTO_RULES.map(rule => {
-      const value = saved?.[rule.id] || {};
-      const amount = Number.isFinite(Number(value[rule.unit])) ? Number(value[rule.unit]) : rule.value;
-      return `<div class="auto-rule" data-rule="${rule.id}" style="padding:14px 0;border-top:1px solid var(--border)"><div class="ui-setting" style="padding:0"><span><strong>${escapeHtml(rule.title)}</strong><small>${escapeHtml(rule.help)}</small></span><input class="ui-switch" type="checkbox" data-auto-on${value.on === true ? ' checked' : ''}></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"><span class="ui-hint" style="margin:0">Call</span><input class="ui-input" type="number" data-auto-amount min="${rule.min}" max="${rule.max}" value="${amount}" style="width:90px"><span class="ui-hint" style="margin:0">${escapeHtml(rule.unitLabel)}</span></div><textarea class="ui-textarea" rows="2" maxlength="300" data-auto-purpose placeholder="What the AI says" style="margin-top:8px">${escapeHtml(value.purpose || rule.purpose)}</textarea></div>`;
+    $('#flow-cards').innerHTML = FLOWS.map(flow => {
+      const value = saved?.[flow.id] || {};
+      const amount = Number.isFinite(Number(value[flow.unit])) ? Number(value[flow.unit]) : flow.value;
+      const body = flow.id === 'transfer'
+        ? `<label class="ui-label" for="transfer-number">Your phone number</label><input class="ui-input" id="transfer-number" type="tel" placeholder="+1 555 010 0001"><div class="ui-setting" id="transfer-warm-row" style="margin-top:10px"><span><strong>Tell me about the caller first</strong><small>The AI says who is calling and what they need, then connects you. Off: the call is passed straight to you.</small></span><input class="ui-switch" id="transfer-warm" type="checkbox" checked></div><p class="ui-hint" style="margin:8px 0 0">If you don’t answer, the AI tells the caller you will call back, and sends you their message. Works on real calls, not in the browser test.</p>`
+        : `<div class="flow-row"><span class="ui-hint" style="margin:0">Call</span><input class="ui-input" type="number" data-flow-amount min="${flow.min}" max="${flow.max}" value="${amount}"><span class="ui-hint" style="margin:0">${escapeHtml(flow.unitLabel)}</span></div><label class="ui-label" style="display:block;margin:12px 0 6px">What the AI says</label><textarea class="ui-textarea" rows="2" maxlength="300" data-flow-purpose>${escapeHtml(value.purpose || flow.purpose)}</textarea><p class="ui-hint flow-needs" hidden style="margin:8px 0 0">Needs a Hansora number that can make calls.</p>`;
+      const on = flow.id === 'transfer' ? false : value.on === true;
+      return `<div class="flow-card${on ? ' on' : ''}" data-flow="${flow.id}"><div class="flow-head"><span class="flow-icon" aria-hidden="true">${flow.icon}</span><div class="flow-text"><span class="flow-when">When</span>${escapeHtml(flow.when)}<div class="flow-then">→ ${escapeHtml(flow.then)}</div></div><input class="ui-switch" type="checkbox" data-flow-on aria-label="${escapeHtml(flow.when)}"${on ? ' checked' : ''}></div><div class="flow-body"${on ? '' : ' hidden'}>${body}</div></div>`;
     }).join('');
-    $('#auto-hours').checked = saved?.hours_only !== false;
+    $('#auto-from').value = /^\d\d:\d\d$/.test(saved?.from || '') ? saved.from : '09:00';
+    $('#auto-to').value = /^\d\d:\d\d$/.test(saved?.to || '') ? saved.to : '20:00';
   }
+  function flowCard(id) { return document.querySelector(`.flow-card[data-flow="${id}"]`); }
+  function flowOn(id) { return Boolean(flowCard(id)?.querySelector('[data-flow-on]')?.checked); }
+  function setFlowOn(id, on) { const card = flowCard(id); if (!card) return; card.querySelector('[data-flow-on]').checked = on; card.classList.toggle('on', on); card.querySelector('.flow-body').hidden = !on; }
   function readAutoCalls() {
-    const result = { hours_only:$('#auto-hours').checked };
-    for (const rule of AUTO_RULES) {
-      const box = document.querySelector(`.auto-rule[data-rule="${rule.id}"]`);
-      if (!box) continue;
-      const amount = Math.min(rule.max, Math.max(rule.min, Math.round(Number(box.querySelector('[data-auto-amount]').value) || rule.value)));
-      result[rule.id] = { on:box.querySelector('[data-auto-on]').checked, [rule.unit]:amount, purpose:box.querySelector('[data-auto-purpose]').value.trim().slice(0, 300) || rule.purpose };
+    const result = { from:$('#auto-from').value || '09:00', to:$('#auto-to').value || '20:00' };
+    for (const flow of FLOWS.filter(item => item.unit)) {
+      const card = flowCard(flow.id); if (!card) continue;
+      const amount = Math.min(flow.max, Math.max(flow.min, Math.round(Number(card.querySelector('[data-flow-amount]').value) || flow.value)));
+      result[flow.id] = { on:flowOn(flow.id), [flow.unit]:amount, purpose:card.querySelector('[data-flow-purpose]').value.trim().slice(0, 300) || flow.purpose };
     }
     return result;
   }
-  // Outgoing calls need a Hansora number that can call out; until then the section explains why it is off.
+  // Hidden without a phone number. Calls the customer needs a number that can call out; transfer works on any number.
   function renderOutgoing() {
+    $('#phone-outgoing').hidden = !line.numbers.length;
     const canCall = line.numbers.some(item => item.can_call);
-    const locked = $('#outgoing-locked');
-    locked.hidden = canCall || !line.loaded;
-    locked.innerHTML = line.numbers.length ? 'Outgoing calls are being switched on for your number. Contact us if this takes more than a day.' : 'Outgoing calls work from a Hansora number. Get your number above first.';
-    $('#outgoing-body').style.opacity = canCall ? '' : '.55';
-    $('#outgoing-body').querySelectorAll('input,textarea,button').forEach(element => { element.disabled = !canCall; });
+    $('#make-call-open').hidden = !canCall;
+    if (!canCall) $('#make-call').hidden = true;
+    $('#transfer-warm-row').hidden = !canCall;
+    for (const flow of FLOWS.filter(item => item.outgoing)) {
+      const card = flowCard(flow.id); if (!card) continue;
+      card.querySelector('.flow-needs').hidden = canCall;
+      card.querySelector('[data-flow-on]').disabled = !canCall;
+      card.style.opacity = canCall ? '' : '.6';
+    }
   }
   async function callNow() {
     const status = $('#call-now-status'), button = $('#call-now');
@@ -261,7 +277,7 @@
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
     const numbers = line.numbers.map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
-    $('#phone-review').innerHTML = [['Number', numbers], ['Voice', data.voice], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+    $('#phone-review').innerHTML = [['Number', numbers], ['Voice', data.voice], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
     const live = line.numbers.length
       ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${line.numbers.map(item => escapeHtml(item.e164)).join(', ')}</strong>.${data.number_mode === 'forward' ? '' : ' Call it from any phone to check.'}${canGetNumber() ? ` To add your ${escapeHtml(countryName(targetCountry()))} number, click <strong>${escapeHtml(getNumberLabel())}</strong> below.` : ''}</div>`
@@ -326,7 +342,7 @@
     if (!local && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
     // Numbers the business already has come first; adding another country comes below them.
     const numbers = line.numbers;
-    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · ${number.imported ? 'Your SIP number · ' : ''}Live</small><strong class="big">${escapeHtml(number.e164)}</strong>${number.imported ? '' : forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
+    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · ${number.imported ? (number.last_call_at ? 'Your SIP number · Working ✓' : 'Your SIP number · Waiting for the first call') : 'Live'}</small><strong class="big">${escapeHtml(number.e164)}</strong>${number.imported ? '' : forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
     $('#line-title').textContent = numbers.length ? 'Add another number' : 'How customers reach you';
     $('#line-subtitle').textContent = numbers.length ? 'Get a number in another country, or change how calls reach you.' : 'Pick one. You can change it later.';
     $('#line-contact').innerHTML = where && !local ? contactCard() : '';
@@ -368,11 +384,11 @@
     const sip = line.sip;
     const open = line.sipOpen ?? Boolean(sip);
     const row = (label, value, secret) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:14px;user-select:all;word-break:break-all"${secret ? ' data-sip-secret' : ''}>${escapeHtml(value)}</code></div>`;
-    const details = sip ? `<div style="margin:12px 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)"><strong>In your SIP provider, send incoming calls to:</strong>${row('SIP address', sip.address)}${row('Username', sip.username)}${row('Password', sip.password, true)}${row('Transport', sip.transport)}<span class="ui-hint">Send the called number in international format (for example +374…). Keep the password private. Then call your number from another phone to check.</span></div>` : '';
+    const details = sip ? `<div style="margin:12px 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)"><strong>In your SIP provider, send incoming calls to:</strong>${row('SIP address', sip.address)}${row('Username', sip.username)}${row('Password', sip.password, true)}${row('Transport', sip.transport)}<span class="ui-hint">Send the called number in international format (for example +374…). Keep the password private. Then call your number from another phone: when the call arrives, your number shows <strong>Working ✓</strong>.</span></div>` : '';
     const form = !line.where
       ? '<p class="ui-hint" style="margin:8px 0 0">Choose where your business is (above) first.</p>'
       : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input class="ui-input" id="sip-number" type="tel" placeholder="Your SIP number, e.g. +37460000000" style="flex:1;min-width:200px"><button class="ui-btn primary" type="button" data-line-action="import_sip">Add my SIP number</button></div>`;
-    return `<details data-sip${open ? ' open' : ''}><summary style="cursor:pointer;color:var(--text-2);font-size:13.5px">Already have a SIP trunk number? Use it with your AI</summary><p class="ui-hint" style="margin:8px 0 0">Your provider keeps your number and bills you for the line. Your AI answers its calls, billed per minute like any Hansora number.</p>${details}${form}</details>`;
+    return `<details data-sip${open ? ' open' : ''}><summary style="cursor:pointer;color:var(--text-2);font-size:13.5px">Already have a SIP trunk number? Use it with your AI</summary><p class="ui-hint" style="margin:8px 0 0">Only for numbers on a <strong>SIP trunk</strong> (your phone provider gave you SIP settings). A normal mobile or landline number? Use <strong>Forward your existing number</strong> instead. Your provider keeps the number and bills you for the line; your AI answers its calls, billed per minute.</p>${details}${form}</details>`;
   }
   function requestFor(country) { return line.requests.find(item => item.country === country); }
   function lastContact() { return line.requests.find(item => item.contact_value) || null; }

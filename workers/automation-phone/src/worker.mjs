@@ -232,7 +232,7 @@ export default defineAgent({
       execute: async (args, runContext) => {
         const result = withoutPhotoCounts(await runTool(definition.name, args));
         if (definition.name !== 'handoff_to_human' || !result.ok || isTest) return result;
-        const transferNumber = normalizePhoneNumber(settings.transfer_number);
+        const transferNumber = (settings.transfer_on === false ? '' : normalizePhoneNumber(settings.transfer_number));
         if (!transferNumber || participant.kind !== ParticipantKind.SIP) {
           await createCallbackRequest({ business, conversation, contact, callerNumber: descriptor.callerNumber, reason: text(args.reason, 300), providerCallId: descriptor.providerCallId });
           return { ok: true, callback_requested: true, note: 'The transfer line is unavailable. Tell the caller the team has their callback request and will contact them.' };
@@ -427,7 +427,7 @@ export default defineAgent({
     const hangUp = async () => { try { await livekitApi.room.deleteRoom(ctx.room.name); } finally { ctx.shutdown?.(isTest ? 'test_limit_reached' : 'out_of_credits'); } };
     if (outOfCredits) {
       callStatus = 'failed';
-      const transferNumber = normalizePhoneNumber(settings.transfer_number);
+      const transferNumber = (settings.transfer_on === false ? '' : normalizePhoneNumber(settings.transfer_number));
       if (!isTest && transferNumber && participant.kind === ParticipantKind.SIP) {
         try { await livekitApi.sip.transferSipParticipant(ctx.room.name, participant.identity, `tel:${transferNumber}`, { playDialtone: false }); callStatus = 'transferred'; return; } catch (error) { console.error('out of credits transfer failed', { message: error?.message }); }
       }

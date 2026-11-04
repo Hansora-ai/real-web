@@ -625,6 +625,21 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 /* Phone */
 .ui-connect-logo.phone{background:linear-gradient(145deg,#4c8dff,#2a4fb0)}
 .ui-option-mark svg{width:18px;height:18px}
+.flow-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+.flow-card{margin-top:12px;padding:16px;border:1px solid var(--border-2);border-radius:14px;background:var(--surface-2)}
+.flow-card.on{border-color:var(--accent-line)}
+.flow-head{display:flex;align-items:center;gap:14px}
+.flow-icon{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;background:var(--surface-3);font-size:18px}
+.flow-card.on .flow-icon{background:var(--accent-soft)}
+.flow-text{flex:1;min-width:0;font-size:14.5px;line-height:1.45}
+.flow-when{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:6px;background:var(--surface-3);color:var(--text-2);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.flow-then{color:var(--text-2)}
+.flow-body{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.flow-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.flow-row .ui-input[type=number]{width:90px}
+.flow-hours{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;color:var(--text-2);font-size:13.5px}
+.flow-hours .ui-input{width:auto}
+@media(max-width:640px){.flow-top{flex-direction:column}}
 .ui-voice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .ui-voice-grid .ui-option{padding:12px 14px;gap:12px}
 .ui-voice-play{display:grid;place-items:center;flex:none;width:36px;height:36px;border:1px solid var(--border-2);border-radius:50%;background:var(--surface-3);color:var(--text);font-size:13px;cursor:pointer;transition:background .2s,border-color .2s}
