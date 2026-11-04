@@ -27,7 +27,16 @@ export function pcmToWav(pcm, sampleRate = 24000) {
 export function interactionAudio(data) {
   if (data?.output_audio?.data) return data.output_audio.data;
   const blocks = (Array.isArray(data?.steps) ? data.steps : []).filter(step => step?.type === 'model_output').flatMap(step => Array.isArray(step.content) ? step.content : []).filter(block => block?.type === 'audio' && block.data);
-  return blocks.at(-1)?.data || '';
+  if (blocks.length) return blocks.at(-1).data;
+  // Fallback: the last audio block anywhere in the answer (type "audio" or an audio mime type).
+  let found = '';
+  const walk = value => {
+    if (!value || typeof value !== 'object') return;
+    if (typeof value.data === 'string' && value.data.length > 100 && (value.type === 'audio' || /^audio\//.test(value.mime_type || value.mimeType || ''))) found = value.data;
+    for (const child of Object.values(value)) walk(child);
+  };
+  walk(data);
+  return found;
 }
 
 async function viaInteractions({ key, model, voice, text, fetchImpl }) {
@@ -36,7 +45,7 @@ async function viaInteractions({ key, model, voice, text, fetchImpl }) {
     headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: STYLE }] }] }], response_format: { type: 'audio' }, generation_config: { speech_config: [{ voice }] } })
   });
-  if (!response.ok) throw new Error(`interactions_${response.status}`);
+  if (!response.ok) throw new Error(`interactions_${response.status}: ${(await response.text().catch(() => '')).slice(0, 200)}`);
   const audio = interactionAudio(await response.json());
   if (!audio) throw new Error('interactions_no_audio');
   const buffer = Buffer.from(audio, 'base64');
@@ -50,7 +59,7 @@ async function viaGenerateContent({ key, model, voice, text, fetchImpl }) {
     headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text: `Say in a ${STYLE} voice: ${text}` }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } })
   });
-  if (!response.ok) throw new Error(`generate_${response.status}`);
+  if (!response.ok) throw new Error(`generate_${response.status}: ${(await response.text().catch(() => '')).slice(0, 200)}`);
   const part = (await response.json())?.candidates?.[0]?.content?.parts?.find(item => item?.inlineData?.data);
   if (!part) throw new Error('generate_no_audio');
   const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || '')?.[1]) || 24000;
@@ -67,8 +76,15 @@ export async function handler(event, _context, fetchImpl = fetch) {
   if (!key) return error(503, 'voice_preview_not_configured');
   const model = String(process.env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-tts').trim();
   const request = { key, model, voice, text: SAMPLES[lang], fetchImpl };
+  const errors = [];
+  // Tries the Interactions API, then generateContent, then the older TTS model, and keeps each refusal for the log.
+  const attempts = [() => viaInteractions(request), () => viaGenerateContent(request), () => viaGenerateContent({ ...request, model: 'gemini-2.5-flash-preview-tts' })];
   try {
-    const wav = await viaInteractions(request).catch(first => { console.warn('voice preview: interactions failed, trying generateContent', { voice, message: first?.message }); return viaGenerateContent(request); });
+    let wav = null;
+    for (const attempt of attempts) {
+      try { wav = await attempt(); break; } catch (error) { errors.push(String(error?.message || error).slice(0, 240)); }
+    }
+    if (!wav) throw new Error(errors.join(' | '));
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'audio/wav', 'Cache-Control': 'public, max-age=86400', 'Netlify-CDN-Cache-Control': 'public, durable, max-age=31536000, immutable' },
@@ -77,6 +93,7 @@ export async function handler(event, _context, fetchImpl = fetch) {
     };
   } catch (failure) {
     console.error('voice preview failed', { voice, lang, model, message: failure?.message });
-    return error(502, 'voice_preview_failed');
+    // The provider's reason (no secrets) helps tell a wrong model name from a quota or key problem.
+    return { ...error(502, 'voice_preview_failed'), body: JSON.stringify({ error: 'voice_preview_failed', detail: String(failure?.message || '').replace(/key=[^&\s]+/gi, 'key=…').slice(0, 600) }) };
   }
 }

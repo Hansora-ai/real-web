@@ -221,8 +221,8 @@
   }
   // Hidden without a phone number. Calls the customer needs a number that can call out; transfer works on any number.
   function renderOutgoing() {
-    $('#phone-outgoing').hidden = !line.numbers.length;
-    const canCall = line.numbers.some(item => item.can_call);
+    $('#phone-outgoing').hidden = !liveNumbers().length;
+    const canCall = liveNumbers().some(item => item.can_call);
     $('#make-call-open').hidden = !canCall;
     if (!canCall) $('#make-call').hidden = true;
     $('#transfer-warm-row').hidden = !canCall;
@@ -275,14 +275,14 @@
   function renderReview() {
     const data = collect();
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
-    const numbers = line.numbers.map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
+    const numbers = liveNumbers().map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
     $('#phone-review').innerHTML = [['Number', numbers], ['Voice', data.voice], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
-    const live = line.numbers.length
-      ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${line.numbers.map(item => escapeHtml(item.e164)).join(', ')}</strong>.${data.number_mode === 'forward' ? '' : ' Call it from any phone to check.'}${canGetNumber() ? ` To add your ${escapeHtml(countryName(targetCountry()))} number, click <strong>${escapeHtml(getNumberLabel())}</strong> below.` : ''}</div>`
+    const live = liveNumbers().length
+      ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${liveNumbers().map(item => escapeHtml(item.e164)).join(', ')}</strong>.${data.number_mode === 'forward' ? '' : ' Call it from any phone to check.'}${canGetNumber() ? ` To add your ${escapeHtml(countryName(targetCountry()))} number, click <strong>${escapeHtml(getNumberLabel())}</strong> below.` : ''}</div>`
       : '';
-    const next = line.numbers.length ? ''
+    const next = liveNumbers().length ? ''
       : canGetNumber() ? `<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> Click <strong>${escapeHtml(getNumberLabel())}</strong> below and your number is ready in seconds. The test above already works.</div>`
         : line.where ? `<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> The test above already works.<div style="margin-top:12px">${notLiveOffer()}</div></div>`
           : '<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> Choose where your business is in step 1. <button class="ui-btn ghost" type="button" id="phone-go-number" style="border:1px solid var(--border);margin-top:10px">Choose your country</button></div>';
@@ -297,12 +297,12 @@
       if (result.error) { showError(api.displayError(result.error)); return false; }
     }
     setState();
-    if (!quiet) ui.toast(line.numbers.length ? 'Saved. Your AI employee answers calls with these settings.' : 'Saved. Not live yet: get your number on this step.');
+    if (!quiet) ui.toast(liveNumbers().length ? 'Saved. Your AI employee answers calls with these settings.' : 'Saved. Not live yet: get your number on this step.');
     if (step === 4) render();
     return true;
   }
   // "Live" only once the business really has a number; settings alone do not make calls work.
-  function setState() { const badge = $('#phone-state'); const count = line.numbers.length; badge.textContent = count ? `Live · ${count === 1 ? line.numbers[0].e164 : `${count} numbers`}` : 'Not live yet'; badge.classList.toggle('green', count > 0); badge.classList.remove('amber'); }
+  function setState() { const badge = $('#phone-state'); const live = liveNumbers(); const count = live.length; badge.textContent = count ? `Live · ${count === 1 ? live[0].e164 : `${count} numbers`}` : 'Not live yet'; badge.classList.toggle('green', count > 0); badge.classList.remove('amber'); }
 
   // The business's Hansora numbers. Assigned and released only by the server.
   async function loadLine() {
@@ -319,7 +319,9 @@
   }
   function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
   function readyCountries() { return new Set(line.countries.map(item => item.country)); }
-  function numberIn(country) { return line.numbers.find(item => item.country === country); }
+  function numberIn(country) { return line.numbers.find(item => item.country === country && !item.imported); }
+  // Numbers that really answer calls (an imported SIP number counts once its first call has arrived).
+  function liveNumbers() { return line.numbers.filter(item => !item.pending); }
   function fallbackCountry() { return ['US', 'CA'].find(code => readyCountries().has(code)); }
   // The country the last step's button gets a number in: the business's own country, or a
   // US/Canada number to forward to when there are no local numbers yet.
@@ -341,9 +343,12 @@
     newOption.closest('.ui-option').style.display = local ? '' : 'none';
     if (!local && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
     // Numbers the business already has come first; adding another country comes below them.
-    const numbers = line.numbers;
-    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · ${number.imported ? (number.last_call_at ? 'Your SIP number · Working ✓' : 'Your SIP number · Waiting for the first call') : 'Live'}</small><strong class="big">${escapeHtml(number.e164)}</strong>${number.imported ? '' : forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
-    $('#line-title').textContent = numbers.length ? 'Add another number' : 'How customers reach you';
+    const numbers = liveNumbers();
+    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · ${number.imported ? 'Your SIP number · Live' : 'Live'}</small><strong class="big">${escapeHtml(number.e164)}</strong>${number.imported ? '' : forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
+    // A SIP number that is not connected yet comes first: it is what the owner is in the middle of.
+    const finishing = finishSipHtml();
+    if (finishing) $('#line-numbers').innerHTML += finishing;
+    $('#line-title').textContent = numbers.length ? 'Add another number' : finishing ? 'Or connect another way' : 'How customers reach you';
     $('#line-subtitle').textContent = numbers.length ? 'Get a number in another country, or change how calls reach you.' : 'Pick one. You can change it later.';
     $('#line-contact').innerHTML = where && !local ? contactCard() : '';
     $('#sip-import').innerHTML = sipImportHtml();
@@ -382,13 +387,23 @@
   // their provider at Hansora with the address, username and password shown.
   function sipImportHtml() {
     const sip = line.sip;
+    const pending = line.numbers.filter(item => item.pending);
     const open = line.sipOpen ?? Boolean(sip);
-    const row = (label, value, secret) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:14px;user-select:all;word-break:break-all"${secret ? ' data-sip-secret' : ''}>${escapeHtml(value)}</code></div>`;
-    const details = sip ? `<div style="margin:12px 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)"><strong>In your SIP provider, send incoming calls to:</strong>${row('SIP address', sip.address)}${row('Username', sip.username)}${row('Password', sip.password, true)}${row('Transport', sip.transport)}<span class="ui-hint">Send the called number in international format (for example +374…). Keep the password private. Then call your number from another phone: when the call arrives, your number shows <strong>Working ✓</strong>.</span></div>` : '';
-    const form = !line.where
-      ? '<p class="ui-hint" style="margin:8px 0 0">Choose where your business is (above) first.</p>'
-      : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input class="ui-input" id="sip-number" type="tel" placeholder="Your SIP number, e.g. +37460000000" style="flex:1;min-width:200px"><button class="ui-btn primary" type="button" data-line-action="import_sip">Add my SIP number</button></div>`;
-    return `<details data-sip${open ? ' open' : ''}><summary style="cursor:pointer;color:var(--text-2);font-size:13.5px">Already have a SIP trunk number? Use it with your AI</summary><p class="ui-hint" style="margin:8px 0 0">Only for numbers on a <strong>SIP trunk</strong> (your phone provider gave you SIP settings). A normal mobile or landline number? Use <strong>Forward your existing number</strong> instead. Your provider keeps the number and bills you for the line; your AI answers its calls, billed per minute.</p>${details}${form}</details>`;
+    const row = (label, value) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:14px;user-select:all;word-break:break-all">${escapeHtml(value)}</code></div>`;
+    const settings = sip ? `${row('SIP address', sip.address)}${row('Username', sip.username)}${row('Password', sip.password)}${row('Transport', sip.transport)}` : '';
+    // A number stays "Not connected yet" until a real call arrives on it: that is the only proof the provider is set up.
+    return sipDetailsHtml({ sip, pending, open, row, settings });
+  }
+  function finishSipHtml() {
+    const sip = line.sip; const pending = line.numbers.filter(item => item.pending);
+    const row = (label, value) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:14px;user-select:all;word-break:break-all">${escapeHtml(value)}</code></div>`;
+    const settings = sip ? `${row('SIP address', sip.address)}${row('Username', sip.username)}${row('Password', sip.password)}${row('Transport', sip.transport)}` : '';
+    return pending.map(number => `<div style="margin:12px 0;padding:16px;border:1px solid rgba(255,184,0,.45);border-radius:var(--radius-sm);background:var(--surface-2)"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><strong style="font-size:15px">Finish connecting ${escapeHtml(number.e164)}</strong><span class="ui-badge amber">Not connected yet</span></div><p class="ui-hint" style="margin:10px 0 4px"><strong>1.</strong> In your SIP provider, send incoming calls for this number to:</p>${settings}<p class="ui-hint" style="margin:10px 0 4px"><strong>2.</strong> Call ${escapeHtml(number.e164)} from another phone.</p><p class="ui-hint" style="margin:0 0 12px"><strong>3.</strong> When your AI answers, the number turns on here. Until then it does not answer calls.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ui-btn secondary" type="button" data-line-action="check_sip">I called it, check again</button><button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="border:1px solid var(--border)">Remove</button></div></div>`).join('');
+  }
+  function sipDetailsHtml({ sip, pending, open, row, settings }) {
+    const reference = sip && !pending.length ? `<details style="margin-top:10px"><summary style="cursor:pointer;font-size:13.5px">Your SIP settings</summary>${settings}</details>` : '';
+    const form = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><input class="ui-input" id="sip-number" type="tel" placeholder="Your SIP number, e.g. +37460000000" style="flex:1;min-width:200px"><button class="ui-btn primary" type="button" data-line-action="import_sip">Add my SIP number</button></div>`;
+    return `<details data-sip${open || pending.length ? ' open' : ''}><summary style="cursor:pointer;color:var(--text-2);font-size:13.5px">Already have a SIP trunk number? Use it with your AI</summary><p class="ui-hint" style="margin:8px 0 0">Only for numbers on a <strong>SIP trunk</strong> (your phone provider gave you SIP settings). A normal mobile or landline number? Use <strong>Forward your existing number</strong> instead. Your provider keeps the number and bills you for the line; your AI answers its calls, billed per minute.</p>${reference}${form}</details>`;
   }
   function requestFor(country) { return line.requests.find(item => item.country === country); }
   function lastContact() { return line.requests.find(item => item.contact_value) || null; }
@@ -418,10 +433,12 @@
     const imported = action === 'release' && line.numbers.some(item => item.e164 === button.dataset.e164 && item.imported);
     if (action === 'release' && !confirm(imported ? `Remove ${button.dataset.e164} from your AI? Your provider keeps the number; your AI stops answering it.` : `Turn off ${button.dataset.e164 || 'this number'}? Calls to it will no longer be answered, and the number may be given to another business.`)) return;
     if (action === 'release') extra = { e164:button.dataset.e164 };
+    // "Check again": reload the numbers; a SIP number that has received its first call is connected now.
+    if (action === 'check_sip') { button.disabled = true; await loadLine(); button.disabled = false; ui.toast(line.numbers.some(item => item.pending) ? 'Not connected yet. Check your provider settings and call the number again.' : 'Connected! Your AI answers this number now.'); return; }
     if (action === 'import_sip') {
       const value = $('#sip-number').value.trim();
       if (!/^\+?[\d\s()-]{8,20}$/.test(value)) { showError('Enter your SIP number in international format, for example +37460000000.'); return; }
-      extra = { e164:value, country:line.where };
+      extra = { e164:value, country:line.where || '' };
     }
     if (action === 'contact') {
       const box = button.closest('.contact-box');
@@ -443,11 +460,11 @@
         ui.toast('Thanks! We’ll contact you within a day.'); renderLine(); if (step === 4) render(); return;
       }
       if (action === 'import_sip') {
-        if (!response.ok) throw new Error({ number_in_use:'This number is already used by another Hansora account. Contact us if it is yours.', number_already_added:'This number is already added.', invalid_number:'Enter the number in international format, for example +37460000000.', too_many_imported_numbers:'You can add up to 10 SIP numbers.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', phone_line_setup_failed:'The number could not be added right now. Please try again in a few minutes.' }[payload.error] || 'The number could not be added. Please try again.');
+        if (!response.ok) throw new Error({ number_in_use:'This number is already used by another Hansora account. Contact us if it is yours.', number_already_added:'This number is already added.', invalid_country:'Choose where your business is (above) first.', invalid_number:'Enter the number in international format, for example +37460000000.', too_many_imported_numbers:'You can add up to 10 SIP numbers.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', phone_line_setup_failed:'The number could not be added right now. Please try again in a few minutes.' }[payload.error] || 'The number could not be added. Please try again.');
         line.numbers = Array.isArray(payload.numbers) ? payload.numbers : line.numbers;
         line.sip = payload.sip || line.sip; line.sipOpen = true;
         await save({ quiet:true });
-        ui.toast('Number added. Now enter these details in your SIP provider.'); renderLine(); setState(); if (step === 4) render(); return;
+        ui.toast('Added. Now finish connecting it: enter these settings in your SIP provider.'); renderLine(); setState(); if (step === 4) render(); return;
       }
       if (!response.ok) throw new Error(({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.') + (payload.detail ? ` (${payload.detail})` : ''));
       line.numbers = Array.isArray(payload.numbers) ? payload.numbers : payload.number ? [payload.number] : [];

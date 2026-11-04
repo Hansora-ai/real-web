@@ -3,11 +3,12 @@ import { first, rows, serviceInsert, serviceUpdate, supabaseRequest } from '../.
 import { acceptOnLiveKitTrunk, buyTelnyxNumber, telnyxConfigured } from '../../lib/automation/telnyx.mjs';
 import { buyTwilioNumber, twilioConfigured } from '../../lib/automation/twilio.mjs';
 import { decryptSecret, encryptSecret } from '../../lib/automation/crypto.mjs';
+import { countryForNumber } from '../../lib/automation/phone-outgoing.mjs';
 import { createImportTrunk, deleteImportTrunk, newSipCredentials, setTrunkNumbers, sipAddress } from '../../lib/automation/sip-import.mjs';
 
 const HEADERS = {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'GET, POST, OPTIONS'};
 const json = (statusCode, body) => ({ statusCode, headers: HEADERS, body: JSON.stringify(body) });
-const publicNumber = row => row?.e164 ? { e164: row.e164, country: row.country, assigned_at: row.assigned_at, imported: row.provider === 'sip', can_call: Boolean(row.livekit_outbound_trunk_id) } : null;
+const publicNumber = row => row?.e164 ? { e164: row.e164, country: row.country, assigned_at: row.assigned_at, imported: row.provider === 'sip', pending: row.provider === 'sip' && !row.verified_at, can_call: Boolean(row.livekit_outbound_trunk_id) } : null;
 const MAX_IMPORTED_NUMBERS = 10;
 const CONTACT_METHODS = new Set(['whatsapp', 'telegram', 'email']);
 const CONTACT_WANTS = { local_number: 'wants_local_number', whatsapp_calls: 'wants_whatsapp_calls', forwarding_help: 'wants_forwarding_help' };
@@ -38,11 +39,12 @@ export async function handler(event) {
     const business = await first(`/rest/v1/automation_businesses?id=eq.${encodeURIComponent(businessId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&select=id,automation_agents(id),automation_business_knowledge(id)&limit=1`);
     if (!business) return json(404, { error: 'business_not_found' });
 
-    const assignedNumbers = async () => rows(await supabaseRequest(`/rest/v1/automation_phone_numbers?business_id=eq.${encodeURIComponent(businessId)}&status=eq.assigned&select=e164,country,assigned_at,provider,livekit_outbound_trunk_id&order=assigned_at.asc&limit=50`)).map(publicNumber).filter(Boolean);
+    const assignedNumbers = async () => rows(await supabaseRequest(`/rest/v1/automation_phone_numbers?business_id=eq.${encodeURIComponent(businessId)}&status=eq.assigned&select=e164,country,assigned_at,provider,livekit_outbound_trunk_id,verified_at&order=assigned_at.asc&limit=50`)).map(publicNumber).filter(Boolean);
     // The phone channel is connected while the business has at least one number.
-    const syncChannel = async numbers => serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone`, numbers.length
+    // (An imported SIP number counts only once a call has arrived on it.)
+    const syncChannel = async all => { const numbers = all.filter(item => !item.pending); return serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone`, numbers.length
       ? { status: 'connected', connected_account_label: numbers.map(item => item.e164).join(', ').slice(0, 200), last_error_code: null }
-      : { status: 'not_connected', connected_account_label: null });
+      : { status: 'not_connected', connected_account_label: null }); };
     // The business's own SIP trunk (imported numbers): where to send calls and how to sign in.
     const importTrunk = () => first(`/rest/v1/automation_phone_sip_trunks?business_id=eq.${encodeURIComponent(businessId)}&select=*&limit=1`);
     const importDetails = trunk => trunk ? { address: sipAddress(), username: trunk.auth_username, password: decryptSecret(trunk), transport: 'UDP or TCP, port 5060' } : null;
@@ -62,11 +64,6 @@ export async function handler(event) {
       const requests = rows(await supabaseRequest(`/rest/v1/automation_phone_country_requests?user_id=eq.${encodeURIComponent(user.id)}&select=country,contact_method,contact_value,wants_local_number,wants_whatsapp_calls,wants_forwarding_help&limit=300`).catch(() => []));
       const numbers = await assignedNumbers();
       const sip = numbers.some(item => item.imported) ? importDetails(await importTrunk()) : null;
-      // An imported number shows "Working" once a call has really arrived on it (a normal, non-SIP number never gets one).
-      for (const number of numbers.filter(item => item.imported)) {
-        const last = await first(`/rest/v1/automation_calls?business_id=eq.${encodeURIComponent(businessId)}&direction=eq.inbound&outcome->>called_number=eq.${encodeURIComponent(number.e164)}&select=started_at&order=started_at.desc&limit=1`).catch(() => null);
-        number.last_call_at = last?.started_at || null;
-      }
       return json(200, { numbers, number: numbers[0] || null, countries, requests, sip });
     }
 
@@ -135,7 +132,7 @@ export async function handler(event) {
       const hasRecord = value => Array.isArray(value) ? value.length > 0 : Boolean(value?.id);
       if (!hasRecord(business.automation_agents) || !hasRecord(business.automation_business_knowledge)) return json(409, { error: 'phone_agent_configuration_incomplete' });
       const e164 = `+${String(body.e164 || '').replace(/\D/g, '')}`;
-      const country = String(body.country || '').toUpperCase();
+      const country = countryForNumber(e164, body.country);
       if (!/^\+[1-9][0-9]{7,14}$/.test(e164)) return json(400, { error: 'invalid_number' });
       if (!/^[A-Z]{2}$/.test(country)) return json(400, { error: 'invalid_country' });
       const existing = await first(`/rest/v1/automation_phone_numbers?e164=eq.${encodeURIComponent(e164)}&select=business_id,provider&limit=1`);
@@ -161,7 +158,6 @@ export async function handler(event) {
       }
       const numbers = await assignedNumbers();
       await syncChannel(numbers);
-      await serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone&connected_at=is.null`, { provider: 'sip', connected_at: new Date().toISOString() });
       return json(200, { numbers, sip: importDetails(await importTrunk()) });
     }
 
