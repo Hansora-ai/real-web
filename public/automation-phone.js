@@ -23,6 +23,10 @@
   // Same codes as the AI's language list (lib/automation/instructions.mjs).
   const LANGUAGES = { en:'English', hy:'Armenian', ru:'Russian', es:'Spanish', fr:'French', de:'German', it:'Italian', pt:'Portuguese', uk:'Ukrainian', pl:'Polish', nl:'Dutch', tr:'Turkish', ar:'Arabic', ka:'Georgian', zh:'Chinese', ja:'Japanese', ko:'Korean', hi:'Hindi' };
   const CONTACT_METHODS = { whatsapp:['WhatsApp', '+374 91 123456'], telegram:['Telegram', '@username or +374 91 123456'] };
+  // Gemini voices (same list as lib/automation/phone.mjs). The first four are the recommended ones.
+  const VOICES = [['Leda','female','Youthful'],['Callirrhoe','female','Easy-going'],['Schedar','male','Even'],['Sadachbia','male','Lively'],['Zephyr','female','Bright'],['Kore','female','Firm'],['Aoede','female','Breezy'],['Autonoe','female','Bright'],['Despina','female','Smooth'],['Erinome','female','Clear'],['Laomedeia','female','Upbeat'],['Achernar','female','Soft'],['Gacrux','female','Mature'],['Pulcherrima','female','Forward'],['Vindemiatrix','female','Gentle'],['Sulafat','female','Warm'],['Puck','male','Upbeat'],['Charon','male','Informative'],['Fenrir','male','Excitable'],['Orus','male','Firm'],['Enceladus','male','Breathy'],['Iapetus','male','Clear'],['Umbriel','male','Easy-going'],['Algieba','male','Smooth'],['Algenib','male','Gravelly'],['Rasalgethi','male','Informative'],['Alnilam','male','Firm'],['Achird','male','Friendly'],['Zubenelgenubi','male','Casual'],['Sadaltager','male','Knowledgeable']].map(([name, gender, style]) => ({ name, gender, style }));
+  const RECOMMENDED_VOICES = VOICES.slice(0, 4);
+  const voicePlayer = { audio:null, button:null };
   let agentLanguages = ['en'];
   if (api.isLocalPreview) { try { saved = JSON.parse(localStorage.getItem(STORAGE) || '{}'); } catch (_) {} agentLanguages = ['hy', 'ru', 'en']; }
   else if (/^[0-9a-f-]{36}$/i.test(businessId)) {
@@ -47,10 +51,12 @@
   document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', syncForward));
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   document.querySelectorAll('input[name="language-mode"]').forEach(input => input.addEventListener('change', renderLanguages));
-  for (const box of ['#line-contact', '#option-detail', '#phone-live', '#line-numbers']) $(box).addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
+  for (const box of ['#line-contact', '#option-detail', '#phone-live', '#line-numbers', '#sip-import']) $(box).addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
   // The contact field's hint follows the chosen method.
   document.addEventListener('change', event => { if (event.target.matches('[data-contact-method]')) event.target.closest('.contact-box').querySelector('[data-contact-value]').placeholder = CONTACT_METHODS[event.target.value][1]; });
   $('#celebrate-done').addEventListener('click', () => { $('#phone-celebrate').hidden = true; });
+  // Keeps the SIP import box open or closed across re-renders (toggle does not bubble, so listen while capturing).
+  $('#sip-import').addEventListener('toggle', event => { if (event.target.matches('details[data-sip]')) line.sipOpen = event.target.open; }, true);
   document.addEventListener('keydown', event => { if (event.key === 'Escape') $('#phone-celebrate').hidden = true; });
   // A full-width list under the field: matches by name (own language or English) as the owner types.
   const SORTED_COUNTRIES = ALL_COUNTRIES.slice().sort((a, b) => countryName(a).localeCompare(countryName(b)));
@@ -119,19 +125,60 @@
   function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = mode() !== 'forward'; renderLine(); }
   function collect() {
     const languages = languageMode() === 'only' ? chosenLanguages() : [];
-    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:'Leda', voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
+    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
   }
   function applySaved(data) {
     if (data.number_mode) document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
     if (data.forward_number) $('#phone-number').value = data.forward_number;
     if (ALL_COUNTRIES.includes(data.country)) line.where = data.country;
+    renderVoices(data.voice);
     if (data.greeting) $('#phone-greeting').value = data.greeting;
     if (data.answer_mode) { const input = document.querySelector(`input[name="answer-mode"][value="${data.answer_mode}"]`); if (input) input.checked = true; }
     if (data.transfer_number) $('#transfer-number').value = data.transfer_number;
+    if (data.transfer_mode === 'direct') $('#transfer-warm').checked = false;
     if (data.save_transcripts === false) $('#save-transcripts').checked = false;
     if (data.language_mode === 'only' && Array.isArray(data.languages) && data.languages.length) document.querySelector('input[name="language-mode"][value="only"]').checked = true;
     renderLanguages(Array.isArray(data.languages) && data.languages.length ? data.languages : agentLanguages);
     syncForward();
+  }
+  // Voice step: four recommended voices on top, the rest under "More voices"; ▶ plays a short sample.
+  function renderVoices(chosen) {
+    const current = VOICES.some(voice => voice.name === chosen) ? chosen : 'Leda';
+    const card = voice => `<label class="ui-option"><input type="radio" name="phone-voice" value="${voice.name}"${voice.name === current ? ' checked' : ''}><span class="ui-option-text"><strong>${voice.name}</strong><small>${voice.gender === 'female' ? 'Female' : 'Male'} · ${voice.style}</small></span><button class="ui-voice-play" type="button" data-voice-play="${voice.name}" aria-label="Play ${voice.name}">▶</button><span class="ui-option-radio" aria-hidden="true"></span></label>`;
+    $('#voice-recommended').innerHTML = RECOMMENDED_VOICES.map(card).join('');
+    const rest = VOICES.slice(4);
+    $('#voice-female').innerHTML = rest.filter(voice => voice.gender === 'female').map(card).join('');
+    $('#voice-male').innerHTML = rest.filter(voice => voice.gender === 'male').map(card).join('');
+    // A chosen voice from the longer list keeps that list open, so the owner sees it.
+    if (!RECOMMENDED_VOICES.some(voice => voice.name === current)) $('.ui-voice-more').open = true;
+    if (!renderVoices.bound) {
+      renderVoices.bound = true;
+      $('#voice-picker').addEventListener('click', event => {
+        const button = event.target.closest('[data-voice-play]');
+        if (!button) return;
+        // Playing a sample does not change the chosen voice.
+        event.preventDefault(); event.stopPropagation();
+        playVoice(button);
+      });
+    }
+  }
+  function selectedVoice() { return document.querySelector('input[name="phone-voice"]:checked')?.value || 'Leda'; }
+  function stopVoice() {
+    if (voicePlayer.audio) { voicePlayer.audio.pause(); voicePlayer.audio = null; }
+    if (voicePlayer.button) { voicePlayer.button.classList.remove('playing', 'loading'); voicePlayer.button.textContent = '▶'; voicePlayer.button = null; }
+  }
+  function playVoice(button) {
+    const same = voicePlayer.button === button;
+    stopVoice();
+    if (same) return;
+    const lang = ['hy', 'ru', 'en'].find(code => agentLanguages.includes(code)) || 'en';
+    const audio = new Audio(`/.netlify/functions/automation-phone-voice-preview?voice=${encodeURIComponent(button.dataset.voicePlay)}&lang=${lang}&v=1`);
+    voicePlayer.audio = audio; voicePlayer.button = button;
+    button.classList.add('loading'); button.textContent = '…';
+    audio.addEventListener('playing', () => { if (voicePlayer.audio !== audio) return; button.classList.remove('loading'); button.classList.add('playing'); button.textContent = '■'; });
+    audio.addEventListener('ended', () => { if (voicePlayer.audio === audio) stopVoice(); });
+    audio.addEventListener('error', () => { if (voicePlayer.audio !== audio) return; stopVoice(); $('#voice-hint').textContent = 'This sample could not play right now. Please try again in a moment.'; });
+    audio.play().catch(() => { if (voicePlayer.audio === audio) stopVoice(); });
   }
   // The language choice in Rules: the caller's language, or only the ones the owner ticks.
   function renderLanguages(selected) {
@@ -146,6 +193,7 @@
       : 'The AI answers in the language the caller speaks and keeps it for the whole call.';
   }
   function render() {
+    stopVoice();
     document.querySelectorAll('.phone-step').forEach(pane => { pane.hidden = Number(pane.dataset.phoneStep) !== step; });
     document.querySelectorAll('.ui-stepper li').forEach(item => { const n = Number(item.dataset.step); item.classList.toggle('active', n === step); item.classList.toggle('done', n < step); });
     $('.ui-stepper').style.setProperty('--progress-num', String((step - 1) / 3));
@@ -160,7 +208,7 @@
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
     const numbers = line.numbers.map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
-    $('#phone-review').innerHTML = [['Number', numbers], ['Voice', 'Leda'], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+    $('#phone-review').innerHTML = [['Number', numbers], ['Voice', data.voice], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
     const live = line.numbers.length
       ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${line.numbers.map(item => escapeHtml(item.e164)).join(', ')}</strong>.${data.number_mode === 'forward' ? '' : ' Call it from any phone to check.'}${canGetNumber() ? ` To add your ${escapeHtml(countryName(targetCountry()))} number, click <strong>${escapeHtml(getNumberLabel())}</strong> below.` : ''}</div>`
@@ -195,7 +243,7 @@
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'phone_line_unavailable');
       const numbers = Array.isArray(payload.numbers) ? payload.numbers : payload.number ? [payload.number] : [];
-      line = { ...line, numbers, countries:payload.countries || [], requests:payload.requests || [], loaded:true, error:false };
+      line = { ...line, numbers, countries:payload.countries || [], requests:payload.requests || [], sip:payload.sip || null, loaded:true, error:false };
     } catch (_) { line = { ...line, numbers:[], countries:[], loaded:true, error:true }; }
     renderLine(); setState(); if (step === 4) render();
     if (!line.numbers.length && !line.error) recordCountry();
@@ -225,10 +273,11 @@
     if (!local && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
     // Numbers the business already has come first; adding another country comes below them.
     const numbers = line.numbers;
-    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · Live</small><strong class="big">${escapeHtml(number.e164)}</strong>${forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
+    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · ${number.imported ? 'Your SIP number · ' : ''}Live</small><strong class="big">${escapeHtml(number.e164)}</strong>${number.imported ? '' : forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
     $('#line-title').textContent = numbers.length ? 'Add another number' : 'How customers reach you';
     $('#line-subtitle').textContent = numbers.length ? 'Get a number in another country, or change how calls reach you.' : 'Pick one. You can change it later.';
     $('#line-contact').innerHTML = where && !local ? contactCard() : '';
+    $('#sip-import').innerHTML = sipImportHtml();
     // Each option's details sit right under the options.
     const fallback = fallbackCountry();
     $('#forward-info').innerHTML = !where ? ''
@@ -259,6 +308,18 @@
     const codes = [['All calls', `**21*${dial}#`], ['Only when you don’t answer, are busy or unreachable', `**004*${dial}#`]];
     return `<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Also forward your existing phone to this number</summary><p class="ui-hint" style="margin:6px 0 8px">Your old customers keep calling the number they know, and your AI answers them too. On the phone with your existing number, dial one of these codes and press call:</p>${codes.map(([label, code]) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:15px;user-select:all">${code}</code></div>`).join('')}<span class="ui-hint">Works on most mobile operators. To stop forwarding, dial <code>##002#</code>.${line.where && line.where !== number.country ? ' This number is in another country, so your operator charges you for each forwarded call.' : ''}</span></details>`;
   }
+  // For owners who already have a number on a SIP trunk (any provider): they add it here, and point
+  // their provider at Hansora with the address, username and password shown.
+  function sipImportHtml() {
+    const sip = line.sip;
+    const open = line.sipOpen ?? Boolean(sip);
+    const row = (label, value, secret) => `<div class="ui-setting" style="padding:8px 0"><span>${label}</span><code style="font-size:14px;user-select:all;word-break:break-all"${secret ? ' data-sip-secret' : ''}>${escapeHtml(value)}</code></div>`;
+    const details = sip ? `<div style="margin:12px 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)"><strong>In your SIP provider, send incoming calls to:</strong>${row('SIP address', sip.address)}${row('Username', sip.username)}${row('Password', sip.password, true)}${row('Transport', sip.transport)}<span class="ui-hint">Send the called number in international format (for example +374…). Keep the password private. Then call your number from another phone to check.</span></div>` : '';
+    const form = !line.where
+      ? '<p class="ui-hint" style="margin:8px 0 0">Choose where your business is (above) first.</p>'
+      : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input class="ui-input" id="sip-number" type="tel" placeholder="Your SIP number, e.g. +37460000000" style="flex:1;min-width:200px"><button class="ui-btn primary" type="button" data-line-action="import_sip">Add my SIP number</button></div>`;
+    return `<details data-sip${open ? ' open' : ''}><summary style="cursor:pointer;color:var(--text-2);font-size:13.5px">Already have a SIP trunk number? Use it with your AI</summary><p class="ui-hint" style="margin:8px 0 0">Your provider keeps your number and bills you for the line. Your AI answers its calls, billed per minute like any Hansora number.</p>${details}${form}</details>`;
+  }
   function requestFor(country) { return line.requests.find(item => item.country === country); }
   function lastContact() { return line.requests.find(item => item.contact_value) || null; }
   // One clear box for countries without numbers: the owner leaves WhatsApp or Telegram, and Hansora sets it up with them.
@@ -284,8 +345,14 @@
   }
   async function lineAction(action, button) {
     let extra = {};
-    if (action === 'release' && !confirm(`Turn off ${button.dataset.e164 || 'this number'}? Calls to it will no longer be answered, and the number may be given to another business.`)) return;
+    const imported = action === 'release' && line.numbers.some(item => item.e164 === button.dataset.e164 && item.imported);
+    if (action === 'release' && !confirm(imported ? `Remove ${button.dataset.e164} from your AI? Your provider keeps the number; your AI stops answering it.` : `Turn off ${button.dataset.e164 || 'this number'}? Calls to it will no longer be answered, and the number may be given to another business.`)) return;
     if (action === 'release') extra = { e164:button.dataset.e164 };
+    if (action === 'import_sip') {
+      const value = $('#sip-number').value.trim();
+      if (!/^\+?[\d\s()-]{8,20}$/.test(value)) { showError('Enter your SIP number in international format, for example +37460000000.'); return; }
+      extra = { e164:value, country:line.where };
+    }
     if (action === 'contact') {
       const box = button.closest('.contact-box');
       const method = box.querySelector('[data-contact-method]').value, value = box.querySelector('[data-contact-value]').value.trim();
@@ -305,10 +372,17 @@
         line.requests = [{ ...(requestFor(extra.country) || {}), country:extra.country, contact_method:extra.method, contact_value:extra.value, ...flags }, ...others];
         ui.toast('Thanks! We’ll contact you within a day.'); renderLine(); if (step === 4) render(); return;
       }
+      if (action === 'import_sip') {
+        if (!response.ok) throw new Error({ number_in_use:'This number is already used by another Hansora account. Contact us if it is yours.', number_already_added:'This number is already added.', invalid_number:'Enter the number in international format, for example +37460000000.', too_many_imported_numbers:'You can add up to 10 SIP numbers.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', phone_line_setup_failed:'The number could not be added right now. Please try again in a few minutes.' }[payload.error] || 'The number could not be added. Please try again.');
+        line.numbers = Array.isArray(payload.numbers) ? payload.numbers : line.numbers;
+        line.sip = payload.sip || line.sip; line.sipOpen = true;
+        await save({ quiet:true });
+        ui.toast('Number added. Now enter these details in your SIP provider.'); renderLine(); setState(); if (step === 4) render(); return;
+      }
       if (!response.ok) throw new Error(({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.') + (payload.detail ? ` (${payload.detail})` : ''));
       line.numbers = Array.isArray(payload.numbers) ? payload.numbers : payload.number ? [payload.number] : [];
       if (action === 'activate') { await save({ quiet:true }); if (payload.number) showCelebration(payload.number); }
-      else ui.toast('Number turned off.');
+      else { if (!line.numbers.some(item => item.imported)) line.sip = null; ui.toast(imported ? 'Number removed.' : 'Number turned off.'); }
       renderLine(); setState(); if (step === 4) render();
     } catch (error) { showError(error.message); }
     finally { button.disabled = false; }

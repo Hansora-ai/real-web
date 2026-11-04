@@ -625,6 +625,16 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 /* Phone */
 .ui-connect-logo.phone{background:linear-gradient(145deg,#4c8dff,#2a4fb0)}
 .ui-option-mark svg{width:18px;height:18px}
+.ui-voice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ui-voice-grid .ui-option{padding:12px 14px;gap:12px}
+.ui-voice-play{display:grid;place-items:center;flex:none;width:36px;height:36px;border:1px solid var(--border-2);border-radius:50%;background:var(--surface-3);color:var(--text);font-size:13px;cursor:pointer;transition:background .2s,border-color .2s}
+.ui-voice-play:hover{border-color:var(--accent-line)}
+.ui-voice-play.playing{background:var(--accent);border-color:var(--accent);color:#fff}
+.ui-voice-play.loading{opacity:.6;cursor:progress}
+.ui-voice-more{margin-top:12px}
+.ui-voice-more summary{cursor:pointer;color:var(--text-2);font-size:13.5px}
+#voice-hint{display:block;margin-top:10px}
+@media(max-width:640px){.ui-voice-grid{grid-template-columns:1fr}}
 .ui-voice-card{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--accent-line);border-radius:14px;background:var(--accent-soft)}
 .ui-voice-card>div{flex:1}
 .ui-voice-card strong{display:block;font-size:15px;font-weight:600}

@@ -69,6 +69,32 @@
   document.querySelector('#toggle-ai').addEventListener('click', toggleAi);
   // One button next to the reply box: take over from the AI, or hand the conversation back to it.
   document.querySelector('#take-over').addEventListener('click', () => (current()?.human ? toggleAi() : takeOver()));
+  // "Call with AI": the AI phones this customer from the business's number and says why it is calling.
+  const callBox = document.querySelector('#ai-call-box');
+  document.querySelector('#ai-call').addEventListener('click', () => {
+    const conversation = current(); if (!conversation?.phone) return;
+    document.querySelector('#ai-call-title').textContent = `Your AI calls ${conversation.name} · ${conversation.phone}`;
+    document.querySelector('#ai-call-purpose').value = conversation.intent && conversation.intent !== 'Customer message' ? `Follow up on: ${conversation.intent}` : 'Call back about their request';
+    document.querySelector('#ai-call-status').textContent = 'The AI says it is your assistant, explains why it is calling, and the call appears here. Billed per minute like other calls.';
+    document.querySelector('#ai-call-start').disabled = false;
+    callBox.hidden = false; document.querySelector('#ai-call-purpose').focus();
+  });
+  document.querySelector('#ai-call-cancel').addEventListener('click', () => { callBox.hidden = true; });
+  document.querySelector('#ai-call-start').addEventListener('click', async event => {
+    const button = event.currentTarget; const conversation = current(); const status = document.querySelector('#ai-call-status');
+    const purpose = document.querySelector('#ai-call-purpose').value.trim();
+    if (!conversation?.phone) return;
+    if (!purpose) { status.textContent = 'Write what the AI should call about.'; return; }
+    if (api.isLocalPreview) { status.textContent = 'Calls work on the live site, not in the local preview.'; return; }
+    button.disabled = true; status.textContent = 'Starting the call…';
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-call', { method:'POST', body:JSON.stringify({ business_id:businessId, contact_id:conversation.contactId, purpose }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(({ no_outgoing_line:'Your phone number cannot make calls yet. Contact us to turn on outgoing calls.', other_country:'Your AI can only call numbers in the same country as your phone number.', credits_required:'Add credits to make calls.', too_many_calls:'Too many calls in a short time. Please wait a few minutes.', invalid_number:'This customer’s phone number is not valid.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.' })[payload.error] || 'The call could not be started. Please try again.');
+      status.textContent = `Calling ${payload.calling} from ${payload.from}… The call appears in your inbox and in Phone calls.`;
+      setTimeout(() => { callBox.hidden = true; }, 6000);
+    } catch (error) { status.textContent = error.message; button.disabled = false; }
+  });
   document.querySelector('#resolve-conversation').addEventListener('click', async () => {
     const conversation = current(); conversation.resolved = !conversation.resolved;
     if (!api.isLocalPreview) {
@@ -259,6 +285,7 @@
     document.querySelector('#human-composer button[type="submit"]').textContent = useTemplate ? 'Send template' : 'Send';
     document.querySelector('#composer-help').textContent = instagramClosed() ? `${appName(current().channelType)}’s ${windowHours(current().channelType)}-hour window has closed. You can reply after the customer writes again.` : !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
     document.querySelector('#take-over').hidden = current().resolved;
+    document.querySelector('#ai-call').hidden = !current().phone;
     document.querySelector('#take-over').textContent = current().human ? 'Give back to AI' : 'Take over';
   }
   // WhatsApp only allows free-form replies within 24 hours of the customer's last message; after that, approved templates.
@@ -369,7 +396,7 @@
       const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts || {};
       const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer',tiktok:'TikTok customer'}[row.channel_type] || 'Instagram customer');
       const avatarUrl = /^https:\/\//.test(String(contact.profile?.profile_pic || '')) ? String(contact.profile.profile_pic) : '';
-      return {id:row.id,contactId:row.contact_id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
+      return {id:row.id,contactId:row.contact_id,phone:contact.primary_phone||'',channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
     });
   }
   async function loadMessages(conversation) {

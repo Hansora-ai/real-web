@@ -22,7 +22,7 @@ function fixture(owner = 'new-owner') {
     ...phone, console, process:{env:{}}, Date, setTimeout:(fn,ms) => {const timer={fn,ms};timeouts.push(timer);return timer;}, clearTimeout:timer => {timer.cleared=true;},
     fileURLToPath:value=>value, cli:{runApp(){}}, ServerOptions:class {}, defineAgent:value=>value,
     llm:{ChatMessage:class {}}, tool:value=>value, voice:{AgentSession:Session,Agent:{create:value=>value},AgentSessionEventTypes:{MetricsCollected:'metrics',ConversationItemAdded:'message',Error:'error',Close:'close'}},
-    google:{realtime:{RealtimeModel:class {}}}, ParticipantKind:{SIP:3}, LiveKitAPI:class {room={deleteRoom:async()=>{}};},
+    google:{realtime:{RealtimeModel:class {}}}, ParticipantKind:{SIP:3}, RoomEvent:{ParticipantDisconnected:'participantDisconnected'}, canCallFrom:()=>false, LiveKitAPI:class {room={deleteRoom:async()=>{}};},
     first:async()=>({id,owner_user_id:owner,name:'New business',automation_agents:{},automation_business_knowledge:{},automation_channel_connections:[]}),
     serviceUpsert:async(table,valueKey,value)=>({id:table,...value}),
     serviceInsert:async(table,value)=>{inserts.push({table,value});return{id:table,...value};},
@@ -35,7 +35,7 @@ function fixture(owner = 'new-owner') {
     toolInstructions:()=>'',businessClock:()=>'',buildAutomationInstructions:()=>'',firstMessageFor:()=> 'Hello'
   };
   vm.runInNewContext(source,sandbox);
-  const ctx = {job:{metadata:JSON.stringify({business_id:id,owner_user_id:'new-owner',participant_identity:'caller',direction:'test'})},room:{name:'test-room'},connect:async()=>{},waitForParticipant:async identity=>{assert.equal(identity,'caller');return{identity,attributes:{}};},addShutdownCallback(){},shutdown(){}};
+  const ctx = {job:{metadata:JSON.stringify({business_id:id,owner_user_id:'new-owner',participant_identity:'caller',direction:'test'})},room:{name:'test-room',on(){}},connect:async()=>{},waitForParticipant:async identity=>{assert.equal(identity,'caller');return{identity,attributes:{}};},addShutdownCallback(){},shutdown(){}};
   return {entry:()=>sandbox.definition.entry(ctx),inserts,updates,timeouts,sessions,get toolContext(){return toolContext;}};
 }
 
