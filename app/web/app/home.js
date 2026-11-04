@@ -112,7 +112,7 @@
     var R = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/website%20content/';
     var size = '?width=420&height=420&resize=cover&quality=85';
     var shots = [
-      ['Woman laughing by a Christmas tree, warm light', R + 'Untitled%20design%20(25).png' + size],
+      ['Football player, intense close-up, stadium lights', R + 'posters/video-19.webp' + size],
       ['Boy in a magical forest with friendly animals', R + 'Untitled%20design%20(37).png' + size],
       ['Golden-hour portrait by the window, soft film look', R + 'Untitled%20design%20(44).png' + size],
       ['Fashion portrait, red glasses and red fur, studio light', R + 'Untitled%20design/7.png' + size]
