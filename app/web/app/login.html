@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="/app/app-shim.js"></script>
+<link rel="stylesheet" href="/app/app.css"><link rel="manifest" href="/app/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Hansora"><meta name="apple-mobile-web-app-status-bar-style" content="black"><link rel="apple-touch-icon" href="/app/icon-180.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#08090b">
+<title>Log in · Hansora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+  /* The app's login screen (Hansora app design). */
+  :root { --bg:#08090b; --surface:#101114; --surface-2:#15161a; --surface-3:#1b1c21; --line:rgba(255,255,255,.12); --text:#f5f5f6; --text-2:#a3a6ad; --text-3:#6f727b; --accent:#4c8dff; --accent-soft:rgba(76,141,255,.12); --red:#ff6b6b; --from:#2fd3fb; --to:#8b87e6; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { min-height: 100svh; position: relative; overflow-x: hidden; }
+  .glow { position: absolute; inset: -20% -30% auto; height: 70%; pointer-events: none; filter: blur(10px);
+    background: radial-gradient(40% 45% at 30% 40%, color-mix(in srgb, var(--from) 22%, transparent), transparent 70%), radial-gradient(45% 50% at 72% 30%, color-mix(in srgb, var(--to) 24%, transparent), transparent 70%); }
+  .wrap { position: relative; min-height: 100svh; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; padding: calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 16px); }
+  .close { position: absolute; z-index: 5; top: calc(env(safe-area-inset-top) + 16px); right: 16px; width: 40px; height: 40px; border-radius: 20px; border: 0; background: rgba(255,255,255,.08); color: var(--text); padding: 0; display: grid; place-items: center; cursor: pointer; }
+  .back { width: 44px; height: 44px; margin: -8px 0 12px -12px; border: 0; background: none; color: var(--text); font-size: 28px; cursor: pointer; }
+  .hero { padding: 8px 0 24px; animation: rise .45s ease both; }
+  .hero img { display: block; width: 44px; height: 44px; margin-bottom: 20px; filter: drop-shadow(0 8px 24px rgba(76,141,255,.18)); }
+  h1 { margin: 0; font-size: 30px; line-height: 1.12; font-weight: 800; letter-spacing: -.03em; }
+  .hero p { margin: 8px 0 0; color: var(--text-2); font-size: 15.5px; line-height: 1.45; }
+  form { display: flex; flex-direction: column; gap: 14px; animation: rise .45s .05s ease both; }
+  .segment { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 12px; background: var(--surface-2); }
+  .segment button { border: 0; min-height: 38px; border-radius: 9px; background: transparent; color: var(--text-2); font: 600 14px Inter, sans-serif; cursor: pointer; }
+  .segment button.on { background: var(--surface-3); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  label { display: flex; flex-direction: column; gap: 6px; }
+  label > span { color: var(--text-2); font-size: 13px; font-weight: 600; padding-left: 4px; }
+  input { width: 100%; min-height: 52px; border-radius: 14px; border: 0; padding: 0 16px; outline: none; background: var(--surface); color: var(--text); font: 400 17px Inter, sans-serif; box-shadow: inset 0 0 0 1px var(--line); }
+  input:focus { box-shadow: inset 0 0 0 2px var(--accent); }
+  .pw { position: relative; } .pw input { padding-right: 52px; }
+  .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; background: none; color: var(--text-3); cursor: pointer; font-size: 13px; font-weight: 700; }
+  #code { text-align: center; font-size: 26px; letter-spacing: .5em; }
+  .btn { width: 100%; min-height: 54px; border-radius: 16px; border: 0; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 10px; font: 600 17px Inter, sans-serif; cursor: pointer; transition: transform .15s, opacity .15s; }
+  .btn:active:not(:disabled) { transform: scale(.98); } .btn:disabled { opacity: .5; }
+  .primary { background: var(--accent); color: #fff; margin-top: 4px; }
+  .light { background: #fff; color: #0a0a0b; min-height: 58px; }
+  .light svg { width: 22px; height: 22px; flex: none; }
+  .link { align-self: center; border: 0; background: none; color: var(--accent); font: 500 15px Inter, sans-serif; min-height: 44px; cursor: pointer; margin-top: -4px; }
+  .notice { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-size: 14px; line-height: 1.45; }
+  .notice.error { background: rgba(255,107,107,.12); color: #ffc9c9; }
+  .social { margin-top: auto; padding-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--text-3); font-size: 13px; }
+  .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .note { margin: 0 4px; color: var(--text-3); font-size: 12.5px; line-height: 1.45; text-align: center; }
+  .terms { margin: 16px 0 0; text-align: center; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+  .terms a { color: var(--text-2); }
+  [hidden] { display: none !important; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (max-height: 700px) { .wrap { padding-top: calc(env(safe-area-inset-top) + 16px); } .hero img { width: 36px; height: 36px; margin-bottom: 12px; } .hero { padding-bottom: 16px; } h1 { font-size: 26px; } .hero p, .note { display: none; } form { gap: 10px; } input { min-height: 48px; } .btn { min-height: 50px; } }
+</style>
+</head>
+<body>
+  <div class="glow" aria-hidden="true"></div>
+  <main class="wrap">
+    <button class="close" id="close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <header class="hero">
+      <button class="back" id="back" type="button" aria-label="Back" hidden>‹</button>
+      <img id="logo" src="/hansora-logo.png" alt="">
+      <h1 id="title">Welcome to Hansora</h1>
+      <p id="subtitle">Sign in to create with AI and manage your AI employees.</p>
+    </header>
+
+    <form id="form" novalidate>
+      <div class="segment" id="segment" role="tablist">
+        <button type="button" role="tab" data-mode="signIn" class="on">Sign in</button>
+        <button type="button" role="tab" data-mode="signUp">Create account</button>
+      </div>
+      <label id="emailField"><span>Email</span><input id="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="name@example.com"></label>
+      <label id="passwordField"><span>Password</span><span class="pw"><input id="password" type="password" autocomplete="current-password"><button class="eye" id="eye" type="button" aria-label="Show password">Show</button></span></label>
+      <label id="repeatField" hidden><span>Repeat password</span><input id="repeat" type="password" autocomplete="new-password"></label>
+      <label id="codeField" hidden><span>6-digit code</span><input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••"></label>
+      <p class="notice" id="notice" role="status" hidden></p>
+      <button class="btn primary" id="submit" type="submit">Sign in</button>
+      <button class="link" id="forgot" type="button">Forgot password?</button>
+      <button class="link" id="resend" type="button" hidden>Resend code</button>
+    </form>
+
+    <div class="social" id="social">
+      <div class="or">or continue with</div>
+      <div class="row">
+        <button class="btn light" id="google" type="button" aria-label="Continue with Google">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+          <span>Google</span>
+        </button>
+        <button class="btn light" id="apple" type="button" aria-label="Continue with Apple">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M16.37 12.62c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.38-3.69ZM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.01.61-2.66 1.37-.58.67-1.1 1.76-.96 2.8 1.01.08 2.05-.52 2.68-1.28Z"/></svg>
+          <span>Apple</span>
+        </button>
+      </div>
+      <p class="note">Already have a Hansora account? Sign in the same way you signed up, so you see your credits and AI employees.</p>
+    </div>
+    <p class="terms">By continuing you agree to the <a href="/termsofuse.html">Terms</a> and <a href="/policy.html">Privacy Policy</a>.</p>
+  </main>
+
+<script src="/app/vendor/supabase-js-2.118.0.js"></script>
+<script src="/app/login.js"></script>
+</body>
+</html>

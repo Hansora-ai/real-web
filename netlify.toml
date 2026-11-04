@@ -7,6 +7,11 @@
 [build.environment]
   NODE_VERSION = "22.22.0"
 
+# PR preview of the phone-app branch only: the preview link shows the app (app/web). See app/scripts/netlify-preview.mjs.
+# Production (hansora.co) and other PR previews are unchanged.
+[context.deploy-preview]
+  command = "npm run build:functions && node app/scripts/netlify-preview.mjs"
+
 [functions]
   node_bundler = "esbuild"
 
