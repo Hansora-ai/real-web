@@ -135,7 +135,11 @@ export default defineAgent({
       } catch (error) {
         console.error('outgoing call not answered', { message: error?.message });
         const at = new Date().toISOString();
-        await serviceInsert('automation_calls', { business_id: job.business_id, provider_call_id: `outbound:${ctx.room.name}`.slice(0, 500), direction: 'outbound', status: 'missed', started_at: at, ended_at: at, billable_seconds: 0, outcome: { called_number: to, line_number: from, purpose: text(job.purpose, 500), reason: text(error?.message, 200) } }, { ignoreDuplicates: true }).catch(() => null);
+        const key = `outbound:${ctx.room.name}`.slice(0, 500);
+        const missed = { status: 'missed', ended_at: at, billable_seconds: 0, outcome: { called_number: to, line_number: from, purpose: text(job.purpose, 500), reason: text(error?.message, 200), ...(job.trigger_key ? { trigger_key: text(job.trigger_key, 200) } : {}) } };
+        // The server recorded the call as 'ringing' when it started it; mark that row missed (or add one).
+        const updated = await serviceUpdate('automation_calls', `business_id=eq.${encodeURIComponent(job.business_id)}&provider_call_id=eq.${encodeURIComponent(key)}`, missed).catch(() => []);
+        if (!updated?.length) await serviceInsert('automation_calls', { business_id: job.business_id, provider_call_id: key, direction: 'outbound', started_at: at, ...missed }, { ignoreDuplicates: true }).catch(() => null);
         await livekitApi.room.deleteRoom(ctx.room.name).catch(() => null);
         ctx.shutdown?.('no_answer');
         return;
@@ -182,7 +186,9 @@ export default defineAgent({
       last_message_preview: isTest ? 'Live phone test started' : isOutbound ? 'Outgoing phone call' : 'Incoming phone call',
       last_message_at: now
     });
-    const call = await serviceInsert('automation_calls', {
+    // An outgoing call already has its row (saved as 'ringing' by the server), so it is read, not inserted twice.
+    const existingCall = isOutbound ? await first(`/rest/v1/automation_calls?business_id=eq.${business.id}&provider_call_id=eq.${encodeURIComponent(descriptor.providerCallId)}&select=*&limit=1`) : null;
+    const call = existingCall || await serviceInsert('automation_calls', {
       business_id: business.id,
       conversation_id: conversation.id,
       provider_call_id: descriptor.providerCallId,
@@ -192,6 +198,11 @@ export default defineAgent({
       connected_at: now,
       outcome: { room_name: descriptor.roomName, caller_number: descriptor.callerNumber, called_number: descriptor.calledNumber, participant_identity: descriptor.participantIdentity, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: callVoice, ...(isOutbound ? { purpose: descriptor.purpose } : {}) }
     }, { ignoreDuplicates: true }) || await first(`/rest/v1/automation_calls?business_id=eq.${business.id}&provider_call_id=eq.${encodeURIComponent(descriptor.providerCallId)}&select=*&limit=1`);
+    // An outgoing call was saved as 'ringing' when it was started: it is answered now, so billing starts now.
+    if (call?.status === 'ringing') {
+      Object.assign(call, { status: 'connected', started_at: now, connected_at: now, outcome: { ...call.outcome, room_name: descriptor.roomName, caller_number: descriptor.callerNumber, called_number: descriptor.calledNumber, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: callVoice } });
+      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: call.status, started_at: now, connected_at: now, conversation_id: conversation.id, outcome: call.outcome });
+    }
 
     // Pay as you go: the call only runs as long as the owner's credits cover it.
     const perMinute = isTest ? 0 : (await automationPricesFor(business.id)).voiceMinute;

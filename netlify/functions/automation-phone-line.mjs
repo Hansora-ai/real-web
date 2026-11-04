@@ -7,7 +7,7 @@ import { createImportTrunk, deleteImportTrunk, newSipCredentials, setTrunkNumber
 
 const HEADERS = {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'GET, POST, OPTIONS'};
 const json = (statusCode, body) => ({ statusCode, headers: HEADERS, body: JSON.stringify(body) });
-const publicNumber = row => row?.e164 ? { e164: row.e164, country: row.country, assigned_at: row.assigned_at, imported: row.provider === 'sip' } : null;
+const publicNumber = row => row?.e164 ? { e164: row.e164, country: row.country, assigned_at: row.assigned_at, imported: row.provider === 'sip', can_call: Boolean(row.livekit_outbound_trunk_id) } : null;
 const MAX_IMPORTED_NUMBERS = 10;
 const CONTACT_METHODS = new Set(['whatsapp', 'telegram', 'email']);
 const CONTACT_WANTS = { local_number: 'wants_local_number', whatsapp_calls: 'wants_whatsapp_calls', forwarding_help: 'wants_forwarding_help' };
@@ -38,7 +38,7 @@ export async function handler(event) {
     const business = await first(`/rest/v1/automation_businesses?id=eq.${encodeURIComponent(businessId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&select=id,automation_agents(id),automation_business_knowledge(id)&limit=1`);
     if (!business) return json(404, { error: 'business_not_found' });
 
-    const assignedNumbers = async () => rows(await supabaseRequest(`/rest/v1/automation_phone_numbers?business_id=eq.${encodeURIComponent(businessId)}&status=eq.assigned&select=e164,country,assigned_at,provider&order=assigned_at.asc&limit=50`)).map(publicNumber).filter(Boolean);
+    const assignedNumbers = async () => rows(await supabaseRequest(`/rest/v1/automation_phone_numbers?business_id=eq.${encodeURIComponent(businessId)}&status=eq.assigned&select=e164,country,assigned_at,provider,livekit_outbound_trunk_id&order=assigned_at.asc&limit=50`)).map(publicNumber).filter(Boolean);
     // The phone channel is connected while the business has at least one number.
     const syncChannel = async numbers => serviceUpdate('automation_channel_connections', `business_id=eq.${encodeURIComponent(businessId)}&channel_type=eq.phone`, numbers.length
       ? { status: 'connected', connected_account_label: numbers.map(item => item.e164).join(', ').slice(0, 200), last_error_code: null }

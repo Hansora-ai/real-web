@@ -25,3 +25,15 @@ test('an outgoing call describes the customer as the other side and keeps the re
   assert.equal(describePhoneCall({ jobMetadata: { direction: 'inbound' }, attributes: { 'sip.phoneNumber': '+1555' } }).purpose, '');
 });
 
+
+import { autoCallSettings } from '../../lib/automation/phone-auto-calls.mjs';
+test('automatic call settings are off by default and clamped', () => {
+  const off = autoCallSettings();
+  assert.equal(off.callback.on, false); assert.equal(off.order.on, false); assert.equal(off.reminder.on, false);
+  assert.equal(off.hours_only, true);
+  const on = autoCallSettings({ hours_only: false, callback: { on: true, delay_minutes: 99999 }, reminder: { on: true, hours_before: 0, purpose: '  ' } });
+  assert.equal(on.callback.delay_minutes, 1440);
+  assert.equal(on.reminder.hours_before, 1);
+  assert.match(on.reminder.purpose, /Remind/);
+  assert.equal(on.hours_only, false);
+});

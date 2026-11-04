@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261104-voice">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="vendor/livekit-client.umd.js"></script><script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261104-add"></script><script defer src="automation-voice-test.js?v=20261005-isolation"></script><script defer src="automation-phone.js?v=20261104-call"></script>
+  <script defer src="vendor/livekit-client.umd.js"></script><script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261104-add"></script><script defer src="automation-voice-test.js?v=20261005-isolation"></script><script defer src="automation-phone.js?v=20261105-outgoing"></script>
 </head>
 <body class="ui" data-automation-page="phone">
   <div data-automation-header></div>
@@ -102,6 +102,21 @@
         .line-number-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px;margin-bottom:12px;background:var(--surface-2)}
         .line-number-card strong.big{display:block;font-size:26px;letter-spacing:.02em;user-select:all;margin:4px 0}
       </style>
+      <section class="ui-card" id="phone-outgoing" style="margin-top:18px"><div class="ui-step">
+        <div class="ui-step-head"><h2>Outgoing calls</h2><p>Your AI calls customers for you, from your Hansora number. Billed per minute like other calls.</p></div>
+        <div class="ui-note" id="outgoing-locked" hidden style="margin-bottom:14px"></div>
+        <div id="outgoing-body">
+          <strong style="display:block;font-size:15px;margin-bottom:8px">Call now</strong>
+          <input class="ui-input" id="call-now-number" type="tel" placeholder="Number to call, for example +12125550100">
+          <textarea class="ui-textarea" id="call-now-purpose" rows="2" maxlength="500" placeholder="What should the AI say or ask? For example: Confirm Friday’s 11:30 booking" style="margin-top:8px"></textarea>
+          <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:8px"><span class="ui-hint" id="call-now-status">The AI says it is your assistant and explains why it is calling.</span><button class="ui-btn primary" id="call-now" type="button">Call now</button></div>
+          <strong style="display:block;font-size:15px;margin:24px 0 2px">Automatic calls</strong>
+          <p class="ui-hint" style="margin:0 0 10px">Turn on what your AI calls about by itself. Each one is called once.</p>
+          <div id="auto-call-rules"></div>
+          <div class="ui-setting" style="margin-top:6px"><span><strong>Only between 9:00 and 20:00</strong><small>Your business time. Calls wait until then.</small></span><input class="ui-switch" id="auto-hours" type="checkbox" checked></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="ui-btn primary" id="auto-save" type="button">Save automatic calls</button></div>
+        </div>
+      </div></section>
       <section class="ui-card" id="phone-calls" style="margin-top:18px"><div class="ui-step"><div class="ui-step-head"><h2>Recent calls</h2><p>Every call with its transcript. Full conversations are also in the Inbox.</p></div><div id="phone-calls-list"></div></div></section>
       <p class="ui-hint" style="margin-top:14px;text-align:center"><a class="ui-link" id="phone-tools-link" href="automation-tools.html">Bookings, orders and handoff rules →</a> · Billed per connected minute, shown in Usage.</p>
     </div>
