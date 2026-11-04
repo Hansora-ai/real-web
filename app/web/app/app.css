@@ -247,3 +247,4 @@ html.hansora-app .site-header .user-menu > a.app-menu-automation { color: #c4b5f
 html.hansora-app .app-menu-automation i { font-style: normal; opacity: .8; }
 html.hansora-app .auto-bottom-nav .auto-tab-burger { position: relative; z-index: 1; width: 25px !important; height: 25px !important; display: flex !important; flex-direction: column; justify-content: center; align-items: center; gap: 4px !important; }
 html.hansora-app .auto-bottom-nav .auto-tab-burger i { width: 19px !important; height: 2px !important; margin: 0 !important; border-radius: 2px; }
+html.hansora-app .lx-gen-tile.t4 em { top: 10px; bottom: auto !important; }
