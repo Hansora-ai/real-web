@@ -1,16 +1,16 @@
 import { rows, supabaseRequest } from '../../lib/automation/db.mjs';
 import { startOutgoingCall } from '../../lib/automation/phone-dial.mjs';
-import { autoCallSettings } from '../../lib/automation/phone-auto-calls.mjs';
+import { autoCallSettings, insideHours } from '../../lib/automation/phone-auto-calls.mjs';
 import { isInternalCall, isScheduledRun } from '../../lib/automation/schedule.mjs';
 
 // Automatic AI calls, every 5 minutes: for each business that turned them on (Phone → Outgoing calls),
-// call back callback requests, confirm new orders, and remind customers before bookings.
+// confirm new orders and remind customers before bookings, inside the business's calling hours.
 // Each trigger is called at most once (its key is saved on the call record).
 // Scheduled every 5 minutes in netlify.toml.
 const MAX_CALLS_PER_BUSINESS_PER_RUN = 2;
 
-function localHour(timezone, at = new Date()) {
-  try { return Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: timezone || 'UTC' }).format(at)); } catch (_) { return at.getUTCHours(); }
+function localClock(timezone, at = new Date()) {
+  try { return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: timezone || 'UTC' }).format(at); } catch (_) { return at.toISOString().slice(11, 16); }
 }
 function localTime(timezone, value) {
   try { return new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: timezone || 'UTC' }).format(new Date(value)); } catch (_) { return String(value); }
@@ -27,15 +27,15 @@ async function candidates(rule, settings, business) {
   const now = Date.now();
   const contactPhone = outcome => outcome.customer_phone || outcome.automation_contacts?.primary_phone || '';
   const select = 'id,title,summary,customer_name,customer_phone,service_name,scheduled_start,collected_fields,automation_contacts(display_name,primary_phone)';
-  if (rule === 'callback' || rule === 'order') {
+  if (rule === 'order') {
     const delay = settings[rule].delay_minutes * 60 * 1000;
-    const kind = rule === 'callback' ? 'outcome_type=eq.lead&title=eq.Callback%20request' : 'outcome_type=in.(order,lead)&title=neq.Callback%20request';
+    const kind = 'outcome_type=in.(order,lead)&title=neq.Callback%20request';
     const found = rows(await supabaseRequest(`/rest/v1/automation_outcomes?business_id=eq.${q(business.id)}&${kind}&status=eq.new&created_at=lte.${q(iso(now - delay))}&created_at=gte.${q(iso(now - 24 * 3600 * 1000))}&select=${q(select)}&order=created_at.asc&limit=20`));
     return found.map(outcome => ({
       key: `auto:${rule}:${outcome.id}`,
       phone: contactPhone(outcome),
       name: outcome.customer_name || outcome.automation_contacts?.display_name || '',
-      purpose: `${settings[rule].purpose} ${rule === 'callback' ? `Their request: ${outcome.collected_fields?.Reason || outcome.summary || 'they asked to talk to a person'}.` : `Their order: ${outcome.title}${outcome.summary ? ` — ${outcome.summary}` : ''}.`}`.slice(0, 500)
+      purpose: `${settings[rule].purpose} Their order: ${outcome.title}${outcome.summary ? ` — ${outcome.summary}` : ''}.`.slice(0, 500)
     }));
   }
   // Reminder: bookings starting in `hours_before` hours (a 15-minute window; each booking is called once).
@@ -57,9 +57,9 @@ export async function handler(event = {}) {
   for (const connection of connections) {
     const settings = autoCallSettings(connection.settings?.auto_calls);
     const business = connection.automation_businesses || { id: connection.business_id };
-    const rules = ['callback', 'order', 'reminder'].filter(rule => settings[rule].on);
+    const rules = ['order', 'reminder'].filter(rule => settings[rule].on);
     if (!rules.length) continue;
-    if (settings.hours_only) { const hour = localHour(business.timezone); if (hour < 9 || hour >= 20) continue; }
+    if (!insideHours(localClock(business.timezone), settings.from, settings.to)) continue;
     let made = 0;
     for (const rule of rules) {
       if (made >= MAX_CALLS_PER_BUSINESS_PER_RUN) break;

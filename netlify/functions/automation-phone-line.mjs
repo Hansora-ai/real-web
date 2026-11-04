@@ -62,6 +62,11 @@ export async function handler(event) {
       const requests = rows(await supabaseRequest(`/rest/v1/automation_phone_country_requests?user_id=eq.${encodeURIComponent(user.id)}&select=country,contact_method,contact_value,wants_local_number,wants_whatsapp_calls,wants_forwarding_help&limit=300`).catch(() => []));
       const numbers = await assignedNumbers();
       const sip = numbers.some(item => item.imported) ? importDetails(await importTrunk()) : null;
+      // An imported number shows "Working" once a call has really arrived on it (a normal, non-SIP number never gets one).
+      for (const number of numbers.filter(item => item.imported)) {
+        const last = await first(`/rest/v1/automation_calls?business_id=eq.${encodeURIComponent(businessId)}&direction=eq.inbound&outcome->>called_number=eq.${encodeURIComponent(number.e164)}&select=started_at&order=started_at.desc&limit=1`).catch(() => null);
+        number.last_call_at = last?.started_at || null;
+      }
       return json(200, { numbers, number: numbers[0] || null, countries, requests, sip });
     }
 

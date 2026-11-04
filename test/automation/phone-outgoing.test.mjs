@@ -26,14 +26,18 @@ test('an outgoing call describes the customer as the other side and keeps the re
 });
 
 
-import { autoCallSettings } from '../../lib/automation/phone-auto-calls.mjs';
-test('automatic call settings are off by default and clamped', () => {
+import { autoCallSettings, insideHours } from '../../lib/automation/phone-auto-calls.mjs';
+test('call automations are off by default, clamped, with calling hours', () => {
   const off = autoCallSettings();
-  assert.equal(off.callback.on, false); assert.equal(off.order.on, false); assert.equal(off.reminder.on, false);
-  assert.equal(off.hours_only, true);
-  const on = autoCallSettings({ hours_only: false, callback: { on: true, delay_minutes: 99999 }, reminder: { on: true, hours_before: 0, purpose: '  ' } });
-  assert.equal(on.callback.delay_minutes, 1440);
+  assert.equal(off.order.on, false); assert.equal(off.reminder.on, false);
+  assert.equal(off.from, '09:00'); assert.equal(off.to, '20:00');
+  const on = autoCallSettings({ from: '10:30', to: '25:00', order: { on: true, delay_minutes: 99999 }, reminder: { on: true, hours_before: 0, purpose: '  ' } });
+  assert.equal(on.order.delay_minutes, 1440);
   assert.equal(on.reminder.hours_before, 1);
   assert.match(on.reminder.purpose, /Remind/);
-  assert.equal(on.hours_only, false);
+  assert.equal(on.from, '10:30'); assert.equal(on.to, '20:00');
+  assert.equal(insideHours('12:00', '09:00', '20:00'), true);
+  assert.equal(insideHours('20:00', '09:00', '20:00'), false);
+  assert.equal(insideHours('23:00', '22:00', '06:00'), true);
+  assert.equal(insideHours('07:00', '22:00', '06:00'), false);
 });
