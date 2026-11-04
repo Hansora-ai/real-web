@@ -27,6 +27,12 @@
   const VOICES = [['Leda','female','Youthful'],['Callirrhoe','female','Easy-going'],['Schedar','male','Even'],['Sadachbia','male','Lively'],['Zephyr','female','Bright'],['Kore','female','Firm'],['Aoede','female','Breezy'],['Autonoe','female','Bright'],['Despina','female','Smooth'],['Erinome','female','Clear'],['Laomedeia','female','Upbeat'],['Achernar','female','Soft'],['Gacrux','female','Mature'],['Pulcherrima','female','Forward'],['Vindemiatrix','female','Gentle'],['Sulafat','female','Warm'],['Puck','male','Upbeat'],['Charon','male','Informative'],['Fenrir','male','Excitable'],['Orus','male','Firm'],['Enceladus','male','Breathy'],['Iapetus','male','Clear'],['Umbriel','male','Easy-going'],['Algieba','male','Smooth'],['Algenib','male','Gravelly'],['Rasalgethi','male','Informative'],['Alnilam','male','Firm'],['Achird','male','Friendly'],['Zubenelgenubi','male','Casual'],['Sadaltager','male','Knowledgeable']].map(([name, gender, style]) => ({ name, gender, style }));
   const RECOMMENDED_VOICES = VOICES.slice(0, 4);
   const voicePlayer = { audio:null, button:null };
+  // Automatic outgoing calls (same defaults as lib/automation/phone-auto-calls.mjs).
+  const AUTO_RULES = [
+    { id:'callback', title:'Call back callback requests', help:'When a caller asked for a person and nobody answered.', unit:'delay_minutes', unitLabel:'minutes after', min:1, max:1440, value:5, purpose:'Call back the customer who asked to talk to a person, and help them with their request.' },
+    { id:'order', title:'Confirm new orders', help:'When your AI takes an order or a request with a phone number, in any chat or call.', unit:'delay_minutes', unitLabel:'minutes after', min:1, max:1440, value:10, purpose:'Confirm the customer’s order and answer their questions.' },
+    { id:'reminder', title:'Booking reminders', help:'Before each booking that has a phone number.', unit:'hours_before', unitLabel:'hours before', min:1, max:72, value:24, purpose:'Remind the customer about their booking and ask them to confirm they are coming.' }
+  ];
   let agentLanguages = ['en'];
   if (api.isLocalPreview) { try { saved = JSON.parse(localStorage.getItem(STORAGE) || '{}'); } catch (_) {} agentLanguages = ['hy', 'ru', 'en']; }
   else if (/^[0-9a-f-]{36}$/i.test(businessId)) {
@@ -55,6 +61,8 @@
   // The contact field's hint follows the chosen method.
   document.addEventListener('change', event => { if (event.target.matches('[data-contact-method]')) event.target.closest('.contact-box').querySelector('[data-contact-value]').placeholder = CONTACT_METHODS[event.target.value][1]; });
   $('#celebrate-done').addEventListener('click', () => { $('#phone-celebrate').hidden = true; });
+  $('#call-now').addEventListener('click', callNow);
+  $('#auto-save').addEventListener('click', async event => { const button = event.currentTarget; button.disabled = true; try { if (await save({ quiet:true })) ui.toast('Automatic calls saved.'); } finally { button.disabled = false; } });
   // Keeps the SIP import box open or closed across re-renders (toggle does not bubble, so listen while capturing).
   $('#sip-import').addEventListener('toggle', event => { if (event.target.matches('details[data-sip]')) line.sipOpen = event.target.open; }, true);
   document.addEventListener('keydown', event => { if (event.key === 'Escape') $('#phone-celebrate').hidden = true; });
@@ -125,13 +133,14 @@
   function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = mode() !== 'forward'; renderLine(); }
   function collect() {
     const languages = languageMode() === 'only' ? chosenLanguages() : [];
-    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
+    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', auto_calls:readAutoCalls(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
   }
   function applySaved(data) {
     if (data.number_mode) document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
     if (data.forward_number) $('#phone-number').value = data.forward_number;
     if (ALL_COUNTRIES.includes(data.country)) line.where = data.country;
     renderVoices(data.voice);
+    renderAutoCalls(data.auto_calls);
     if (data.greeting) $('#phone-greeting').value = data.greeting;
     if (data.answer_mode) { const input = document.querySelector(`input[name="answer-mode"][value="${data.answer_mode}"]`); if (input) input.checked = true; }
     if (data.transfer_number) $('#transfer-number').value = data.transfer_number;
@@ -179,6 +188,50 @@
     audio.addEventListener('ended', () => { if (voicePlayer.audio === audio) stopVoice(); });
     audio.addEventListener('error', () => { if (voicePlayer.audio !== audio) return; stopVoice(); $('#voice-hint').textContent = 'This sample could not play right now. Please try again in a moment.'; });
     audio.play().catch(() => { if (voicePlayer.audio === audio) stopVoice(); });
+  }
+  // Outgoing calls: one switch, timing and "what to say" per automatic call.
+  function renderAutoCalls(saved = {}) {
+    $('#auto-call-rules').innerHTML = AUTO_RULES.map(rule => {
+      const value = saved?.[rule.id] || {};
+      const amount = Number.isFinite(Number(value[rule.unit])) ? Number(value[rule.unit]) : rule.value;
+      return `<div class="auto-rule" data-rule="${rule.id}" style="padding:14px 0;border-top:1px solid var(--border)"><div class="ui-setting" style="padding:0"><span><strong>${escapeHtml(rule.title)}</strong><small>${escapeHtml(rule.help)}</small></span><input class="ui-switch" type="checkbox" data-auto-on${value.on === true ? ' checked' : ''}></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"><span class="ui-hint" style="margin:0">Call</span><input class="ui-input" type="number" data-auto-amount min="${rule.min}" max="${rule.max}" value="${amount}" style="width:90px"><span class="ui-hint" style="margin:0">${escapeHtml(rule.unitLabel)}</span></div><textarea class="ui-textarea" rows="2" maxlength="300" data-auto-purpose placeholder="What the AI says" style="margin-top:8px">${escapeHtml(value.purpose || rule.purpose)}</textarea></div>`;
+    }).join('');
+    $('#auto-hours').checked = saved?.hours_only !== false;
+  }
+  function readAutoCalls() {
+    const result = { hours_only:$('#auto-hours').checked };
+    for (const rule of AUTO_RULES) {
+      const box = document.querySelector(`.auto-rule[data-rule="${rule.id}"]`);
+      if (!box) continue;
+      const amount = Math.min(rule.max, Math.max(rule.min, Math.round(Number(box.querySelector('[data-auto-amount]').value) || rule.value)));
+      result[rule.id] = { on:box.querySelector('[data-auto-on]').checked, [rule.unit]:amount, purpose:box.querySelector('[data-auto-purpose]').value.trim().slice(0, 300) || rule.purpose };
+    }
+    return result;
+  }
+  // Outgoing calls need a Hansora number that can call out; until then the section explains why it is off.
+  function renderOutgoing() {
+    const canCall = line.numbers.some(item => item.can_call);
+    const locked = $('#outgoing-locked');
+    locked.hidden = canCall || !line.loaded;
+    locked.innerHTML = line.numbers.length ? 'Outgoing calls are being switched on for your number. Contact us if this takes more than a day.' : 'Outgoing calls work from a Hansora number. Get your number above first.';
+    $('#outgoing-body').style.opacity = canCall ? '' : '.55';
+    $('#outgoing-body').querySelectorAll('input,textarea,button').forEach(element => { element.disabled = !canCall; });
+  }
+  async function callNow() {
+    const status = $('#call-now-status'), button = $('#call-now');
+    const to = $('#call-now-number').value.trim(), purpose = $('#call-now-purpose').value.trim();
+    if (!/^\+?[\d\s()-]{8,20}$/.test(to)) { status.textContent = 'Enter the number in international format, for example +12125550100.'; return; }
+    if (!purpose) { status.textContent = 'Write what the AI should say or ask.'; return; }
+    if (api.isLocalPreview) { status.textContent = 'Calls work on the live site, not in the local preview.'; return; }
+    button.disabled = true; status.textContent = 'Starting the call…';
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-call', { method:'POST', body:JSON.stringify({ business_id:businessId, to, purpose }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(({ no_outgoing_line:'Your number cannot make calls yet.', other_country:'Your AI can only call numbers in the same country as your Hansora number.', credits_required:'Add credits to make calls.', too_many_calls:'Too many calls in a short time. Please wait a few minutes.', invalid_number:'This number is not valid.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.' })[payload.error] || 'The call could not be started. Please try again.');
+      status.textContent = `Calling ${payload.calling} from ${payload.from}… The call appears in Recent calls below.`;
+      setTimeout(loadCalls, 60000);
+    } catch (error) { status.textContent = error.message; }
+    finally { button.disabled = false; }
   }
   // The language choice in Rules: the caller's language, or only the ones the owner ticks.
   function renderLanguages(selected) {
@@ -278,6 +331,7 @@
     $('#line-subtitle').textContent = numbers.length ? 'Get a number in another country, or change how calls reach you.' : 'Pick one. You can change it later.';
     $('#line-contact').innerHTML = where && !local ? contactCard() : '';
     $('#sip-import').innerHTML = sipImportHtml();
+    renderOutgoing();
     // Each option's details sit right under the options.
     const fallback = fallbackCountry();
     $('#forward-info').innerHTML = !where ? ''

@@ -101,6 +101,10 @@
 [functions."automation-media-cleanup"]
   schedule = "20 3 * * *"
 
+# Automatic AI phone calls (callback requests, new orders, booking reminders), every 5 minutes
+[functions."automation-phone-auto-calls"]
+  schedule = "*/5 * * * *"
+
 # Re-reads connected Google Sheets (product catalogs) every hour
 [functions."automation-catalog-sync"]
   schedule = "7 * * * *"
