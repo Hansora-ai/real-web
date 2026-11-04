@@ -183,7 +183,7 @@
   // The first sample of a voice takes a few seconds to make; the four recommended ones are fetched as soon as the
   // Voice step opens, so ▶ plays at once (they are cached afterwards for everyone).
   function preloadVoices() {
-    if (preloadVoices.done || api.isLocalPreview) return;
+    if (preloadVoices.done || api.isLocalPreview || typeof fetch !== 'function') return;
     preloadVoices.done = true;
     for (const voice of RECOMMENDED_VOICES) fetch(voiceSampleUrl(voice.name)).catch(() => null);
   }
