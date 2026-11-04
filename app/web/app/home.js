@@ -149,7 +149,7 @@
     }
     if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) loop(); }, { threshold: 0.25 }).observe(sec);
     else { visible = true; loop(); }
-    // "Try this prompt": the create page opens with the prompt that is on screen.
+    // "Try generating now": the create page opens with the prompt that is on screen.
     go.addEventListener('click', function () { try { sessionStorage.setItem('hansora:article-preset', JSON.stringify({ prompt: current })); } catch (_) {} go.href = '/search-models.html?articlePreset=1'; });
   })();
 
