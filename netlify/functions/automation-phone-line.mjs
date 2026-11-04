@@ -16,7 +16,7 @@ const CONTACT_WANTS = { local_number: 'wants_local_number', whatsapp_calls: 'wan
 // LiveKit inbound trunk its calls arrive on.
 const countryList = value => String(value || '').split(',').map(code => code.trim().toUpperCase()).filter(code => /^[A-Z]{2}$/.test(code));
 const numberProviders = () => [
-  twilioConfigured() && { name: 'twilio', countries: countryList(process.env.TWILIO_COUNTRIES || 'US,CA'), buy: buyTwilioNumber, trunkId: String(process.env.LIVEKIT_TWILIO_TRUNK_ID).trim() },
+  twilioConfigured() && { name: 'twilio', countries: countryList(process.env.TWILIO_COUNTRIES || 'US,CA'), buy: buyTwilioNumber, trunkId: String(process.env.LIVEKIT_TWILIO_TRUNK_ID).trim(), outboundTrunkId: String(process.env.LIVEKIT_TWILIO_OUTBOUND_TRUNK_ID || '').trim() },
   telnyxConfigured() && { name: 'telnyx', countries: countryList(process.env.TELNYX_COUNTRIES || 'US,CA'), buy: buyTelnyxNumber, trunkId: String(process.env.LIVEKIT_TELNYX_TRUNK_ID).trim() }
 ].filter(Boolean);
 const buyableCountries = () => [...new Set(numberProviders().flatMap(provider => provider.countries))];
@@ -112,7 +112,7 @@ export async function handler(event) {
           if (!bought) continue;
           // A number LiveKit does not accept would ring into nothing, so it is kept out of use until fixed by hand.
           const accepted = await acceptOnLiveKitTrunk(bought.e164, { trunkId: provider.trunkId }).then(() => true, error => { console.error('livekit trunk update failed', { message: error?.message }); return false; });
-          await serviceInsert('automation_phone_numbers', { e164: bought.e164, country, provider: provider.name, provider_number_id: bought.providerNumberId, status: accepted ? 'available' : 'disabled', label: accepted ? null : 'Not on the LiveKit trunk yet' }, { ignoreDuplicates: true });
+          await serviceInsert('automation_phone_numbers', { e164: bought.e164, country, provider: provider.name, provider_number_id: bought.providerNumberId, livekit_outbound_trunk_id: provider.outboundTrunkId || null, status: accepted ? 'available' : 'disabled', label: accepted ? null : 'Not on the LiveKit trunk yet' }, { ignoreDuplicates: true });
           if (!accepted) return json(503, { error: 'phone_line_setup_failed' });
           number = await assign();
           break;
