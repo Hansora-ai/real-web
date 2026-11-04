@@ -7,7 +7,7 @@ import { buildAutomationInstructions, firstMessageFor } from '../../../lib/autom
 import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../../lib/automation/db.mjs';
 import { notifyOwner } from '../../../lib/automation/notify.mjs';
 import { affordableVoiceSeconds, automationPricesFor, canAfford, chargeCredits, handleOutOfCredits, voiceCredits } from '../../../lib/automation/billing.mjs';
-import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, createPhoneMetrics, describePhoneCall, normalizePhoneNumber, parsePhoneMetadata, phoneLanguageSettings, phoneTestMaxSeconds, phoneTestSettings, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
+import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, createPhoneMetrics, describePhoneCall, normalizePhoneNumber, parsePhoneMetadata, phoneLanguageSettings, phoneTestMaxSeconds, phoneTestSettings, phoneVoice, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
 import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs, toolInstructions } from '../../../lib/automation/tools.mjs';
 
 // The Google plugin (1.9.1) reports every model-started generation as caller
@@ -138,6 +138,8 @@ export default defineAgent({
     const knowledge = one(business.automation_business_knowledge);
     if (!agent || !knowledge) throw new Error('phone_agent_configuration_incomplete');
     const settings = isTest && job.test_settings ? { ...phoneSettings(business), ...phoneTestSettings(job.test_settings) } : phoneSettings(business);
+    // The owner's chosen voice; else the deployment default (Leda).
+    const callVoice = phoneVoice(settings.voice) || process.env.GEMINI_PHONE_VOICE || PHONE_VOICE;
     const externalContactId = isTest ? `phone-test:${descriptor.ownerUserId || participant.identity}` : (descriptor.callerNumber || participant.identity);
     const now = new Date().toISOString();
     const contact = await serviceUpsert('automation_contacts', 'business_id,channel_type,external_contact_id', {
@@ -167,7 +169,7 @@ export default defineAgent({
       status: 'connected',
       started_at: now,
       connected_at: now,
-      outcome: { room_name: descriptor.roomName, caller_number: descriptor.callerNumber, called_number: descriptor.calledNumber, participant_identity: descriptor.participantIdentity, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: process.env.GEMINI_PHONE_VOICE || PHONE_VOICE }
+      outcome: { room_name: descriptor.roomName, caller_number: descriptor.callerNumber, called_number: descriptor.calledNumber, participant_identity: descriptor.participantIdentity, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: callVoice }
     }, { ignoreDuplicates: true }) || await first(`/rest/v1/automation_calls?business_id=eq.${business.id}&provider_call_id=eq.${encodeURIComponent(descriptor.providerCallId)}&select=*&limit=1`);
 
     // Pay as you go: the call only runs as long as the owner's credits cover it.
@@ -225,7 +227,7 @@ export default defineAgent({
     const session = new voice.AgentSession({
       llm: guardToolTurns(new google.realtime.RealtimeModel({
         model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL,
-        voice: process.env.GEMINI_PHONE_VOICE || PHONE_VOICE,
+        voice: callVoice,
         apiKey: process.env.GOOGLE_API_KEY,
         temperature: 0.5,
         inputAudioTranscription: transcriptionLanguages(agent),
@@ -336,7 +338,7 @@ export default defineAgent({
           provider_usage_id: descriptor.providerCallId,
           idempotency_key: `usage:phone:${descriptor.providerCallId}`,
           credits: charge.charged || 0,
-          metadata: { call_id: call.id, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: process.env.GEMINI_PHONE_VOICE || PHONE_VOICE, test: isTest, provider_usage: metrics }
+          metadata: { call_id: call.id, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: callVoice, test: isTest, provider_usage: metrics }
         }, { ignoreDuplicates: true });
       }
     }

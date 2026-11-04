@@ -23,6 +23,10 @@
   // Same codes as the AI's language list (lib/automation/instructions.mjs).
   const LANGUAGES = { en:'English', hy:'Armenian', ru:'Russian', es:'Spanish', fr:'French', de:'German', it:'Italian', pt:'Portuguese', uk:'Ukrainian', pl:'Polish', nl:'Dutch', tr:'Turkish', ar:'Arabic', ka:'Georgian', zh:'Chinese', ja:'Japanese', ko:'Korean', hi:'Hindi' };
   const CONTACT_METHODS = { whatsapp:['WhatsApp', '+374 91 123456'], telegram:['Telegram', '@username or +374 91 123456'] };
+  // Gemini voices (same list as lib/automation/phone.mjs). The first four are the recommended ones.
+  const VOICES = [['Leda','female','Youthful'],['Callirrhoe','female','Easy-going'],['Schedar','male','Even'],['Sadachbia','male','Lively'],['Zephyr','female','Bright'],['Kore','female','Firm'],['Aoede','female','Breezy'],['Autonoe','female','Bright'],['Despina','female','Smooth'],['Erinome','female','Clear'],['Laomedeia','female','Upbeat'],['Achernar','female','Soft'],['Gacrux','female','Mature'],['Pulcherrima','female','Forward'],['Vindemiatrix','female','Gentle'],['Sulafat','female','Warm'],['Puck','male','Upbeat'],['Charon','male','Informative'],['Fenrir','male','Excitable'],['Orus','male','Firm'],['Enceladus','male','Breathy'],['Iapetus','male','Clear'],['Umbriel','male','Easy-going'],['Algieba','male','Smooth'],['Algenib','male','Gravelly'],['Rasalgethi','male','Informative'],['Alnilam','male','Firm'],['Achird','male','Friendly'],['Zubenelgenubi','male','Casual'],['Sadaltager','male','Knowledgeable']].map(([name, gender, style]) => ({ name, gender, style }));
+  const RECOMMENDED_VOICES = VOICES.slice(0, 4);
+  const voicePlayer = { audio:null, button:null };
   let agentLanguages = ['en'];
   if (api.isLocalPreview) { try { saved = JSON.parse(localStorage.getItem(STORAGE) || '{}'); } catch (_) {} agentLanguages = ['hy', 'ru', 'en']; }
   else if (/^[0-9a-f-]{36}$/i.test(businessId)) {
@@ -119,12 +123,13 @@
   function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = mode() !== 'forward'; renderLine(); }
   function collect() {
     const languages = languageMode() === 'only' ? chosenLanguages() : [];
-    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:'Leda', voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
+    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
   }
   function applySaved(data) {
     if (data.number_mode) document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
     if (data.forward_number) $('#phone-number').value = data.forward_number;
     if (ALL_COUNTRIES.includes(data.country)) line.where = data.country;
+    renderVoices(data.voice);
     if (data.greeting) $('#phone-greeting').value = data.greeting;
     if (data.answer_mode) { const input = document.querySelector(`input[name="answer-mode"][value="${data.answer_mode}"]`); if (input) input.checked = true; }
     if (data.transfer_number) $('#transfer-number').value = data.transfer_number;
@@ -132,6 +137,45 @@
     if (data.language_mode === 'only' && Array.isArray(data.languages) && data.languages.length) document.querySelector('input[name="language-mode"][value="only"]').checked = true;
     renderLanguages(Array.isArray(data.languages) && data.languages.length ? data.languages : agentLanguages);
     syncForward();
+  }
+  // Voice step: four recommended voices on top, the rest under "More voices"; ▶ plays a short sample.
+  function renderVoices(chosen) {
+    const current = VOICES.some(voice => voice.name === chosen) ? chosen : 'Leda';
+    const card = voice => `<label class="ui-option"><input type="radio" name="phone-voice" value="${voice.name}"${voice.name === current ? ' checked' : ''}><span class="ui-option-text"><strong>${voice.name}</strong><small>${voice.gender === 'female' ? 'Female' : 'Male'} · ${voice.style}</small></span><button class="ui-voice-play" type="button" data-voice-play="${voice.name}" aria-label="Play ${voice.name}">▶</button><span class="ui-option-radio" aria-hidden="true"></span></label>`;
+    $('#voice-recommended').innerHTML = RECOMMENDED_VOICES.map(card).join('');
+    const rest = VOICES.slice(4);
+    $('#voice-female').innerHTML = rest.filter(voice => voice.gender === 'female').map(card).join('');
+    $('#voice-male').innerHTML = rest.filter(voice => voice.gender === 'male').map(card).join('');
+    // A chosen voice from the longer list keeps that list open, so the owner sees it.
+    if (!RECOMMENDED_VOICES.some(voice => voice.name === current)) $('.ui-voice-more').open = true;
+    if (!renderVoices.bound) {
+      renderVoices.bound = true;
+      $('#voice-picker').addEventListener('click', event => {
+        const button = event.target.closest('[data-voice-play]');
+        if (!button) return;
+        // Playing a sample does not change the chosen voice.
+        event.preventDefault(); event.stopPropagation();
+        playVoice(button);
+      });
+    }
+  }
+  function selectedVoice() { return document.querySelector('input[name="phone-voice"]:checked')?.value || 'Leda'; }
+  function stopVoice() {
+    if (voicePlayer.audio) { voicePlayer.audio.pause(); voicePlayer.audio = null; }
+    if (voicePlayer.button) { voicePlayer.button.classList.remove('playing', 'loading'); voicePlayer.button.textContent = '▶'; voicePlayer.button = null; }
+  }
+  function playVoice(button) {
+    const same = voicePlayer.button === button;
+    stopVoice();
+    if (same) return;
+    const lang = ['hy', 'ru', 'en'].find(code => agentLanguages.includes(code)) || 'en';
+    const audio = new Audio(`/.netlify/functions/automation-phone-voice-preview?voice=${encodeURIComponent(button.dataset.voicePlay)}&lang=${lang}&v=1`);
+    voicePlayer.audio = audio; voicePlayer.button = button;
+    button.classList.add('loading'); button.textContent = '…';
+    audio.addEventListener('playing', () => { if (voicePlayer.audio !== audio) return; button.classList.remove('loading'); button.classList.add('playing'); button.textContent = '■'; });
+    audio.addEventListener('ended', () => { if (voicePlayer.audio === audio) stopVoice(); });
+    audio.addEventListener('error', () => { if (voicePlayer.audio !== audio) return; stopVoice(); $('#voice-hint').textContent = 'This sample could not play right now. Please try again in a moment.'; });
+    audio.play().catch(() => { if (voicePlayer.audio === audio) stopVoice(); });
   }
   // The language choice in Rules: the caller's language, or only the ones the owner ticks.
   function renderLanguages(selected) {
@@ -146,6 +190,7 @@
       : 'The AI answers in the language the caller speaks and keeps it for the whole call.';
   }
   function render() {
+    stopVoice();
     document.querySelectorAll('.phone-step').forEach(pane => { pane.hidden = Number(pane.dataset.phoneStep) !== step; });
     document.querySelectorAll('.ui-stepper li').forEach(item => { const n = Number(item.dataset.step); item.classList.toggle('active', n === step); item.classList.toggle('done', n < step); });
     $('.ui-stepper').style.setProperty('--progress-num', String((step - 1) / 3));
@@ -160,7 +205,7 @@
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
     const numbers = line.numbers.map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
-    $('#phone-review').innerHTML = [['Number', numbers], ['Voice', 'Leda'], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+    $('#phone-review').innerHTML = [['Number', numbers], ['Voice', data.voice], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
     const live = line.numbers.length
       ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${line.numbers.map(item => escapeHtml(item.e164)).join(', ')}</strong>.${data.number_mode === 'forward' ? '' : ' Call it from any phone to check.'}${canGetNumber() ? ` To add your ${escapeHtml(countryName(targetCountry()))} number, click <strong>${escapeHtml(getNumberLabel())}</strong> below.` : ''}</div>`
