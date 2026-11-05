@@ -7,7 +7,7 @@
   const RU_SUCCESS_URL = 'https://hansora.co/russian-payment-success.html';
 
   // Prices per action in ⚡. Must match lib/automation/billing.mjs (automationPrices and AUTOMATION_PLANS).
-  const PAYG_RATES = { aiReply: 1.2, mediaReply: 2, voiceReply: 1, commentRun: 1, voiceMinute: 8 };
+  const PAYG_RATES = { aiReply: 1.2, mediaReply: 2, voiceReply: 1, commentRun: 1, voiceMinute: 9 };
   const PAYG_DISCOUNT = 0.3; // shown as the pay-as-you-go sale, like the Hansora Creative pricing page
 
   // Pay as you go: the same packs and products as the Hansora Creative pricing page, because credits are one shared
@@ -22,10 +22,10 @@
 
   // Monthly plans (Dodo subscriptions). credits = ⚡ added every paid month. product = the Dodo subscription link.
   const PLANS = [
-    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQYSDnUbMHvi9Gt6yy', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 1, voiceMinute: 8 } },
-    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQrUC5gB5c3Jk8zZE9', note: 'Lots of Instagram comments', popular: true, rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 7 } },
-    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeR55QAhlX4ViGBTCF4', note: 'Every channel and phone calls', rates: { aiReply: 0.9, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 7 } },
-    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeRJQYrPCPCIK9zbEb1', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, voiceReply: 1, commentRun: 0.3, voiceMinute: 6 } }
+    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQYSDnUbMHvi9Gt6yy', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 1, voiceMinute: 9 } },
+    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQrUC5gB5c3Jk8zZE9', note: 'Lots of Instagram comments', popular: true, rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 8 } },
+    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeR55QAhlX4ViGBTCF4', note: 'Every channel and phone calls', rates: { aiReply: 0.9, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 8 } },
+    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeRJQYrPCPCIK9zbEb1', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, voiceReply: 1, commentRun: 0.3, voiceMinute: 7 } }
   ];
 
   const fmt = new Intl.NumberFormat('en-US');
