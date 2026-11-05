@@ -11,6 +11,8 @@
   $('#phone-tools-link').href = `automation-tools.html?business=${encodeURIComponent(businessId)}${previewSuffix}`;
   const STORAGE = 'hansora_automation_phone_setup';
   let step = params.get('test') === '1' ? 4 : 1;
+  // True after "Edit settings" on a number the business already has: the steps only change settings, nothing is bought.
+  let editing = false;
 
 
   let saved = {};
@@ -55,7 +57,7 @@
   loadCalls();
   preloadVoices();
 
-  document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', event => { if (event.isTrusted) line.modeTouched = true; syncForward(); }));
+  document.querySelectorAll('input[name="number-mode"]').forEach(input => input.addEventListener('change', event => { if (event.isTrusted) { line.modeTouched = true; editing = false; } syncForward(); render(); }));
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   document.querySelectorAll('input[name="language-mode"]').forEach(input => input.addEventListener('change', renderLanguages));
   for (const box of ['#line-contact', '#option-detail', '#phone-live', '#line-numbers', '#sip-import']) $(box).addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
@@ -117,6 +119,8 @@
   document.querySelectorAll('.ui-stepper li').forEach(item => item.addEventListener('click', () => { const target = Number(item.dataset.step); if (target < step) { step = target; render(); } }));
   $('#phone-previous').addEventListener('click', () => { if (step > 1) { step--; render(); } });
   $('#phone-next').addEventListener('click', async () => {
+    if (step === 1 && mode() === 'none') { showError('Choose how customers reach you.'); return; }
+    if (step === 1 && mode() === 'new' && line.where && numberIn(line.where)) { showError(`You already have a ${countryName(line.where)} number. Choose another country, or press Edit settings on your number.`); return; }
     if (step === 1 && mode() === 'forward' && !/^\+?[\d\s()-]{8,20}$/.test($('#phone-number').value.trim())) { showError('Enter the business number to forward.'); return; }
     if (step === 3 && languageMode() === 'only' && !chosenLanguages().length) { showError('Choose at least one language, or pick "The caller\'s language".'); return; }
     $('#phone-error').hidden = true;
@@ -132,15 +136,18 @@
   });
 
   function mode() { return document.querySelector('input[name="number-mode"]:checked').value; }
+  // How this business is connected: the option chosen now, otherwise what it already uses.
+  function currentMode() { const chosen = mode(); return chosen === 'none' ? saved.number_mode || 'new' : chosen; }
   function languageMode() { return document.querySelector('input[name="language-mode"]:checked').value; }
   function chosenLanguages() { return [...document.querySelectorAll('#language-list input:checked')].map(input => input.value); }
-  function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = mode() !== 'forward'; renderLine(); }
+  function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = currentMode() !== 'forward'; renderLine(); }
   function collect() {
     const languages = languageMode() === 'only' ? chosenLanguages() : [];
-    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:mode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_on:flowOn('transfer'), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', auto_calls:readAutoCalls(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
+    return { number_mode:currentMode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:currentMode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_on:flowOn('transfer'), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', auto_calls:readAutoCalls(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
   }
   function applySaved(data) {
-    if (data.number_mode) document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
+    // "Get a new phone number" was the old default, so a saved "new" is not a real choice and stays unchosen.
+    if (data.number_mode && data.number_mode !== 'new') document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
     if (data.forward_number) $('#phone-number').value = data.forward_number;
     if (ALL_COUNTRIES.includes(data.country)) line.where = data.country;
     renderVoices(data.voice);
@@ -279,9 +286,12 @@
     document.querySelectorAll('.ui-stepper li').forEach(item => { const n = Number(item.dataset.step); item.classList.toggle('active', n === step); item.classList.toggle('done', n < step); });
     $('.ui-stepper').style.setProperty('--progress-num', String((step - 1) / 3));
     $('#phone-previous').hidden = step === 1;
-    $('#phone-next').textContent = step === 4 ? (canGetNumber() ? getNumberLabel() : 'Save phone setup') : 'Continue';
+    $('#phone-next').textContent = step === 4 ? (canGetNumber() ? getNumberLabel() : editing ? 'Save changes' : 'Save phone setup') : 'Continue';
+    // With a number already live, step 1 has nothing to continue to until the owner picks something new to add.
+    $('#phone-next').hidden = step === 1 && mode() === 'none' && liveNumbers().length > 0;
+    if (liveNumbers().length) $('#phone-save-state').textContent = 'These settings apply to all this AI employee’s numbers';
     // A new Hansora number belongs to the AI alone, so it answers every call; the choice only matters when forwarding.
-    $('#answer-mode-field').hidden = mode() !== 'forward';
+    $('#answer-mode-field').hidden = currentMode() !== 'forward';
     if (step === 4) renderReview();
   }
   function renderReview() {
@@ -308,6 +318,7 @@
       const result = await api.db.from('automation_channel_connections').update({ settings:data }).eq('business_id', businessId).eq('channel_type', 'phone');
       if (result.error) { showError(api.displayError(result.error)); return false; }
     }
+    saved = data;
     setState();
     if (!quiet) ui.toast(liveNumbers().length ? 'Saved. Your AI employee answers calls with these settings.' : 'Saved. Not live yet: get your number on this step.');
     if (step === 4) render();
@@ -327,7 +338,7 @@
       line = { ...line, numbers, countries:payload.countries || [], requests:payload.requests || [], sip:payload.sip || null, loaded:true, error:false };
     } catch (_) { line = { ...line, numbers:[], countries:[], loaded:true, error:true }; }
     keepSipMode();
-    renderLine(); setState(); if (step === 4) render();
+    renderLine(); setState(); render();
     if (!line.numbers.length && !line.error) recordCountry();
   }
   function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
@@ -335,19 +346,23 @@
   function numberIn(country) { return line.numbers.find(item => item.country === country && !item.imported); }
   // Numbers that really answer calls (an imported SIP number counts once its first call has arrived).
   function liveNumbers() { return line.numbers.filter(item => !item.pending); }
-  // While a SIP number waits for its test call, no other option is chosen (the owner is continuing with SIP).
-  // Choosing an option by hand switches to it; removing the SIP number goes back to "Get a new phone number".
+  // Nothing is chosen for the owner. While a SIP number waits for its test call, the owner is continuing with SIP.
+  // With a live number, no option is chosen either: "Edit settings" changes it, and the options only add something new.
   function keepSipMode() {
     const sipRadio = document.querySelector('input[name="number-mode"][value="sip"]');
-    if (line.numbers.some(item => item.pending) && !line.modeTouched) sipRadio.checked = true;
-    else if (sipRadio.checked && !line.numbers.some(item => item.imported)) document.querySelector('input[name="number-mode"][value="new"]').checked = true;
-    $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = mode() !== 'forward';
+    const noneRadio = document.querySelector('input[name="number-mode"][value="none"]');
+    if (!line.modeTouched) {
+      if (line.numbers.some(item => item.pending)) sipRadio.checked = true;
+      else if (liveNumbers().length) noneRadio.checked = true;
+    }
+    if (sipRadio.checked && !line.numbers.some(item => item.imported)) noneRadio.checked = true;
+    $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = currentMode() !== 'forward';
   }
   function fallbackCountry() { return ['US', 'CA'].find(code => readyCountries().has(code)); }
   // The country the last step's button gets a number in: the business's own country, or a
   // US/Canada number to forward to when there are no local numbers yet.
   function targetCountry() {
-    if (!line.where || mode() === 'whatsapp' || mode() === 'sip') return '';
+    if (!line.where || ['none', 'whatsapp', 'sip'].includes(mode())) return '';
     if (readyCountries().has(line.where)) return line.where;
     return mode() === 'forward' ? fallbackCountry() || '' : '';
   }
@@ -362,15 +377,15 @@
     const newOption = document.querySelector('input[name="number-mode"][value="new"]');
     newOption.disabled = !local;
     newOption.closest('.ui-option').style.display = local ? '' : 'none';
-    if (!local && newOption.checked) { document.querySelector('input[name="number-mode"][value="forward"]').checked = true; $('#forward-field').hidden = false; $('#answer-mode-field').hidden = false; }
+    if (!local && newOption.checked) { document.querySelector('input[name="number-mode"][value="none"]').checked = true; $('#forward-field').hidden = true; }
     // Numbers the business already has come first; adding another country comes below them.
     const numbers = liveNumbers();
-    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · ${number.imported ? 'Your SIP number · Live' : 'Live'}</small><strong class="big">${escapeHtml(number.e164)}</strong>${number.imported ? '' : forwardingHtml(number) || alsoForwardHtml(number)}<button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="margin-top:12px;border:1px solid var(--border)">Turn off this number</button></div>`).join('')}` : '';
+    $('#line-numbers').innerHTML = numbers.length ? `<div class="ui-step-head" style="margin-bottom:12px"><h2>Your phone ${numbers.length === 1 ? 'number' : 'numbers'}</h2><p>Your AI employee answers every call to ${numbers.length === 1 ? 'it' : 'them'}.</p></div>${numbers.map(number => `<div class="line-number-card"><small class="ui-faint">${escapeHtml(countryName(number.country))} · ${number.imported ? 'Your SIP number · Live' : 'Live'}</small><strong class="big">${escapeHtml(number.e164)}</strong>${number.imported ? '' : forwardingHtml(number) || alsoForwardHtml(number)}<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"><button class="ui-btn primary" type="button" data-line-action="edit">Edit settings</button><button class="ui-btn ghost" type="button" data-line-action="release" data-e164="${escapeHtml(number.e164)}" style="border:1px solid var(--border)">Turn off this number</button></div></div>`).join('')}` : '';
     // A SIP number that is not connected yet comes first: it is what the owner is in the middle of.
     const finishing = finishSipHtml();
     if (finishing) $('#line-numbers').innerHTML += finishing;
     $('#line-title').textContent = numbers.length ? 'Add another number' : finishing ? 'Or connect another way' : 'How customers reach you';
-    $('#line-subtitle').textContent = numbers.length ? 'Get a number in another country, or change how calls reach you.' : 'Pick one. You can change it later.';
+    $('#line-subtitle').textContent = numbers.length ? 'Only choose one of these to add something new. To change the voice, greeting or languages, press Edit settings above.' : 'Pick one. You can change it later.';
     $('#line-contact').innerHTML = where && !local ? contactCard() : '';
     $('#sip-import').innerHTML = sipImportHtml();
     renderOutgoing();
@@ -450,6 +465,8 @@
     $('#celebrate-done').focus();
   }
   async function lineAction(action, button) {
+    // Goes to the settings steps; no number is bought and nothing changes until Save.
+    if (action === 'edit') { editing = true; line.modeTouched = false; keepSipMode(); renderLine(); step = 2; render(); window.scrollTo?.(0, 0); return; }
     let extra = {};
     const imported = action === 'release' && line.numbers.some(item => item.e164 === button.dataset.e164 && item.imported);
     if (action === 'release' && !confirm(imported ? `Remove ${button.dataset.e164} from your AI? Your provider keeps the number; your AI stops answering it.` : `Turn off ${button.dataset.e164 || 'this number'}? Calls to it will no longer be answered, and the number may be given to another business.`)) return;
@@ -489,9 +506,9 @@
       }
       if (!response.ok) throw new Error(({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.') + (payload.detail ? ` (${payload.detail})` : ''));
       line.numbers = Array.isArray(payload.numbers) ? payload.numbers : payload.number ? [payload.number] : [];
-      if (action === 'activate') { await save({ quiet:true }); if (payload.number) showCelebration(payload.number); }
-      else { if (!line.numbers.some(item => item.imported)) line.sip = null; keepSipMode(); ui.toast(imported ? 'Number removed.' : 'Number turned off.'); }
-      renderLine(); setState(); if (step === 4) render();
+      if (action === 'activate') { await save({ quiet:true }); line.modeTouched = false; keepSipMode(); if (payload.number) showCelebration(payload.number); }
+      else { if (!line.numbers.some(item => item.imported)) line.sip = null; line.modeTouched = false; keepSipMode(); ui.toast(imported ? 'Number removed.' : 'Number turned off.'); }
+      renderLine(); setState(); render();
     } catch (error) { showError(error.message); }
     finally { button.disabled = false; }
   }

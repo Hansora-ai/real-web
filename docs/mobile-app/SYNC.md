@@ -5,6 +5,7 @@ gets ticked when the app has it too. Newest at the top.
 
 | Date | Website change | Where in the app | Done in app |
 |---|---|---|---|
+| 2026-11-05 | Phone: nothing pre-selected, Edit settings for existing numbers (PR 252, open); Automation packs and prices match Creative, new demo videos (PR 251) | `automation-phone.html/js`, `automation.html`, `automation-pricing.*`, `automation-ui.css`, `automation-landing.css`, `automation.js` (the "From $9.99" line stays out of the app) | ✅ |
 | 2026-11-04 | Phone: SIP number waits for a test call ("Finish connecting" box, no option pre-chosen), voice samples preloaded; server: voice preview key/fallbacks, team alert for left contacts (PRs 247–249) | `automation-phone.html/js` (server parts need nothing in the app) | ✅ |
 | 2026-11-04 | Phone: voice picker with ▶ samples, own SIP trunk number, call automations (warm transfer, order confirm, booking reminder, calling hours), Call with AI from the Inbox; Instagram account photo after connecting; Comments-only "Add AI employee" (PRs 240–246) | `automation-phone.*`, `automation-inbox.*`, `automation-connect.js`, `automation-header.js`, `automation-ui.css`, `automation-setup.js`; app-shim plays server sounds from hansora.co | ✅ |
 | 2026-11-03 | Phone calls: several numbers per business, 3 options (new number / forward / WhatsApp calls), contact box for countries without numbers (PRs 216, 237) | `automation-phone.html/js` | ✅ |

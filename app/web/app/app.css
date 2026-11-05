@@ -38,22 +38,33 @@ html.hansora-app input, html.hansora-app textarea, html.hansora-app select { fon
 html.hansora-app footer { display: none !important; }
 
 html.hansora-app { background: #08090c; }
-/* Page changes (app-shim.js §6): the content slides out, the next page's real content slides in when it is ready.
-   The top bar, bottom bar and floating buttons stay still. */
-html.app-leaving body > :not(.hs-bottom-nav):not(.auto-bottom-nav):not(#sharedHeader):not([data-automation-header]):not(.hsa-launcher):not(.app-offline) { animation: appOutLeft .18s cubic-bezier(.4,0,1,1) forwards; }
-html.app-leaving-back body > :not(.hs-bottom-nav):not(.auto-bottom-nav):not(#sharedHeader):not([data-automation-header]):not(.hsa-launcher):not(.app-offline) { animation: appOutRight .18s cubic-bezier(.4,0,1,1) forwards; }
-html.app-arriving:not(.app-arrived) body > :not(.hs-bottom-nav):not(.auto-bottom-nav):not(#sharedHeader):not([data-automation-header]):not(.hsa-launcher):not(.app-offline) { opacity: 0; }
-html.app-arrived body > :not(.hs-bottom-nav):not(.auto-bottom-nav):not(#sharedHeader):not([data-automation-header]):not(.hsa-launcher):not(.app-offline) { animation: appInRight .34s cubic-bezier(.2,.8,.2,1) both; }
-html.app-arrived.app-from-left body > :not(.hs-bottom-nav):not(.auto-bottom-nav):not(#sharedHeader):not([data-automation-header]):not(.hsa-launcher):not(.app-offline) { animation-name: appInLeft; }
-@keyframes appOutLeft { to { transform: translateX(-28%); opacity: 0; } }
-@keyframes appOutRight { to { transform: translateX(28%); opacity: 0; } }
-@keyframes appInRight { from { transform: translateX(34%); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes appInLeft { from { transform: translateX(-34%); opacity: 0; } to { transform: none; opacity: 1; } }
-/* A slow page: a small loader after a moment. */
-html.app-arriving:not(.app-arrived)::before { content: ''; position: fixed; left: 50%; top: 50%; z-index: 2147483601; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; pointer-events: none;
-  border: 2.5px solid rgba(139,92,246,.25); border-top-color: #8b5cf6; opacity: 0; animation: appSpin .7s linear .4s infinite; }
-@keyframes appSpin { from { opacity: 1; } to { opacity: 1; transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { html.app-leaving body > *, html.app-leaving-back body > *, html.app-arrived body > * { animation: none !important; } }
+/* Page changes (app-shim.js §6). The browser keeps the old page until the new one is ready, then both slide:
+   the new page in from the right (from the left for Back), the old one away. The bars stay still. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: .34s cubic-bezier(.2,.8,.2,1) both appVtOutLeft; }
+::view-transition-new(root) { animation: .34s cubic-bezier(.2,.8,.2,1) both appVtInRight; }
+html.app-back::view-transition-old(root) { animation-name: appVtOutRight; }
+html.app-back::view-transition-new(root) { animation-name: appVtInLeft; }
+@keyframes appVtOutLeft { to { transform: translateX(-30%); opacity: .4; } }
+@keyframes appVtInRight { from { transform: translateX(100%); } }
+@keyframes appVtOutRight { to { transform: translateX(100%); } }
+@keyframes appVtInLeft { from { transform: translateX(-30%); opacity: .4; } }
+html.app-back::view-transition-new(root) { z-index: 0; } html.app-back::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { box-shadow: -18px 0 40px rgba(0,0,0,.45); }
+/* Bars stay still: they get their own layer with no movement (the new bar shows on top straight away). */
+.hs-bottom-nav { view-transition-name: app-tabbar; }
+.auto-bottom-nav { view-transition-name: app-autotabbar; }
+#siteHeader { view-transition-name: app-header; }
+.auto-header { view-transition-name: app-autoheader; }
+::view-transition-group(app-tabbar), ::view-transition-group(app-autotabbar), ::view-transition-group(app-header), ::view-transition-group(app-autoheader),
+::view-transition-old(app-tabbar), ::view-transition-old(app-autotabbar), ::view-transition-old(app-header), ::view-transition-old(app-autoheader),
+::view-transition-new(app-tabbar), ::view-transition-new(app-autotabbar), ::view-transition-new(app-header), ::view-transition-new(app-autoheader) { animation: none; }
+/* Phones whose browser can't do this: a short slide-in that starts at once (nothing hidden while loading). */
+html.app-enter body > :not(.hs-bottom-nav):not(.auto-bottom-nav):not(#sharedHeader):not([data-automation-header]):not(.hsa-launcher):not(.app-offline) { animation: appInRight .3s cubic-bezier(.2,.8,.2,1) both; }
+html.app-enter.app-back body > :not(.hs-bottom-nav):not(.auto-bottom-nav):not(#sharedHeader):not([data-automation-header]):not(.hsa-launcher):not(.app-offline) { animation-name: appInLeft; }
+@keyframes appInRight { from { transform: translateX(22%); opacity: .3; } }
+@keyframes appInLeft { from { transform: translateX(-22%); opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } html.app-enter body > * { animation: none !important; } }
 
 /* Back arrow on inner pages (in the page's own header). */
 .app-back-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; margin-right: 6px; flex: none; border: 0; border-radius: 12px;
@@ -248,3 +259,6 @@ html.hansora-app .app-menu-automation i { font-style: normal; opacity: .8; }
 html.hansora-app .auto-bottom-nav .auto-tab-burger { position: relative; z-index: 1; width: 25px !important; height: 25px !important; display: flex !important; flex-direction: column; justify-content: center; align-items: center; gap: 4px !important; }
 html.hansora-app .auto-bottom-nav .auto-tab-burger i { width: 19px !important; height: 2px !important; margin: 0 !important; border-radius: 2px; }
 html.hansora-app .lx-gen-tile.t4 em { top: 10px; bottom: auto !important; }
+/* Automation home: profile photo in the header (opens the account menu). */
+.app-hdr-avatar { width: 34px; height: 34px; padding: 0; border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(167,139,250,.6); background: #1b1b24; flex: none; cursor: pointer; }
+.app-hdr-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }

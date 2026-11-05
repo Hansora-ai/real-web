@@ -146,15 +146,13 @@ body.ah { margin: 0; background: #07070a; color: #f5f5f7; font-family: Inter, -a
 .ahf-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .ahf-tile { position: relative; aspect-ratio: 1; border-radius: 18px; overflow: hidden; background: #13121d; border: 1px solid rgba(255,255,255,.1);
   animation: ahfIn .5s cubic-bezier(.2,1.2,.4,1) both; }
-.ahf-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.12); filter: blur(10px);
-  transition: opacity .6s ease, transform .8s cubic-bezier(.2,1.2,.4,1), filter .6s ease; }
+.ahf-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .9; transform: scale(1.14); filter: blur(12px) saturate(1.4);
+  transition: opacity .6s ease, transform 1.1s cubic-bezier(.2,1,.3,1), filter 1s ease; }
 .ahf-tile.done img { opacity: 1; transform: none; filter: none; }
 .ahf-tile::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(110deg, transparent 30%, rgba(196,181,253,.28) 50%, transparent 70%) , radial-gradient(70% 70% at 50% 50%, rgba(139,92,246,.35), transparent 70%);
   background-size: 250% 100%, 100% 100%; animation: ahShimmerMove 1.2s linear infinite; transition: opacity .4s; }
 .ahf-tile.done::before { opacity: 0; }
-.ahf-tile::after { content: ''; position: absolute; left: 50%; top: 50%; z-index: 2; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
-  border: 2.5px solid rgba(196,181,253,.25); border-top-color: #c4b5fd; animation: appSpinOnly .8s linear infinite; transition: opacity .3s; }
-.ahf-tile.done::after { opacity: 0; }
+.ahf-tile::after { content: none; }
 .ahf-tile.new { box-shadow: 0 0 0 2px rgba(196,181,253,.7), 0 10px 26px -10px rgba(168,85,247,.9); }
 @keyframes ahfIn { from { opacity: 0; transform: translateX(-40%) scale(.7); } }
 @keyframes appSpinOnly { to { transform: rotate(360deg); } }

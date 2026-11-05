@@ -195,39 +195,82 @@
   });
 
   // ---------- 6. Moving around like an app ----------
-  // Tapping a link: the page's content slides out to the left (to the right for Back), then the next page opens.
-  // The next page's content stays hidden until it is ready, then slides in from the right (from the left for Back),
-  // so you see the real next screen arrive, never a black screen. The top and bottom bars stay still.
-  // Swiping back from the left edge (iPhone gesture) shows the previous page directly.
-  var SLIDE_KEY = 'hansora.app.slide';
+  // Page changes slide like an iPhone app: the old page stays on screen until the next one is ready, then the next
+  // page slides in from the right (from the left for Back) while the old one slides away. The top and bottom bars
+  // stay still. This uses the browser's own page transition (no blank or black screen in between). Phones whose
+  // browser can't do that get a short slide-in that starts straight away (nothing is hidden while loading).
+  // Scroll position: coming back to a page (Back, or a bottom-bar tab) returns to where you were.
+  var SLIDE_KEY = 'hansora.app.slide', SCROLL_KEY = 'hansora.app.scroll';
   var navEntry = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
   var slide = null;
   try { slide = sessionStorage.getItem(SLIDE_KEY); sessionStorage.removeItem(SLIDE_KEY); } catch (_) {}
-  var hideSplash = function () { try { if (native && Plugins.SplashScreen) Plugins.SplashScreen.hide({ fadeOutDuration: 250 }); } catch (_) {} };
-  if (slide || navEntry.type !== 'back_forward') {
-    root.classList.add('app-arriving');
-    if (slide === 'back') root.classList.add('app-from-left');
-    var revealed = false;
-    var reveal = function () {
-      if (revealed) return; revealed = true;
-      hideSplash();
-      root.classList.add('app-arrived');
-      setTimeout(function () { root.classList.remove('app-arriving', 'app-arrived', 'app-from-left'); }, 450);
-    };
-    var whenReady = function () { setTimeout(function () { requestAnimationFrame(reveal); }, 60); };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', whenReady); else whenReady();
-    setTimeout(reveal, 3000); // never stay hidden
-  } else onReady(hideSplash);
-  // A page kept in memory (Back): show it as it is.
-  window.addEventListener('pageshow', function (event) {
-    if (!event.persisted) return;
-    root.classList.remove('app-leaving', 'app-leaving-back', 'app-arriving', 'app-arrived', 'app-from-left');
+  var cameBack = slide === 'back' || navEntry.type === 'back_forward';
+  if (slide === 'back') root.classList.add('app-back');
+  if (slide) root.classList.add('app-enter'); // the fallback slide-in (switched off below when the browser does it)
+  try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
+  var pageKey = function (href) { try { var u = new URL(href || location.href); return u.pathname + u.search; } catch (_) { return location.pathname; } };
+  function readScrolls() { try { return JSON.parse(sessionStorage.getItem(SCROLL_KEY) || '{}'); } catch (_) { return {}; } }
+  function saveScroll() { try { var all = readScrolls(); all[pageKey()] = Math.round(window.scrollY || 0); sessionStorage.setItem(SCROLL_KEY, JSON.stringify(all)); } catch (_) {} }
+  window.addEventListener('pagehide', saveScroll);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') saveScroll(); });
+  window.addEventListener('pagereveal', function (event) {
+    var vt = event.viewTransition;
+    if (!vt) return;
+    // The iPhone's swipe-back already animates; don't slide a second time.
+    if (navEntry.type === 'back_forward' && slide !== 'back') { try { vt.skipTransition(); } catch (_) {} return; }
+    root.classList.remove('app-enter');
+    ['ready', 'finished', 'updateCallbackDone'].forEach(function (key) { var p = vt[key]; if (p && p.catch) p.catch(function () {}); });
   });
+  window.addEventListener('pageswap', function (event) {
+    var vt = event.viewTransition;
+    if (vt) ['ready', 'finished', 'updateCallbackDone'].forEach(function (key) { if (vt[key] && vt[key].catch) vt[key].catch(function () {}); });
+  });
+  // Restore the scroll position when coming back (Back) or when opening a bottom-bar tab you were already on.
+  var isMainTab = /^\/(index\.html)?$|^\/(search-models|usage|models|automation-dashboard|automation-agent|automation-inbox|automation)\.html$/i.test(location.pathname);
+  var wantY = (cameBack || (slide && isMainTab)) ? readScrolls()[pageKey()] : 0;
+  if (wantY > 0) {
+    var tries = 0;
+    var restore = function () {
+      var max = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo(0, Math.min(wantY, Math.max(0, max)));
+      if (Math.abs(window.scrollY - wantY) > 4 && ++tries < 12) setTimeout(restore, 120); // the page is still growing
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restore); else restore();
+    window.addEventListener('load', function () { tries = 0; restore(); });
+  }
+  var hideSplash = function () { try { if (native && Plugins.SplashScreen) Plugins.SplashScreen.hide({ fadeOutDuration: 250 }); } catch (_) {} };
+  onReady(function () { setTimeout(hideSplash, 80); });
+  setTimeout(function () { root.classList.remove('app-enter'); }, 700);
+  // A page kept in memory (Back): show it as it is.
+  window.addEventListener('pageshow', function (event) { if (event.persisted) root.classList.remove('app-enter', 'app-back'); });
   window.HansoraLeave = function (go, back) {
+    saveScroll();
     try { sessionStorage.setItem(SLIDE_KEY, back ? 'back' : 'forward'); } catch (_) {}
-    root.classList.add(back ? 'app-leaving-back' : 'app-leaving');
-    setTimeout(go, 170);
+    go();
   };
+  // Logged out: links to signed-in Automation pages go straight to the login screen (no page that appears and
+  // then jumps to login). "Start free setup" opens "Create account".
+  var SIGNED_IN_PAGES = /^\/automation-(setup|dashboard|agent|inbox|operations|products|tools|phone|usage|profile|contacts|comments|workflows|connect|tiktok-comments)(\.html)?$/i;
+  function hasSession() {
+    try {
+      for (var k = 0; k < localStorage.length; k++) {
+        var key = localStorage.key(k);
+        if (/^sb-.*-auth-token$/.test(key)) { var v = JSON.parse(localStorage.getItem(key) || 'null'); if (v && (v.access_token || (v.currentSession && v.currentSession.access_token))) return true; }
+      }
+    } catch (_) {}
+    return false;
+  }
+  document.addEventListener('click', function (event) {
+    if (event.defaultPrevented || event.button !== 0) return;
+    var a = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+    if (!a) return;
+    var url; try { url = new URL(a.href, location.href); } catch (_) { return; }
+    if (url.origin !== location.origin || !SIGNED_IN_PAGES.test(url.pathname) || url.searchParams.get('preview') === '1' || hasSession()) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    var q = new URLSearchParams({ returnTo: url.pathname + url.search });
+    if (/automation-setup/i.test(url.pathname)) q.set('mode', 'signup');
+    window.HansoraLeave(function () { location.href = '/app/login.html?' + q; }, false);
+  }, true);
   document.addEventListener('click', function (event) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     var a = event.target && event.target.closest ? event.target.closest('a[href]') : null;
@@ -483,6 +526,27 @@
   }
   onReady(addProfileMenuDoor);
   new MutationObserver(addProfileMenuDoor).observe(root, { childList: true, subtree: true });
+  // Automation pages whose header has no account area (the Automation home): the profile photo, like everywhere else.
+  function addAutomationAvatar() {
+    if (!isAutomation) return;
+    var tools = document.querySelector('.auto-header .auto-header-tools');
+    var avatar = document.getElementById('navAvatar'), img = document.getElementById('navAvatarImg');
+    if (!tools || !avatar || tools.querySelector('.auto-account')) return;
+    var mine = tools.querySelector('.app-hdr-avatar');
+    var loggedIn = avatar.style.display !== 'none' && getComputedStyle(avatar).display !== 'none' || hasSession();
+    if (!loggedIn) { if (mine) mine.remove(); return; }
+    if (!mine) {
+      mine = document.createElement('button');
+      mine.type = 'button'; mine.className = 'app-hdr-avatar'; mine.setAttribute('aria-label', 'Open account menu');
+      mine.innerHTML = '<img alt="">';
+      mine.addEventListener('click', function (event) { event.stopPropagation(); avatar.click(); });
+      tools.insertBefore(mine, tools.querySelector('.auto-menu-toggle'));
+    }
+    var src = img && img.getAttribute('src');
+    if (src && mine.firstChild.getAttribute('src') !== src) mine.firstChild.setAttribute('src', src);
+  }
+  onReady(addAutomationAvatar);
+  if (isAutomation) setInterval(addAutomationAvatar, 1200); // login state and photo can change after the page opens
   var addAnyDoor = isAutomation ? addCreativeDoor : addDoors;
   onReady(addAnyDoor);
   new MutationObserver(addAnyDoor).observe(root, { childList: true, subtree: true });
