@@ -21,7 +21,7 @@ the reference for features, prices, credits and wording.
 | Languages | English first; Russian and Armenian after (the website's _ru/_arm pages are already packaged) |
 | Login | Email + password, Google (≈90% of users), and **Sign in with Apple** (Apple requires it when Google is offered) |
 | Credits | Same balance as the website. Stored credits shown ×10 with ⚡ (3 stored = 30⚡ welcome gift) |
-| Buying credits | **Option A**: Apple / Google in-app purchases for the same packages, and website purchases still count |
+| Buying credits | Apple / Google in-app purchases through **RevenueCat** (owner's choice, 2026-11-05): everything the website sells — the 4 credit packs and the Creative and Automation monthly plans — same credits and benefits, same prices until approval (then a little higher for the 15%). Website purchases still count. Details: `docs/mobile-app/PURCHASES.md` |
 | Orders & bookings | **Option B**: everything like the website — orders, bookings and leads, every status |
 | Notifications | For each business owner about their own business: AI needs you, new order/sale, new booking, other alerts. Tapping opens the item |
 | Delete account | At the bottom of both profile pages (Creative and Automation). The user chooses Automation data only, or the whole Hansora account. The app records a request (`account-deletion-request` function, `public.account_deletion_requests`); the owner gets a Telegram message and completes it within 30 days (allowed by Apple 5.1.1(v)) |

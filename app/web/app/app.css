@@ -1,9 +1,10 @@
 /* Hansora app additions (the pages' own design is unchanged). */
 
-/* Store rules: no website checkout inside the app. */
-html.hansora-app a[href*="pricing"],
-html.hansora-app #hansoraSignupOffer, html.hansora-app #btnBuyCredits, html.hansora-app #subscriptionUpgradeLink,
-html.hansora-app section#pricing, html.hansora-app section.lx-price, html.hansora-app a[href*="affilate"],
+/* Store rules: no website checkout inside the app. Buying happens on the two pricing pages, through Apple / Google
+   (app/iap.js); the pricing sections on other pages and website-only offers stay hidden. */
+html.hansora-app #hansoraSignupOffer,
+html.hansora-app body:not(:has(#appStoreBox)) section#pricing, html.hansora-app section.lx-price, html.hansora-app a[href*="affilate"],
+html.hansora-app .payment-method-box, html.hansora-app .ui-platform-switch, html.hansora-app #ru-monthly-note,
 html.hansora-app [data-app-hidden] { display: none !important; }
 
 /* English first: the language choice comes back when the Russian and Armenian pages are added.
@@ -238,8 +239,8 @@ html.hansora-app .site-header .user-menu, html.hansora-app .auto-user-menu {
   background: rgba(22, 23, 28, .96) !important; border: 1px solid rgba(255,255,255,.1) !important; box-shadow: 0 24px 50px -16px rgba(0,0,0,.7) !important;
   -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 html.hansora-app .site-header .user-menu { position: fixed !important; }
-html.hansora-app .site-header .user-menu > a:not([href*="pricing"]), html.hansora-app .site-header .user-menu > button,
-html.hansora-app .auto-user-menu > a:not([href*="pricing"]), html.hansora-app .auto-user-menu > button {
+html.hansora-app .site-header .user-menu > a, html.hansora-app .site-header .user-menu > button,
+html.hansora-app .auto-user-menu > a, html.hansora-app .auto-user-menu > button {
   display: flex !important; align-items: center; justify-content: space-between; gap: 8px; width: 100% !important; box-sizing: border-box; min-height: 46px; margin: 0 !important;
   padding: 0 14px !important; border: 0 !important; border-radius: 11px !important; background: transparent !important; color: #f2f2f5 !important;
   font: 500 15.5px/1.2 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif !important; text-align: left; text-decoration: none !important; }
@@ -262,3 +263,14 @@ html.hansora-app .lx-gen-tile.t4 em { top: 10px; bottom: auto !important; }
 /* Automation home: profile photo in the header (opens the account menu). */
 .app-hdr-avatar { width: 34px; height: 34px; padding: 0; border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(167,139,250,.6); background: #1b1b24; flex: none; cursor: pointer; }
 .app-hdr-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Pricing pages in the app: store prices, Restore purchases, Manage subscription and the subscription terms. */
+.app-store-price { margin: 6px 0 0; text-align: center; font-size: 12.5px; font-weight: 700; color: #a5b4fc; }
+.app-store-box { max-width: 760px; margin: 28px auto 16px; padding: 18px 16px; border-radius: 20px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+  color: rgba(226,232,240,.72); font: 400 12.5px/1.55 Inter, -apple-system, sans-serif; text-align: center; }
+.app-store-box p { margin: 10px 0 0; } .app-store-box a { color: #c4b5fd; }
+.app-store-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.app-store-actions button { min-height: 44px; padding: 0 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: #fff; font: 600 14px Inter, -apple-system, sans-serif; }
+[aria-busy="true"] { opacity: .75; }
+/* The website's "Pricing · 30% OFF" pill stays out of the app's top bar (Buy credits is in the menus). */
+html.hansora-app #siteHeader a[href*="pricing"], html.hansora-app .auto-header nav > a[href*="pricing"] { display: none !important; }

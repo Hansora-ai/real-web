@@ -114,7 +114,8 @@
   // ---------- 3. Store rules: no website checkout inside the app ----------
   // Apple 3.1.1 / Google Play: credits can't be sold through Dodo/YooMoney inside an app.
   // Credits bought on the website still work in the app.
-  if (/(^|\/)(automation-)?pricing(_ru|_arm)?(\.html)?$/i.test(location.pathname) || /russian-payment|\/affilate/i.test(location.pathname)) {
+  // The pricing pages stay: their Buy buttons use Apple / Google in-app purchase (app/iap.js), never the website checkout.
+  if (/russian-payment|\/affilate/i.test(location.pathname)) {
     location.replace('/');
     return;
   }
