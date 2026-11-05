@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -43,11 +44,112 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-// Hansora: the app's main screen. Turns on the iPhone swipe-from-the-edge gesture to go back and forward
-// between pages (used by Main.storyboard).
-class MainViewController: CAPBridgeViewController {
+// Hansora: the app's main screen (used by Main.storyboard).
+// - Swipe from the left edge goes back (iPhone gesture).
+// - Page changes slide like a native app. Every screen is its own web page, so the web view can't slide two pages
+//   itself. Instead: when a link is tapped, the page sends "leave" and a picture of the current screen is put in front
+//   (no loading or black screen is ever seen). When the next page is ready it sends "ready"; a picture of it slides in
+//   from the right over the old one (Back: the old one slides away to the right; bottom-bar tabs: a quick fade), then
+//   both pictures are removed and the live page is there. Messages come from app-shim.js (§6), name "hansoraNav".
+class MainViewController: CAPBridgeViewController, WKScriptMessageHandler {
+    private var oldPage: UIView?
+    private var kind = "push"
+    private var fallback: DispatchWorkItem?
+
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         webView?.allowsBackForwardNavigationGestures = true
+        webView?.configuration.userContentController.add(HansoraWeakScriptHandler(self), name: "hansoraNav")
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any], let phase = body["phase"] as? String else { return }
+        if phase == "leave" {
+            cover(kind: (body["kind"] as? String) ?? "push")
+        } else if phase == "ready" {
+            reveal()
+        }
+    }
+
+    // A picture of the current screen goes in front while the next page loads.
+    private func cover(kind: String) {
+        guard let webView = webView, oldPage == nil, let shot = webView.snapshotView(afterScreenUpdates: false) else { return }
+        shot.frame = webView.bounds
+        shot.isUserInteractionEnabled = false
+        webView.addSubview(shot)
+        oldPage = shot
+        self.kind = kind
+        fallback?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.reveal() }
+        fallback = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work) // never stay covered
+    }
+
+    // The next page is ready: slide a picture of it in, then show the live page.
+    private func reveal() {
+        fallback?.cancel()
+        fallback = nil
+        guard let webView = webView, let old = oldPage else { return }
+        oldPage = nil
+        let config = WKSnapshotConfiguration()
+        config.afterScreenUpdates = true
+        webView.takeSnapshot(with: config) { [weak self] image, _ in
+            guard let self = self, let image = image else {
+                UIView.animate(withDuration: 0.15, animations: { old.alpha = 0 }, completion: { _ in old.removeFromSuperview() })
+                return
+            }
+            self.slide(from: old, to: image, in: webView)
+        }
+    }
+
+    private func slide(from old: UIView, to image: UIImage, in webView: WKWebView) {
+        let fresh = UIImageView(image: image)
+        fresh.frame = webView.bounds
+        fresh.isUserInteractionEnabled = false
+        let width = webView.bounds.width
+        let finish: (Bool) -> Void = { _ in
+            old.removeFromSuperview()
+            fresh.removeFromSuperview()
+        }
+        switch kind {
+        case "tab":
+            webView.insertSubview(fresh, belowSubview: old)
+            UIView.animate(withDuration: 0.18, delay: 0, options: [.curveEaseOut], animations: { old.alpha = 0 }, completion: finish)
+        case "back":
+            webView.insertSubview(fresh, belowSubview: old)
+            fresh.transform = CGAffineTransform(translationX: -width * 0.3, y: 0)
+            addEdgeShadow(to: old)
+            UIView.animate(withDuration: 0.34, delay: 0, options: [.curveEaseOut], animations: {
+                old.transform = CGAffineTransform(translationX: width, y: 0)
+                fresh.transform = .identity
+            }, completion: finish)
+        default:
+            webView.addSubview(fresh)
+            fresh.transform = CGAffineTransform(translationX: width, y: 0)
+            addEdgeShadow(to: fresh)
+            UIView.animate(withDuration: 0.34, delay: 0, options: [.curveEaseOut], animations: {
+                fresh.transform = .identity
+                old.transform = CGAffineTransform(translationX: -width * 0.3, y: 0)
+                old.alpha = 0.7
+            }, completion: finish)
+        }
+    }
+
+    private func addEdgeShadow(to view: UIView) {
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.35
+        view.layer.shadowRadius = 12
+        view.layer.shadowOffset = CGSize(width: -4, height: 0)
+        view.layer.shadowPath = UIBezierPath(rect: view.bounds).cgPath
+    }
+}
+
+// Keeps the web view from holding the screen in memory forever (WKUserContentController keeps its handlers).
+@MainActor
+final class HansoraWeakScriptHandler: NSObject, WKScriptMessageHandler {
+    weak var target: WKScriptMessageHandler?
+    init(_ target: WKScriptMessageHandler) { self.target = target }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        target?.userContentController(userContentController, didReceive: message)
     }
 }

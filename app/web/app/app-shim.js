@@ -196,39 +196,73 @@
   });
 
   // ---------- 6. Moving around like an app ----------
-  // Page changes have no custom animation: the phone keeps the old page until the next one is ready, then switches
-  // at once (custom slides stuttered on iPhone). Swipe from the left edge goes back.
-  // Scroll position: coming back to a page (Back, or a bottom-bar tab) returns to where you were, in one step.
+  // Page changes slide like a native app, done by the iPhone itself (MainViewController in AppDelegate.swift):
+  // "leave" → a picture of this screen stays in front while the next page loads (never a black screen);
+  // "ready" → the next page's picture slides in (Back: the old one slides away; bottom-bar tabs: a quick fade).
+  // Swipe from the left edge goes back. Where the iPhone part is missing (Android, browser), pages switch at once.
+  // Scroll position: coming back to a page (Back, or a bottom-bar tab) returns to where you were.
   var SLIDE_KEY = 'hansora.app.slide', SCROLL_KEY = 'hansora.app.scroll';
   var navEntry = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
   var slide = null;
   try { slide = sessionStorage.getItem(SLIDE_KEY); sessionStorage.removeItem(SLIDE_KEY); } catch (_) {}
   var cameBack = slide === 'back' || navEntry.type === 'back_forward';
+  function tellPhone(message) {
+    try { var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraNav; if (h) { h.postMessage(message); return true; } } catch (_) {}
+    return false;
+  }
   try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
-  var pageKey = function (href) { try { var u = new URL(href || location.href); return u.pathname + u.search; } catch (_) { return location.pathname; } };
+  // "/" and "/index.html" are the same page.
+  var pageKey = function (href) { try { var u = new URL(href || location.href); var p = u.pathname === '/' ? '/index.html' : u.pathname; return p + u.search; } catch (_) { return location.pathname; } };
   function readScrolls() { try { return JSON.parse(sessionStorage.getItem(SCROLL_KEY) || '{}'); } catch (_) { return {}; } }
   function saveScroll() { try { var all = readScrolls(); all[pageKey()] = Math.round(window.scrollY || 0); sessionStorage.setItem(SCROLL_KEY, JSON.stringify(all)); } catch (_) {} }
+  var scrollTimer = null;
+  window.addEventListener('scroll', function () { clearTimeout(scrollTimer); scrollTimer = setTimeout(saveScroll, 150); }, { passive: true });
   window.addEventListener('pagehide', saveScroll);
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') saveScroll(); });
   var isMainTab = /^\/(index\.html)?$|^\/(search-models|usage|models|automation-dashboard|automation-agent|automation-inbox|automation)\.html$/i.test(location.pathname);
   var wantY = (cameBack || (slide && isMainTab)) ? readScrolls()[pageKey()] : 0;
+  // Tell the phone the page is ready (after the scroll position is back, so the picture shows the right place).
+  var readySent = false;
+  function sendReady() { if (readySent) return; readySent = true; requestAnimationFrame(function () { requestAnimationFrame(function () { tellPhone({ phase: 'ready' }); }); }); }
   if (wantY > 0) {
-    // One jump once the page has its height (no repeated jumps while it loads).
-    var restored = false;
+    var stop = false, started = Date.now();
+    var stopIt = function () { stop = true; };
+    window.addEventListener('touchstart', stopIt, { passive: true, once: true });
     var restore = function () {
-      if (restored) return;
-      if (document.documentElement.scrollHeight - window.innerHeight >= wantY - 4 || document.readyState === 'complete') { restored = true; window.scrollTo(0, wantY); }
+      if (stop) return sendReady();
+      var max = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo(0, Math.min(wantY, Math.max(0, max)));
+      if (Math.abs(window.scrollY - wantY) <= 4 || Date.now() - started > 2500) { stop = true; return sendReady(); }
+      setTimeout(restore, 100); // the page is still growing (sections loading)
+      if (Date.now() - started > 700) sendReady(); // don't hold the picture longer than this
     };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restore); else restore();
-    window.addEventListener('load', restore);
+    onReady(function () { setTimeout(restore, 0); });
+  } else {
+    onReady(function () { setTimeout(sendReady, 30); });
   }
+  // A page kept in memory (Back): it is ready straight away.
+  window.addEventListener('pageshow', function (event) { if (event.persisted) { readySent = false; sendReady(); } });
   var hideSplash = function () { try { if (native && Plugins.SplashScreen) Plugins.SplashScreen.hide({ fadeOutDuration: 250 }); } catch (_) {} };
   onReady(function () { setTimeout(hideSplash, 80); });
-  window.HansoraLeave = function (go, back) {
+  // kind: "push" (a link), "back", or "tab" (bottom bar).
+  window.HansoraLeave = function (go, back, kind) {
     saveScroll();
     try { sessionStorage.setItem(SLIDE_KEY, back ? 'back' : 'forward'); } catch (_) {}
-    go();
+    if (tellPhone({ phase: 'leave', kind: back ? 'back' : (kind || 'push') })) setTimeout(go, 40); else go();
   };
+  document.addEventListener('click', function (event) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    var a = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+    if (!a || a.hasAttribute('download') || (a.target && a.target !== '_self')) return;
+    var raw = a.getAttribute('href') || '';
+    if (!raw || raw.charAt(0) === '#' || /^(javascript|mailto|tel|sms):/i.test(raw)) return;
+    var url;
+    try { url = new URL(a.href, location.href); } catch (_) { return; }
+    if (url.origin !== location.origin) return;
+    if (pageKey(url.href) === pageKey()) return; // same page
+    event.preventDefault();
+    var tab = !!a.closest('.hs-bottom-nav, .auto-bottom-nav');
+    window.HansoraLeave(function () { location.href = url.href; }, false, tab ? 'tab' : 'push');
+  });
 
   // Logged out: links to signed-in Automation pages go straight to the login screen (no page that appears and
   // then jumps to login). "Start free setup" opens "Create account".
@@ -253,19 +287,6 @@
     if (/automation-setup/i.test(url.pathname)) q.set('mode', 'signup');
     window.HansoraLeave(function () { location.href = '/app/login.html?' + q; }, false);
   }, true);
-  document.addEventListener('click', function (event) {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    var a = event.target && event.target.closest ? event.target.closest('a[href]') : null;
-    if (!a || a.hasAttribute('download') || (a.target && a.target !== '_self')) return;
-    var raw = a.getAttribute('href') || '';
-    if (!raw || raw.charAt(0) === '#' || /^(javascript|mailto|tel|sms):/i.test(raw)) return;
-    var url;
-    try { url = new URL(a.href, location.href); } catch (_) { return; }
-    if (url.origin !== location.origin) return;
-    if (url.pathname === location.pathname && url.search === location.search) return; // same page
-    event.preventDefault();
-    window.HansoraLeave(function () { location.href = url.href; }, false);
-  });
 
   // Only this harmless notice is ignored (a page slide interrupted by a page that moves on straight away).
   window.addEventListener('unhandledrejection', function (event) {
@@ -285,8 +306,8 @@
     button.setAttribute('aria-label', 'Back');
     button.textContent = '‹';
     button.addEventListener('click', function () {
-      var cameFromApp = document.referrer && document.referrer.indexOf(location.origin) === 0;
-      var go = (cameFromApp && history.length > 1) ? function () { history.back(); } : function () { location.href = isAutomation ? '/automation-dashboard.html' : '/index.html'; };
+      // Back to the page you came from (all pages in the app's history are the app's own pages).
+      var go = history.length > 1 ? function () { history.back(); } : function () { location.href = isAutomation ? '/automation-dashboard.html' : '/index.html'; };
       if (window.HansoraLeave) window.HansoraLeave(go, true); else go();
     });
     brand.parentNode.insertBefore(button, brand);
