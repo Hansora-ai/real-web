@@ -64,7 +64,7 @@
   // Hansora Creative: a prompt is typed, the tiles "generate", then the next prompt.
   async function playCreative(section) {
     const text = section.querySelector('#lx-gen-text');
-    const prompts = ['Girl with silver wings flying over the mountains', 'Robot warrior in a misty forest, cinematic', 'Chocolate bar ad, bright and playful', 'Sunset sky lettering, GPT Image'];
+    const prompts = ['Girl with silver wings flying over the mountains', 'Motorbike racing through an ice canyon, cinematic', 'Chocolate bar ad, bright and playful', 'Giant octopus pulling down an aircraft carrier'];
     // Real Hansora Creative results, loaded only now that the section is on screen.
     const media = [...section.querySelectorAll('[data-src]')];
     media.forEach(item => { item.src = item.dataset.src; });
