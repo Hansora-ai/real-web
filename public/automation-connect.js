@@ -251,7 +251,7 @@
         providerConnected = true; selectedAccount = result.data.connected_account_label || selectedAccount;
         if(result.data.connected_account_label){connectedAccount={name:String(result.data.connected_account_label).split(' · ')[0]||config.title.replace('Connect ',''),detail:result.data.connected_account_label,mark:ACCOUNT_MARK};renderAccounts();selectedAccount=result.data.connected_account_label;}
         markAuthorized();
-        if (result.data.status === 'connected') setConnected(true);
+        if (result.data.status === 'connected') { setConnected(true); document.querySelector('#connect-save-state').textContent = 'Live'; }
       }
       // Show the saved choices, so re-saving never resets them to the defaults.
       const saved = result.data?.settings || {};
@@ -300,6 +300,30 @@
     document.querySelector('#provider-button-help').textContent = 'Continue to choose the account';
     if (!document.querySelector('#connection-state').classList.contains('green')) setConnected(false);
     updateFooter();
+    if (channel === 'instagram') showInstagramProfile();
+  }
+  // After Instagram is connected: show the account's photo and @username, so the owner sees it worked.
+  // (A flag on the function, not a let: this runs during loadDraft, before later lines of this body.)
+  async function showInstagramProfile() {
+    if (showInstagramProfile.done || api.isLocalPreview) return;
+    showInstagramProfile.done = true;
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-instagram-profile', {method:'POST', body:JSON.stringify({business_ids:[businessId]})});
+      const profile = (await response.json().catch(() => ({})))?.profiles?.[businessId];
+      if (!response.ok || !profile?.username) return;
+      const button = document.querySelector('#provider-connect');
+      if (/^https:\/\//i.test(profile.picture || '')) {
+        const mark = document.querySelector('#provider-mark');
+        mark.innerHTML = '';
+        const img = document.createElement('img');
+        img.className = 'ui-provider-photo'; img.alt = ''; img.referrerPolicy = 'no-referrer'; img.src = profile.picture;
+        img.addEventListener('error', () => { mark.classList.remove('has-photo'); mark.innerHTML = ui.icon(config.providerMark); });
+        mark.appendChild(img); mark.classList.add('has-photo');
+      }
+      document.querySelector('#provider-button-label').textContent = `Connected as @${profile.username}`;
+      document.querySelector('#provider-button-help').textContent = `${profile.name ? `${profile.name} · ` : ''}All good. Press Continue.`;
+      button.classList.add('just-connected');
+    } catch (_) {}
   }
   // Shows what Meta itself reports for the connected account (webhook fields, latest DMs), for troubleshooting.
   document.querySelector('#channel-diagnose').addEventListener('click', async () => {

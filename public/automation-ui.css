@@ -310,6 +310,11 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 .ui-provider-text small{display:block;margin-top:2px;color:var(--text-3);font-size:13px}
 .ui-provider-state{width:22px;height:22px;border:1.5px solid var(--border-3);border-radius:50%;transition:all .3s var(--ease)}
 .ui-provider-button.connected{border-color:rgba(62,207,142,.4);background:var(--green-soft)}
+.ui-provider-mark.has-photo{background:none;padding:0;overflow:hidden;border-radius:50%;box-shadow:0 0 0 2px var(--green)}
+.ui-provider-photo{width:100%;height:100%;object-fit:cover;display:block;animation:ui-pop .45s var(--ease) both}
+.ui-provider-button.just-connected{animation:ui-connected-glow 1.6s var(--ease) 1}
+@keyframes ui-connected-glow{0%{box-shadow:0 0 0 0 rgba(62,207,142,.55)}70%{box-shadow:0 0 0 12px rgba(62,207,142,0)}100%{box-shadow:0 0 0 0 rgba(62,207,142,0)}}
+@media (prefers-reduced-motion:reduce){.ui-provider-photo,.ui-provider-button.just-connected{animation:none}}
 .ui-provider-button.connected .ui-provider-state{border-color:var(--green);background:var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/13px no-repeat;animation:ui-pop .4s var(--ease)}
 .ui-permissions{display:grid;gap:8px;margin:18px 0 0;padding:0;list-style:none}
 .ui-permissions li{position:relative;padding-left:22px;color:var(--text-2);font-size:13px}
@@ -620,6 +625,31 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 /* Phone */
 .ui-connect-logo.phone{background:linear-gradient(145deg,#4c8dff,#2a4fb0)}
 .ui-option-mark svg{width:18px;height:18px}
+.flow-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+.flow-card{margin-top:12px;padding:16px;border:1px solid var(--border-2);border-radius:14px;background:var(--surface-2)}
+.flow-card.on{border-color:var(--accent-line)}
+.flow-head{display:flex;align-items:center;gap:14px}
+.flow-icon{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;background:var(--surface-3);font-size:18px}
+.flow-card.on .flow-icon{background:var(--accent-soft)}
+.flow-text{flex:1;min-width:0;font-size:14.5px;line-height:1.45}
+.flow-when{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:6px;background:var(--surface-3);color:var(--text-2);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.flow-then{color:var(--text-2)}
+.flow-body{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.flow-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.flow-row .ui-input[type=number]{width:90px}
+.flow-hours{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;color:var(--text-2);font-size:13.5px}
+.flow-hours .ui-input{width:auto}
+@media(max-width:640px){.flow-top{flex-direction:column}}
+.ui-voice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ui-voice-grid .ui-option{padding:12px 14px;gap:12px}
+.ui-voice-play{display:grid;place-items:center;flex:none;width:36px;height:36px;border:1px solid var(--border-2);border-radius:50%;background:var(--surface-3);color:var(--text);font-size:13px;cursor:pointer;transition:background .2s,border-color .2s}
+.ui-voice-play:hover{border-color:var(--accent-line)}
+.ui-voice-play.playing{background:var(--accent);border-color:var(--accent);color:#fff}
+.ui-voice-play.loading{opacity:.6;cursor:progress}
+.ui-voice-more{margin-top:12px}
+.ui-voice-more summary{cursor:pointer;color:var(--text-2);font-size:13.5px}
+#voice-hint{display:block;margin-top:10px}
+@media(max-width:640px){.ui-voice-grid{grid-template-columns:1fr}}
 .ui-voice-card{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--accent-line);border-radius:14px;background:var(--accent-soft)}
 .ui-voice-card>div{flex:1}
 .ui-voice-card strong{display:block;font-size:15px;font-weight:600}
@@ -924,3 +954,16 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 .ui-contact-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;max-width:1120px;margin:48px auto 0;padding:22px 24px 40px;border-top:1px solid var(--border);color:var(--text-3);font-size:12px;letter-spacing:.08em}
 .ui-contact-footer nav{display:flex;flex-wrap:wrap;gap:18px;letter-spacing:0}
 .ui-contact-footer a{color:var(--text-3);text-decoration:none;font-size:13px}.ui-contact-footer a:hover{color:var(--text)}
+
+/* Monthly plans: the lower prices sit right under the price, so they are the first thing people see. */
+.ui-plan-rates{padding:12px 14px;border:1px solid var(--accent-line);border-radius:var(--radius-sm);background:var(--accent-soft)}
+.ui-plan-rates p{margin:0 0 9px;color:var(--text);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.ui-plan-rates .ui-pack-list{gap:7px;font-size:13.5px}
+.ui-pack .ui-plan-rates+.ui-pack-buy{margin-top:0}
+
+/* Pay as you go: the free credits, shown like on the Hansora Creative pricing page. */
+.ui-pack-gift{justify-self:start;align-self:start;width:fit-content;padding:6px 12px;border-radius:999px;background:linear-gradient(100deg,#16a34a,#22c55e);color:#fff;font-size:13.5px;font-weight:700;white-space:nowrap}
+.ui-pack-more{margin:0;color:var(--green);font-size:14px;font-weight:600;line-height:1.4}
+.ui-pack-upsell{margin:0;padding:9px 12px;border:1px dashed var(--green);border-radius:var(--radius-sm);background:var(--green-soft);color:var(--text-2);font-size:13.5px;line-height:1.4}
+.ui-pack-upsell b{color:var(--green)}
+.ui-pack .ui-pack-more+.ui-pack-buy,.ui-pack .ui-pack-upsell+.ui-pack-buy{margin-top:0}

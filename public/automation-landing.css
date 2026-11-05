@@ -490,3 +490,8 @@ html:has(body.lx), body.lx { overflow-x: clip; }
 .lx-aurora.small .a { left: -10%; top: -30%; } .lx-aurora.small .b { right: -10%; top: 0; }
 /* Mouse light spans the full screen width, so it never ends in a straight line at the content edge. */
 .lx-spot { left: 50%; right: auto; width: 100vw; transform: translateX(-50%); background: radial-gradient(520px circle at var(--mx, 70%) var(--my, 30%), rgba(139, 92, 246, .14), transparent 70%); }
+
+/* Hansora Creative card: long prompts must never make the card wider than the screen. */
+.lx-creative > * { min-width: 0; }
+.lx-gen { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.lx-gen-go { flex: none; }

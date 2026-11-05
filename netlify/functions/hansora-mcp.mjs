@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getPendingVideo, getRecentAutoVideo, getRecentResultUrls, getUnfinishedPicture, startedVideoSince, hadRecentGrokFailure, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { AuthUnavailableError, authenticateToken, getAccount, getGeneration, countRunning, getFirstVideoRecipe, getPendingPhotos, getPendingVideo, getRecentAutoVideo, getRecentResultUrls, getUnfinishedPicture, startedVideoSince, hadRecentGrokFailure, hadRecentOutcome, getGenerationBatch, getLastVideo, isFirstGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -15,7 +15,7 @@ import { alternativeFor, classifyFailure, failureView, modelIdOf, switchStep } f
 import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { useSavedFiles } from '../../lib/hansora-mcp/own-results.mjs';
-import { recordPendingVideo, recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
+import { photoCount, recordPendingPhotos, recordPendingVideo, recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
 import { NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
@@ -248,6 +248,10 @@ function pictureNotReadyResult(model, pictureRun, planned = false) {
 // from their photo), the planned video is kept, and Hansora starts it from the picture as soon as the picture is
 // ready, under the picture's card. ChatGPT often stopped after the picture, so the user got a picture and no video.
 const PLAN_TTL_MS = 15 * 60 * 1000;
+// Results that send a request back to ChatGPT to be made again (another model, a question, a short wait).
+const SENT_BACK = new Set(['insufficient_credits', 'first_video_on_grok', 'first_paid_video_choice', 'too_many_running', 'picture_not_ready', 'temporarily_unavailable', 'model_temporarily_unavailable']);
+const PHOTOS_KEPT_MS = 10 * 60 * 1000;
+const restoredPhotoInputs = new WeakSet();
 const AUTO_VIDEO_SUFFIX = '-video'; // getRecentAutoVideo (data.mjs) looks for the same ending
 function keepPicturePlanFor(userId, waitUntil) {
   return (result, input) => {
@@ -823,9 +827,33 @@ export function createHansoraServer(ctx) {
   const registerTool = server.registerTool.bind(server);
   server.registerTool = (name, config, callback) => registerTool(name, config, async (input, extra) => {
     const result = await callback(input, extra);
+    if (restoredPhotoInputs.has(input) && result?.structuredContent) result.structuredContent.photo_restored = true;
+    keepPhotosOfSentBack(name, input, result);
     recordToolEvent(userId, name, input, result, waitUntil);
     return result;
   });
+  // A request Hansora sends back to ChatGPT with another model or a question keeps its photos for a few minutes, so
+  // they can be put back if ChatGPT's next request leaves them out (restoreDroppedPhotos).
+  const keepPhotosOfSentBack = (name, input, result) => {
+    const value = result?.structuredContent || {};
+    if (name !== 'create_generation' || !SENT_BACK.has(String(value.error || '')) || !photoCount(input)) return;
+    recordPendingPhotos(userId, {
+      ...(Array.isArray(input.image_urls) && input.image_urls.length ? { image_urls: input.image_urls.slice(0, 30) } : {}),
+      ...(Array.isArray(input.image_files) && input.image_files.length ? { image_files: input.image_files.slice(0, 30) } : {}),
+      ...(input.first_frame_url ? { first_frame_url: input.first_frame_url } : {}),
+      ...(input.last_frame_url ? { last_frame_url: input.last_frame_url } : {})
+    }, waitUntil);
+  };
+  const restoreDroppedPhotos = async (requested) => {
+    if (photoCount(requested)) return;
+    const model = getModel(requested.model_id);
+    if (!model || !['video', 'image'].includes(model.category)) return;
+    const kept = await getPendingPhotos(userId, new Date(Date.now() - PHOTOS_KEPT_MS).toISOString()).catch(() => null);
+    if (!kept || !photoCount(kept)) return;
+    for (const field of ['image_urls', 'image_files', 'first_frame_url', 'last_frame_url']) if (kept[field]) requested[field] = kept[field];
+    restoredPhotoInputs.add(requested);
+    console.log('hansora_mcp_photo_restored', JSON.stringify({ user: userId.slice(0, 8), model: model.id, photos: photoCount(kept) }));
+  };
 
   server.registerResource('hansora-generation-app', GENERATION_APP_URI, {
     title: 'Hansora generation',
@@ -1253,6 +1281,7 @@ export function createHansoraServer(ctx) {
     }
   }, async (requested) => {
     try {
+      await restoreDroppedPhotos(requested);
       const resting = await veoRestSwitch(requested);
       const input = resting ? resting.input : requested;
       // Said in the card and by ChatGPT, so nobody is misled about which model made the video.

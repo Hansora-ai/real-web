@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AUTOMATION_PLANS, automationPricesFor, planIsActive, pricesForPlan, replyPrice } from '../../lib/automation/billing.mjs';
 
-test('Pay as you go: 1.2⚡ per reply, 2⚡ for a photo or video, 1⚡ per comment run, 8⚡ per call minute', () => {
+test('Pay as you go: 1.2⚡ per reply, 2⚡ for a photo or video, 1⚡ per comment run, 9⚡ per call minute', () => {
   const rates = pricesForPlan(null);
-  assert.deepEqual([rates.aiReply, rates.mediaReply, rates.commentRun, rates.voiceMinute, rates.testReply], [0.12, 0.2, 0.1, 0.8, 0.12]);
+  assert.deepEqual([rates.aiReply, rates.mediaReply, rates.commentRun, rates.voiceMinute, rates.testReply], [0.12, 0.2, 0.1, 0.9, 0.12]);
   assert.equal(replyPrice(rates, null), 0.12);
   assert.equal(replyPrice(rates, { kind: 'image' }), 0.2);
   assert.equal(replyPrice(rates, { kind: 'video' }), 0.2);
@@ -17,7 +17,7 @@ test('Monthly plans: $1 = 100⚡ and every action is cheaper on bigger plans', (
   assert.deepEqual(pricesForPlan('automation_starter_monthly').aiReply, 0.1);
   assert.deepEqual(pricesForPlan('automation_growth_monthly').commentRun, 0.05);
   const scale = pricesForPlan('automation_scale_monthly');
-  assert.deepEqual([scale.aiReply, scale.commentRun, scale.voiceMinute, scale.mediaReply, scale.testReply], [0.08, 0.03, 0.6, 0.2, 0.08]);
+  assert.deepEqual([scale.aiReply, scale.commentRun, scale.voiceMinute, scale.mediaReply, scale.testReply], [0.08, 0.03, 0.7, 0.2, 0.08]);
   assert.equal(pricesForPlan('automation_business_monthly').aiReply, 0.09);
 });
 
