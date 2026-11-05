@@ -196,59 +196,40 @@
   });
 
   // ---------- 6. Moving around like an app ----------
-  // Page changes slide like an iPhone app: the old page stays on screen until the next one is ready, then the next
-  // page slides in from the right (from the left for Back) while the old one slides away. The top and bottom bars
-  // stay still. This uses the browser's own page transition (no blank or black screen in between). Phones whose
-  // browser can't do that get a short slide-in that starts straight away (nothing is hidden while loading).
-  // Scroll position: coming back to a page (Back, or a bottom-bar tab) returns to where you were.
+  // Page changes have no custom animation: the phone keeps the old page until the next one is ready, then switches
+  // at once (custom slides stuttered on iPhone). Swipe from the left edge goes back.
+  // Scroll position: coming back to a page (Back, or a bottom-bar tab) returns to where you were, in one step.
   var SLIDE_KEY = 'hansora.app.slide', SCROLL_KEY = 'hansora.app.scroll';
   var navEntry = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
   var slide = null;
   try { slide = sessionStorage.getItem(SLIDE_KEY); sessionStorage.removeItem(SLIDE_KEY); } catch (_) {}
   var cameBack = slide === 'back' || navEntry.type === 'back_forward';
-  if (slide === 'back') root.classList.add('app-back');
-  if (slide) root.classList.add('app-enter'); // the fallback slide-in (switched off below when the browser does it)
   try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
   var pageKey = function (href) { try { var u = new URL(href || location.href); return u.pathname + u.search; } catch (_) { return location.pathname; } };
   function readScrolls() { try { return JSON.parse(sessionStorage.getItem(SCROLL_KEY) || '{}'); } catch (_) { return {}; } }
   function saveScroll() { try { var all = readScrolls(); all[pageKey()] = Math.round(window.scrollY || 0); sessionStorage.setItem(SCROLL_KEY, JSON.stringify(all)); } catch (_) {} }
   window.addEventListener('pagehide', saveScroll);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') saveScroll(); });
-  window.addEventListener('pagereveal', function (event) {
-    var vt = event.viewTransition;
-    if (!vt) return;
-    // The iPhone's swipe-back already animates; don't slide a second time.
-    if (navEntry.type === 'back_forward' && slide !== 'back') { try { vt.skipTransition(); } catch (_) {} return; }
-    root.classList.remove('app-enter');
-    ['ready', 'finished', 'updateCallbackDone'].forEach(function (key) { var p = vt[key]; if (p && p.catch) p.catch(function () {}); });
-  });
-  window.addEventListener('pageswap', function (event) {
-    var vt = event.viewTransition;
-    if (vt) ['ready', 'finished', 'updateCallbackDone'].forEach(function (key) { if (vt[key] && vt[key].catch) vt[key].catch(function () {}); });
-  });
-  // Restore the scroll position when coming back (Back) or when opening a bottom-bar tab you were already on.
   var isMainTab = /^\/(index\.html)?$|^\/(search-models|usage|models|automation-dashboard|automation-agent|automation-inbox|automation)\.html$/i.test(location.pathname);
   var wantY = (cameBack || (slide && isMainTab)) ? readScrolls()[pageKey()] : 0;
   if (wantY > 0) {
-    var tries = 0;
+    // One jump once the page has its height (no repeated jumps while it loads).
+    var restored = false;
     var restore = function () {
-      var max = document.documentElement.scrollHeight - window.innerHeight;
-      window.scrollTo(0, Math.min(wantY, Math.max(0, max)));
-      if (Math.abs(window.scrollY - wantY) > 4 && ++tries < 12) setTimeout(restore, 120); // the page is still growing
+      if (restored) return;
+      if (document.documentElement.scrollHeight - window.innerHeight >= wantY - 4 || document.readyState === 'complete') { restored = true; window.scrollTo(0, wantY); }
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restore); else restore();
-    window.addEventListener('load', function () { tries = 0; restore(); });
+    window.addEventListener('load', restore);
   }
   var hideSplash = function () { try { if (native && Plugins.SplashScreen) Plugins.SplashScreen.hide({ fadeOutDuration: 250 }); } catch (_) {} };
   onReady(function () { setTimeout(hideSplash, 80); });
-  setTimeout(function () { root.classList.remove('app-enter'); }, 700);
-  // A page kept in memory (Back): show it as it is.
-  window.addEventListener('pageshow', function (event) { if (event.persisted) root.classList.remove('app-enter', 'app-back'); });
   window.HansoraLeave = function (go, back) {
     saveScroll();
     try { sessionStorage.setItem(SLIDE_KEY, back ? 'back' : 'forward'); } catch (_) {}
     go();
   };
+
   // Logged out: links to signed-in Automation pages go straight to the login screen (no page that appears and
   // then jumps to login). "Start free setup" opens "Create account".
   var SIGNED_IN_PAGES = /^\/automation-(setup|dashboard|agent|inbox|operations|products|tools|phone|usage|profile|contacts|comments|workflows|connect|tiktok-comments)(\.html)?$/i;
@@ -548,6 +529,14 @@
   }
   onReady(addAutomationAvatar);
   if (isAutomation) setInterval(addAutomationAvatar, 1200); // login state and photo can change after the page opens
+  // The ⚡ credits number in the top bar opens the pricing page of the section you are in.
+  document.addEventListener('click', function (event) {
+    var pill = event.target && event.target.closest ? event.target.closest('#navCredits, .credits-pill, .auto-credits') : null;
+    if (!pill) return;
+    event.preventDefault();
+    var to = isAutomation ? '/automation-pricing.html' : '/pricing.html';
+    if (location.pathname !== to) window.HansoraLeave(function () { location.href = to; }, false);
+  });
   var addAnyDoor = isAutomation ? addCreativeDoor : addDoors;
   onReady(addAnyDoor);
   new MutationObserver(addAnyDoor).observe(root, { childList: true, subtree: true });
