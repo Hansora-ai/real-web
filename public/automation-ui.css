@@ -954,3 +954,9 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 .ui-contact-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;max-width:1120px;margin:48px auto 0;padding:22px 24px 40px;border-top:1px solid var(--border);color:var(--text-3);font-size:12px;letter-spacing:.08em}
 .ui-contact-footer nav{display:flex;flex-wrap:wrap;gap:18px;letter-spacing:0}
 .ui-contact-footer a{color:var(--text-3);text-decoration:none;font-size:13px}.ui-contact-footer a:hover{color:var(--text)}
+
+/* Monthly plans: the lower prices sit right under the price, so they are the first thing people see. */
+.ui-plan-rates{padding:12px 14px;border:1px solid var(--accent-line);border-radius:var(--radius-sm);background:var(--accent-soft)}
+.ui-plan-rates p{margin:0 0 9px;color:var(--text);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.ui-plan-rates .ui-pack-list{gap:7px;font-size:13.5px}
+.ui-pack .ui-plan-rates+.ui-pack-buy{margin-top:0}
