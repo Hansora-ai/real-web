@@ -960,3 +960,10 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 .ui-plan-rates p{margin:0 0 9px;color:var(--text);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .ui-plan-rates .ui-pack-list{gap:7px;font-size:13.5px}
 .ui-pack .ui-plan-rates+.ui-pack-buy{margin-top:0}
+
+/* Pay as you go: the free credits, shown like on the Hansora Creative pricing page. */
+.ui-pack-gift{justify-self:start;align-self:start;width:fit-content;padding:6px 12px;border-radius:999px;background:linear-gradient(100deg,#16a34a,#22c55e);color:#fff;font-size:13.5px;font-weight:700;white-space:nowrap}
+.ui-pack-more{margin:0;color:var(--green);font-size:14px;font-weight:600;line-height:1.4}
+.ui-pack-upsell{margin:0;padding:9px 12px;border:1px dashed var(--green);border-radius:var(--radius-sm);background:var(--green-soft);color:var(--text-2);font-size:13.5px;line-height:1.4}
+.ui-pack-upsell b{color:var(--green)}
+.ui-pack .ui-pack-more+.ui-pack-buy,.ui-pack .ui-pack-upsell+.ui-pack-buy{margin-top:0}

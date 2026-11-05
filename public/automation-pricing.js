@@ -59,13 +59,20 @@
       const was = ru ? `${fmt.format(Math.round(pack.rub / (1 - PAYG_DISCOUNT) / 10) * 10)} ₽` : `$${pack.was.toFixed(2)}`;
       const saving = ru ? `${Math.round(PAYG_DISCOUNT * 100)}%` : `$${Math.round(pack.was - pack.price)}`;
       const soon = !ru && !pack.product;
+      // The free credits, shown like on the Hansora Creative pricing page. The pack without any points to the next one.
+      const next = PACKS.find(item => item.bonus);
+      const gift = pack.bonus
+        ? `<p class="ui-pack-more">🎁 You get ${Math.round(pack.bonus / pack.credits * 100)}% more credits, free</p>`
+        : `<p class="ui-pack-upsell">🎁 Get <b>${zap(next.bonus * DISPLAY)} free</b> with the ${ru ? `${fmt.format(next.rub)} ₽` : `$${next.price.toFixed(2)}`} pack</p>`;
       return `<article class="ui-card ui-pack${pack.popular ? ' popular' : ''}">
         ${pack.popular ? '<span class="ui-pack-flag">Most popular</span>' : ''}
         <div class="ui-pack-head"><h2>${pack.name}</h2><p>${pack.note}</p></div>
+        ${pack.bonus ? `<span class="ui-pack-gift">🎁 +${zap(pack.bonus * DISPLAY)} FREE</span>` : ''}
         <div class="ui-pack-pricing"><div class="ui-pack-was"><s>${was}</s><span class="ui-badge green">Save ${saving}</span></div>
           <div class="ui-pack-price"><strong>${price}</strong><span class="ui-pack-once">one-time</span></div></div>
+        ${gift}
         <button class="ui-btn ui-pack-buy" type="button" data-pack="${pack.id}"${soon ? ' data-soon' : ''}>${soon ? 'Available soon' : 'Buy'}</button>
-        <div class="ui-pack-credits"><b>${zap(total)}</b>${pack.bonus ? `<small>${zap(pack.credits * DISPLAY)} + <em>${zap(pack.bonus * DISPLAY)} bonus</em> · never expire</small>` : '<small>credits that never expire</small>'}</div>
+        <div class="ui-pack-credits"><b>${zap(total)}</b>${pack.bonus ? `<small>${zap(pack.credits * DISPLAY)} + <em>${zap(pack.bonus * DISPLAY)} free</em> · never expire</small>` : '<small>credits that never expire</small>'}</div>
         ${capacity(total, PAYG_RATES)}
         <ul class="ui-pack-list">${li('check', 'Unlimited AI employees, every channel')}</ul>
       </article>`;
