@@ -88,7 +88,7 @@
           <div class="ui-pack-price"><strong>$${plan.price}</strong><span class="ui-pack-once">/ month</span></div></div>
         <div class="ui-plan-rates"><p>Your lower prices</p><ul class="ui-pack-list">
           ${li('message', `AI reply <b>${zap(plan.rates.aiReply)}</b>${save > 0 ? ` <span class="ui-plan-save">−${save}%</span>` : ''}`)}
-          ${li('comment', `Comment automation <b>${zap(plan.rates.commentRun)}</b>${plan.rates.commentRun < PAYG_RATES.commentRun ? ` <span class="ui-plan-save">−${Math.round((1 - plan.rates.commentRun / PAYG_RATES.commentRun) * 100)}%</span>` : ''}`)}
+          ${li('comment', `Comments <b>${zap(plan.rates.commentRun)}</b>${plan.rates.commentRun < PAYG_RATES.commentRun ? ` <span class="ui-plan-save">−${Math.round((1 - plan.rates.commentRun / PAYG_RATES.commentRun) * 100)}%</span>` : ''}`)}
           ${li('phone', `Phone call <b>${zap(plan.rates.voiceMinute)}</b> / min${plan.rates.voiceMinute < PAYG_RATES.voiceMinute ? ` <span class="ui-plan-save">−${Math.round((1 - plan.rates.voiceMinute / PAYG_RATES.voiceMinute) * 100)}%</span>` : ''}`)}
         </ul></div>
         <button class="ui-btn ui-pack-buy" type="button" data-plan="${plan.id}"${soon && !isCurrent ? ' data-soon' : ''}${isCurrent ? ' disabled' : ''}>${isCurrent ? 'Current plan' : soon ? 'Available soon' : 'Buy'}</button>
