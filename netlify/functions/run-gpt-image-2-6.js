@@ -1,7 +1,8 @@
 // netlify/functions/run-gpt-image-2-6.js
 // GPT Image 2.6 (Sunburst) on reAPI: text to image and image editing (up to 16 reference images).
-// reAPI bills one flat price per image ($0.023) for every size and quality, so the image is always made at high
-// quality. Credits: 0.4 for 1K, 0.5 for 2K, 0.7 for 4K (server-side only; the client must NOT debit).
+// reAPI bills one flat price per image ($0.023) for every size, quality and complexity, so the image is always made
+// at high quality and normal size; the user chooses the complexity (simple, balanced, complex: how much the model
+// plans before drawing). Credits: 0.4 per image (server-side only; the client must NOT debit).
 // The row is an image row like GPT Image 2.5's; kie-check follows it on reAPI (meta.provider_api = reapi-image),
 // then saves the picture or refunds exactly as for the other image models.
 //
@@ -14,9 +15,11 @@ const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const MODEL = "gpt-image-2.6-sunburst";
 const VERSION_TAG = "gpt_image_2_6_sunburst_reapi_v1";
-const CREDITS = Object.freeze({ "1K": 0.4, "2K": 0.5, "4K": 0.7 });
-// Target pixel counts per size, inside reAPI's limits (655,360 to 8,294,400 pixels, edges up to 3840, both divisible by 16).
-const PIXELS = Object.freeze({ "1K": 1024 * 1024, "2K": 2048 * 2048, "4K": 3840 * 2160 });
+const COST = 0.4;
+const COMPLEXITY = new Set(["low", "medium", "high"]);
+// The normal image size for a chosen shape: about 1024x1024 pixels, inside reAPI's limits (655,360 to 8,294,400
+// pixels, edges up to 3840, both divisible by 16).
+const PIXELS = 1024 * 1024;
 
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
@@ -173,21 +176,15 @@ function normalizeAspectRatio(v) {
   const s = String(v || "auto").trim().toLowerCase().replace(/(\d)[_\-x](\d)/g, "$1:$2");
   return RATIOS.has(s) ? s : "auto";
 }
-function normalizeResolution(v) {
-  const r = String(v || "1K").trim().toUpperCase();
-  return CREDITS[r] != null ? r : "1K";
-}
-// WIDTHxHEIGHT for a size and shape. "auto" never goes to reAPI as "auto" (that would be reAPI's default size, not the
-// size the user paid for): it uses the shape of the user's first photo, or a square without one.
-function sizeFor(resolution, aspect, photoRatio = null) {
-  let ratio;
-  if (aspect === "auto") {
-    ratio = Number.isFinite(photoRatio) && photoRatio > 0 ? Math.min(3, Math.max(1 / 3, photoRatio)) : 1;
-  } else {
-    const [w, h] = aspect.split(":").map(Number);
-    ratio = w / h;
-  }
-  const pixels = PIXELS[resolution];
+function normalizeComplexity(v) {
+  const c = String(v || "medium").trim().toLowerCase();
+  return COMPLEXITY.has(c) ? c : "medium";
+}// WIDTHxHEIGHT of the normal size for a shape; "auto" lets reAPI keep the shape of the user's photo.
+function sizeFor(aspect) {
+  if (aspect === "auto") return "auto";
+  const [w, h] = aspect.split(":").map(Number);
+  const ratio = w / h;
+  const pixels = PIXELS;
   let width = Math.sqrt(pixels * ratio), height = Math.sqrt(pixels / ratio);
   const scale = Math.min(1, 3840 / Math.max(width, height));
   width = Math.floor((width * scale) / 16) * 16;
@@ -199,18 +196,6 @@ function sizeFor(resolution, aspect, photoRatio = null) {
     if (width < height) width += 16; else height += 16;
   }
   return `${width}x${height}`;
-}
-
-// Width / height of the user's first photo, read from its first bytes; null when it cannot be read.
-async function photoRatio(url){
-  if (!/^https:\/\//i.test(String(url || ''))) return null;
-  try{
-    const { imageSize } = await import('../../lib/hansora-mcp/image-shape.mjs');
-    const r = await fetch(url, { headers: { Range: 'bytes=0-262143' }, signal: AbortSignal.timeout(6000) });
-    if (!r.ok) return null;
-    const size = imageSize(Buffer.from(await r.arrayBuffer()).subarray(0, 262144));
-    return size && size.width > 0 && size.height > 0 ? size.width / size.height : null;
-  }catch(_e){ return null; }
 }
 
 async function currentCredits(uid){
@@ -239,11 +224,11 @@ exports.handler = async (event) => {
     const prompt = (body.prompt || "").toString().trim();
     if (!prompt) return json(400, { ok:false, error:"missing_prompt", version: VERSION_TAG });
     const aspect_ratio = normalizeAspectRatio(body.aspect_ratio || body.size || body.aspectRatio);
-    const resolution = normalizeResolution(body.resolution);
+    const complexity = normalizeComplexity(body.complexity);
     const urls = Array.isArray(body.urls) ? body.urls : (Array.isArray(body.input_urls) ? body.input_urls : (Array.isArray(body.image_urls) ? body.image_urls : []));
     const image_urls = urls.map(u => String(u)).filter(u => /^https:\/\//.test(u)).slice(0, 16);
     const mode = image_urls.length ? "image-to-image" : "text-to-image";
-    const cost = CREDITS[resolution];
+    const cost = COST;
     const provider = "GPT Image 2.6";
 
     // A retry of the same run never starts or charges twice.
@@ -254,12 +239,12 @@ exports.handler = async (event) => {
     const balance = await currentCredits(uid);
     if (balance != null && balance < cost) return json(402, { ok:false, error:"not_enough_credits", credits: balance, need: cost, version: VERSION_TAG });
 
-    const size = sizeFor(resolution, aspect_ratio, aspect_ratio === "auto" && image_urls.length ? await photoRatio(image_urls[0]) : null);
-    const baseMeta = { aspect_ratio, resolution, size, mode, quality: "high", reference_image_urls: image_urls, refund_amount: 0, charge_cost: cost };
+    const size = sizeFor(aspect_ratio);
+    const baseMeta = { aspect_ratio, size, complexity, mode, quality: "high", reference_image_urls: image_urls, refund_amount: 0, charge_cost: cost };
     const seeded = await seedUserGeneration(uid, run_id, prompt, provider, baseMeta);
     const row_id = seeded?.row_id || null;
 
-    const payload = { model: MODEL, prompt, size, quality: "high", output_format: "png", n: 1, ...(image_urls.length ? { image_urls } : {}) };
+    const payload = { model: MODEL, prompt, size, quality: "high", complexity, output_format: "png", n: 1, ...(image_urls.length ? { image_urls } : {}) };
     let task;
     try {
       task = await reapi.submitImage(payload);
