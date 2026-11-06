@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.06-1';
+  var HANSORA_BUILD = '2026.11.06-2';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -214,7 +214,7 @@
     try { var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraNav; if (h) { h.postMessage(message); return true; } } catch (_) {}
     return false;
   }
-  try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
+  // Back: the phone itself puts the page back where you were; the code below only helps when it didn't.
   // "/" and "/index.html" are the same page.
   var pageKey = function (href) { try { var u = new URL(href || location.href); var p = u.pathname === '/' ? '/index.html' : u.pathname; return p + u.search; } catch (_) { return location.pathname; } };
   function readScrolls() { try { return JSON.parse(sessionStorage.getItem(SCROLL_KEY) || '{}'); } catch (_) { return {}; } }
@@ -229,6 +229,7 @@
   function sendReady() { if (readySent) return; readySent = true; requestAnimationFrame(function () { requestAnimationFrame(function () { tellPhone({ phase: 'ready' }); }); }); }
   if (wantY > 0) {
     var stop = false, started = Date.now();
+    // Coming back: give the phone's own restore a moment first.
     var stopIt = function () { stop = true; };
     window.addEventListener('touchstart', stopIt, { passive: true, once: true });
     var restore = function () {
@@ -239,7 +240,10 @@
       setTimeout(restore, 100); // the page is still growing (sections loading)
       if (Date.now() - started > 700) sendReady(); // don't hold the picture longer than this
     };
-    onReady(function () { setTimeout(restore, 0); });
+    onReady(function () { setTimeout(function () {
+      if (cameBack && Math.abs(window.scrollY - wantY) <= 40) { stop = true; return sendReady(); } // the phone did it
+      restore();
+    }, cameBack ? 120 : 0); });
   } else {
     onReady(function () { setTimeout(sendReady, 30); });
   }
@@ -251,7 +255,11 @@
   window.HansoraLeave = function (go, back, kind) {
     saveScroll();
     try { sessionStorage.setItem(SLIDE_KEY, back ? 'back' : 'forward'); } catch (_) {}
-    if (tellPhone({ phase: 'leave', kind: back ? 'back' : (kind || 'push') })) setTimeout(go, 40); else go();
+    // The iPhone takes a picture of this screen first, then answers "go" (window.__hansoraGo); at most 0.6 s.
+    var went = false;
+    var goOnce = function () { if (went) return; went = true; window.__hansoraGo = null; go(); };
+    window.__hansoraGo = goOnce;
+    if (tellPhone({ phase: 'leave', kind: back ? 'back' : (kind || 'push') })) setTimeout(goOnce, 600); else goOnce();
   };
   document.addEventListener('click', function (event) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

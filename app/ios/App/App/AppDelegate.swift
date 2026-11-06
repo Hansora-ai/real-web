@@ -71,18 +71,30 @@ class MainViewController: CAPBridgeViewController, WKScriptMessageHandler {
         }
     }
 
-    // A picture of the current screen goes in front while the next page loads.
+    // A picture of the current screen goes in front while the next page loads. Apple's own web-page picture
+    // (takeSnapshot) is used; the page waits for our answer before it opens the next page, so the picture is
+    // always in place first.
     private func cover(kind: String) {
-        guard let webView = webView, oldPage == nil, let shot = webView.snapshotView(afterScreenUpdates: false) else { return }
-        shot.frame = webView.bounds
-        shot.isUserInteractionEnabled = false
-        webView.addSubview(shot)
-        oldPage = shot
+        guard let webView = webView else { return }
+        if let stale = oldPage { stale.removeFromSuperview(); oldPage = nil }
         self.kind = kind
-        fallback?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.reveal() }
-        fallback = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work) // never stay covered
+        let config = WKSnapshotConfiguration()
+        config.afterScreenUpdates = false
+        webView.takeSnapshot(with: config) { [weak self] image, _ in
+            guard let self = self else { return }
+            if let image = image {
+                let shot = UIImageView(image: image)
+                shot.frame = webView.bounds
+                shot.isUserInteractionEnabled = false
+                webView.addSubview(shot)
+                self.oldPage = shot
+                self.fallback?.cancel()
+                let work = DispatchWorkItem { [weak self] in self?.reveal() }
+                self.fallback = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work) // never stay covered
+            }
+            webView.evaluateJavaScript("window.__hansoraGo && window.__hansoraGo()", completionHandler: nil)
+        }
     }
 
     // The next page is ready: slide a picture of it in, then show the live page.
