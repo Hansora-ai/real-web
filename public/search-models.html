@@ -14100,6 +14100,38 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           updateRunButtonLabel();
           return true;
         }
+        if (currentModel.id === 'gemini-omni-flash-1-1' || ['wan27', 'wan30', 'happyhorse'].includes(currentModel.specificUpload)) {
+          // The picture becomes the video's first frame, so the video starts from it.
+          videoFirstFrameFile = files[0] || null;
+          renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {
+            videoFirstFrameFile = null;
+            const input = document.getElementById('videoFirstFrameInput');
+            if (input) input.value = '';
+            clearVideoLastFrame();
+            syncVideoRefsInputLocks();
+            updateCostDisplay();
+            updateRunButtonLabel();
+          });
+          syncVideoRefsInputLocks();
+          updateCostDisplay();
+          updateRunButtonLabel();
+          return true;
+        }
+        if (currentModel.specificUpload === 'geminiOmni') {
+          videoRefImageFiles = files.slice(0, 1);
+          renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
+            videoRefImageFiles.splice(index, 1);
+            const input = document.getElementById('videoRefImagesInput');
+            if (input) input.value = '';
+            syncVideoRefsInputLocks();
+            updateCostDisplay();
+            updateRunButtonLabel();
+          });
+          syncVideoRefsInputLocks();
+          updateCostDisplay();
+          updateRunButtonLabel();
+          return true;
+        }
         if (currentModel.id === 'kling30') {
           kling30FirstFrameFile = files[0] || null;
           renderSingleThumb(kling30FirstFrameFile, document.getElementById('kling30FirstThumb'), () => {
@@ -14280,7 +14312,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (!imageUrl) throw new Error('No image URL found for Create Video.');
       if (typeof setStatus === 'function') setStatus('Preparing image for video...', '');
       const file = await fileFromPreviewUrl(imageUrl, 'hansora-video-reference.png', 'image/png');
-      applyPreviewFilesToCurrentModel([file], 'video-source');
+      if (!applyPreviewFilesToCurrentModel([file], 'video-source')) throw new Error('Could not add the image to the video model. Please upload it manually.');
       updateModelButtonLabels();
       updateCostDisplay();
       updateRunButtonLabel();
