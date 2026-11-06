@@ -83,7 +83,7 @@ $$;
 revoke all on function public.cleanup_storage_objects(text, text[], integer, integer) from public, anon, authenticated;
 revoke all on function public.cleanup_user_generations(integer) from public, anon, authenticated;
 
--- Swap the old jobs for 90-day ones.
+-- Swap the old jobs for 90-day ones, run every 3 days at night (UTC).
 do $$
 declare j text;
 begin
@@ -97,11 +97,11 @@ begin
   end loop;
 end $$;
 
-select cron.schedule('retention-90d-generation-history', '0 */6 * * *',
-  $$select * from public.cleanup_storage_objects('generation-history', null, 90, 500)$$);
-select cron.schedule('retention-90d-video-media', '10 */6 * * *',
-  $$select * from public.cleanup_storage_objects('video', array['images/user-uploads/', 'audio/', '2025/', '2026/'], 90, 500)$$);
-select cron.schedule('retention-90d-user-generations', '20 */6 * * *',
+select cron.schedule('retention-90d-generation-history', '0 3 */3 * *',
+  $$select * from public.cleanup_storage_objects('generation-history', null, 90, 2000)$$);
+select cron.schedule('retention-90d-video-media', '20 3 */3 * *',
+  $$select * from public.cleanup_storage_objects('video', array['images/user-uploads/', 'audio/', '2025/', '2026/'], 90, 2000)$$);
+select cron.schedule('retention-90d-user-generations', '40 3 */3 * *',
   $$select public.cleanup_user_generations(90)$$);
 
 drop function if exists public.cleanup_video_long_term_media_older_than_30d();
