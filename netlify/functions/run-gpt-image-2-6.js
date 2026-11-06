@@ -267,7 +267,7 @@ exports.handler = async (event) => {
       const metaFail = { source:'gpt-image-2-6', provider_api:'reapi-image', run_id, model: MODEL, model_id:'gpt-image-2-6', ...baseMeta, status: error.rejected ? "failed" : "create_failed", error: String(error.message || 'create_failed').slice(0, 300), failed: !!error.rejected };
       if (row_id) await patchUserGenerationMetaById(row_id, metaFail);
       const outOfCredits = /insufficient|balance|credit/i.test(String(error.message || '')) || error.code === 'insufficient_credits';
-      return json(outOfCredits ? 503 : (error.rejected ? 400 : 502), { ok:false, error: outOfCredits ? "provider_unavailable" : "create_failed", message: outOfCredits ? "GPT Image 2.6 is temporarily unavailable. Nothing was charged." : String(error.message || ''), version: VERSION_TAG });
+      return json(outOfCredits ? 503 : (error.rejected ? 400 : 502), { ok:false, error: outOfCredits ? "provider_unavailable" : "create_failed", message: outOfCredits ? "GPT Image 2.6 is temporarily unavailable. Nothing was charged." : String(error.message || ''), provider_error: String(error.message || '').slice(0, 200), version: VERSION_TAG });
     }
 
     const processingMeta = { source:'gpt-image-2-6', provider_api:'reapi-image', run_id, model: MODEL, model_id:'gpt-image-2-6', status:"processing", task_id: task.id, ...baseMeta };

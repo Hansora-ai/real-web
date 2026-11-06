@@ -721,6 +721,10 @@ exports.handler = async function handler(event) {
         console.warn('safe_run_submit_failure_record_failed', error && error.message);
       });
     }
+    // Kie or reAPI itself out of credits: tell the owner right away (at most every 30 minutes).
+    if (response.status >= 400 && /insufficient credits\. required|credits? insufficient|balance isn.?t enough|insufficient (kie )?balance|please top up|provider temporarily unavailable\. nothing was charged/i.test(responseBody)) {
+      await import('../../lib/business/provider-balance.mjs').then((m) => m.alertProviderError(responseBody)).catch(() => {});
+    }
     return {
       statusCode: response.status,
       headers: {
