@@ -88,7 +88,17 @@ test('every 1K/2K/4K size and shape fits reAPI\'s size rules', () => {
       assert.ok(w % 16 === 0 && h % 16 === 0 && w <= 3840 && h <= 3840 && w * h >= 655360 && w * h <= 8294400 && Math.max(w / h, h / w) <= 3, `${resolution} ${aspect} ${w}x${h}`);
     }
   }
-  assert.equal(runner._sizeFor('2K', 'auto'), 'auto');
+  // "auto" is never reAPI's default size: the photo's own shape, or a square, at the size paid for.
+  assert.equal(runner._sizeFor('4K', 'auto'), '2880x2880');
+  assert.equal(runner._sizeFor('1K', 'auto'), '1024x1024');
+  assert.equal(runner._sizeFor('4K', 'auto', 4032 / 3024), '3312x2480');
+  assert.equal(runner._sizeFor('2K', 'auto', 1080 / 1920), '1536x2720');
+  for (const ratio of [0.1, 0.33, 0.75, 1, 1.5, 2.4, 9]) {
+    for (const resolution of ['1K', '2K', '4K']) {
+      const [w, h] = runner._sizeFor(resolution, 'auto', ratio).split('x').map(Number);
+      assert.ok(w % 16 === 0 && h % 16 === 0 && w <= 3840 && h <= 3840 && w * h >= 655360 && w * h <= 8294400 && Math.max(w / h, h / w) <= 3, `${resolution} auto ${ratio} ${w}x${h}`);
+    }
+  }
 });
 
 test('reAPI image task state: done with its image, failed with its reason, otherwise pending', async () => {

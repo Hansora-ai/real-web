@@ -177,11 +177,16 @@ function normalizeResolution(v) {
   const r = String(v || "1K").trim().toUpperCase();
   return CREDITS[r] != null ? r : "1K";
 }
-// WIDTHxHEIGHT for a size and shape; "auto" keeps the shape of the reference image (or a square) at reAPI's default size.
-function sizeFor(resolution, aspect) {
-  if (aspect === "auto") return "auto";
-  const [w, h] = aspect.split(":").map(Number);
-  const ratio = w / h;
+// WIDTHxHEIGHT for a size and shape. "auto" never goes to reAPI as "auto" (that would be reAPI's default size, not the
+// size the user paid for): it uses the shape of the user's first photo, or a square without one.
+function sizeFor(resolution, aspect, photoRatio = null) {
+  let ratio;
+  if (aspect === "auto") {
+    ratio = Number.isFinite(photoRatio) && photoRatio > 0 ? Math.min(3, Math.max(1 / 3, photoRatio)) : 1;
+  } else {
+    const [w, h] = aspect.split(":").map(Number);
+    ratio = w / h;
+  }
   const pixels = PIXELS[resolution];
   let width = Math.sqrt(pixels * ratio), height = Math.sqrt(pixels / ratio);
   const scale = Math.min(1, 3840 / Math.max(width, height));
@@ -194,6 +199,18 @@ function sizeFor(resolution, aspect) {
     if (width < height) width += 16; else height += 16;
   }
   return `${width}x${height}`;
+}
+
+// Width / height of the user's first photo, read from its first bytes; null when it cannot be read.
+async function photoRatio(url){
+  if (!/^https:\/\//i.test(String(url || ''))) return null;
+  try{
+    const { imageSize } = await import('../../lib/hansora-mcp/image-shape.mjs');
+    const r = await fetch(url, { headers: { Range: 'bytes=0-262143' }, signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return null;
+    const size = imageSize(Buffer.from(await r.arrayBuffer()).subarray(0, 262144));
+    return size && size.width > 0 && size.height > 0 ? size.width / size.height : null;
+  }catch(_e){ return null; }
 }
 
 async function currentCredits(uid){
@@ -237,7 +254,7 @@ exports.handler = async (event) => {
     const balance = await currentCredits(uid);
     if (balance != null && balance < cost) return json(402, { ok:false, error:"not_enough_credits", credits: balance, need: cost, version: VERSION_TAG });
 
-    const size = sizeFor(resolution, aspect_ratio);
+    const size = sizeFor(resolution, aspect_ratio, aspect_ratio === "auto" && image_urls.length ? await photoRatio(image_urls[0]) : null);
     const baseMeta = { aspect_ratio, resolution, size, mode, quality: "high", reference_image_urls: image_urls, refund_amount: 0, charge_cost: cost };
     const seeded = await seedUserGeneration(uid, run_id, prompt, provider, baseMeta);
     const row_id = seeded?.row_id || null;
