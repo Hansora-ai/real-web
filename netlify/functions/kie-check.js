@@ -41,9 +41,13 @@ exports.handler = async (event) => {
     }
 
     const inputUrls = collectKnownInputUrls(row);
-    const state = await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin" || row.meta?.provider_api === "market");
+    // GPT Image 2.6 runs on reAPI but is saved and refunded like every other image here.
+    const state = row.meta?.provider_api === "reapi-image"
+      ? await require('../../lib/reapi/client.cjs').imageState(ids.taskId)
+      : await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin" || row.meta?.provider_api === "market");
 
     if (state.failed) {
+      if (/insufficient credits\. required|credits? insufficient|balance isn.?t enough|insufficient (kie )?balance|please top up|provider temporarily unavailable\. nothing was charged/i.test(String(state.error || ""))) await import('../../lib/business/provider-balance.mjs').then((m) => m.alertProviderError(state.error)).catch(() => {});
       const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed", code: state.code ?? null });
       if (refund.waiting_for_charge) {
         return json(200, {
@@ -103,6 +107,7 @@ async function handlePost(event) {
 
   const status = callbackStatus(body);
   if (status === "failed") {
+    if (/insufficient credits\. required|credits? insufficient|balance isn.?t enough|insufficient (kie )?balance|please top up|provider temporarily unavailable\. nothing was charged/i.test(String(failureReason(body) || ""))) await import('../../lib/business/provider-balance.mjs').then((m) => m.alertProviderError(failureReason(body))).catch(() => {});
     const refund = await failAndRefundOnce({ row, ids, reason: failureReason(body), code: failureCode(body) });
     if (refund.waiting_for_charge) {
       return json(200, {

@@ -263,6 +263,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-gemini-omni-video',
   '/.netlify/functions/run-gpt-image-1-5',
   '/.netlify/functions/run-gpt-image-2-5',
+  '/.netlify/functions/run-gpt-image-2-6',
   '/.netlify/functions/run-gpt-image-2',
   '/.netlify/functions/run-grok-image',
   '/.netlify/functions/run-grok-video',
@@ -719,6 +720,10 @@ exports.handler = async function handler(event) {
       await recordSubmitFailure(event, request.payload, responseBody).catch((error) => {
         console.warn('safe_run_submit_failure_record_failed', error && error.message);
       });
+    }
+    // Kie or reAPI itself out of credits: tell the owner right away (at most every 30 minutes).
+    if (response.status >= 400 && /insufficient credits\. required|credits? insufficient|balance isn.?t enough|insufficient (kie )?balance|please top up|provider temporarily unavailable\. nothing was charged/i.test(responseBody)) {
+      await import('../../lib/business/provider-balance.mjs').then((m) => m.alertProviderError(responseBody)).catch(() => {});
     }
     return {
       statusCode: response.status,
