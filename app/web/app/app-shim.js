@@ -12,6 +12,10 @@
   var Cap = window.Capacitor;
   var native = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
   var Plugins = (Cap && Cap.Plugins) || {};
+  // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
+  // which version a phone runs. Change it with every update.
+  var HANSORA_BUILD = '2026.11.06-1';
+  window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
 
@@ -558,6 +562,18 @@
     var to = isAutomation ? '/automation-pricing.html' : '/pricing.html';
     if (location.pathname !== to) window.HansoraLeave(function () { location.href = to; }, false);
   });
+  // Version line at the bottom of both menus ("slide ✓" when the iPhone part for page slides is there).
+  function addVersion() {
+    var host = document.querySelector('#hs-overlay .links') || document.getElementById('automation-nav');
+    if (!host || host.querySelector('.app-version')) return;
+    var slideOn = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraNav);
+    var p = document.createElement('p');
+    p.className = 'app-version';
+    p.textContent = 'Hansora app · version ' + HANSORA_BUILD + (native ? (slideOn ? ' · slide ✓' : ' · slide ✗') : '');
+    host.appendChild(p);
+  }
+  onReady(addVersion);
+  new MutationObserver(addVersion).observe(root, { childList: true, subtree: true });
   var addAnyDoor = isAutomation ? addCreativeDoor : addDoors;
   onReady(addAnyDoor);
   new MutationObserver(addAnyDoor).observe(root, { childList: true, subtree: true });

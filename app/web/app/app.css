@@ -250,3 +250,4 @@ html.hansora-app .lx-gen-tile.t4 em { top: 10px; bottom: auto !important; }
 /* The website's "Pricing · 30% OFF" pill stays out of the app's top bar (Credits / Pricing are in the menus, and the ⚡ number opens pricing). */
 html.hansora-app #siteHeader .hansora-mobile-pricing { display: none !important; }
 html.hansora-app #navCredits, html.hansora-app .credits-pill { cursor: pointer; }
+.app-version { margin: 14px 0 4px; text-align: center; font: 500 12px/1.4 -apple-system, Inter, sans-serif; color: #6f717c; }
