@@ -263,6 +263,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-gemini-omni-video',
   '/.netlify/functions/run-gpt-image-1-5',
   '/.netlify/functions/run-gpt-image-2-5',
+  '/.netlify/functions/run-gpt-image-2-6',
   '/.netlify/functions/run-gpt-image-2',
   '/.netlify/functions/run-grok-image',
   '/.netlify/functions/run-grok-video',
