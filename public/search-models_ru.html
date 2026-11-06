@@ -3502,6 +3502,47 @@
       object-fit:cover !important;
       display:block !important;
     }
+    /* Frame pictures (first/last frame, every model): fill the whole box and show the whole picture, never a small or cropped square. */
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoFirstFrameThumb:has(img),
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoLastFrameThumb:has(img){
+      padding:0 !important;
+      overflow:hidden !important;
+      display:flex !important;
+      align-items:stretch !important;
+      justify-content:stretch !important;
+    }
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoFirstFrameThumb > div,
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoLastFrameThumb > div{
+      width:100% !important;
+      height:100% !important;
+      flex:1 1 100% !important;
+    }
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoFirstFrameThumb .relative,
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoLastFrameThumb .relative,
+    html body.workspace-redesign #seedanceFirstThumb .relative,
+    html body.workspace-redesign #seedanceLastThumb .relative,
+    html body.workspace-redesign #kling30FirstThumb .relative,
+    html body.workspace-redesign #kling30LastThumb .relative,
+    html body.workspace-redesign #startFrameThumb .relative,
+    html body.workspace-redesign #lastFrameThumb .relative{
+      width:100% !important;
+      height:100% !important;
+      border:0 !important;
+      background:#07080d !important;
+    }
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoFirstFrameThumb img,
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoLastFrameThumb img,
+    html body.workspace-redesign #seedanceFirstThumb img,
+    html body.workspace-redesign #seedanceLastThumb img,
+    html body.workspace-redesign #kling30FirstThumb img,
+    html body.workspace-redesign #kling30LastThumb img,
+    html body.workspace-redesign #startFrameThumb img,
+    html body.workspace-redesign #lastFrameThumb img{
+      width:100% !important;
+      height:100% !important;
+      object-fit:contain !important;
+      display:block !important;
+    }
     body.workspace-redesign .upload-drop-card.drag-over{
       border-color:rgba(129,140,248,.95) !important;
       background:rgba(99,102,241,.16) !important;
