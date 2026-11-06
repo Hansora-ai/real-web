@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { googleSheetCsvUrl, guessColumnMap, parseCsv, parsePrice, rowsToProducts, searchProducts, resolveOrderItems, reduceStockForOrder, restoreStockForOrder } from '../../lib/automation/catalog.mjs';
+import { createToolRunner } from '../../lib/automation/tools.mjs';
 
 test('prices and CSV are read the way people write them', () => {
   assert.equal(parsePrice('12 900 ֏'), 12900);
@@ -53,6 +54,35 @@ test('a question in another language still shows the small catalog to pick from'
   const result = await searchProducts({ businessId: 'b1', query: 'բազմոց ունե՞ք' }, { supabaseRequest: async () => catalog, rows: v => v });
   assert.equal(result.products.length, 2);
   assert.match(result.note, /another language/);
+  assert.equal(Object.hasOwn(result.products[0], 'stock'), false);
+});
+
+test('phone fallback keeps actual stock and variant counts for generic multilingual questions', async () => {
+  for (const query of ['How many are available?', 'Քանի հատ կա՞', 'Сколько осталось?']) {
+    const result = await searchProducts({ businessId: 'b1', query, includeFallbackStock: true }, { supabaseRequest: async () => catalog, rows: v => v });
+    assert.equal(result.products[0].ref, 'aaaaaaaa');
+    assert.equal(result.products[0].stock, 2);
+    assert.deepEqual(result.products[0].variants.map(v => [v.name, v.stock]), [['Grey', 2], ['Blue', 0]]);
+    assert.equal(result.products[1].stock, 'not tracked');
+    assert.doesNotMatch(result.note, /Search again/);
+  }
+});
+
+test('only phone tool calls opt in to fallback stock; message/comment results stay unchanged', async () => {
+  for (const channel of ['phone', 'instagram_dm', 'instagram_comments', 'test']) {
+    const run = createToolRunner({ businessId: 'b1', channel }, {
+      first: async () => ({ id: 'b1', timezone: 'UTC' }),
+      rows: value => value,
+      supabaseRequest: async path => {
+        assert.match(path, /business_id=eq.b1/);
+        return path.includes('automation_tool_configs') ? [{ tool_type: 'catalog', enabled: true, config: {} }] : catalog;
+      }
+    });
+    const result = await run('search_products', { query: 'Քանի հատ կա՞' });
+    assert.equal(result.ok, true);
+    assert.equal(Object.hasOwn(result.products[0], 'stock'), channel === 'phone');
+    assert.equal(Object.hasOwn(result.products[0], 'variants'), channel === 'phone');
+  }
 });
 
 test('order items are checked against the catalog, and stock goes out and back per variant', async () => {
