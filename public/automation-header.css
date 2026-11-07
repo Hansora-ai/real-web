@@ -82,7 +82,10 @@ body[data-automation-page]{padding-top:0!important}
   .auto-header-tools .auto-credits{height:30px;padding:0 9px}
   .auto-header{gap:10px}.auto-brand{min-width:0;flex-shrink:1;overflow:hidden}
   /* The landing page keeps its light/dark switch in the header even with the bottom bar. */
-  body[data-automation-page="landing"].has-auto-bottom-nav .auto-header-tools .auto-theme{display:inline-flex}
+  body[data-automation-page="landing"].has-auto-bottom-nav .auto-header-tools .auto-theme{display:grid}
+  body[data-automation-page="landing"].has-auto-bottom-nav .auto-menu-toggle{display:block}
+  /* No empty pill while the credits are still loading. */
+  .auto-credits:empty{display:none!important}
 }
 @media(max-width:430px){.auto-brand small,.auto-brand i{display:none}}
 
