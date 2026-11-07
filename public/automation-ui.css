@@ -367,6 +367,11 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 .ui-convo.active{background:var(--surface-3)}
 .ui-convo.active::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--accent)}
 .ui-convo.resolved{opacity:.55}
+/* Waiting for the team: red, so it is seen first. */
+.ui-convo.urgent{background:rgba(239,68,68,.08)}
+.ui-convo.urgent:hover{background:rgba(239,68,68,.13)}
+.ui-convo.urgent::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:#ef4444}
+.ui-convo.urgent .ui-convo-avatar::after{content:"";position:absolute;left:-2px;top:-2px;width:11px;height:11px;border-radius:50%;background:#ef4444;border:2px solid var(--bg-soft)}
 .ui-convo-avatar{position:relative;display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:50%;background:var(--surface-3);border:1px solid var(--border-2);color:var(--text-2);font-size:13px;font-weight:600}
 .ui-convo-channel{position:absolute;right:-4px;bottom:-4px;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;border:2px solid var(--bg-soft);background:var(--surface-3);color:var(--text-2)}
 .ui-convo-channel svg{width:10px;height:10px}

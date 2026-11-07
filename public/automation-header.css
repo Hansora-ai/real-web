@@ -142,3 +142,8 @@ body.auto-sidebar-collapsed .auto-sidebar .auto-switch-text,body.auto-sidebar-co
 body.auto-sidebar-collapsed .auto-sidebar .auto-switch-button{justify-content:center;padding:7px 0}
 body.auto-sidebar-collapsed .auto-sidebar .auto-switch-menu{left:0;right:auto;width:240px}
 .auto-mobile-sections .auto-switch{margin:0 0 8px}
+/* Inbox: red number of chats waiting for the team */
+.auto-side-link,.auto-tab{position:relative}
+.auto-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:auto;padding:0 5px;border-radius:9px;background:#ef4444;color:#fff;font:700 11px/1 inherit;font-style:normal}
+body.auto-sidebar-collapsed .auto-side-link .auto-badge{position:absolute;left:24px;top:4px;min-width:16px;height:16px;padding:0 4px;font-size:10px}
+.auto-tab .auto-badge{position:absolute;top:6px;left:calc(50% + 4px);margin:0;min-width:17px;height:17px;font-size:10.5px}
