@@ -1,3 +1,4 @@
+import { sendWaitingNote } from '../../lib/automation/waiting-note.mjs';
 import { keepAvatar } from '../../lib/automation/avatars.mjs';
 import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
@@ -92,6 +93,7 @@ export async function handler(event) {
       await serviceUpdate('automation_messages', `id=eq.${inbound.id}`, { content: understood?.content || shown, metadata: { sender_id: chatId, page_id: message.pageId, media_pending: false, ...(media?.mediaPath ? { media_path: media.mediaPath, media_mime: media.mimeType } : {}) } }).catch(() => null);
       if (understood) await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: understood.content.slice(0, 1000) }).catch(() => null);
     }
+    if (!aiWillReply && connection?.status === 'connected') await sendWaitingNote({ businessId: account.business_id, conversation, settings, provider: 'messenger', send: text => sendMessengerText({ ...typingTarget, text }) });
     if (!aiWillReply || !String(aiText || '').trim()) { await markProcessed(webhook.id, account.business_id); return json(200, { ok: true, ai_skipped: true }); }
 
     const turn = { conversationId: conversation.id, occurredAt: inbound.occurred_at || occurredAt, createdAt: inbound.created_at, messageId: inbound.id };

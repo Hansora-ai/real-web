@@ -49,6 +49,26 @@
   app.hidden = false;
   renderList(); renderConversation();
   refreshPhotos();
+  // New messages appear without reloading: the list is checked every 30 seconds while the page is open.
+  // Chats that changed are marked unread (bold), and the open chat gets its new messages.
+  if (!api.isLocalPreview) setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const fresh = await loadConversations();
+      const before = new Map(conversations.map(item => [item.id, item]));
+      let openChanged = false;
+      conversations = fresh.map(item => {
+        const old = before.get(item.id);
+        if (!old) return { ...item, unread: true };
+        const changed = item.lastAt && item.lastAt !== old.lastAt;
+        if (changed && item.id === selectedId) openChanged = true;
+        return { ...item, avatarUrl: old.avatarUrl || item.avatarUrl, messages: old.messages, lastCustomerAt: old.lastCustomerAt, unread: changed ? item.id !== selectedId : old.unread };
+      });
+      if (openChanged && current()) await loadMessages(current());
+      renderList();
+      if (openChanged) renderConversation();
+    } catch (_) {}
+  }, 30000);
 
   document.querySelector('#inbox-filters').addEventListener('click', event => {
     const button = event.target.closest('button[data-filter]'); if (!button) return;
@@ -96,7 +116,7 @@
     } catch (error) { status.textContent = error.message; button.disabled = false; }
   });
   document.querySelector('#resolve-conversation').addEventListener('click', async () => {
-    const conversation = current(); conversation.resolved = !conversation.resolved;
+    const conversation = current(); conversation.resolved = !conversation.resolved; conversation.attention = false;
     if (!api.isLocalPreview) {
       const result = await api.db.from('automation_conversations').update({status:conversation.resolved?'resolved':conversation.human?'human_handling':'open',resolved_at:conversation.resolved?new Date().toISOString():null}).eq('id',conversation.id).eq('business_id',businessId);
       if (result.error) return showError(api.displayError(result.error));
@@ -123,6 +143,7 @@
         if (!response.ok) { if (result.error === 'whatsapp_template_required') { current().lastCustomerAt = 0; setComposerState(); } return showError(replyError(result.error)); }
       }
       current().messages.push({role:'human',text,time:'Now',counted:false}); input.value = '';
+      if (current().attention) { current().attention = false; renderList(); window.HansoraInboxBadge?.refresh(); }
       if (template) { document.querySelector('#template-select').value = ''; renderTemplateFields(); }
       renderMessages(); renderUsage();
     } finally { setComposerState(); }
@@ -172,7 +193,7 @@
     const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone','Telegram':'telegram','Messenger':'messenger','TikTok':'tiktok'};
     document.querySelector('#conversation-list').innerHTML = visible.length ? visible.map(conversation => {
       const state = conversation.resolved ? '' : conversation.attention ? '<span class="ui-badge red sm">Needs you</span>' : conversation.human ? '<span class="ui-badge amber sm">Your team</span>' : '';
-      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${stageChip(conversation)}${outcomeBadges(conversation)}${state}</span></button>`;
+      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}${conversation.attention && !conversation.resolved ? ' urgent' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${stageChip(conversation)}${outcomeBadges(conversation)}${state}</span></button>`;
     }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match.' : 'New conversations from your connected apps appear here.'}</div>`;
     updateTopCounts();
   }
@@ -264,14 +285,14 @@
   }
 
   async function toggleAi() {
-    const conversation = current(); conversation.aiActive = !conversation.aiActive; conversation.human = !conversation.aiActive;
+    const conversation = current(); conversation.aiActive = !conversation.aiActive; conversation.human = !conversation.aiActive; conversation.attention = false;
     if (!api.isLocalPreview) {
       const result = await api.db.from('automation_conversations').update({ai_enabled:conversation.aiActive,status:conversation.human?'human_handling':'open'}).eq('id',conversation.id).eq('business_id',businessId);
       if (result.error) return showError(api.displayError(result.error));
     }
     renderConversation(); renderList();
   }
-  async function takeOver() { const conversation = current(); conversation.aiActive = false; conversation.human = true; if (!api.isLocalPreview) { const result=await api.db.from('automation_conversations').update({ai_enabled:false,status:'human_handling'}).eq('id',conversation.id).eq('business_id',businessId); if(result.error)return showError(api.displayError(result.error)); } renderConversation(); renderList(); document.querySelector('#human-message').focus(); }
+  async function takeOver() { const conversation = current(); conversation.aiActive = false; conversation.human = true; conversation.attention = false; if (!api.isLocalPreview) { const result=await api.db.from('automation_conversations').update({ai_enabled:false,status:'human_handling'}).eq('id',conversation.id).eq('business_id',businessId); if(result.error)return showError(api.displayError(result.error)); } renderConversation(); renderList(); document.querySelector('#human-message').focus(); }
   function setComposerState() {
     const enabled = current().human && !current().resolved && !instagramClosed();
     const useTemplate = templateMode();
@@ -283,7 +304,7 @@
     document.querySelector('#template-select').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').textContent = useTemplate ? 'Send template' : 'Send';
-    document.querySelector('#composer-help').textContent = instagramClosed() ? `${appName(current().channelType)}’s ${windowHours(current().channelType)}-hour window has closed. You can reply after the customer writes again.` : !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
+    document.querySelector('#composer-help').textContent = instagramClosed() ? `${appName(current().channelType)}’s ${windowHours(current().channelType)}-hour window has closed. You can reply after the customer writes again.` : !enabled ? 'The AI is replying. Take over to write yourself.' : current().attention ? 'The AI handed this chat to you. Reply here; the AI stays paused until you give it back.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
     document.querySelector('#take-over').hidden = current().resolved;
     document.querySelector('#ai-call').hidden = !current().phone;
     document.querySelector('#take-over').textContent = current().human ? 'Give back to AI' : 'Take over';
@@ -356,7 +377,9 @@
     document.querySelector('#stage-filters').hidden = !staged;
     document.querySelectorAll('#stage-filters [data-stage-count]').forEach(element => { element.textContent = conversations.filter(item => item.stage === element.dataset.stageCount).length; });
     document.querySelector('#open-count').textContent = conversations.filter(item => !item.resolved).length;
-    document.querySelector('#attention-count').textContent = conversations.filter(item => item.attention && !item.resolved).length;
+    const waiting = conversations.filter(item => item.attention && !item.resolved).length;
+    document.querySelector('#attention-count').textContent = waiting;
+    window.HansoraInboxBadge?.set(waiting);
   }
   function platformOf(value) { const key = String(value || '').toLowerCase(); return key.startsWith('instagram') ? 'instagram' : key; }
   function renderPlatforms() {
@@ -379,6 +402,9 @@
       if (changed) { renderList(); renderCustomer(); }
     } catch (_) {}
   }
+  // Red "Needs you": the AI handed the chat over (or asked for help) and nobody from the team has replied since.
+  // Same rule as the Inbox badge in the menu (automation-header.js).
+  function needsYou(row) { return row.status !== 'resolved' && row.status !== 'archived' && (row.status === 'needs_attention' || (row.ai_enabled === false && row.status !== 'human_handling')); }
   function current() { return conversations.find(conversation => conversation.id === selectedId) || conversations[0] || null; }
   async function loadConversations() {
     const base = 'id,contact_id,channel_type,status,ai_enabled,intent,summary,last_message_preview,last_message_at,automation_contacts(display_name,primary_phone,primary_email,language,profile)';
@@ -396,7 +422,7 @@
       const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts || {};
       const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer',tiktok:'TikTok customer'}[row.channel_type] || 'Instagram customer');
       const avatarUrl = /^https:\/\//.test(String(contact.profile?.profile_pic || '')) ? String(contact.profile.profile_pic) : '';
-      return {id:row.id,contactId:row.contact_id,phone:contact.primary_phone||'',channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
+      return {id:row.id,contactId:row.contact_id,phone:contact.primary_phone||'',channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,lastAt:row.last_message_at||'',attention:needsYou(row),human:row.ai_enabled===false&&row.status!=='resolved',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
     });
   }
   async function loadMessages(conversation) {
@@ -425,6 +451,6 @@
     if (result.error) { showError(api.displayError(result.error)); return false; }
     return result.data.id;
   }
-  function statusText(conversation) { return conversation.human ? 'Human handling' : conversation.aiActive ? 'AI is replying' : 'AI paused'; }
+  function statusText(conversation) { return conversation.attention && conversation.human ? 'Needs your reply' : conversation.human ? 'Human handling' : conversation.aiActive ? 'AI is replying' : 'AI paused'; }
   function escapeHtml(value) { return String(value || '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character])); }
 })();
