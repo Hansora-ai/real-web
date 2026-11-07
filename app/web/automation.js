@@ -123,7 +123,7 @@
       result: ['✓', 'Order #1043 created', 'Oak coffee table · $320'], alert: 'Order alert sent to the owner'
     },
     {
-      business: 'Glow Beauty Salon', logo: 'G', tone: 'glow', channel: 'WhatsApp', icon: 'whatsapp',
+      business: 'Glow Beauty Salon', logo: 'G', tone: 'glow', channel: 'Telegram', icon: 'telegram',
       steps: [
         ['voice', 'Can I get a manicure on Saturday afternoon?'],
         ['a', 'Of course 💅 Saturday we have 14:00 and 16:30 free. Which one suits you?'],

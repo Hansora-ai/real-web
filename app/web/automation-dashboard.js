@@ -30,7 +30,7 @@
     const name = agent?.display_name || business.name;
     const status = String(agent?.status || business.status || 'draft');
     const languages = (agent?.supported_languages || []).map(api.languageName).join(' · ') || 'Languages not set';
-    const channels = business.automation_channel_connections || [];
+    const channels = (business.automation_channel_connections || []).filter(item => !['whatsapp', 'messenger'].includes(item.channel_type));
     const live = channels.filter(channel => channel.status === 'connected').length;
     const icons = Object.entries(CHANNEL_ICONS).map(([type, [icon, label]]) => {
       const channel = channels.find(item => item.channel_type === type);

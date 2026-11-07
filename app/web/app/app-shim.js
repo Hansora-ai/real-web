@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.06-2';
+  var HANSORA_BUILD = '2026.11.07-1';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -585,4 +585,48 @@
   var addAnyDoor = isAutomation ? addCreativeDoor : addDoors;
   onReady(addAnyDoor);
   new MutationObserver(addAnyDoor).observe(root, { childList: true, subtree: true });
+
+  // Report content (Google Play's AI-generated content policy; Apple 1.2): a "Report content" entry in both menus opens a
+  // short form inside the app. It is sent to Hansora support through the website's contact form.
+  function openReport() {
+    if (document.getElementById('appReport')) return;
+    var box = document.createElement('div');
+    box.id = 'appReport'; box.className = 'app-report';
+    box.innerHTML = '<form class="app-report-card" novalidate><h2>Report content</h2>' +
+      '<p>Tell us about an AI result or anything in the app that is offensive, harmful or breaks the rules. We review every report.</p>' +
+      '<label>Reason<select name="reason"><option>Offensive or hateful</option><option>Sexual content</option><option>Violence or harm</option><option>Copyright or someone else’s likeness</option><option>Other</option></select></label>' +
+      '<label>What happened<textarea name="details" rows="4" placeholder="Which result (prompt, model, time) and what is wrong with it"></textarea></label>' +
+      '<label>Your email<input name="email" type="email" autocomplete="email" placeholder="you@example.com"></label>' +
+      '<p class="app-report-msg" role="status"></p>' +
+      '<div class="app-report-actions"><button type="button" class="app-report-cancel">Cancel</button><button type="submit" class="app-report-send">Send report</button></div></form>';
+    document.body.appendChild(box);
+    var form = box.querySelector('form'), msg = box.querySelector('.app-report-msg');
+    function close() { box.remove(); }
+    box.addEventListener('click', function (e) { if (e.target === box) close(); });
+    box.querySelector('.app-report-cancel').addEventListener('click', close);
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = form.email.value.trim(), details = form.details.value.trim();
+      if (!/^\S+@\S+\.\S+$/.test(email)) { msg.textContent = 'Enter your email so we can reply.'; return; }
+      if (details.length < 5) { msg.textContent = 'Describe what you are reporting.'; return; }
+      var send = box.querySelector('.app-report-send'); send.disabled = true; msg.textContent = 'Sending…';
+      var text = '[APP REPORT] ' + form.reason.value + '\n\n' + details + '\n\nPage: ' + location.pathname + location.search + '\nApp version: ' + HANSORA_BUILD;
+      fetch('/.netlify/functions/contact-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, message: text }) })
+        .then(function (r) { if (!r.ok) throw new Error('status ' + r.status); form.innerHTML = '<h2>Thank you</h2><p>Your report was sent. We review it and remove content that breaks the rules.</p><div class="app-report-actions"><button type="button" class="app-report-send">Close</button></div>'; form.querySelector('button').addEventListener('click', close); })
+        .catch(function () { send.disabled = false; msg.textContent = 'Could not send. Check your connection and try again.'; });
+    });
+  }
+  function addReportLink() {
+    var hosts = [document.querySelector('#hs-overlay .links'), document.getElementById('automation-nav'), document.getElementById('navMenu')];
+    hosts.forEach(function (host) {
+      if (!host || host.querySelector('.app-report-link')) return;
+      var a = document.createElement('a');
+      a.href = '#'; a.className = 'app-report-link'; a.textContent = 'Report content';
+      a.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openReport(); });
+      var before = host.querySelector('.app-version') || (host.id === 'navMenu' ? document.getElementById('btnLogout') : null);
+      host.insertBefore(a, before && before.parentNode === host ? before : null);
+    });
+  }
+  onReady(addReportLink);
+  new MutationObserver(addReportLink).observe(root, { childList: true, subtree: true });
 })();

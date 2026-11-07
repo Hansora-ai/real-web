@@ -245,7 +245,7 @@
       messenger: `automation-connect.html?channel=messenger&${businessQuery}`,
       tiktok: `automation-connect.html?channel=tiktok&${businessQuery}`
     };
-    const channels = (business.automation_channel_connections || []).sort((a, b) => a.setup_order - b.setup_order);
+    const channels = (business.automation_channel_connections || []).filter(channel => !['whatsapp', 'messenger'].includes(channel.channel_type)).sort((a, b) => a.setup_order - b.setup_order);
     $('#channel-stack').innerHTML = channels.map(channel => {
       const [title, description, iconName, tone] = meta[channel.channel_type] || [channel.channel_type, '', 'message', ''];
       const badge = channel.status === 'connected' ? '<span class="ui-badge dot green live">Live</span>'

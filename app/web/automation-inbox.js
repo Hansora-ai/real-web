@@ -34,7 +34,7 @@
   let selectedId = conversations.some(item => item.id === params.get('conversation')) ? params.get('conversation') : conversations[0]?.id || null;
   let activeFilter = 'all', activeStage = '', activePlatform = '';
   // Platform chips: only the apps this AI employee is connected to (plus any app that already has chats here).
-  const PLATFORMS = [['instagram','Instagram'],['tiktok','TikTok'],['whatsapp','WhatsApp'],['messenger','Messenger'],['telegram','Telegram'],['phone','Phone']];
+  const PLATFORMS = [['instagram','Instagram'],['tiktok','TikTok'],['telegram','Telegram'],['phone','Phone']];
   let connectedPlatforms = new Set();
   try {
     if (!api.isLocalPreview) {

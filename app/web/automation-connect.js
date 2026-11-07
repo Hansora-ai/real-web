@@ -70,7 +70,8 @@
       primaryLabel:'Answer TikTok messages', primaryHelp:'Use the shared AI employee for new TikTok direct messages'
     }
   };
-  const config = configurations[channel];
+  // App: WhatsApp and Messenger are added in a later app version (waiting for Meta's approval).
+  const config = ['whatsapp', 'messenger'].includes(channel) ? null : configurations[channel];
   if (!config) return fail('Choose a channel from the AI employee workspace.');
   const CHANNEL_TYPE = { instagram: 'instagram_dm', whatsapp: 'whatsapp', telegram: 'telegram', messenger: 'messenger', tiktok: 'tiktok' }[channel];
   const ACCOUNT_MARK = { instagram: 'IG', whatsapp: 'WA', telegram: 'TG', messenger: 'FB', tiktok: 'TT' }[channel];
