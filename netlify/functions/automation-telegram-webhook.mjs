@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { first, serviceInsert, serviceUpdate, supabaseRequest } from '../../lib/automation/db.mjs';
+import { first, rows, serviceInsert, serviceUpdate, supabaseRequest } from '../../lib/automation/db.mjs';
 import { telegramApi, telegramBot, telegramWebhookSecret } from '../../lib/automation/telegram.mjs';
 
 // The bot answers the owner in their Telegram app language (Armenian, Russian, else English). Telegram has no official
@@ -97,6 +97,13 @@ async function handleConnection(connection) {
   }
   // A reconnect can reuse the same connection id: an old, disconnected row with it would block this one.
   await supabaseRequest(`/rest/v1/automation_provider_resources?business_id=eq.${resource.business_id}&provider=eq.telegram&resource_type=eq.telegram_account&provider_resource_id=eq.${encodeURIComponent(String(connection.id))}&id=neq.${resource.id}`, { method: 'DELETE' }).catch(() => null);
+  // One Telegram account answers for one AI employee: a link to another employee (an earlier attempt) is ended,
+  // otherwise its messages could keep going to that employee.
+  const others = await supabaseRequest(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&status=in.(pending,active)&business_id=neq.${resource.business_id}&or=(provider_resource_id.eq.${encodeURIComponent(String(connection.id))},safe_config->>telegram_user_id.eq.${encodeURIComponent(userId)})&select=id,business_id`).then(rows).catch(() => []);
+  for (const other of others) {
+    await serviceUpdate('automation_provider_resources', `id=eq.${other.id}`, { status: 'revoked', updated_at: new Date().toISOString() }).catch(() => null);
+    await serviceUpdate('automation_channel_connections', `business_id=eq.${other.business_id}&channel_type=eq.telegram`, { status: 'not_connected', connected_account_label: null, connected_at: null, updated_at: new Date().toISOString() }).catch(() => null);
+  }
   await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { provider_resource_id: String(connection.id), status: 'active', safe_config: { ...resource.safe_config, business_connection_id: String(connection.id), user_chat_id: String(connection.user_chat_id || ''), can_reply: canReply, connected_at: new Date().toISOString() }, last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   await serviceUpdate('automation_channel_connections', `business_id=eq.${resource.business_id}&channel_type=eq.telegram`, { status: 'connecting', provider: 'telegram', connected_account_label: label, connected_at: new Date().toISOString(), last_error_code: canReply ? null : 'telegram_reply_not_allowed', updated_at: new Date().toISOString() });
   await notify(canReply ? t.connected : t.allowReply);
@@ -106,6 +113,8 @@ async function queueMessage(event, message) {
   if (!message.business_connection_id || message.chat?.type !== 'private') return;
   // Sent by a bot on the owner's behalf (our own replies and photos): not a customer message and not the owner typing.
   if (message.sender_business_bot) return;
+  // The owner's own chat with a bot (for example our "✅ Connected" messages): not a customer.
+  if (message.from?.is_bot || message.chat?.is_bot) return;
   const externalEventId = `telegram:${message.business_connection_id}:${message.chat.id}:${message.message_id}`;
   const inserted = await serviceInsert('automation_webhook_events', { provider: 'telegram', external_event_id: externalEventId, event_type: 'telegram_business_message', payload: message, status: 'received' }, { ignoreDuplicates: true });
   const row = inserted || await first(`/rest/v1/automation_webhook_events?provider=eq.telegram&external_event_id=eq.${encodeURIComponent(externalEventId)}&select=id,status&limit=1`);
