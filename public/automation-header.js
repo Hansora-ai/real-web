@@ -147,7 +147,7 @@
         const label = (row.automation_channel_connections || []).find(item => item.channel_type === 'instagram_dm' && item.status !== 'not_connected' && item.connected_account_label)?.connected_account_label || '';
         return { id: row.id, name: agent?.display_name || row.name || 'AI employee', ig: label ? (label.startsWith('@') ? label : `@${label}`) : '' };
       });
-      try { sessionStorage.setItem(CACHE, JSON.stringify(list)); } catch (_) {}
+      try { sessionStorage.setItem(CACHE, JSON.stringify(list)); localStorage.setItem('hansora_automation_has_employees', list.length ? '1' : '0'); } catch (_) {}
       render(list);
     }).catch(() => {});
   }
@@ -166,11 +166,72 @@
     document.body.classList.add('has-auto-bottom-nav');
     const menuButton = bar.querySelector('[data-bottom-menu]');
     menuButton.addEventListener('click', () => { root.querySelector('.auto-menu-toggle')?.click(); menuButton.setAttribute('aria-expanded', String(root.classList.contains('menu-open'))); });
-    // Credits and the photo stay visible in the phone header (header.js fills the same elements).
+  }
+
+  // Phones: credits and the photo stay in the header, next to the light/dark switch, on every page
+  // (header.js fills the same elements), instead of hiding inside the menu.
+  placeAccount();
+  function placeAccount() {
     const account = root.querySelector('.auto-account'); const tools = root.querySelector('.auto-header-tools'); const nav = root.querySelector('nav');
+    if (!account || !tools || !nav) return;
     const phone = window.matchMedia('(max-width:760px)');
-    const place = () => { if (!account || !tools || !nav) return; if (phone.matches) tools.insertBefore(account, tools.querySelector('.auto-menu-toggle')); else nav.appendChild(account); };
+    const place = () => { if (phone.matches) tools.insertBefore(account, tools.querySelector('.auto-menu-toggle')); else nav.appendChild(account); };
     place(); phone.addEventListener?.('change', place);
+  }
+
+  // Landing page, signed in: the same phone bottom bar (Home, Employees, Inbox, Menu), and "Start free setup"
+  // goes to the dashboard when the account already has AI employees. Decided from what the browser remembers,
+  // so it is instant, then checked once in the background.
+  if (page === 'landing' && realSite) landingShortcuts();
+  function landingShortcuts() {
+    const preview = '';
+    let businessId = '', hasEmployees = false;
+    try {
+      businessId = localStorage.getItem('hansora_automation_business') || '';
+      hasEmployees = Boolean(businessId) || localStorage.getItem('hansora_automation_has_employees') === '1' || JSON.parse(sessionStorage.getItem('hansora_automation_employees') || '[]').length > 0;
+    } catch (_) {}
+    if (!/^[0-9a-f-]{36}$/i.test(businessId)) businessId = '';
+    let bar = null;
+    const apply = () => {
+      const setup = 'automation-setup.html';
+      const dashboard = 'automation-dashboard.html';
+      document.querySelectorAll('[data-start]').forEach(link => {
+        link.href = hasEmployees ? dashboard : setup;
+        const label = [...link.childNodes].find(node => node.nodeType === 3 && node.nodeValue.trim());
+        if (label) { link.dataset.startLabel ||= label.nodeValue; label.nodeValue = hasEmployees ? 'Open my dashboard ' : link.dataset.startLabel; }
+      });
+      if (!bar) return;
+      const hrefs = { home: businessId ? `automation-agent.html?id=${encodeURIComponent(businessId)}` : hasEmployees ? dashboard : setup, employees: hasEmployees ? dashboard : setup, inbox: businessId ? `automation-inbox.html?business=${encodeURIComponent(businessId)}` : hasEmployees ? dashboard : setup };
+      bar.querySelectorAll('[data-tab]').forEach(tab => { tab.href = hrefs[tab.dataset.tab]; });
+    };
+    const showBar = () => {
+      if (bar) return;
+      const icon = name => window.HansoraUI?.icon(name) || '';
+      bar = document.createElement('nav');
+      bar.className = 'auto-bottom-nav';
+      bar.setAttribute('aria-label', 'Automation navigation');
+      bar.innerHTML = `<a class="auto-tab" data-tab="home" href="#">${icon('sparkle')}<span>Home</span></a><a class="auto-tab" data-tab="employees" href="#">${icon('user')}<span>Employees</span></a><a class="auto-tab" data-tab="inbox" href="#">${icon('message')}<span>Inbox</span></a><button class="auto-tab" type="button" data-bottom-menu aria-expanded="false"><span class="auto-tab-burger" aria-hidden="true"><i></i><i></i><i></i></span><span>Menu</span></button>`;
+      document.body.appendChild(bar);
+      document.body.classList.add('has-auto-bottom-nav');
+      const menuButton = bar.querySelector('[data-bottom-menu]');
+      menuButton.addEventListener('click', () => { root.querySelector('.auto-menu-toggle')?.click(); menuButton.setAttribute('aria-expanded', String(root.classList.contains('menu-open'))); });
+      apply();
+    };
+    const hideBar = () => { bar?.remove(); bar = null; document.body.classList.remove('has-auto-bottom-nav'); };
+    if (cachedLoggedIn) showBar();
+    apply();
+    api?.getUser?.().then(async user => {
+      if (!user) { hasEmployees = false; businessId = ''; hideBar(); apply(); return; }
+      showBar();
+      const result = await api.db.from('automation_businesses').select('id').order('updated_at', { ascending: false }).limit(1);
+      if (result?.error) return;
+      const first = Array.isArray(result.data) ? result.data[0] : null;
+      hasEmployees = Boolean(first);
+      if (!first) businessId = '';
+      else if (!businessId) businessId = first.id;
+      try { localStorage.setItem('hansora_automation_has_employees', hasEmployees ? '1' : '0'); if (!hasEmployees) localStorage.removeItem('hansora_automation_business'); } catch (_) {}
+      apply();
+    }).catch(() => {});
   }
 
   if (realSite) connectHansoraAccount();
