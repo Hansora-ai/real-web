@@ -32,7 +32,7 @@ export async function handler(event) {
     const message = webhook.payload || {};
     const [, account] = await Promise.all([
       serviceUpdate('automation_webhook_events', `id=eq.${webhook.id}`, { status: 'processing', attempt_count: Number(webhook.attempt_count || 0) + 1, last_error: null }),
-      first(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&provider_resource_id=eq.${encodeURIComponent(String(message.business_connection_id))}&status=eq.active&select=*&limit=1`)
+      first(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&provider_resource_id=eq.${encodeURIComponent(String(message.business_connection_id))}&status=eq.active&select=*&order=updated_at.desc&limit=1`)
     ]);
     if (!account) throw new Error('telegram_account_not_connected');
     const connection = await first(`/rest/v1/automation_channel_connections?business_id=eq.${account.business_id}&channel_type=eq.telegram&select=*&limit=1`);
