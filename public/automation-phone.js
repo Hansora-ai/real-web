@@ -65,6 +65,16 @@
   document.addEventListener('change', event => { if (event.target.matches('[data-contact-method]')) event.target.closest('.contact-box').querySelector('[data-contact-value]').placeholder = CONTACT_METHODS[event.target.value][1]; });
   $('#celebrate-done').addEventListener('click', () => { $('#phone-celebrate').hidden = true; });
   $('#call-now').addEventListener('click', callNow);
+  // "Test a call" (top of the page): straight to the microphone test in step 4, no number needed.
+  $('#phone-try').addEventListener('click', () => { step = 4; render(); $('#test-call')?.scrollIntoView({ behavior:'smooth', block:'center' }); });
+  // Comments-only accounts have no business information yet: the test would not know the business.
+  if (!api.isLocalPreview) Promise.resolve(api.db.from('automation_businesses').select('setup_mode').eq('id', businessId).maybeSingle()).then(result => {
+    if (result?.data?.setup_mode !== 'comments') return;
+    const try_ = $('#phone-try'); const link = document.createElement('a');
+    link.className = 'ui-btn primary sm'; link.href = `automation-setup.html?id=${encodeURIComponent(businessId)}`; link.textContent = 'Create my AI employee first';
+    link.title = 'Your AI employee needs your business information before it can answer calls';
+    try_.replaceWith(link);
+  }).catch(() => {});
   $('#make-call-open').addEventListener('click', () => { $('#make-call').hidden = !$('#make-call').hidden; if (!$('#make-call').hidden) $('#call-now-number').focus(); });
   $('#auto-save').addEventListener('click', async event => { const button = event.currentTarget; button.disabled = true; try { if (await save({ quiet:true })) ui.toast('Call automations saved.'); } finally { button.disabled = false; } });
   // A card opens when it is switched on.
@@ -454,7 +464,7 @@
   }
   // WhatsApp: the business connects its WhatsApp; calls on it are answered once WhatsApp calling opens.
   function whatsappDetail() {
-    return `<div style="display:flex;gap:14px;align-items:flex-start;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:50%;background:#25d366;color:#fff;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5.1 5.24-1.37A9.9 9.9 0 1 0 12.04 2Zm4.5 11.95c-.25-.12-1.46-.72-1.69-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.79.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.32-2.9c-.25-.43.25-.4.71-1.33.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.41-.56-.42h-.48a.92.92 0 0 0-.66.31 2.78 2.78 0 0 0-.87 2.07 4.83 4.83 0 0 0 1.01 2.56 11.05 11.05 0 0 0 4.23 3.74c.59.26 1.05.41 1.41.52a3.4 3.4 0 0 0 1.56.1c.48-.07 1.46-.6 1.67-1.18.2-.58.2-1.07.14-1.18-.06-.1-.22-.16-.47-.29Z"/></svg></span><div style="flex:1"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong>Connect your WhatsApp</strong><span class="ui-badge amber">Calls coming soon</span></div><p class="ui-hint" style="margin:4px 0 12px">Connect your WhatsApp number to your AI employee. It answers your WhatsApp messages, and WhatsApp calls as soon as they open, in any country, with no phone number to buy.</p><a class="ui-btn primary" href="automation-connect.html?channel=whatsapp&business=${encodeURIComponent(businessId)}${previewSuffix}">Connect WhatsApp</a></div></div>`;
+    return `<div style="display:flex;gap:14px;align-items:flex-start;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:50%;background:#25d366;color:#fff;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5.1 5.24-1.37A9.9 9.9 0 1 0 12.04 2Zm4.5 11.95c-.25-.12-1.46-.72-1.69-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.79.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.32-2.9c-.25-.43.25-.4.71-1.33.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.41-.56-.42h-.48a.92.92 0 0 0-.66.31 2.78 2.78 0 0 0-.87 2.07 4.83 4.83 0 0 0 1.01 2.56 11.05 11.05 0 0 0 4.23 3.74c.59.26 1.05.41 1.41.52a3.4 3.4 0 0 0 1.56.1c.48-.07 1.46-.6 1.67-1.18.2-.58.2-1.07.14-1.18-.06-.1-.22-.16-.47-.29Z"/></svg></span><div style="flex:1"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong>WhatsApp messages and calls</strong><span class="ui-badge amber">Coming soon</span></div><p class="ui-hint" style="margin:4px 0 12px">Soon your AI employee answers your WhatsApp messages and calls, in any country, with no phone number to buy.</p><span class="ui-btn secondary" aria-disabled="true" style="opacity:.6;cursor:default">Coming soon</span></div></div>`;
   }
   function notLiveOffer() { return mode() === 'whatsapp' ? whatsappDetail() : line.where && !readyCountries().has(line.where) ? contactCard() : ''; }
   function showCelebration(number) {
