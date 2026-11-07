@@ -128,6 +128,7 @@
   }
   document.querySelectorAll('.ui-stepper li').forEach(item => item.addEventListener('click', () => { const target = Number(item.dataset.step); if (target < step) { step = target; render(); } }));
   $('#phone-previous').addEventListener('click', () => { if (step > 1) { step--; render(); } });
+  $('#phone-review').addEventListener('click', event => { const card = event.target.closest('[data-edit-step]'); if (!card) return; step = Number(card.dataset.editStep); render(); $('.ui-stepper').scrollIntoView({ behavior:'smooth', block:'start' }); });
   $('#phone-next').addEventListener('click', async () => {
     if (step === 1 && mode() === 'none') { showError('Choose how customers reach you.'); return; }
     if (step === 1 && mode() === 'new' && line.where && numberIn(line.where)) { showError(`You already have a ${countryName(line.where)} number. Choose another country, or press Edit settings on your number.`); return; }
@@ -309,7 +310,8 @@
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
     const numbers = liveNumbers().map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
-    $('#phone-review').innerHTML = [['Number', numbers], ['Voice', data.voice], ['Answers', answer], ['Languages', languages], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+    // Each card opens the step where it is changed, so the owner can edit right after a test call.
+    $('#phone-review').innerHTML = [['Number', numbers, 1], ['Voice', data.voice, 2], ['Answers', answer, 3], ['Languages', languages, 3], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message', 3]].map(([label, value, target]) => `<button type="button" data-edit-step="${target}" title="Change ${label.toLowerCase()}"><span>${label}<em>Edit</em></span><strong>${escapeHtml(value)}</strong></button>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
     const live = liveNumbers().length
       ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${liveNumbers().map(item => escapeHtml(item.e164)).join(', ')}</strong>.${data.number_mode === 'forward' ? '' : ' Call it from any phone to check.'}${canGetNumber() ? ` To add your ${escapeHtml(countryName(targetCountry()))} number, click <strong>${escapeHtml(getNumberLabel())}</strong> below.` : ''}</div>`
