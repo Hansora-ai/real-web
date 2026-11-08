@@ -13,6 +13,8 @@
   let step = params.get('test') === '1' ? 4 : 1;
   // True after "Edit settings" on a number the business already has: the steps only change settings, nothing is bought.
   let editing = false;
+  // Step 2 or 3 opened inside the Test step (see openInline); declared early because render() reads it.
+  const inline = { pane:null, home:null };
 
 
   let saved = {};
@@ -128,7 +130,33 @@
   }
   document.querySelectorAll('.ui-stepper li').forEach(item => item.addEventListener('click', () => { const target = Number(item.dataset.step); if (target < step) { step = target; render(); } }));
   $('#phone-previous').addEventListener('click', () => { if (step > 1) { step--; render(); } });
-  $('#phone-review').addEventListener('click', event => { const card = event.target.closest('[data-edit-step]'); if (!card) return; step = Number(card.dataset.editStep); render(); $('.ui-stepper').scrollIntoView({ behavior:'smooth', block:'start' }); });
+  // Editing from the Test step: Voice and Rules open inside the Test step (the test call stays on screen);
+  // Number goes to step 1, and Transfer to the Call automations card.
+  function openInline(n) {
+    closeInline();
+    const pane = document.querySelector(`.phone-step[data-phone-step="${n}"]`); if (!pane) return;
+    inline.home = document.createComment('phone-step'); pane.parentNode.insertBefore(inline.home, pane);
+    inline.pane = pane; $('#phone-inline-body').appendChild(pane); pane.hidden = false;
+    if (n === 2) preloadVoices();
+    $('#phone-review').hidden = true; $('#phone-inline-edit').hidden = false;
+    $('#phone-inline-edit').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  function closeInline() {
+    if (inline.pane) { stopVoice(); inline.home.parentNode.insertBefore(inline.pane, inline.home); inline.home.remove(); inline.pane.hidden = Number(inline.pane.dataset.phoneStep) !== step; inline.pane = null; inline.home = null; }
+    $('#phone-inline-edit').hidden = true; $('#phone-review').hidden = false;
+  }
+  $('#phone-review').addEventListener('click', event => {
+    const card = event.target.closest('[data-edit-step]'); if (!card) return;
+    const target = card.dataset.editStep;
+    if (target === 'calls' && !$('#phone-outgoing').hidden) { $('#phone-outgoing').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+    if (target === '1') { step = 1; render(); $('.ui-stepper').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+    openInline(target === 'calls' ? 3 : Number(target));
+  });
+  $('#phone-inline-done').addEventListener('click', () => {
+    closeInline(); renderReview();
+    $('#phone-save-state').textContent = 'Test again, then save to use it on real calls';
+    $('#test-call').scrollIntoView({ behavior:'smooth', block:'center' });
+  });
   $('#phone-next').addEventListener('click', async () => {
     if (step === 1 && mode() === 'none') { showError('Choose how customers reach you.'); return; }
     if (step === 1 && mode() === 'new' && line.where && numberIn(line.where)) { showError(`You already have a ${countryName(line.where)} number. Choose another country, or press Edit settings on your number.`); return; }
@@ -194,12 +222,10 @@
       });
     }
   }
-  function voiceSampleUrl(name) {
-    const lang = ['hy', 'ru', 'en'].find(code => agentLanguages.includes(code)) || 'en';
-    return `/.netlify/functions/automation-phone-voice-preview?voice=${encodeURIComponent(name)}&lang=${lang}&v=1`;
-  }
-  // The first sample of a voice takes a few seconds to make; the four recommended ones are fetched as soon as the
-  // Voice step opens, so ▶ plays at once (they are cached afterwards for everyone).
+  // A short ready-made sample of each voice (public/voices), so ▶ plays at once. The owner only needs to hear
+  // the voice; on calls it speaks the caller's language.
+  function voiceSampleUrl(name) { return `voices/${encodeURIComponent(name)}.mp3?v=1`; }
+  // The four recommended samples are fetched when the Voice step opens.
   function preloadVoices() {
     if (preloadVoices.done || api.isLocalPreview || typeof fetch !== 'function') return;
     preloadVoices.done = true;
@@ -292,8 +318,9 @@
   }
   function render() {
     stopVoice();
-    if (step === 2) preloadVoices();
-    document.querySelectorAll('.phone-step').forEach(pane => { pane.hidden = Number(pane.dataset.phoneStep) !== step; });
+    if (step !== 4) closeInline();
+    if (step === 2 || inline.pane?.dataset.phoneStep === '2') preloadVoices();
+    document.querySelectorAll('.phone-step').forEach(pane => { pane.hidden = pane === inline.pane ? false : Number(pane.dataset.phoneStep) !== step; });
     document.querySelectorAll('.ui-stepper li').forEach(item => { const n = Number(item.dataset.step); item.classList.toggle('active', n === step); item.classList.toggle('done', n < step); });
     $('.ui-stepper').style.setProperty('--progress-num', String((step - 1) / 3));
     $('#phone-previous').hidden = step === 1;
@@ -310,8 +337,8 @@
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
     const numbers = liveNumbers().map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
-    // Each card opens the step where it is changed, so the owner can edit right after a test call.
-    $('#phone-review').innerHTML = [['Number', numbers, 1], ['Voice', data.voice, 2], ['Answers', answer, 3], ['Languages', languages, 3], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message', 3]].map(([label, value, target]) => `<button type="button" data-edit-step="${target}" title="Change ${label.toLowerCase()}"><span>${label}<em>Edit</em></span><strong>${escapeHtml(value)}</strong></button>`).join('');
+    // Each card opens its settings right here, under the test call, so the owner can change and test again.
+    $('#phone-review').innerHTML = [['Number', numbers, 1], ['Voice', data.voice, 2], ['Answers', answer, 3], ['Languages', languages, 3], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message', 'calls']].map(([label, value, target]) => `<button type="button" data-edit-step="${target}" title="Change ${label.toLowerCase()}"><span>${label}<em>Edit</em></span><strong>${escapeHtml(value)}</strong></button>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
     const live = liveNumbers().length
       ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${liveNumbers().map(item => escapeHtml(item.e164)).join(', ')}</strong>.${data.number_mode === 'forward' ? '' : ' Call it from any phone to check.'}${canGetNumber() ? ` To add your ${escapeHtml(countryName(targetCountry()))} number, click <strong>${escapeHtml(getNumberLabel())}</strong> below.` : ''}</div>`
