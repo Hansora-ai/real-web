@@ -106,6 +106,34 @@
     root.querySelector('nav')?.prepend(mobile);
     renderSwitcher(businessId, preview);
     renderBottomBar(items, businessId, preview);
+    inboxBadge(businessId);
+  }
+
+  // A red number on every Inbox link: chats the AI handed to the team that nobody has answered yet
+  // (the same rule as the red chats in the inbox). Shown at once from the last count, then checked every minute.
+  function inboxBadge(businessId) {
+    if (!businessId || !/^[0-9a-f-]{36}$/i.test(businessId) || api?.isLocalPreview || !api?.db) return;
+    const key = `hansora_inbox_waiting:${businessId}`;
+    const baseTitle = document.title.replace(/^\(\d+\+?\) /, '');
+    const set = count => {
+      const n = Math.max(0, Number(count) || 0);
+      try { sessionStorage.setItem(key, String(n)); } catch (_) {}
+      document.querySelectorAll('a[href^="automation-inbox.html"]').forEach(link => {
+        let badge = link.querySelector('.auto-badge');
+        if (!n) { badge?.remove(); return; }
+        if (!badge) { badge = document.createElement('b'); badge.className = 'auto-badge'; link.appendChild(badge); }
+        badge.textContent = n > 99 ? '99+' : String(n);
+        badge.setAttribute('aria-label', `${n} chat${n === 1 ? '' : 's'} need you`);
+      });
+      document.title = n ? `(${n > 99 ? '99+' : n}) ${baseTitle}` : baseTitle;
+    };
+    const refresh = () => Promise.resolve(api.db.from('automation_conversations').select('id', { count: 'exact', head: true }).eq('business_id', businessId)
+      .or('status.eq.needs_attention,and(ai_enabled.eq.false,status.not.in.(human_handling,resolved,archived))'))
+      .then(result => { if (!result?.error && typeof result.count === 'number') set(result.count); }).catch(() => {});
+    window.HansoraInboxBadge = { set, refresh };
+    try { const saved = sessionStorage.getItem(key); if (saved) set(saved); } catch (_) {}
+    // The inbox page counts its own list; other pages ask the database.
+    if (page !== 'inbox') { refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 60000); }
   }
 
   // Which AI employee you are working on, and a quick way to change it: same page, other employee.
@@ -231,6 +259,7 @@
       else if (!businessId) businessId = first.id;
       try { localStorage.setItem('hansora_automation_has_employees', hasEmployees ? '1' : '0'); if (!hasEmployees) localStorage.removeItem('hansora_automation_business'); } catch (_) {}
       apply();
+      if (businessId) inboxBadge(businessId);
     }).catch(() => {});
   }
 

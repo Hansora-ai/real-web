@@ -1,3 +1,4 @@
+import { sendWaitingNote } from '../../lib/automation/waiting-note.mjs';
 import { isKeptAvatar, keepAvatar } from '../../lib/automation/avatars.mjs';
 import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
@@ -32,7 +33,7 @@ export async function handler(event) {
     const message = webhook.payload || {};
     const [, account] = await Promise.all([
       serviceUpdate('automation_webhook_events', `id=eq.${webhook.id}`, { status: 'processing', attempt_count: Number(webhook.attempt_count || 0) + 1, last_error: null }),
-      first(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&provider_resource_id=eq.${encodeURIComponent(String(message.business_connection_id))}&status=eq.active&select=*&limit=1`)
+      first(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&provider_resource_id=eq.${encodeURIComponent(String(message.business_connection_id))}&status=eq.active&select=*&order=updated_at.desc&limit=1`)
     ]);
     if (!account) throw new Error('telegram_account_not_connected');
     const connection = await first(`/rest/v1/automation_channel_connections?business_id=eq.${account.business_id}&channel_type=eq.telegram&select=*&limit=1`);
@@ -91,6 +92,7 @@ export async function handler(event) {
       await serviceUpdate('automation_messages', `id=eq.${inbound.id}`, { content: understood?.content || shown, metadata: { chat_id: chatId, media_pending: false, ...(media?.mediaPath ? { media_path: media.mediaPath, media_mime: media.mimeType } : {}) } }).catch(() => null);
       if (understood) await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: understood.content.slice(0, 1000) }).catch(() => null);
     }
+    if (!aiWillReply && connection?.status === 'connected') await sendWaitingNote({ businessId: account.business_id, conversation, settings, provider: 'telegram', send: text => sendTelegramText({ ...typingTarget, text }) });
     if (!aiWillReply || !String(aiText || '').trim()) { await markProcessed(webhook.id, account.business_id); return json(200, { ok: true, ai_skipped: true }); }
 
     const turn = { conversationId: conversation.id, occurredAt: inbound.occurred_at || occurredAt, createdAt: inbound.created_at, messageId: inbound.id };
