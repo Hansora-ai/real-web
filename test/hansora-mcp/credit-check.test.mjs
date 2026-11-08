@@ -1423,19 +1423,18 @@ test('a photo ChatGPT leaves out after Hansora switched the model is put back be
   assert.ok(!JSON.stringify(later.submitted[0].payload).includes(photo));
 });
 
-test('a low balance sees the lowest price for the video, not the expensive model, and always the hansora.co account line', async () => {
-  // The owner's case on 8 Nov: a 6-second nature video sent to Seedance 2.5 with 10 credits.
+test('a credit refusal shows the real price of the model that will be used, and always the hansora.co account line', async () => {
+  // The owner's case on 8 Nov: a 6-second video on Seedance 2.5 (the model of their last video) with 10 credits.
+  // The price shown is the one they will pay after adding credits, never a cheaper model's.
   const { result, submitted } = await callTool('create_generation', {
     model_id: 'seedance25', prompt: 'A nature video: mountains, meadows and a stream at sunrise', duration: 6, resolution: '720p'
   }, { credits: 1, rest: returningUser });
   assert.equal(submitted.length, 0);
   const value = result.structuredContent;
   assert.equal(value.credits_available, 10);
-  assert.deepEqual(value.options_within_balance, []);
-  assert.equal(value.lowest_price_video.model_id, 'grok-video');
-  assert.equal(value.lowest_price_video.credits, 18);
-  assert.match(value.next_step, /this video can be made from 18 Hansora credits \(Grok Video, duration 6, resolution 720p\) and their balance is 10 credits/);
-  assert.match(value.next_step, /do not mention the 228 credits of Seedance 2\.5/);
+  assert.equal(value.credits_required, 228);
+  assert.equal(value.lowest_price_video, undefined);
+  assert.match(value.next_step, /this request needs 228 Hansora credits and their balance is 10 credits/);
   assert.equal(value.account_url, 'https://hansora.co');
   assert.match(value.next_step, /"Your Hansora balance and account are at \[hansora\.co\]\(https:\/\/hansora\.co\)\."/);
   assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
@@ -1443,6 +1442,5 @@ test('a low balance sees the lowest price for the video, not the expensive model
   // A request that some option covers still ends with the account line.
   const covered = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A cat', duration: 30, resolution: '1080p' }, { credits: 3, rest: returningUser });
   assert.ok(covered.result.structuredContent.options_within_balance.length > 0);
-  assert.equal(covered.result.structuredContent.lowest_price_video, undefined);
   assert.match(covered.result.structuredContent.next_step, /Your Hansora balance and account are at \[hansora\.co\]/);
 });
