@@ -5088,12 +5088,65 @@
     setTimeout(finish, 10000);
   }
 
+  // Someone opened hansora.co from the account link ChatGPT shows when credits run out
+  // (?from=chatgpt_credits). Recorded once per visit, so we can count: stopped for credits
+  // in ChatGPT -> opened the link -> bought.
+  function recordChatgptCreditsLinkOpen() {
+    let params;
+    try { params = new URLSearchParams(location.search || ''); } catch (_) { return; }
+    const from = params.get('from');
+    if (!from || !/^chatgpt_[a-z_]{1,40}$/.test(from)) return;
+    const eventName = `${from}_link_opened`;
+    try {
+      params.delete('from');
+      const query = params.toString();
+      history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash || ''}`);
+    } catch (_) {}
+    try {
+      if (sessionStorage.getItem('hansora:' + eventName)) return;
+      sessionStorage.setItem('hansora:' + eventName, '1');
+    } catch (_) {}
+    const pagePath = location.pathname;
+    // Sign-in and the analytics consent mode load a moment after the page: try a few times.
+    function attempt(triesLeft) {
+      recordRegisteredClickEvent(eventName, { elementType: 'link', elementId: from, destination: pagePath })
+        .then(function (recorded) {
+          if (recorded) return;
+          const visitorId = analyticsVisitorId();
+          if (!visitorId) {
+            if (triesLeft > 0) setTimeout(function () { attempt(triesLeft - 1); }, 1500);
+            return;
+          }
+          fetch(`${SUPABASE_URL}/rest/v1/anonymous_click_events`, {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              visitor_id: visitorId,
+              session_id: analyticsSessionId(),
+              event_name: 'click',
+              element_type: 'link',
+              element_id: from,
+              element_label: eventName,
+              destination: pagePath,
+              page_path: pagePath.slice(0, 300),
+              device_type: window.matchMedia && window.matchMedia('(max-width: 900px)').matches ? 'mobile' : 'desktop',
+              consent_version: ANALYTICS_CONSENT_VERSION
+            })
+          }).catch(function () {});
+        })
+        .catch(function () {});
+    }
+    attempt(5);
+  }
+
   function startHeaderSession() {
     ensureSupabaseClient();
     exposeApi();
     loadSalesAgentWidget();
     bindEvents();
     bindGlobalClickTracking();
+    recordChatgptCreditsLinkOpen();
     bindCourseLessonFunnelTracking();
     preserveAffiliateRefAcrossPageLinks();
     authCallbackArrivalWrite = captureAuthCallbackArrival().catch(function (error) {
