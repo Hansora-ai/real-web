@@ -387,7 +387,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /13\. Sexual or NSFW requests: Hansora does not create them with any model\. Do not submit them\./);
   assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
   assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
-  assert.match(guide, /8\. Stay with the model\. .*also when Hansora started their first video on a model their free credits cover\. Keep using it and its resolution for the next simple videos without asking; for complex videos ask step 4 with it listed first\. Never move to a model that costs more on your own.*start only after they agree\./);
+  assert.match(guide, /8\. Stay with the model\. .*also when Hansora started their first video on a model their free credits cover\. Keep using it and its resolution for the next simple videos without asking \(except after Seedance 2\.5, Seedance 2\.0 or Kling 4\.0: then ask the step 3 question, once per conversation\); for complex videos ask step 4 with it listed first\. Never move to a model that costs more on your own.*start only after they agree\./);
   assert.ok(list.result.structuredContent.models.every((model) => !('video_selection_guide' in model)));
 
   const seedance = await callTool('get_model', { model_id: 'seedance25' }, { credits: 30 });
@@ -1421,4 +1421,35 @@ test('a photo ChatGPT leaves out after Hansora switched the model is put back be
   const later = await callTool('create_generation', { model_id: 'grok-video', prompt: 'Two foxes in a meadow', duration: 6, resolution: '720p' }, { credits: 3, rest: world({ started: [{ id: 'g1' }] }) });
   assert.equal(later.submitted.length, 1);
   assert.ok(!JSON.stringify(later.submitted[0].payload).includes(photo));
+});
+
+test('a credit refusal shows the real price of the model that will be used, and always the hansora.co account line', async () => {
+  // The owner's case on 8 Nov: a 6-second video on Seedance 2.5 (the model of their last video) with 10 credits.
+  // The price shown is the one they will pay after adding credits, never a cheaper model's.
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'seedance25', prompt: 'A nature video: mountains, meadows and a stream at sunrise', duration: 6, resolution: '720p'
+  }, { credits: 1, rest: returningUser });
+  assert.equal(submitted.length, 0);
+  const value = result.structuredContent;
+  assert.equal(value.credits_available, 10);
+  assert.equal(value.credits_required, 228);
+  assert.equal(value.lowest_price_video, undefined);
+  assert.match(value.next_step, /this request needs 228 Hansora credits and their balance is 10 credits/);
+  assert.equal(value.account_url, 'https://hansora.co');
+  assert.match(value.next_step, /"Your Hansora balance and account are at \[hansora\.co\]\(https:\/\/hansora\.co\)\."/);
+  assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
+
+  // A request that some option covers still ends with the account line.
+  const covered = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A cat', duration: 30, resolution: '1080p' }, { credits: 3, rest: returningUser });
+  assert.ok(covered.result.structuredContent.options_within_balance.length > 0);
+  assert.match(covered.result.structuredContent.next_step, /Your Hansora balance and account are at \[hansora\.co\]/);
+});
+
+test('a simple video after an expensive model asks once: same quality as the last video, or a cheaper model', async () => {
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.match(VIDEO_SELECTION_GUIDE, /Exception, a simple video after an expensive one: if the user's last video .* was made with Seedance 2\.5, Seedance 2\.0 or Kling 4\.0, do not generate directly\./);
+  assert.match(VIDEO_SELECTION_GUIDE, /1\) "Same quality as your last video": that model at the resolution of the last video \(first, the default\); 2\) "More affordable, great for a simple video like this": Grok Video, 720p/);
+  assert.match(VIDEO_SELECTION_GUIDE, /If the user answers vaguely \("ok", "go", "you choose"\), use option 1\./);
+  assert.match(VIDEO_SELECTION_GUIDE, /ask this only once per conversation/);
+  assert.match(VIDEO_SELECTION_GUIDE, /except after Seedance 2\.5, Seedance 2\.0 or Kling 4\.0: then ask the step 3 question, once per conversation/);
 });
