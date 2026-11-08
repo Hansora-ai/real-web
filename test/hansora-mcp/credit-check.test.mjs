@@ -1435,8 +1435,8 @@ test('a credit refusal shows the real price of the model that will be used, and 
   assert.equal(value.credits_required, 228);
   assert.equal(value.lowest_price_video, undefined);
   assert.match(value.next_step, /this request needs 228 Hansora credits and their balance is 10 credits/);
-  assert.equal(value.account_url, 'https://hansora.co');
-  assert.match(value.next_step, /"Your Hansora balance and account are at \[hansora\.co\]\(https:\/\/hansora\.co\)\."/);
+  assert.equal(value.account_url, 'https://hansora.co/?from=chatgpt_credits');
+  assert.ok(value.next_step.includes('"Your Hansora balance and account are at [hansora.co](https://hansora.co/?from=chatgpt_credits)."'));
   assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
 
   // A request that some option covers still ends with the account line.
