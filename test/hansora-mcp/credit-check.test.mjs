@@ -372,7 +372,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /If you are not sure, treat it as complex/);
   // One short question with plain choices, so users who know no model names can pick. The model of
   // the user's last video comes first, so "ok" keeps the price they already know.
-  assert.match(guide, /4\. Complex: first call get_account to see the balance and last_video \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with these options/);
+  assert.match(guide, /4\. Complex: first read the balance and last_video from the account \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with these options/);
   assert.match(guide, /If the balance covers none of the options, do not ask and do not show their prices/);
   assert.match(guide, /   - Same quality as your last video: .*it always comes first and is the default\.\n   - Our best, cinema quality: Seedance 2\.5, 720p\n   - High quality, lower price: Kling 4\.0, 720p\n   - Good quality, budget: Wan 3\.0, 720p\n/);
   assert.match(guide, /list it only once, first, as "Same quality as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, list Kling 4\.0 first as "Recommended: great quality, smooth motion", then Seedance 2\.5, then Wan 3\.0\./);
@@ -1468,4 +1468,22 @@ test('with too few credits after an expensive model, a simple request also hears
   assert.equal(seven.result.structuredContent.simple_video_option.settings.duration, 8);
   const grok = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A lake', duration: 10, resolution: '720p' }, { credits: 1, rest: returningUser });
   assert.equal(grok.result.structuredContent.simple_video_option, undefined);
+});
+
+test('fewer round trips: list_models brings the account, a Seedance/Kling quote brings the Grok price', async () => {
+  const list = await callTool('list_models', { category: 'video' }, { credits: 1 });
+  const value = list.result.structuredContent;
+  assert.equal(value.account.credits, 10);
+  assert.ok(value.video_selection_guide.includes('list_models (for video) includes the user\'s balance and last_video as "account"; use it and call get_account only when it is missing.'));
+  // Image lists stay as they were.
+  const images = await callTool('list_models', { category: 'image' }, { credits: 1 });
+  assert.equal('account' in images.result.structuredContent, false);
+
+  const seedance = await callTool('quote_generation', { model_id: 'seedance25', duration: 6, resolution: '720p' }, { credits: 1 });
+  assert.equal(seedance.result.structuredContent.credits, 228);
+  assert.deepEqual(seedance.result.structuredContent.simple_video_option, { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18 });
+  const grok = await callTool('quote_generation', { model_id: 'grok-video', duration: 6, resolution: '720p' }, { credits: 1 });
+  assert.equal(grok.result.structuredContent.simple_video_option, undefined);
+  const withVideo = await callTool('quote_generation', { model_id: 'seedance25', duration: 6, resolution: '720p', has_video_input: true, source_video_duration: 5 }, { credits: 1 });
+  assert.equal(withVideo.result.structuredContent.simple_video_option, undefined);
 });
