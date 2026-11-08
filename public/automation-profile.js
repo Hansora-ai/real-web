@@ -35,7 +35,7 @@
     else if (sb) { const { data } = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle(); stored = Number(data?.credits || 0); }
     const shown = stored * DISPLAY;
     $('#profile-balance').textContent = lightning(stored);
-    $('#profile-balance-note').textContent = `≈ ${fmt.format(Math.floor(shown))} AI replies or ${fmt.format(Math.floor(shown / 8))} phone minutes`;
+    $('#profile-balance-note').textContent = `≈ ${fmt.format(Math.floor(shown))} AI replies or ${fmt.format(Math.floor(shown / 9))} phone minutes`;
   }
   loadCredits().catch(() => {});
   setInterval(() => loadCredits().catch(() => {}), 15000);

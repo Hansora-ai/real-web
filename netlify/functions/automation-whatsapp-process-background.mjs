@@ -1,3 +1,4 @@
+import { sendWaitingNote } from '../../lib/automation/waiting-note.mjs';
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
@@ -83,7 +84,7 @@ export async function handler(event){
       await serviceUpdate('automation_messages',`id=eq.${inbound.id}`,{content:understood?.content||message.text,metadata:{phone_number_id:message.phoneNumberId,waba_id:message.wabaId,message_type:message.messageType,interactive_id:message.interactiveId||null,media_pending:false,...(media?.mediaPath?{media_path:media.mediaPath,media_mime:media.mimeType}:{})}}).catch(error=>console.warn('media message update failed',{message:error?.message}));
       if(understood)await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:understood.content.slice(0,1000)}).catch(()=>null);
     }
-    if(!aiWillReply){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
+    if(!aiWillReply){await sendWaitingNote({businessId:account.business_id,conversation,settings,provider:'whatsapp',send:text=>sendWhatsAppText({phoneNumberId:account.provider_resource_id,to:message.senderId,text,accessToken})});await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
     // One answer per turn (see lib/automation/turns.mjs).
     const turn={conversationId:conversation.id,occurredAt:inbound.occurred_at||occurredAt,createdAt:inbound.created_at,messageId:inbound.id};
     if(await hasNewerCustomerMessage(turn)){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}

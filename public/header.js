@@ -434,7 +434,8 @@
 
   const IMAGE_MENU_MODELS = [
     { label: 'Nano Banana 2.1', id: 'nano-banana-2-1', icon: 'N2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Fast image edits' },
-    { label: 'GPT Image 2.5', id: 'gpt-image-2-5', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
+    { label: 'GPT Image 2.6', id: 'gpt-image-2-6', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
+    { label: 'GPT Image 2.5', id: 'gpt-image-2-5', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'OpenAI image model' },
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
     { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Fast image edits' },
     { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', icon: 'NL', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Low-cost 1K image edits' },

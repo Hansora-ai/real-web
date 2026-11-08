@@ -178,6 +178,7 @@
     ];
     const MODEL_IMAGE_BASE = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE';
     const MODEL_IMAGE_URLS = {
+      'gpt-image-2-6': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%285%29.jpg',
       'gpt-image-2-5': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%285%29.jpg',
       'seedance25': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg',
       'wan-3': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%287%29.jpg',
@@ -243,7 +244,8 @@
     const LOGO = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/';
     const IMAGE_MODELS = fromHeaderItems([
       { label: 'Nano Banana 2.1', id: 'nano-banana-2-1', logo: 13, note: 'Պատկերների արագ խմբագրում' },
-      { label: 'GPT Image 2.5', id: 'gpt-image-2-5', logo: 2, note: 'Պատկերների նորագույն գեներացում' },
+      { label: 'GPT Image 2.6', id: 'gpt-image-2-6', logo: 2, note: 'OpenAI-ի նորագույն պատկերային մոդելը' },
+      { label: 'GPT Image 2.5', id: 'gpt-image-2-5', logo: 2, note: 'OpenAI-ի պատկերների մոդել' },
       { label: 'GPT Image 2', id: 'gpt-image-2', logo: 2, note: 'Պատկերների նորագույն գեներացում' },
       { label: 'Nano Banana 2', id: 'nano-banana-2', logo: 13, note: 'Պատկերների արագ խմբագրում' },
       { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', logo: 13, note: 'Մատչելի 1K պատկերների խմբագրում' },
@@ -305,7 +307,7 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation', logo: 20, note: 'Ստեղծել երաժշտական թրեքեր' }
     ], 'audio', 9);
 
-    const MX_TAGS = { 'seedance25': 'TOP', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-5': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+    const MX_TAGS = { 'seedance25': 'TOP', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
 
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';

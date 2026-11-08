@@ -66,8 +66,8 @@ body.auto-sidebar-collapsed [data-automation-header]{margin-left:-64px}
 /* Account area shared with the Hansora Creative header (login window, credits, photo). */
 body[data-automation-page]{padding-top:0!important}
 .auto-account{display:inline-flex;align-items:center;gap:8px;margin-left:8px}
-.auto-header nav .auto-auth-link{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--border-2,rgba(255,255,255,.12));border-radius:8px;background:none;color:var(--text,#f5f5f6);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
-.auto-header nav .auto-auth-link:hover{background:var(--surface-2,rgba(255,255,255,.05))}
+.auto-header .auto-auth-link{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--border-2,rgba(255,255,255,.12));border-radius:8px;background:none;color:var(--text,#f5f5f6);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.auto-header .auto-auth-link:hover{background:var(--surface-2,rgba(255,255,255,.05))}
 .auto-credits{align-items:center;height:30px;padding:0 10px;border:1px solid var(--border-2,rgba(255,255,255,.12));border-radius:999px;color:var(--text,#f5f5f6);font-size:12.5px;font-weight:600;white-space:nowrap}
 .auto-avatar{align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:1px solid var(--border-2,rgba(255,255,255,.14));border-radius:50%;background:var(--surface-2,#1a1b1f);overflow:hidden;cursor:pointer}
 .auto-avatar img{width:100%;height:100%;object-fit:cover;display:block}
@@ -76,6 +76,18 @@ body[data-automation-page]{padding-top:0!important}
 .auto-user-menu a,.auto-user-menu button{display:block;padding:9px 11px;border:0;border-radius:8px;background:none;color:var(--text,#f5f5f6);font:inherit;font-size:13.5px;text-align:left;text-decoration:none;cursor:pointer}
 .auto-user-menu a:hover,.auto-user-menu button:hover{background:var(--surface-2,rgba(255,255,255,.06))}
 @media(max-width:860px){.auto-account{margin:8px 0 0}.auto-user-menu{top:64px;right:12px}}
+/* Phones: credits and photo sit in the header next to the light/dark switch on every page. */
+@media(max-width:760px){
+  .auto-header-tools .auto-account{display:inline-flex;margin:0 0 0 4px;gap:6px}
+  .auto-header-tools .auto-credits{height:30px;padding:0 9px}
+  .auto-header{gap:10px}.auto-brand{min-width:0;flex-shrink:1;overflow:hidden}
+  /* The landing page keeps its light/dark switch in the header even with the bottom bar. */
+  body[data-automation-page="landing"].has-auto-bottom-nav .auto-header-tools .auto-theme{display:grid}
+  body[data-automation-page="landing"].has-auto-bottom-nav .auto-menu-toggle{display:block}
+  /* No empty pill while the credits are still loading. */
+  .auto-credits:empty{display:none!important}
+}
+@media(max-width:430px){.auto-brand small,.auto-brand i{display:none}}
 
 /* "Hansora Creative" stands out so people can always find their way back. */
 .auto-header .auto-back{display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;border:1px solid transparent;background:linear-gradient(var(--bg,#08090b),var(--bg,#08090b)) padding-box,linear-gradient(120deg,#8b5cf6,#4f9cff 55%,#22d3ee) border-box;color:var(--text,#f5f5f6);font-weight:600}
@@ -130,3 +142,8 @@ body.auto-sidebar-collapsed .auto-sidebar .auto-switch-text,body.auto-sidebar-co
 body.auto-sidebar-collapsed .auto-sidebar .auto-switch-button{justify-content:center;padding:7px 0}
 body.auto-sidebar-collapsed .auto-sidebar .auto-switch-menu{left:0;right:auto;width:240px}
 .auto-mobile-sections .auto-switch{margin:0 0 8px}
+/* Inbox: red number of chats waiting for the team */
+.auto-side-link,.auto-tab{position:relative}
+.auto-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:auto;padding:0 5px;border-radius:9px;background:#ef4444;color:#fff;font:700 11px/1 inherit;font-style:normal}
+body.auto-sidebar-collapsed .auto-side-link .auto-badge{position:absolute;left:24px;top:4px;min-width:16px;height:16px;padding:0 4px;font-size:10px}
+.auto-tab .auto-badge{position:absolute;top:6px;left:calc(50% + 4px);margin:0;min-width:17px;height:17px;font-size:10.5px}

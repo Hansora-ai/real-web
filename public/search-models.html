@@ -3502,6 +3502,47 @@
       object-fit:cover !important;
       display:block !important;
     }
+    /* Frame pictures (first/last frame, every model): fill the whole box and show the whole picture, never a small or cropped square. */
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoFirstFrameThumb:has(img),
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoLastFrameThumb:has(img){
+      padding:0 !important;
+      overflow:hidden !important;
+      display:flex !important;
+      align-items:stretch !important;
+      justify-content:stretch !important;
+    }
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoFirstFrameThumb > div,
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoLastFrameThumb > div{
+      width:100% !important;
+      height:100% !important;
+      flex:1 1 100% !important;
+    }
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoFirstFrameThumb .relative,
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoLastFrameThumb .relative,
+    html body.workspace-redesign #seedanceFirstThumb .relative,
+    html body.workspace-redesign #seedanceLastThumb .relative,
+    html body.workspace-redesign #kling30FirstThumb .relative,
+    html body.workspace-redesign #kling30LastThumb .relative,
+    html body.workspace-redesign #startFrameThumb .relative,
+    html body.workspace-redesign #lastFrameThumb .relative{
+      width:100% !important;
+      height:100% !important;
+      border:0 !important;
+      background:#07080d !important;
+    }
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoFirstFrameThumb img,
+    html body.workspace-redesign #videoRefsUploadWrap[class] #videoLastFrameThumb img,
+    html body.workspace-redesign #seedanceFirstThumb img,
+    html body.workspace-redesign #seedanceLastThumb img,
+    html body.workspace-redesign #kling30FirstThumb img,
+    html body.workspace-redesign #kling30LastThumb img,
+    html body.workspace-redesign #startFrameThumb img,
+    html body.workspace-redesign #lastFrameThumb img{
+      width:100% !important;
+      height:100% !important;
+      object-fit:contain !important;
+      display:block !important;
+    }
     body.workspace-redesign .upload-drop-card.drag-over{
       border-color:rgba(129,140,248,.95) !important;
       background:rgba(99,102,241,.16) !important;
@@ -7243,6 +7284,24 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 1.5
       },
       {
+        id: 'gpt-image-2-6',
+        name: 'GPT Image 2.6',
+        emoji: '🧠',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'GPT Image 2.6 Sunburst — the newest OpenAI image model, always at high quality, for text-to-image and image editing.',
+        endpoint: '/.netlify/functions/run-gpt-image-2-6',
+        needsImage: false,
+        maxFiles: 16,
+        uploadMaxMB: 10,
+        aspectOptions: ['auto', '1:1', '3:2', '2:3', '4:3', '3:4', '16:9', '9:16', '21:9'],
+        defaultAspect: 'auto',
+        durations: null,
+        costLabel: '4⚡ per job',
+        minCredits: 0.4,
+        isNew: true
+      },
+      {
         id: 'gpt-image-2-5',
         name: 'GPT Image 2.5',
         emoji: '🧠',
@@ -7879,8 +7938,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let currentVeoVariant = 'fast'; // 'lite' | 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
-	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
-	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
+	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
+	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
     const VIDEO_MODEL_ORDER = ['seedance25', 'kling40', 'henshin', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
@@ -8031,6 +8090,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function getModelLogoText(model) {
       const id = String(model?.id || '');
+	      if (id === 'gpt-image-2-6') return 'G26';
 	      if (id === 'gpt-image-2-5') return 'G25';
 	      if (id === 'gpt-image-2') return 'G2';
 	      if (id.includes('gpt')) return 'AI';
@@ -8410,6 +8470,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let currentResolution = '1K';
     let currentSoraTier = 'base';
     let currentWanTier = 'normal';
+    // GPT Image 2.6: how much the model plans before drawing (same size and price at every level).
+    let currentGptComplexity = 'medium';
     let currentMotionModel = 'kling26';
     let currentSeedanceVariant = 'standard';
     let seedanceFirstFrameFile = null;
@@ -9173,6 +9235,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        'nano-banana-2.1': 'nano-banana-2-1',
           'seedream-5.0-flash': 'seedream-5-flash',
           'nanobanana2lite': 'nano-banana-2-lite',
+	        'gpt-image-2.6': 'gpt-image-2-6',
+	        'gptimage26': 'gpt-image-2-6',
 	        'gpt-image-2.5': 'gpt-image-2-5',
 	        'gptimage25': 'gpt-image-2-5',
 	        'seedream-5-pro': 'seedream-5-pro',
@@ -9386,6 +9450,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (model.id === 'nano-banana-2-1') return currentResolution === '4K' ? 0.7 : (currentResolution === '2K' ? 0.5 : 0.3);
           if (model.id === 'seedream-5-flash') return 0.3;
           if (model.id === 'nano-banana-2-lite') return 0.3;
+	      if (model.id === 'gpt-image-2-6') return 0.4;
 	      if (model.id === 'gpt-image-2' || model.id === 'gpt-image-2-5') return currentResolution === '4K' ? 1.2 : (currentResolution === '2K' ? 0.7 : 0.5);
 	      if (model.id === 'seedream-5-pro') return currentResolution === '2K' ? 1 : 0.5;
       if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
@@ -9981,6 +10046,31 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           };
           veoQualityPills.appendChild(makeBtn('Normal', 'normal'));
           veoQualityPills.appendChild(makeBtn('Pro', 'pro'));
+        }
+      } else if (currentModel.id === 'gpt-image-2-6') {
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Detail';
+        currentWanTier = 'normal';
+        currentVeoFamily = null;
+        currentVeoVariant = 'fast';
+        if (!['low', 'medium', 'high'].includes(currentGptComplexity)) currentGptComplexity = 'medium';
+        if (veoQualityBlock) veoQualityBlock.classList.remove('hidden');
+        if (veoQualityPills) {
+          veoQualityPills.innerHTML = '';
+          [['Simple', 'low'], ['Balanced', 'medium'], ['Complex', 'high']].forEach(([label, level]) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (level === currentGptComplexity) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              currentGptComplexity = level;
+              Array.from(veoQualityPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+              updateCostDisplay();
+              updateRunButtonLabel();
+            });
+            veoQualityPills.appendChild(b);
+          });
         }
       } else if (currentModel.id === 'seedance20') {
         if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
@@ -12751,6 +12841,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), quality: (resolution === '2K' ? 'high' : 'basic'), run_id: runId };
         case 'gpt-image-1':
           return { prompt, aspect_ratio: aspect || '1:1', image_urls: urls && urls.length ? urls : undefined, run_id: runId };
+        case 'gpt-image-2-6':
+          return { urls, prompt: prompt || '.', format: 'png', aspect_ratio: aspect || 'auto', size: aspect || 'auto', complexity: currentGptComplexity || 'medium', run_id: runId };
         case 'gpt-image-2':
         case 'gpt-image-2-5':
           return { urls, prompt: prompt || '.', format: 'png', aspect_ratio: aspect || 'auto', size: aspect || 'auto', resolution: (resolution || '1K'), run_id: runId };
@@ -13840,6 +13932,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       const normalized = normalizePreviewModelToken(label);
       const compact = compactPreviewModelToken(label);
       const aliases = {
+        'gpt image 2.6': 'gpt-image-2-6',
+        'gptimage26': 'gpt-image-2-6',
         'gpt image 2.5': 'gpt-image-2-5',
         'gptimage25': 'gpt-image-2-5',
         'gptimage20': 'gpt-image-2',
@@ -14047,6 +14141,38 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           updateRunButtonLabel();
           return true;
         }
+        if (currentModel.id === 'gemini-omni-flash-1-1' || ['wan27', 'wan30', 'happyhorse'].includes(currentModel.specificUpload)) {
+          // The picture becomes the video's first frame, so the video starts from it.
+          videoFirstFrameFile = files[0] || null;
+          renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {
+            videoFirstFrameFile = null;
+            const input = document.getElementById('videoFirstFrameInput');
+            if (input) input.value = '';
+            clearVideoLastFrame();
+            syncVideoRefsInputLocks();
+            updateCostDisplay();
+            updateRunButtonLabel();
+          });
+          syncVideoRefsInputLocks();
+          updateCostDisplay();
+          updateRunButtonLabel();
+          return true;
+        }
+        if (currentModel.specificUpload === 'geminiOmni') {
+          videoRefImageFiles = files.slice(0, 1);
+          renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
+            videoRefImageFiles.splice(index, 1);
+            const input = document.getElementById('videoRefImagesInput');
+            if (input) input.value = '';
+            syncVideoRefsInputLocks();
+            updateCostDisplay();
+            updateRunButtonLabel();
+          });
+          syncVideoRefsInputLocks();
+          updateCostDisplay();
+          updateRunButtonLabel();
+          return true;
+        }
         if (currentModel.id === 'kling30') {
           kling30FirstFrameFile = files[0] || null;
           renderSingleThumb(kling30FirstFrameFile, document.getElementById('kling30FirstThumb'), () => {
@@ -14227,7 +14353,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (!imageUrl) throw new Error('No image URL found for Create Video.');
       if (typeof setStatus === 'function') setStatus('Preparing image for video...', '');
       const file = await fileFromPreviewUrl(imageUrl, 'hansora-video-reference.png', 'image/png');
-      applyPreviewFilesToCurrentModel([file], 'video-source');
+      if (!applyPreviewFilesToCurrentModel([file], 'video-source')) throw new Error('Could not add the image to the video model. Please upload it manually.');
       updateModelButtonLabels();
       updateCostDisplay();
       updateRunButtonLabel();

@@ -44,6 +44,16 @@
     link.href = `automation-setup.html?id=${encodeURIComponent(id)}`;
     banner.append(link);
     workspace.prepend(banner);
+    // The call and chat tests need the business information a comments-only account has not given yet.
+    const talk = document.querySelector('#voice-talk'), chat = document.querySelector('#live-test');
+    if (talk) {
+      const card = document.createElement('section');
+      card.className = 'ui-card';
+      card.style.cssText = 'padding:22px;text-align:center';
+      card.innerHTML = `<strong style="display:block;font-size:16px">Test calls and chats</strong><p class="ui-hint" style="margin:8px 0 14px">Your AI employee needs your business information first, so it can answer like your team.</p><a class="ui-btn primary" href="automation-setup.html?id=${encodeURIComponent(id)}">Create my AI employee</a>`;
+      talk.replaceWith(card);
+    }
+    chat?.remove();
   }
 
   // The connected Instagram photo and @name replace the letter, so each AI employee is easy to recognise.
@@ -230,11 +240,14 @@
       instagram_dm: ['Instagram DMs', 'Answer private messages with your business knowledge', 'instagram', 'instagram'],
       instagram_comments: ['Instagram comments', 'Reply to comments and follow up in DMs', 'comment', 'instagram'],
       whatsapp: ['WhatsApp', 'Handle customer chats on your business number', 'whatsapp', 'whatsapp'],
+      // (TikTok: comment replies work now; direct messages wait for TikTok's approval.)
       phone: ['Phone calls', 'Answer calls with a natural voice', 'phone', 'phone'],
       telegram: ['Telegram', 'Answer chats on your Telegram account (Telegram Business)', 'telegram', 'telegram'],
       messenger: ['Messenger', 'Answer Facebook Messenger chats of your Page', 'messenger', 'messenger'],
-      tiktok: ['TikTok', 'Answer direct messages on your TikTok Business account', 'tiktok', 'tiktok']
+      tiktok: ['TikTok', 'Reply to comments now. Direct messages coming soon', 'tiktok', 'tiktok']
     };
+    // Channels that are not open yet are shown as "Coming soon" and cannot be opened.
+    const COMING_SOON = new Set(['whatsapp', 'messenger']);
     const businessQuery = `business=${encodeURIComponent(business.id)}${previewLinks ? '&preview=1' : ''}`;
     const destinations = {
       instagram_dm: `automation-connect.html?channel=instagram&${businessQuery}`,
@@ -243,20 +256,22 @@
       phone: `automation-phone.html?${businessQuery}`,
       telegram: `automation-connect.html?channel=telegram&${businessQuery}`,
       messenger: `automation-connect.html?channel=messenger&${businessQuery}`,
-      tiktok: `automation-connect.html?channel=tiktok&${businessQuery}`
+      tiktok: `automation-tiktok-comments.html?${businessQuery}`
     };
     const channels = (business.automation_channel_connections || []).sort((a, b) => a.setup_order - b.setup_order);
     $('#channel-stack').innerHTML = channels.map(channel => {
       const [title, description, iconName, tone] = meta[channel.channel_type] || [channel.channel_type, '', 'message', ''];
-      const badge = channel.status === 'connected' ? '<span class="ui-badge dot green live">Live</span>'
+      if (COMING_SOON.has(channel.channel_type)) return `<div class="ui-row" aria-disabled="true" style="opacity:.6;cursor:default"><span class="ui-icon-tile ${tone}">${ui.icon(iconName)}</span><span class="ui-row-main"><span class="ui-row-title">${escapeHtml(title)}</span><span class="ui-row-sub">${escapeHtml(description)}</span></span><span class="ui-badge amber">Coming soon</span></div>`;
+      const badge = channel.channel_type === 'tiktok' ? (channel.status === 'connected' ? '<span class="ui-badge dot green live">Comments live</span>' : '<span class="ui-badge">Set up comments</span>')
+        : channel.status === 'connected' ? '<span class="ui-badge dot green live">Live</span>'
         : channel.status === 'connecting' ? '<span class="ui-badge dot amber">Finish setup</span>'
         : channel.status === 'error' ? '<span class="ui-badge dot red">Needs attention</span>'
         : `<span class="ui-badge">${channel.channel_type === 'instagram_comments' ? 'Build flow' : 'Connect'}</span>`;
       return `<a class="ui-row" href="${destinations[channel.channel_type] || '#'}"><span class="ui-icon-tile ${tone}">${ui.icon(iconName)}</span><span class="ui-row-main"><span class="ui-row-title">${escapeHtml(title)}</span><span class="ui-row-sub">${escapeHtml(description)}</span></span>${badge}<span class="ui-chevron">${ui.icon('chevron')}</span></a>`;
     }).join('');
-    const connected = channels.filter(channel => channel.status === 'connected').length;
+    const connected = channels.filter(channel => channel.status === 'connected' && !COMING_SOON.has(channel.channel_type)).length;
     const count = $('#channel-count');
-    count.textContent = `${connected} of ${channels.length || 6} live`;
+    count.textContent = `${connected} of ${channels.filter(channel => !COMING_SOON.has(channel.channel_type)).length || 5} live`;
     count.classList.toggle('green', connected > 0);
   }
 
