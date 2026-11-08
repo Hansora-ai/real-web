@@ -1453,3 +1453,19 @@ test('a simple video after an expensive model asks once: same quality as the las
   assert.match(VIDEO_SELECTION_GUIDE, /ask this only once per conversation/);
   assert.match(VIDEO_SELECTION_GUIDE, /except after Seedance 2\.5, Seedance 2\.0 or Kling 4\.0: then ask the step 3 question, once per conversation/);
 });
+
+test('with too few credits after an expensive model, a simple request also hears the Grok price', async () => {
+  // The owner's test on 8 Nov: a 6-second cosmos documentary, last video Seedance 2.5, 10 credits.
+  const { result } = await callTool('create_generation', { model_id: 'seedance25', prompt: 'A 6 second documentary about the cosmos', duration: 6, resolution: '720p' }, { credits: 1, rest: returningUser });
+  const value = result.structuredContent;
+  assert.equal(value.credits_required, 228);
+  assert.deepEqual(value.simple_video_option, { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18 });
+  assert.match(value.next_step, /a simple video like this can also be made with Grok Video, 720p, for 18 credits, while Seedance 2\.5 matches the quality of their last video\. Do not start either one\./);
+  assert.ok(value.next_step.includes('hansora.co/?from=chatgpt_credits'));
+  assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
+  // Odd lengths round up to Grok's even lengths; cheap models get no extra line.
+  const seven = await callTool('create_generation', { model_id: 'kling40', prompt: 'A lake', duration: 7, resolution: '720p' }, { credits: 1, rest: returningUser });
+  assert.equal(seven.result.structuredContent.simple_video_option.settings.duration, 8);
+  const grok = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A lake', duration: 10, resolution: '720p' }, { credits: 1, rest: returningUser });
+  assert.equal(grok.result.structuredContent.simple_video_option, undefined);
+});
