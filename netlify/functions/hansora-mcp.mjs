@@ -16,7 +16,7 @@ import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { useSavedFiles } from '../../lib/hansora-mcp/own-results.mjs';
 import { photoCount, recordPendingPhotos, recordPendingVideo, recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
-import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, simpleVideoOption, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -870,11 +870,21 @@ export function createHansoraServer(ctx) {
     }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ category, include_unavailable }) => {
-    const unavailable = await unavailableModels();
+    // For video, the balance and last video come along, so ChatGPT needs no separate get_account call
+    // (fewer round trips). A slow or failed lookup just leaves "account" out.
+    const wantsAccount = !category || category === 'video';
+    const [unavailable, account] = await Promise.all([
+      unavailableModels(),
+      wantsAccount ? Promise.race([
+        Promise.all([getAccount(userId), getLastVideo(userId).catch(() => null)])
+          .then(([found, lastVideo]) => accountSummary(found, lastVideoModel(lastVideo))).catch(() => null),
+        new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+      ]) : null
+    ]);
     const models = listModels({ category, includeUnavailable: include_unavailable }).map((model) => withHealth(model, unavailable));
     const listed = models.map(({ video_selection_guide: _guide, ...model }) => model);
     const hasVideo = listed.some((model) => model.category === 'video');
-    return jsonText({ ...(hasVideo ? { video_selection_guide: VIDEO_SELECTION_GUIDE } : {}), models: listed, count: listed.length });
+    return jsonText({ ...(hasVideo ? { video_selection_guide: VIDEO_SELECTION_GUIDE } : {}), ...(hasVideo && account ? { account } : {}), models: listed, count: listed.length });
   });
 
   server.registerTool('get_model', {
@@ -916,6 +926,9 @@ export function createHansoraServer(ctx) {
       }
       const price = quote(model_id, options);
       const value = publicQuote(price);
+      // The cheaper option of video_selection_guide step 3 in the same answer, so no second quote is needed.
+      const simple = getModel(model_id) && !options.has_video_input ? simpleVideoOption(getModel(model_id), options) : null;
+      if (simple) value.simple_video_option = simple;
       // ChatGPT sometimes quotes before reading the balance and then shows prices the user cannot pay.
       // A failed balance lookup just leaves the quote as it is.
       if (getModel(model_id)?.category === 'video') {
