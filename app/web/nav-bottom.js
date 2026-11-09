@@ -85,7 +85,7 @@
         <a href="/upscale.html">Image upscale</a>
         <a href="/expand.html?mode=angles">Full angles</a>
         <a href="/expand.html?mode=expand">Expand</a>
-        <a href="/expand.html?mode=face-swap">Face swap</a>
+        <a href="/expand.html?mode=face-swap">Face edit</a>
         <a href="/character.html">Character</a>
         <a href="/upscale.html?mode=video">Video upscale</a>
         <a href="/lipsync.html">Lipsync Avatar</a>
