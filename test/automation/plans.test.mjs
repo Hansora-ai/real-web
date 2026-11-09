@@ -15,10 +15,15 @@ test('Pay as you go: 1.2⚡ per reply, 2⚡ for a photo or video, 1⚡ per comme
 test('Monthly plans: $1 = 100⚡ and every action is cheaper on bigger plans', () => {
   for (const plan of Object.values(AUTOMATION_PLANS)) assert.equal(plan.credits, plan.price * 10);
   assert.deepEqual(pricesForPlan('automation_starter_monthly').aiReply, 0.1);
+  const lite = pricesForPlan('automation_lite_monthly');
+  assert.deepEqual([lite.aiReply, lite.commentRun, lite.voiceMinute], [0.1, 0.1, 0.9]);
+  const starter = pricesForPlan('automation_starter_monthly');
+  assert.deepEqual([starter.commentRun, starter.voiceMinute], [0.08, 0.8]);
+  assert.equal(pricesForPlan('automation_growth_monthly').aiReply, 0.09);
   assert.deepEqual(pricesForPlan('automation_growth_monthly').commentRun, 0.05);
   const scale = pricesForPlan('automation_scale_monthly');
   assert.deepEqual([scale.aiReply, scale.commentRun, scale.voiceMinute, scale.mediaReply, scale.testReply], [0.08, 0.03, 0.7, 0.2, 0.08]);
-  assert.equal(pricesForPlan('automation_business_monthly').aiReply, 0.09);
+  assert.equal(pricesForPlan('automation_business_monthly').aiReply, 0.08);
 });
 
 test('A plan counts only while active and paid (one day of grace for a late renewal)', () => {
