@@ -414,6 +414,14 @@
       callback.searchParams.set('mcp_return_to', mcpReturn);
       return callback.href;
     }
+    // Buy clicked while logged out on a pricing page: come back there so checkout opens (pricing*.html).
+    try {
+      const pendingBuy = JSON.parse(localStorage.getItem('hansora:pricing-buy-return') || 'null');
+      const buyPath = String(pendingBuy && pendingBuy.path || '');
+      if (Date.now() - Number(pendingBuy && pendingBuy.createdAt || 0) < 15 * 60 * 1000 && /^\/pricing(?:_ru|_arm)?(?:\.html)?(?:\?[^\s#]*)?$/.test(buyPath)) {
+        return new URL(buyPath, location.origin).href;
+      }
+    } catch (_) {}
     const target = localizedHref('/index.html');
     try { return new URL(target, location.origin).href; } catch (_) { return `${location.origin}${target}`; }
   }
@@ -4922,6 +4930,17 @@
       window.location.replace(pendingMcpReturn);
       return profile;
     }
+    // Buy clicked while logged out on a pricing page, and Google brought the user to another page: go back so
+    // checkout opens there (the pricing page reads and clears the saved package).
+    try {
+      const pendingBuy = JSON.parse(localStorage.getItem('hansora:pricing-buy-return') || 'null');
+      const buyPath = String(pendingBuy && pendingBuy.path || '');
+      const onPricing = /^\/pricing(?:_ru|_arm)?(?:\.html)?$/.test(location.pathname);
+      if (!onPricing && Date.now() - Number(pendingBuy && pendingBuy.createdAt || 0) < 15 * 60 * 1000 && /^\/pricing(?:_ru|_arm)?(?:\.html)?(?:\?[^\s#]*)?$/.test(buyPath)) {
+        window.location.replace(buyPath);
+        return profile;
+      }
+    } catch (_) {}
     const newAccountNeedsLanguage = !registrationLanguageChoiceIsCompleted(user) && (
       profile.__hansoraNewSignup || isRecentlyCreatedAccount(user)
     );
