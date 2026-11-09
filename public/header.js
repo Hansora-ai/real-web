@@ -141,7 +141,7 @@
     en: {
       home: 'HANSORA AI home', primaryNav: 'Primary navigation', image: 'Image', imageMenu: 'Image tools and models', imageSection: 'Image models and tools',
       video: 'Video', videoMenu: 'Video models', features: 'Features', featureMenu: 'Feature tools', imageTools: 'Image tools', videoAudioTools: 'Video and audio tools',
-      audio: 'Audio', audioTools: 'Audio tools', trend: 'Trend', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT Plugin', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
+      audio: 'Audio', audioTools: 'Audio tools', trend: 'Trend', automation: 'Automation', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT Plugin', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
       startCreating: 'Start creating', profile: 'Profile', history: 'History', credits: 'Credits', aiCourse: 'AI Course', logout: 'Logout', language: 'Language',
       closeCourse: 'Close course selection', courseEyebrow: 'Hansora AI Course', courseTitle: 'Choose your course language', courseIntro: 'Select the language in which you would like to study.',
       closeLanguage: 'Close language selection', languageEyebrow: 'Hansora language', languageTitle: 'Choose website language', languageIntro: 'Select the language for this page and every Hansora menu and popup.', current: 'Current',
@@ -156,7 +156,7 @@
     hy: {
       home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
       video: 'Տեսանյութ', videoMenu: 'Տեսանյութի մոդելներ', features: 'Գործիքներ', featureMenu: 'Լրացուցիչ գործիքներ', imageTools: 'Պատկերի գործիքներ', videoAudioTools: 'Տեսանյութի և ձայնի գործիքներ',
-      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', trend: 'Թրենդ', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT պլագին', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
+      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', trend: 'Թրենդ', automation: 'Ավտոմատացում', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT պլագին', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
       startCreating: 'Սկսել ստեղծել', profile: 'Պրոֆիլ', history: 'Պատմություն', credits: 'Կրեդիտներ', aiCourse: 'AI դասընթաց', logout: 'Դուրս գալ', language: 'Լեզու',
       closeCourse: 'Փակել դասընթացի լեզվի ընտրությունը', courseEyebrow: 'Hansora AI դասընթաց', courseTitle: 'Ընտրեք դասընթացի լեզուն', courseIntro: 'Ընտրեք, թե որ լեզվով եք ցանկանում սովորել։',
       closeLanguage: 'Փակել լեզվի ընտրությունը', languageEyebrow: 'Hansora-ի լեզու', languageTitle: 'Ընտրեք կայքի լեզուն', languageIntro: 'Ընտրեք այս էջի, Hansora-ի ընտրացանկերի և պատուհանների լեզուն։', current: 'Ընտրված',
@@ -171,7 +171,7 @@
     ru: {
       home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
       video: 'Видео', videoMenu: 'Видеомодели', features: 'Инструменты', featureMenu: 'Дополнительные инструменты', imageTools: 'Инструменты для изображений', videoAudioTools: 'Инструменты для видео и аудио',
-      audio: 'Аудио', audioTools: 'Аудиоинструменты', trend: 'Тренды', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'Плагин ChatGPT', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
+      audio: 'Аудио', audioTools: 'Аудиоинструменты', trend: 'Тренды', automation: 'Автоматизация', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'Плагин ChatGPT', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
       startCreating: 'Начать создавать', profile: 'Профиль', history: 'История', credits: 'Кредиты', aiCourse: 'AI-курс', logout: 'Выйти', language: 'Язык',
       closeCourse: 'Закрыть выбор языка курса', courseEyebrow: 'AI-курс Hansora', courseTitle: 'Выберите язык курса', courseIntro: 'Выберите язык, на котором хотите проходить обучение.',
       closeLanguage: 'Закрыть выбор языка', languageEyebrow: 'Язык Hansora', languageTitle: 'Выберите язык сайта', languageIntro: 'Выберите язык этой страницы, меню и всех окон Hansora.', current: 'Выбрано',
@@ -2219,6 +2219,25 @@
       .site-header .btn-primary{ box-shadow:0 8px 26px rgba(99,102,241,.38), inset 0 1px 0 rgba(255,255,255,.25); transition:transform .18s ease, box-shadow .18s ease, filter .18s ease; }
       .site-header .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 12px 34px rgba(99,102,241,.5), inset 0 1px 0 rgba(255,255,255,.3); filter:brightness(1.06); }
       .nav-links .hansora-nav-henshin{ gap:6px; }
+      /* Automation button: animated gradient ring (GPU-only transform), hidden on phones where the menu has it. */
+      .hansora-automation-btn{ position:relative; isolation:isolate; display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 14px 0 6px; border-radius:999px; color:#fff; text-decoration:none; font-weight:800; font-size:.86rem; white-space:nowrap; overflow:hidden; box-shadow:0 6px 22px rgba(139,92,246,.28); transition:transform .18s ease, box-shadow .18s ease; }
+      .hansora-automation-btn::before{ content:""; position:absolute; z-index:-2; left:50%; top:50%; width:220px; height:220px; margin:-110px 0 0 -110px; background:conic-gradient(from 0deg,#38bdf8,#8b5cf6,#ec4899,#f59e0b,#38bdf8); animation:hansora-auto-spin 4s linear infinite; }
+      .hansora-automation-btn::after{ content:""; position:absolute; z-index:-1; inset:1.5px; border-radius:inherit; background:linear-gradient(180deg,#151827,#0d0f19); }
+      .hansora-automation-btn:hover{ transform:translateY(-1px); box-shadow:0 10px 30px rgba(139,92,246,.45); }
+      .hansora-automation-icon{ display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#8b5cf6 55%,#ec4899); box-shadow:inset 0 1px 0 rgba(255,255,255,.35); }
+      .hansora-automation-icon svg{ width:17px; height:17px; }
+      .hansora-automation-dot{ width:7px; height:7px; border-radius:50%; background:#4ade80; box-shadow:0 0 0 0 rgba(74,222,128,.6); animation:hansora-auto-pulse 2s ease-out infinite; }
+      @keyframes hansora-auto-spin{ to{ transform:rotate(360deg); } }
+      @keyframes hansora-auto-pulse{ 0%{ box-shadow:0 0 0 0 rgba(74,222,128,.55); } 70%,100%{ box-shadow:0 0 0 7px rgba(74,222,128,0); } }
+      @media (prefers-reduced-motion:reduce){ .hansora-automation-btn::before, .hansora-automation-dot{ animation:none; } }
+      @media (max-width:900px){ .site-header .hansora-automation-btn{ display:none; } }
+      @media (min-width:901px) and (max-width:1300px){ .site-header .hansora-automation-btn{ padding:0 6px; } .site-header .hansora-automation-text, .site-header .hansora-automation-dot{ display:none; } }
+      @media (min-width:901px) and (max-width:1900px){ html[lang="ru"] .site-header .hansora-automation-btn, html[lang="hy"] .site-header .hansora-automation-btn{ padding:0 6px; } html[lang="ru"] .site-header .hansora-automation-text, html[lang="hy"] .site-header .hansora-automation-text, html[lang="ru"] .site-header .hansora-automation-dot, html[lang="hy"] .site-header .hansora-automation-dot{ display:none; } }
+      @media (min-width:901px) and (max-width:1000px){
+        html[lang] .site-header .hansora-automation-btn{ height:36px; padding:0 4px; }
+        html .site-header .nav-actions{ gap:6px; }
+        html[lang="ru"] body .site-header .nav-links a, html[lang="hy"] body .site-header .nav-links a{ padding:8px 3px; font-size:.74rem; }
+      }
       .hansora-top-badge{ display:inline-flex; align-items:center; height:17px; padding:0 6px; border-radius:6px; background:linear-gradient(135deg,#d9ff3d,#a3f05a); color:#0b1203; font-size:10px; font-weight:900; letter-spacing:.02em; line-height:1; box-shadow:0 0 12px rgba(201,255,61,.35); }
       /* Mid-size screens: keep the menu between the logo and the buttons instead of floating over them. */
       @media (min-width:901px){
@@ -3036,6 +3055,7 @@
             <a class="hansora-nav-trend" href="${siteHref('/mcp-setup.html')}" title="${copy('chatgptPluginFull')}">${copy('chatgptPlugin')}</a>
           </nav>
           <div class="nav-actions">
+            <a class="hansora-automation-btn" href="${withAffiliateRef('/automation.html')}" title="${copy('automation')}"><span class="hansora-automation-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 8V4.5M9.5 14h.01M14.5 14h.01M9.5 17h5"/><circle cx="12" cy="3.5" r="1"/></svg></span><span class="hansora-automation-text">${copy('automation')}</span><span class="hansora-automation-dot" aria-hidden="true"></span></a>
             <button class="hansora-feedback-button" type="button" data-hansora-feedback aria-label="${FEEDBACK_LABEL[CURRENT_LANGUAGE]}" title="${FEEDBACK_LABEL[CURRENT_LANGUAGE]}" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8H5l-3 3V11.5a9 9 0 0 1 18 0Z"/><path d="M7 10h8M7 14h5"/></svg></button>
             <a class="hansora-mobile-pricing" href="${siteHref('/pricing.html')}" aria-label="${copy('pricingAria')}">
               <span>${copy('pricing')}</span>

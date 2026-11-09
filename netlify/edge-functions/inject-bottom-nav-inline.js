@@ -48,6 +48,9 @@ export default async (request, context) => {
       video: 'Video',
       audio: 'Audio',
       chatgptPlugin: 'ChatGPT Plugin',
+      automation: 'Automation',
+      automationText: 'AI employee for your chats and calls',
+      automationNew: 'New',
       trend: 'Trend',
       more: 'See more',
       closeModels: 'Close models menu',
@@ -70,6 +73,9 @@ export default async (request, context) => {
       video: 'Տեսանյութ',
       audio: 'Ձայն',
       chatgptPlugin: 'ChatGPT Plugin',
+      automation: 'Ավտոմատացում',
+      automationText: 'AI աշխատակից՝ չաթերի և զանգերի համար',
+      automationNew: 'Նոր',
       trend: 'Թրենդ',
       more: 'Տեսնել ավելին',
       closeModels: 'Փակել մոդելների ընտրացանկը',
@@ -92,6 +98,9 @@ export default async (request, context) => {
       video: 'Видео',
       audio: 'Аудио',
       chatgptPlugin: 'ChatGPT Plugin',
+      automation: 'Автоматизация',
+      automationText: 'ИИ-сотрудник для чатов и звонков',
+      automationNew: 'Новое',
       trend: 'Тренды',
       more: 'Смотреть ещё',
       closeModels: 'Закрыть меню моделей',
@@ -494,6 +503,69 @@ export default async (request, context) => {
       font:750 16px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
       text-decoration:none;
     }
+    /* Automation card at the top of the phone menu: rotating gradient ring is a single GPU transform. */
+    .hs-auto-card{
+      position:relative;
+      isolation:isolate;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      gap:13px;
+      margin:0 0 12px;
+      padding:14px 14px 14px 12px;
+      border-radius:20px;
+      color:#fff;
+      text-decoration:none;
+      box-shadow:0 12px 34px rgba(139,92,246,.30);
+      -webkit-tap-highlight-color:transparent;
+    }
+    .hs-auto-ring{
+      position:absolute;
+      z-index:-2;
+      left:50%;
+      top:50%;
+      width:640px;
+      height:640px;
+      margin:-320px 0 0 -320px;
+      background:conic-gradient(from 0deg,#38bdf8,#8b5cf6,#ec4899,#f59e0b,#38bdf8);
+      animation:hs-auto-spin 5s linear infinite;
+    }
+    .hs-auto-card::after{
+      content:"";
+      position:absolute;
+      z-index:-1;
+      inset:1.5px;
+      border-radius:19px;
+      background:radial-gradient(120% 140% at 0% 0%, rgba(139,92,246,.30), transparent 55%), linear-gradient(180deg,#171a2b,#0f1120);
+    }
+    .hs-auto-card:active{ transform:scale(.98); }
+    .hs-auto-icon{
+      flex:0 0 46px;
+      width:46px;
+      height:46px;
+      display:grid;
+      place-items:center;
+      border-radius:15px;
+      background:linear-gradient(135deg,#38bdf8,#8b5cf6 55%,#ec4899);
+      box-shadow:0 8px 22px -6px rgba(139,92,246,.8), inset 0 1px 0 rgba(255,255,255,.35);
+    }
+    .hs-overlay .hs-auto-icon svg{ width:24px; height:24px; stroke:#fff; stroke-width:2; }
+    .hs-auto-copy{ display:flex; flex-direction:column; gap:3px; min-width:0; flex:1 1 auto; }
+    .hs-auto-copy b{ font:800 16px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; }
+    .hs-auto-copy small{ font:600 12px/1.25 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; color:rgba(226,230,240,.68); }
+    .hs-auto-new{
+      flex:0 0 auto;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(74,222,128,.14);
+      border:1px solid rgba(74,222,128,.35);
+      color:#86efac;
+      font:800 10px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    @keyframes hs-auto-spin{ to{ transform:rotate(360deg); } }
+    @media (prefers-reduced-motion:reduce){ .hs-auto-ring{ animation:none; } }
     .hs-top-badge{
       margin-left:auto;
       display:inline-flex;
@@ -601,6 +673,12 @@ export default async (request, context) => {
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg>
       </button>
     </header>
+    <a class="hs-auto-card" href="/automation.html">
+      <span class="hs-auto-ring" aria-hidden="true"></span>
+      <span class="hs-auto-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="4"></rect><path d="M12 8V4.5M9.5 14h.01M14.5 14h.01M9.5 17h5"></path><circle cx="12" cy="3.5" r="1"></circle></svg></span>
+      <span class="hs-auto-copy"><b>${copy.automation}</b><small>${copy.automationText}</small></span>
+      <span class="hs-auto-new">${copy.automationNew}</span>
+    </a>
     <div class="links">
       <a href="${localizedPath('/search-models.html')}"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> ${copy.image}</a>
       <a data-hs-video-landing href="${localizedPath('/search-models.html?model=gemini-omni-flash-1-1')}"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> ${copy.video}</a>
