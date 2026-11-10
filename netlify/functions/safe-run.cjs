@@ -260,6 +260,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-aleph',
   '/.netlify/functions/run-audio',
   '/.netlify/functions/run-gemini-omni-flash-1-1',
+  '/.netlify/functions/run-gemini-omni-flash-1-2',
   '/.netlify/functions/run-gemini-omni-video',
   '/.netlify/functions/run-gpt-image-1-5',
   '/.netlify/functions/run-gpt-image-2-5',

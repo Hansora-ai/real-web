@@ -21,10 +21,10 @@ import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoPlan, im
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
 // Models that add a reference video's length to the price (on every platform that offers them).
-const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'kling40']);
+const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'kling40', 'gemini-omni-flash-1-2']);
 // Launchers that report the real charge, measured from the uploaded files.
 const EDIT_MODELS = new Set(['henshin', 'henshin-lite']);
-const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'henshin', 'henshin-lite', 'kling40']);
+const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'henshin', 'henshin-lite', 'kling40', 'gemini-omni-flash-1-2']);
 // Launchers that refuse any request without the quoted price, even without video input.
 const PRICE_CHECKED_MODELS = new Set(['henshin-lite', 'kling40']);
 // ChatGPT gives up on a tool call after roughly a minute; answer well before that.
@@ -615,7 +615,7 @@ const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'first_video_on_wan', 'switc
 // Wan 3.0) instead. Asked once: if ChatGPT sends the same request again (the user chose it, or people must
 // speak a language other than English), it goes through.
 const FREE_CREDITS_INTERNAL = 3;
-const CHEAP_FIRST_MODELS = new Set(['grok-video', ...VEO_MODELS, 'gemini-omni-video', 'gemini-omni-flash-1-1']);
+const CHEAP_FIRST_MODELS = new Set(['grok-video', ...VEO_MODELS, 'gemini-omni-video', 'gemini-omni-flash-1-1', 'gemini-omni-flash-1-2']);
 const PAID_FIRST_CHOICES = [
   { model_id: 'kling40', label: 'Recommended: great quality, smooth motion' },
   { model_id: 'seedance25', label: 'Best, cinema quality' },
