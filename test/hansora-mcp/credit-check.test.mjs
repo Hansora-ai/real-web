@@ -1551,3 +1551,55 @@ test('every ready result points to the user\'s Hansora history; the guide has pr
   assert.match(VIDEO_SELECTION_GUIDE, /a laptop or phone screen faces the viewer/);
   assert.match(VIDEO_SELECTION_GUIDE, /one clear main action per 5 to 6 seconds/);
 });
+
+test('an image that fails on the provider side is remade once on a backup at no more than its price; the card follows', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const old = 'user-1-mcp-1794400000000-img00001';
+  // 1. Creating an image saves what it was made from.
+  const saved = [];
+  await callTool('create_generation', { model_id: 'nano-banana-2-1', prompt: 'A realistic cosmos with a spiral galaxy', resolution: '1K', aspect_ratio: '16:9' }, {
+    credits: 3, rest: (href, options) => { if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return new Response(null, { status: 201 }); } return undefined; }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const recipe = saved.find((row) => row.tool === 'image_recipe');
+  assert.ok(recipe, 'image recipe saved');
+  assert.equal(recipe.model_id, 'nano-banana-2-1');
+  assert.equal(recipe.details.prompt, 'A realistic cosmos with a spiral galaxy');
+  assert.equal(recipe.details.aspect_ratio, '16:9');
+
+  // 2. It fails with a temporary issue: the next check starts it once on Nano Banana 2 Lite (3 credits, not more).
+  const failedRow = { id: 'i-old', kind: 'image', provider: 'Nano Banana 2.1', created_at: '2026-11-10T19:50:00Z', result_url: null,
+    meta: { run_id: old, model: 'nano-banana-2-1', model_id: 'nano-banana-2-1', status: 'failed', error: 'Internal server error, please try again later.', charged_cost: 0.3, refund_amount: 0.3 } };
+  const world = ({ retryRow = null, pendingVideo = false } = {}) => (href) => {
+    if (href.includes('/rest/v1/chatgpt_events') && href.includes('image_recipe')) return reply([{ model_id: 'nano-banana-2-1', details: recipe.details }]);
+    if (href.includes('/rest/v1/chatgpt_events') && href.includes('pending_video')) return reply(pendingVideo ? [{ model_id: 'grok-video', details: { picture_run: old } }] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(encodeURIComponent(`${old}-retry`))) return reply(retryRow ? [retryRow] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`)) return reply([failedRow]);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const first = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world() });
+  assert.equal(first.submitted.length, 1);
+  assert.equal(first.submitted[0].model_id, 'nano-banana-2-lite');
+  assert.equal(first.submitted[0].payload.run_id, `${old}-retry`);
+  const shown = first.result.structuredContent;
+  assert.equal(shown.run_id, old);
+  assert.equal(shown.status, 'processing');
+  assert.match(shown.message, /^Nano Banana 2\.1 had a temporary issue on the provider's side, so this image was made with Nano Banana 2 Lite instead\./);
+
+  // 3. Later checks follow the new run and start nothing more.
+  const retryRow = { id: 'i-new', kind: 'image', provider: 'Nano Banana 2 Lite', created_at: '2026-11-10T19:51:00Z',
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/new.png',
+    meta: { run_id: `${old}-retry`, model_id: 'nano-banana-2-lite', status: 'done', charged_cost: 0.3 } };
+  const later = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world({ retryRow }) });
+  assert.equal(later.submitted.length, 0);
+  assert.equal(later.result.structuredContent.status, 'ready');
+  assert.equal(later.result.structuredContent.result_url, retryRow.result_url);
+
+  // 4. A picture made first for a video is left alone; a content refusal is not retried.
+  const pending = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world({ pendingVideo: true }) });
+  assert.equal(pending.submitted.length, 0);
+  const blockedRow = { ...failedRow, meta: { ...failedRow.meta, error: 'The prompt may contain nudity or sexual content.' } };
+  const blocked = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`) ? reply([blockedRow]) : world()(href)) });
+  assert.equal(blocked.submitted.length, 0);
+});
