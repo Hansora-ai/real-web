@@ -45,7 +45,7 @@ test('3-day dedupe, paid, internal and temp emails are skipped', () => {
     unsubscribed: ['u@x.com']
   }, { now: NOW });
   assert.deepEqual(r.sends, []);
-  assert.deepEqual(r.skips.map(s => s.reason), ['already got an email', 'paid', 'internal account', 'temporary email', 'unsubscribed']);
+  assert.deepEqual(r.skips.map(s => s.reason), ['prices in last 3 days', 'paid', 'internal account', 'temporary email', 'unsubscribed']);
   // with more than one email allowed, the old 3-day rule still applies
   const three = planRun({ settings: { max_emails_per_person: 3 }, clicks: [click(1, 'a@x.com')], history: [{ email: 'a@x.com', campaign: 'prices', sent_at: ago(2 * DAY) }] }, { now: NOW });
   assert.equal(three.skips[0].reason, 'prices in last 3 days');
@@ -119,14 +119,18 @@ test('one email per person, by priority: checkout > prices > credits-used > welc
   assert.deepEqual(r.sends.map(s => `${s.campaign}:${s.email}`), ['abandoned:a@x.com', 'prices:b@x.com', 'credits_used:c@x.com', 'welcome:d@x.com']);
 });
 
-test('anyone already emailed (also by the bot) gets nothing more', () => {
+test('a signup email does not block a later nudge; signup emails stay one per person', () => {
   const r = planRun({
     checkouts: [{ id: 1, email: 'a@x.com', created_at: ago(H), paid: false }],
+    clicks: [click(2, 'p@x.com')],
     signups: [{ id: 'u1', email: 'w@x.com', videos: 3, images: 0, spent: 3, top_model: 'grok', created_at: ago(5 * H) }],
-    history: [{ email: 'a@x.com', campaign: 'welcome', sent_at: ago(10 * DAY) }, { user_id: 'u1', campaign: 'welcome', sent_at: ago(4 * H) }]
+    history: [
+      { email: 'a@x.com', campaign: 'welcome', sent_at: ago(10 * DAY) },
+      { email: 'p@x.com', campaign: 'credits_used', sent_at: ago(DAY) },
+      { user_id: 'u1', campaign: 'welcome', sent_at: ago(4 * H) }
+    ]
   }, { now: NOW });
-  assert.deepEqual(r.sends, []);
-  assert.equal(r.skips[0].reason, 'already got an email');
+  assert.deepEqual(r.sends.map(s => `${s.campaign}:${s.email}`), ['abandoned:a@x.com', 'prices:p@x.com']);
 });
 
 test('signups wait an hour, so people who generate get credits-used instead of welcome', () => {
