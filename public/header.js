@@ -403,6 +403,23 @@
     } catch (_) { return ''; }
   }
 
+  // A page to come back to after logging in, saved for 15 minutes: the pricing page (Buy clicked while logged out,
+  // saved by pricing*.html) or the history page (opened logged out from ChatGPT, saved by usage*.html).
+  function pendingPageReturn() {
+    const pages = [
+      ['hansora:pricing-buy-return', /^\/pricing(?:_ru|_arm)?(?:\.html)?(?:\?[^\s#]*)?$/],
+      ['hansora:auth-return', /^\/usage(?:_ru|_arm)?(?:\.html)?(?:\?[^\s#]*)?$/]
+    ];
+    for (const [key, valid] of pages) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || 'null');
+        const path = String(saved && saved.path || '');
+        if (Date.now() - Number(saved && saved.createdAt || 0) < 15 * 60 * 1000 && valid.test(path)) return path;
+      } catch (_) {}
+    }
+    return '';
+  }
+
   function oauthReturnUrl() {
     // Logins started on an Automation page come straight back to Automation (index.html covers itself if Supabase
     // sends the visitor to the home page instead).
@@ -414,14 +431,9 @@
       callback.searchParams.set('mcp_return_to', mcpReturn);
       return callback.href;
     }
-    // Buy clicked while logged out on a pricing page: come back there so checkout opens (pricing*.html).
-    try {
-      const pendingBuy = JSON.parse(localStorage.getItem('hansora:pricing-buy-return') || 'null');
-      const buyPath = String(pendingBuy && pendingBuy.path || '');
-      if (Date.now() - Number(pendingBuy && pendingBuy.createdAt || 0) < 15 * 60 * 1000 && /^\/pricing(?:_ru|_arm)?(?:\.html)?(?:\?[^\s#]*)?$/.test(buyPath)) {
-        return new URL(buyPath, location.origin).href;
-      }
-    } catch (_) {}
+    // Buy clicked while logged out on a pricing page, or the history page opened logged out: come back there.
+    const pageReturn = pendingPageReturn();
+    if (pageReturn) return new URL(pageReturn, location.origin).href;
     const target = localizedHref('/index.html');
     try { return new URL(target, location.origin).href; } catch (_) { return `${location.origin}${target}`; }
   }
@@ -4946,17 +4958,13 @@
       window.location.replace(pendingMcpReturn);
       return profile;
     }
-    // Buy clicked while logged out on a pricing page, and Google brought the user to another page: go back so
-    // checkout opens there (the pricing page reads and clears the saved package).
-    try {
-      const pendingBuy = JSON.parse(localStorage.getItem('hansora:pricing-buy-return') || 'null');
-      const buyPath = String(pendingBuy && pendingBuy.path || '');
-      const onPricing = /^\/pricing(?:_ru|_arm)?(?:\.html)?$/.test(location.pathname);
-      if (!onPricing && Date.now() - Number(pendingBuy && pendingBuy.createdAt || 0) < 15 * 60 * 1000 && /^\/pricing(?:_ru|_arm)?(?:\.html)?(?:\?[^\s#]*)?$/.test(buyPath)) {
-        window.location.replace(buyPath);
-        return profile;
-      }
-    } catch (_) {}
+    // Buy clicked while logged out on a pricing page (or the history page opened logged out), and Google brought the
+    // user to another page: go back there (that page reads and clears what was saved).
+    const pageReturnPath = pendingPageReturn();
+    if (pageReturnPath && pageReturnPath.split('?')[0] !== location.pathname) {
+      window.location.replace(pageReturnPath);
+      return profile;
+    }
     const newAccountNeedsLanguage = !registrationLanguageChoiceIsCompleted(user) && (
       profile.__hansoraNewSignup || isRecentlyCreatedAccount(user)
     );

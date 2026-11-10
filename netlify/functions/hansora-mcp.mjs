@@ -16,7 +16,7 @@ import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { useSavedFiles } from '../../lib/hansora-mcp/own-results.mjs';
 import { photoCount, recordPendingPhotos, recordPendingVideo, recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
-import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, simpleVideoOption, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoPlan, simpleVideoOption, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -103,6 +103,11 @@ function generationToolMeta(invoking, invoked) {
   };
 }
 
+// Every ready result also says where the user's saved generations are (their own history page, no sales wording).
+// ?from=chatgpt_result lets the website count who opened it (public/header.js, click_events).
+const RESULT_LINK = 'https://hansora.co/usage.html?from=chatgpt_result';
+const RESULT_LINE = `After the result link, add this one plain line, worded as a fact with no sales wording: "All your generations are saved in your Hansora account: [check your generations](${RESULT_LINK})."`;
+
 function creditFailureMessage(meta) {
   const reason = [meta.error_summary, meta.error, meta.fail_reason].map((value) => (typeof value === 'string' ? value : '')).join(' ');
   if (!/not_enough_credits|insufficient_credits/i.test(reason)) return '';
@@ -164,6 +169,7 @@ function presentGeneration(generation, runId, unavailable = new Set()) {
       link_for_user: generation.result_url,
       next_step: [
         `The result is ready. Give the user this exact link to open or download it, copied character for character: ${generation.result_url} . Never build, shorten or change a link yourself.`,
+        RESULT_LINE,
         meta.henshin_model === 'lite' ? 'Only if they are not satisfied, offer to redo it with Henshin, the stronger version, and tell them its price from quote_generation; do not offer it otherwise.' : ''
       ].filter(Boolean).join(' ')
     } : {})
@@ -249,7 +255,7 @@ function pictureNotReadyResult(model, pictureRun, planned = false) {
 // ready, under the picture's card. ChatGPT often stopped after the picture, so the user got a picture and no video.
 const PLAN_TTL_MS = 15 * 60 * 1000;
 // Results that send a request back to ChatGPT to be made again (another model, a question, a short wait).
-const SENT_BACK = new Set(['insufficient_credits', 'first_video_on_grok', 'first_paid_video_choice', 'too_many_running', 'picture_not_ready', 'temporarily_unavailable', 'model_temporarily_unavailable']);
+const SENT_BACK = new Set(['insufficient_credits', 'first_video_on_grok', 'first_video_on_wan', 'first_paid_video_choice', 'too_many_running', 'picture_not_ready', 'temporarily_unavailable', 'model_temporarily_unavailable']);
 const PHOTOS_KEPT_MS = 10 * 60 * 1000;
 const restoredPhotoInputs = new WeakSet();
 const AUTO_VIDEO_SUFFIX = '-video'; // getRecentAutoVideo (data.mjs) looks for the same ending
@@ -602,7 +608,7 @@ async function veoRestSwitch(input) {
 // first video sent to Veo comes back once with "use Grok". Veo stays right only for speech in a language other
 // than English: ChatGPT then sends Veo again, and a recent steer (this one, or the free-credit switch) lets it
 // through, so it never loops.
-const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'switched_to_affordable'];
+const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'first_video_on_wan', 'switched_to_affordable'];
 
 // A user who bought credits (more than the 30 free credits) and has no video yet is not given a cheap model
 // on their first paid video: ChatGPT asks one plain question (recommended Kling 4.0, best Seedance 2.5, budget
@@ -615,6 +621,11 @@ const PAID_FIRST_CHOICES = [
   { model_id: 'seedance25', label: 'Best, cinema quality' },
   { model_id: 'wan-3', label: 'Budget: good quality, cheapest' }
 ];
+// The first-video plan shown with the account: only for a user with no video yet, still on the free credits.
+function firstVideoFor(userId, account, lastVideo) {
+  if (lastVideo || !account || Number(account.internal_credits || 0) > FREE_CREDITS_INTERNAL) return null;
+  try { return firstVideoPlan(userId); } catch { return null; }
+}
 async function firstPaidVideoChoice(userId, model, input, balanceInternal) {
   if (!model || !CHEAP_FIRST_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
   if (!(Number(balanceInternal) > FREE_CREDITS_INTERNAL)) return null;
@@ -648,32 +659,43 @@ async function firstPaidVideoChoice(userId, model, input, balanceInternal) {
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
+// A new user's first video goes to their half of the first-video test (credits.mjs firstVideoPlan): Grok Video
+// (720p, 6 s) or Wan 3.0 (480p, 5 s, text only). ChatGPT is told the plan through the account, and a first video sent
+// to another cheap model comes back once with the plan.
 async function firstVideoOnGrok(userId, input, balanceInternal) {
   const model = getModel(input.model_id);
-  if (!model || !VEO_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
+  if (!model || input.usage_mode === 'unlimited') return null;
   const files = normalizeGenerationFiles(input);
   const photos = (files.image_urls || []).length + (input.first_frame_url ? 1 : 0);
   if (files.video_urls?.length || input.source_video_url || input.last_frame_url || photos > 1) return null;
   if (String(input.prompt || '').length > 5000) return null;
+  // Wan 3.0 is for text-only first videos; with a photo the Grok rules (and Wan for a new scene) stay as they were.
+  let plan = firstVideoPlan(userId);
+  if (plan.model_id === 'wan-3' && photos) plan = null;
   const grok = quote('grok-video', { duration: 6, resolution: '720p' });
-  if (Number(balanceInternal) < grok.internalCredits) return null;
-  // Grok first is for free credits. A user who bought credits is asked instead (firstPaidVideoChoice).
+  const target = plan || { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: grok.displayedCredits, internal_credits: grok.internalCredits };
+  const steerable = VEO_MODELS.has(model.id) || (target.model_id === 'wan-3' && model.id === 'grok-video');
+  if (!steerable || model.id === target.model_id) return null;
+  if (Number(balanceInternal) < target.internal_credits) return null;
+  // The first video is for free credits. A user who bought credits is asked instead (firstPaidVideoChoice).
   if (Number(balanceInternal) > FREE_CREDITS_INTERNAL) return null;
   if (!(await isFirstGeneration(userId))) return null;
   if (await hadRecentOutcome(userId, FIRST_VIDEO_STEERED, new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
-  // Right after this user's Grok video failed, Grok is not the better first video: let Veo through.
-  if (await hadRecentGrokFailure(userId, new Date(Date.now() - 30 * 60 * 1000).toISOString())) return null;
+  // Right after this user's Grok video failed, Grok is not the better first video: let the request through.
+  if (target.model_id === 'grok-video' && await hadRecentGrokFailure(userId, new Date(Date.now() - 30 * 60 * 1000).toISOString())) return null;
+  const onWan = target.model_id === 'wan-3';
+  const settings = `duration ${target.settings.duration}, resolution ${target.settings.resolution}`;
   const value = {
-    ok: false, error: 'first_video_on_grok', generated: false, credits_used: 0,
+    ok: false, error: onWan ? 'first_video_on_wan' : 'first_video_on_grok', generated: false, credits_used: 0,
     model_id: model.id, model_name: model.name,
-    next_option: { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: grok.displayedCredits },
+    next_option: { model_id: target.model_id, model_name: target.model_name, settings: target.settings, credits: target.credits },
     next_step: [
       `Nothing was generated or charged. This is the user's first video, so do not ask anything:`,
-      `call create_generation right now with model_id grok-video, duration 6, resolution 720p, keeping the same prompt, photo and aspect_ratio.`,
-      grokEightSecondsStep(balanceInternal),
+      `call create_generation right now with model_id ${target.model_id}, ${settings}, keeping the same prompt, photo and aspect_ratio.`,
+      onWan ? '' : grokEightSecondsStep(balanceInternal),
       `Exception: only if people in the video must speak a language other than English (Chinese included), call create_generation again exactly as before with ${model.id}.`,
       `When it starts, tell the user in one short, friendly line which model is making their first video and its credits.`,
-      firstVideoLengthNote(6),
+      firstVideoLengthNote(target.settings.duration),
       photos ? newSceneStep(balanceInternal) : ''
     ].filter(Boolean).join(' ')
   };
@@ -877,7 +899,7 @@ export function createHansoraServer(ctx) {
       unavailableModels(),
       wantsAccount ? Promise.race([
         Promise.all([getAccount(userId), getLastVideo(userId).catch(() => null)])
-          .then(([found, lastVideo]) => accountSummary(found, lastVideoModel(lastVideo))).catch(() => null),
+          .then(([found, lastVideo]) => accountSummary(found, lastVideoModel(lastVideo), firstVideoFor(userId, found, lastVideo))).catch(() => null),
         new Promise((resolve) => setTimeout(() => resolve(null), 2500))
       ]) : null
     ]);
@@ -958,7 +980,7 @@ export function createHansoraServer(ctx) {
         getAccount(userId),
         Promise.race([getLastVideo(userId), new Promise((resolve) => setTimeout(() => resolve(null), 2500))])
       ]);
-      return jsonText(accountSummary(account, lastVideoModel(lastVideo)));
+      return jsonText(accountSummary(account, lastVideoModel(lastVideo), firstVideoFor(userId, account, lastVideo)));
     } catch (error) { return toolError(error); }
   });
 
@@ -1339,7 +1361,7 @@ export function createHansoraServer(ctx) {
         // The runner re-checks the balance, so a failed lookup here should not block the request.
         const account = await getAccount(userId).catch(() => null);
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
-          return keepPicturePlan(insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) }), normalizedInput);
+          return keepPicturePlan(insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId), userId }), normalizedInput);
         }
         if (account) {
           const choice = await firstPaidVideoChoice(userId, model, normalizedInput, account.internal_credits);
@@ -1455,7 +1477,7 @@ export function createHansoraServer(ctx) {
         const charged = Number.isFinite(need) && need > 0
           ? { ...(price || {}), displayedCredits: Number((need * 10).toFixed(2)) }
           : price;
-        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
+        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId), userId });
       }
       // Henshin and reference-video launchers measure the uploaded files and report the real charge.
       const debited = Number(result?.debited);
