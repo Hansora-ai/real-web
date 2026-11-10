@@ -287,7 +287,11 @@ async function markDone({ row, ids, urls, enqueueAudio = true }) {
   };
 
   if (['reapi','kie-kling4'].includes(row.meta?.source)) {
-    if (!archive.paths.length) throw Error('Result archival is pending.');
+    // KIE's unbounded output bitrate can produce videos too large for
+    // history storage. Keep a working provider download for those clips.
+    const oversizedUpscale = row.meta?.tool_feature === 'video-upscale'
+      && archive.errors.some(error => /archive_file_too_large|archive_upload_413|entity too large|maximum allowed size/i.test(error));
+    if (!archive.paths.length && !oversizedUpscale) throw Error('Result archival is pending.');
     const audio = row.meta.source_feature === 'henshin' && !require('../../lib/henshin/jobs.cjs').isNativeLite(row) && (row.meta.source_audio_url || row.meta.finish_video);
     const completion = await require('../../lib/reapi/billing.cjs').transition('complete', row.id, row.user_id, {
       result_url: audio ? null : savedUrls[0],

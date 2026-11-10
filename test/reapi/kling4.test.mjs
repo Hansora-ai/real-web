@@ -7,11 +7,13 @@ import {PGlite} from '@electric-sql/pglite';
 const require=createRequire(import.meta.url);
 process.env.SUPABASE_URL='https://example.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY='test-service';
+process.env.SUPABASE_BUCKET='uploads';
 process.env.REAPI_API_KEY='test-reapi';
 process.env.KIE_API_KEY='test-kie';
 const pricing=require('../../public/kling4-pricing.js');
 const {build}=require('../../lib/kling4/request.cjs');
 const launch25=require('../../netlify/functions/run-kling-40.js').handler;
+const launchUpscale=require('../../netlify/functions/run-upscale.js').handler;
 const lite=require('../../netlify/functions/run-henshin.js').handler;
 const checker=require('../../netlify/functions/kling4-check.js').handler;
 const {transition}=require('../../lib/reapi/billing.cjs');
@@ -94,6 +96,34 @@ test('Kling 25% quotes and the explicit Lite price use the same units as the UI'
  assert.equal(pricing.quote({duration:10,inputSeconds:15}).billedSeconds,25);
  assert.equal(pricing.quote({inputSeconds:10.08,lite:true}).duration,11);
  assert.throws(()=>pricing.quote({resolution:'480p'}));
+});
+
+test('video upscale verifies the clip price before reserving once and submitting the KIE resolution', async () => {
+ const uploadUrl = 'https://example.supabase.co/storage/v1/object/public/uploads/images/user-uploads/2026/11/10/source.mp4';
+ const request = event({kind:'video', fileUrl:uploadUrl, videoResolution:'2K', durationSeconds:1, expected_credits:3});
+ const stale = await launchUpscale(request);
+ assert.equal(stale.statusCode, 409, stale.body);
+ const quote = JSON.parse(stale.body);
+ assert.equal(quote.duration_seconds, 5);
+ assert.equal(quote.displayed_credits, 12);
+ assert.equal(posts.length, 0);
+ assert.equal(await balance(), 1000);
+
+ request.body = JSON.stringify({...JSON.parse(request.body), expected_credits:12});
+ const results = await Promise.all([launchUpscale(request), launchUpscale(request)]);
+ assert.ok(results.every(result => [200, 201].includes(result.statusCode)), JSON.stringify(results));
+ assert.equal(posts.length, 1);
+ assert.equal(posts[0].model, 'video/upscale');
+ assert.equal(posts[0].input.resolution, '2K');
+ assert.notEqual(posts[0].input.video_url, uploadUrl);
+ assert.deepEqual(stored[0].bytes, fixture);
+ const row = (await saved())[0];
+ assert.equal(row.meta.tool_feature, 'video-upscale');
+ assert.equal(await balance(), 998.8);
+
+ tasks.get(row.meta.task_id).state = 'fail';
+ await Promise.all([checker(polling(row)), checker(polling(row))]);
+ assert.equal(await balance(), 1000);
 });
 test('documented Kling task IDs containing model-version dots are accepted',async()=>{
  const id='task_kling-4.0-reference-to-video_abc123';assert.equal(require('../../lib/kling4/client.cjs').taskId({code:200,data:{taskId:id}}),id);
