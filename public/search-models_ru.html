@@ -4285,6 +4285,7 @@
 
 	    </style>
   <script src="/kling4-pricing.js?v=20261022"></script>
+  <script src="/gemini-omni-12-pricing.js?v=20261110"></script>
   <script src="/seedance-pricing.js?v=20261025-prices"></script>
   <script src="/seedance-draft.js?v=20261024"></script>
   <script src="/wan-pricing.js?v=20261021"></script>
@@ -7604,6 +7605,27 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 5.2
       },
       {
+        id: 'gemini-omni-flash-1-2',
+        name: 'Gemini Omni 1.2 Flash',
+        emoji: 'GF',
+        subtitle: 'Текст / Кадры / Фото / Видео → Видео',
+        category: 'video',
+        description: 'Gemini Omni 1.2 Flash: видео 3–15 с со звуком, первый/последний кадр, до 6 референсных фото или редактирование видео до 15 с.',
+        endpoint: '/.netlify/functions/run-gemini-omni-flash-1-2',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 100,
+        specificUpload: 'geminiOmni',
+        aspectOptions: ['16:9', '9:16', 'auto'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['360p', '720p', '1080p', '4K'],
+        defaultResolution: '720p',
+        durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        costLabel: '',
+        minCredits: 1,
+        isNew: true
+      },
+      {
         id: 'gemini-omni-flash-1-1',
         name: 'Gemini Omni 1.1 Flash',
         emoji: 'GF',
@@ -7865,7 +7887,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
 	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
 	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance25', 'kling40', 'henshin', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['seedance25', 'kling40', 'henshin', 'gemini-omni-flash-1-2', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
       return String(value || '').trim().toLowerCase();
@@ -9034,7 +9056,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return true;
       }
       if (currentModel.specificUpload === 'grokVideo' || currentModel.specificUpload === 'geminiOmni') {
-        const limit = currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : 7;
+        const limit = currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7;
         videoRefImageFiles = imageFiles.slice(0, limit);
         renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
           videoRefImageFiles.splice(index, 1);
@@ -9153,6 +9175,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'gemini-omni-flash': 'gemini-omni-flash-1-1',
         'gemini-omni-1.1-flash': 'gemini-omni-flash-1-1',
         'gemini-omni-flash-1-1': 'gemini-omni-flash-1-1',
+        'gemini-omni-flash-1-2': 'gemini-omni-flash-1-2',
+        'gemini-omni-1.2-flash': 'gemini-omni-flash-1-2',
         'gemini-omni': 'gemini-omni-video',
 	        'geminiomni': 'gemini-omni-video',
 	        'gemini-omni-video': 'gemini-omni-video',
@@ -9422,6 +9446,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 5));
         return Number((seconds * 1.3).toFixed(1));
       }
+	      if (model.id === 'gemini-omni-flash-1-2') {
+	        // Per second (public/gemini-omni-12-pricing.js); an edit is priced by its source video's length.
+	        const firstAndLast = !!(videoFirstFrameFile && videoLastFrameFile);
+	        const seconds = Math.max(3, Math.min(firstAndLast ? 10 : 15, Math.round(Number(currentDuration || 4))));
+	        const inputSeconds = videoSourceFile ? Math.min(15, Number(geminiOmniSourceDuration) || 15) : 0;
+	        return window.GeminiOmni12Pricing.quote({ resolution: currentResolution, duration: seconds, inputSeconds, firstAndLast }).internalCredits;
+	      }
 	      if (model.id === 'gemini-omni-flash-1-1') {
 	        const hasVideoInput = !!videoSourceFile;
 	        if (hasVideoInput) return currentResolution === '4K' ? 16 : 11;
@@ -10460,7 +10491,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const imageInput = document.getElementById('videoRefImagesInput');
       if (imageLabel) imageLabel.textContent = 'Загрузить изображения';
       if (imageInput) imageInput.multiple = true;
-      const isGeminiFlash = kind === 'geminiOmni' && currentModel && currentModel.id === 'gemini-omni-flash-1-1';
+      const isGeminiFlash = kind === 'geminiOmni' && currentModel && currentModel.id.startsWith('gemini-omni-flash');
+      // Gemini Omni 1.2 Flash has no voice presets.
+      const hasGeminiVoices = kind === 'geminiOmni' && !(currentModel && currentModel.id === 'gemini-omni-flash-1-2');
       const showsFirstFrame = kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash;
       const showsLastFrame = kind === 'wan27' || kind === 'wan30' || isGeminiFlash;
       const showsSourceVideo = kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni';
@@ -10470,7 +10503,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       show('videoImageReferencesSection', true);
       show('videoVideoReferencesSection', showsSourceVideo || showsVideoReferences);
       show('videoAudioReferencesSection', showsAudioReferences);
-      show('geminiVoiceSection', kind === 'geminiOmni');
+      show('geminiVoiceSection', hasGeminiVoices);
       show('wanPromptExtendSection', kind === 'wan27');
       show('videoFirstFrameControl', showsFirstFrame);
       show('videoLastFrameControl', showsLastFrame);
@@ -10478,7 +10511,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       show('videoRefImagesControl', true);
       show('videoRefVideosControl', showsVideoReferences);
       show('videoRefAudioControl', showsAudioReferences);
-      show('geminiAudioIdsControl', kind === 'geminiOmni');
+      show('geminiAudioIdsControl', hasGeminiVoices);
       show('wanPromptExtendControl', kind === 'wan27');
       syncUploadButtonCopy();
       if (typeof syncVideoRefsInputLocks === 'function') syncVideoRefsInputLocks();
@@ -11030,6 +11063,23 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      }
 	    }
 
+	    // Gemini Omni 1.2 Flash edits the whole video (up to 15 s, no trimming); the price follows its length.
+	    async function checkGemini12SourceVideo(file) {
+	      geminiOmniSourceDuration = await readVideoFileDuration(file) || 0;
+	      if (videoSourceFile !== file) return;
+	      if (geminiOmniSourceDuration > 15.05) {
+	        videoSourceFile = null;
+	        geminiOmniSourceDuration = 0;
+	        const input = document.getElementById('videoSourceInput');
+	        if (input) input.value = '';
+	        renderSingleThumb(null, document.getElementById('videoSourceThumb'));
+	        showStatus('Gemini Omni 1.2 Flash редактирует видео длиной до 15 секунд. Обрежьте видео и попробуйте снова.', 'error');
+	      }
+	      syncVideoRefsInputLocks();
+	      updateCostDisplay();
+	      updateRunButtonLabel();
+	    }
+
 	    function openGeminiOmniTrimModal(file) {
 	      if (!file || !currentModel || !currentModel.id.startsWith('gemini-omni')) return;
 	      const overlay = document.getElementById('geminiOmniTrimOverlay');
@@ -11483,12 +11533,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function usesExclusiveVideoFramePair() {
-      return !!(currentModel && (currentModel.id === 'gemini-omni-flash-1-1' || currentModel.id === 'wan-3'));
+      return !!(currentModel && (currentModel.id.startsWith('gemini-omni-flash') || currentModel.id === 'wan-3'));
     }
 
     function hasVideoReferenceInputs() {
       if (!currentModel) return false;
-      if (currentModel.id === 'gemini-omni-flash-1-1') return !!(videoSourceFile || videoRefImageFiles.length || geminiOmniAudioIds.length);
+      if (currentModel.id.startsWith('gemini-omni-flash')) return !!(videoSourceFile || videoRefImageFiles.length || (currentModel.id === 'gemini-omni-flash-1-1' && geminiOmniAudioIds.length));
       if (currentModel.id === 'wan-3') return !!(videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length);
       return false;
     }
@@ -11675,7 +11725,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        updateRunButtonLabel();
 	        syncVideoRefsInputLocks();
 	      });
-	      if (videoSourceFile && currentModel && currentModel.id.startsWith('gemini-omni')) openGeminiOmniTrimModal(videoSourceFile);
+	      if (videoSourceFile && currentModel && currentModel.id === 'gemini-omni-flash-1-2') checkGemini12SourceVideo(videoSourceFile);
+	      else if (videoSourceFile && currentModel && currentModel.id.startsWith('gemini-omni')) openGeminiOmniTrimModal(videoSourceFile);
 	      updateCostDisplay();
 	      updateRunButtonLabel();
 	      syncVideoRefsInputLocks();
@@ -11687,7 +11738,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         showStatus('Удалите кадры перед добавлением референсов изображений.', 'error');
         return;
       }
-      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : (currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 10 : 9));
+      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : (currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7)) : (currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 10 : 9));
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
       e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
@@ -12826,6 +12877,26 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             reference_image_urls: imageRefUrls,
             reference_video_urls: videoRefUrls,
             reference_audio_urls: audioRefUrls,
+            run_id: runId
+          };
+        }
+        case 'gemini-omni-flash-1-2': {
+          let cursor = 0;
+          const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = videoLastFrameFile ? (urls || [])[cursor++] : '';
+          const sourceVideoUrl = videoSourceFile ? (urls || [])[cursor++] : '';
+          const imageUrls = (urls || []).slice(cursor, cursor + videoRefImageFiles.length);
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            aspect_ratio: aspect || '16:9',
+            duration: Number(duration || 4),
+            resolution: String(resolution || currentResolution || '720p').toLowerCase(),
+            first_frame_url: firstFrameUrl || undefined,
+            last_frame_url: lastFrameUrl || undefined,
+            image_urls: imageUrls,
+            video_url: sourceVideoUrl || undefined,
             run_id: runId
           };
         }
@@ -14031,7 +14102,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           updateRunButtonLabel();
           return true;
         }
-        if (currentModel.id === 'gemini-omni-flash-1-1' || ['wan27', 'wan30', 'happyhorse'].includes(currentModel.specificUpload)) {
+        if (currentModel.id.startsWith('gemini-omni-flash') || ['wan27', 'wan30', 'happyhorse'].includes(currentModel.specificUpload)) {
           // The picture becomes the video's first frame, so the video starts from it.
           videoFirstFrameFile = files[0] || null;
           renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {

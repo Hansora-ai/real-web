@@ -718,7 +718,9 @@ test('the balance names the model of the user\'s last video, so ChatGPT can offe
     [{ provider: 'Wan 3.0', meta: { model: 'wan/3-0-video', engine: 'wan-3' } }, 'wan-3'],
     [{ provider: 'Kling-5s', meta: { model: 'kling/v2-5-turbo-image-to-video-pro' } }, 'kling25'],
     [{ provider: 'Seedance 2.5', meta: { model: 'bytedance/seedance-2-5', engine: 'seedance-2.5' } }, 'seedance25'],
-    [{ provider: 'Gemini Omni 1.1 Flash', meta: { model: 'gemini-omni-flash-1-1', engine: 'gemini-omni-flash-1-1' } }, 'gemini-omni-flash-1-1'],
+    // ChatGPT uses Gemini Omni 1.2 Flash in place of 1.1, so a last video on 1.1 is offered as 1.2.
+    [{ provider: 'Gemini Omni 1.1 Flash', meta: { model: 'gemini-omni-flash-1-1', engine: 'gemini-omni-flash-1-1' } }, 'gemini-omni-flash-1-2'],
+    [{ provider: 'Gemini Omni 1.2 Flash', meta: { model: 'google/gemini-omni-flash-1-2', engine: 'gemini-omni-flash-1-2', model_id: 'gemini-omni-flash-1-2' } }, 'gemini-omni-flash-1-2'],
     [{ provider: 'Kling 3 Turbo', meta: { model: 'kling/v3-turbo-text-to-video', engine: 'kling-v3-turbo' } }, 'kling3-turbo']
   ];
   for (const [row, modelId] of saved) {
@@ -1602,4 +1604,29 @@ test('an image that fails on the provider side is remade once on a backup at no 
   const blockedRow = { ...failedRow, meta: { ...failedRow.meta, error: 'The prompt may contain nudity or sexual content.' } };
   const blocked = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`) ? reply([blockedRow]) : world()(href)) });
   assert.equal(blocked.submitted.length, 0);
+});
+
+
+test('ChatGPT lists Gemini Omni 1.2 Flash instead of 1.1, priced per second at a 35% margin, with Kie 1.2 inputs', async () => {
+  const { listModels, getModel, quote, buildGenerationPayload } = await import('../../lib/hansora-mcp/registry.mjs');
+  const ids = listModels({ category: 'video' }).map((model) => model.id);
+  assert.ok(ids.includes('gemini-omni-flash-1-2'));
+  assert.ok(!ids.includes('gemini-omni-flash-1-1'));
+  assert.equal(getModel('gemini-omni-flash-1-1').id, 'gemini-omni-flash-1-2');
+  assert.equal(getModel('gemini-omni-flash-1-2').availability, 'available');
+  assert.equal(quote('gemini-omni-flash-1-2', { duration: 4, resolution: '720p' }).displayedCredits, 28);
+  assert.equal(quote('gemini-omni-flash-1-2', { duration: 10, resolution: '1080p' }).displayedCredits, 77);
+  assert.equal(quote('gemini-omni-flash-1-2', { duration: 15, resolution: '1080p' }).displayedCredits, 116);
+  // An edit is billed by its input video's length.
+  assert.equal(quote('gemini-omni-flash-1-2', { resolution: '720p', has_video_input: true, source_video_duration: 8 }).displayedCredits, 56);
+  // Reference images (up to 6), 'auto' shape with a photo, integer duration, no Gemini voices.
+  const refs = buildGenerationPayload('gemini-omni-flash-1-2', { prompt: 'Make them dance', image_urls: Array.from({ length: 8 }, (_, i) => `https://cdn.test/${i}.png`), duration: 12, resolution: '1080p' }, 'user-1', 'run-12345678');
+  assert.equal(refs.image_urls.length, 6);
+  assert.equal(refs.aspect_ratio, 'auto');
+  assert.equal(refs.duration, 12);
+  assert.equal(refs.audio_ids, undefined);
+  const text = buildGenerationPayload('gemini-omni-flash-1-2', { prompt: 'A city at night', duration: 20, resolution: '4K' }, 'user-1', 'run-12345679');
+  assert.equal(text.aspect_ratio, '16:9');
+  assert.equal(text.duration, 15);
+  assert.equal(text.resolution, '4k');
 });
