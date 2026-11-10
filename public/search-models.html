@@ -9105,7 +9105,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return files;
     }
 
-    function applyReusableImagesToCurrentModel(files) {
+    function applyReusableImagesToCurrentModel(files, { fromArticle = false } = {}) {
       const imageFiles = (files || []).filter((file) => file && (fileIsKind(file, 'image') || fileHasGenericMime(file)));
       if (!currentModel || !imageFiles.length) return false;
       clearPreviewInputValues();
@@ -9130,16 +9130,21 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         syncSeedanceInputLocks();
         return true;
       }
-      if (currentModel.specificUpload === 'grokVideo' || currentModel.specificUpload === 'geminiOmni') {
-        const limit = currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7;
+      const wanArticle = fromArticle && currentModel.specificUpload === 'wan30';
+      if (wanArticle || currentModel.specificUpload === 'grokVideo' || currentModel.specificUpload === 'geminiOmni') {
+        const limit = wanArticle
+          ? getListUploadConfig('videoRefImagesThumbs').max
+          : (currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7);
         videoRefImageFiles = imageFiles.slice(0, limit);
         renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
           videoRefImageFiles.splice(index, 1);
           const input = document.getElementById('videoRefImagesInput');
           if (input) input.value = '';
+          if (wanArticle) syncVideoRefsInputLocks();
           updateCostDisplay();
           updateRunButtonLabel();
         });
+        if (wanArticle) syncVideoRefsInputLocks();
         updateCostDisplay();
         updateRunButtonLabel();
         return true;
@@ -14460,7 +14465,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           ? getSeedanceReferenceLimit('image')
           : Math.max(1, Number(currentModel && currentModel.maxFiles || referenceUrls.length));
         const files = await hydratePreviewFiles(referenceUrls, 'image', limit);
-        if (!applyReusableImagesToCurrentModel(files)) {
+        if (!applyReusableImagesToCurrentModel(files, { fromArticle: true })) {
           throw new Error('Could not add the article reference images to this model.');
         }
       }
