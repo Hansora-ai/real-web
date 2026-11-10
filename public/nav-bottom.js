@@ -82,7 +82,7 @@
         <svg class="hs-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
       </button>
       <div class="hs-feature-list" id="hs-feature-list">
-        <a href="/upscale.html">Image upscale</a>
+        <a href="/upscale.html?mode=image">Image upscale</a>
         <a href="/expand.html?mode=angles">Full angles</a>
         <a href="/expand.html?mode=expand">Expand</a>
         <a href="/expand.html?mode=face-swap">Face swap</a>
