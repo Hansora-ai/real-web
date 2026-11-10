@@ -512,7 +512,7 @@ export default async (request, context) => {
       align-items:center;
       gap:13px;
       margin:0 0 12px;
-      padding:14px 14px 14px 12px;
+      padding:16px 16px 16px 18px;
       border-radius:20px;
       color:#fff;
       text-decoration:none;
@@ -539,17 +539,6 @@ export default async (request, context) => {
       background:radial-gradient(120% 140% at 0% 0%, rgba(139,92,246,.30), transparent 55%), linear-gradient(180deg,#171a2b,#0f1120);
     }
     .hs-auto-card:active{ transform:scale(.98); }
-    .hs-auto-icon{
-      flex:0 0 46px;
-      width:46px;
-      height:46px;
-      display:grid;
-      place-items:center;
-      border-radius:15px;
-      background:linear-gradient(135deg,#38bdf8,#8b5cf6 55%,#ec4899);
-      box-shadow:0 8px 22px -6px rgba(139,92,246,.8), inset 0 1px 0 rgba(255,255,255,.35);
-    }
-    .hs-overlay .hs-auto-icon svg{ width:24px; height:24px; stroke:#fff; stroke-width:2; }
     .hs-auto-copy{ display:flex; flex-direction:column; gap:3px; min-width:0; flex:1 1 auto; }
     .hs-auto-copy b{ font:800 16px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; }
     .hs-auto-copy small{ font:600 12px/1.25 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; color:rgba(226,230,240,.68); }
@@ -675,7 +664,6 @@ export default async (request, context) => {
     </header>
     <a class="hs-auto-card" href="/automation.html">
       <span class="hs-auto-ring" aria-hidden="true"></span>
-      <span class="hs-auto-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="4"></rect><path d="M12 8V4.5M9.5 14h.01M14.5 14h.01M9.5 17h5"></path><circle cx="12" cy="3.5" r="1"></circle></svg></span>
       <span class="hs-auto-copy"><b>${copy.automation}</b><small>${copy.automationText}</small></span>
       <span class="hs-auto-new">${copy.automationNew}</span>
     </a>
