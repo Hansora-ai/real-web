@@ -3056,21 +3056,21 @@
 /* Hansora Automation promo, styled like the ChatGPT Plugin page. CSS-only, skipped while off screen. */
 .ha-auto{content-visibility:auto;contain-intrinsic-size:auto 700px;position:relative;isolation:isolate}
 .ha-auto::before{content:"";position:absolute;inset:-40px 0;z-index:-1;pointer-events:none;background:radial-gradient(40% 55% at 78% 50%,rgba(16,185,129,.10),transparent 70%),radial-gradient(45% 60% at 20% 40%,rgba(124,92,255,.16),transparent 70%)}
-.ha-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.95fr);gap:48px;align-items:center}
+.ha-in{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:40px;align-items:center}
 .ha-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.04);color:#d9deea;font-size:14px;font-weight:600}
 .ha-pill i{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle,#4ade80 35%,rgba(74,222,128,.25) 40%);animation:ha-blink 2s ease-in-out infinite}
 @keyframes ha-blink{50%{opacity:.55}}
-.ha-auto h2{margin:20px 0 0;font-size:clamp(34px,4.6vw,62px);line-height:1.02;letter-spacing:-.045em;font-weight:850}
+.ha-auto h2{margin:16px 0 0;font-size:clamp(30px,3.4vw,48px);line-height:1.02;letter-spacing:-.045em;font-weight:850}
 .ha-grad{background:linear-gradient(100deg,#fff 5%,#a78bfa 45%,#38bdf8);-webkit-background-clip:text;background-clip:text;color:transparent}
-.ha-sub{max-width:560px;margin:20px 0 0;color:rgba(247,247,251,.62);font-size:clamp(16px,1.5vw,18px);line-height:1.6}
-.ha-caps{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}
-.ha-cap{display:flex;gap:13px;align-items:flex-start;padding:15px 16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025);transition:border-color .25s,background .25s}
+.ha-sub{max-width:600px;margin:14px 0 0;color:rgba(247,247,251,.62);font-size:16px;line-height:1.6}
+.ha-caps{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+.ha-cap{display:flex;gap:12px;align-items:center;padding:11px 14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025);transition:border-color .25s,background .25s}
 .ha-cap:hover{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.05)}
-.ha-cap .ic{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,rgba(56,189,248,.18),rgba(167,139,250,.18));font-size:18px}
-.ha-cap b{display:block;margin-bottom:3px;font-size:15.5px;color:#fff}
-.ha-cap span{color:rgba(247,247,251,.58);font-size:13.5px;line-height:1.5}
-.ha-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
-.ha-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:11px;min-height:56px;padding:0 26px;border-radius:16px;font-size:17px;font-weight:700;text-decoration:none;color:#fff;transition:transform .2s,box-shadow .2s,background .2s}
+.ha-cap .ic{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,rgba(56,189,248,.18),rgba(167,139,250,.18));font-size:18px}
+.ha-cap b{display:block;margin-bottom:1px;font-size:14.5px;color:#fff}
+.ha-cap span{color:rgba(247,247,251,.58);font-size:12.5px;line-height:1.4}
+.ha-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+.ha-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:11px;min-height:50px;padding:0 24px;border-radius:14px;font-size:16px;font-weight:700;text-decoration:none;color:#fff;transition:transform .2s,box-shadow .2s,background .2s}
 .ha-btn svg{width:20px;height:20px;flex:none}
 .ha-btn-primary{overflow:hidden;background:linear-gradient(120deg,#7c5cff,#a78bfa 45%,#38bdf8);background-size:200% 100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 14px 40px rgba(124,92,255,.4);animation:ha-shift 6s ease-in-out infinite}
 .ha-btn-primary::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);transform:translateX(-120%);animation:ha-shine 4s ease-in-out infinite}
@@ -3079,7 +3079,7 @@
 .ha-btn-ghost:hover{background:rgba(255,255,255,.09)}
 @keyframes ha-shift{50%{background-position:100% 0}}
 @keyframes ha-shine{55%,100%{transform:translateX(120%)}}
-.ha-orbit{position:relative;width:min(500px,100%);aspect-ratio:1;margin:0 auto}
+.ha-orbit{position:relative;width:min(380px,100%);aspect-ratio:1;margin:0 auto}
 .ha-ring{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.08)}
 .ha-ring.r1{inset:12.5%}
 .ha-ring.r2{inset:0;border-style:dashed;border-color:rgba(255,255,255,.07);animation:ha-spin 120s linear infinite reverse}
@@ -3101,14 +3101,14 @@
 .ha-core::after{content:"";position:absolute;inset:-30%;z-index:-1;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.45),transparent 65%);animation:ha-glow 4s ease-in-out infinite}
 @keyframes ha-glow{50%{opacity:.45}}
 .ha-core img{width:66%;height:66%}
-.ha-toasts{position:relative;width:min(290px,80%);height:58px;margin:6px auto 0}
+.ha-toasts{position:relative;width:min(280px,80%);height:54px;margin:4px auto 0}
 .ha-toast{position:absolute;inset:0;display:flex;align-items:center;gap:11px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(14,16,26,.92);box-shadow:0 18px 40px rgba(0,0,0,.5);opacity:0;transform:translateY(10px) scale(.96);animation:ha-toast 12s ease infinite}
 .ha-toast:nth-child(2){animation-delay:4s}.ha-toast:nth-child(3){animation-delay:8s}
 @keyframes ha-toast{0%{opacity:0;transform:translateY(10px) scale(.96)}4%,28%{opacity:1;transform:none}33%,100%{opacity:0;transform:translateY(-8px) scale(.98)}}
 .ha-toast em{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;font-style:normal;font-size:16px;background:linear-gradient(145deg,rgba(56,189,248,.2),rgba(167,139,250,.2))}
 .ha-toast b{display:block;font-size:13.5px;color:#fff}
 .ha-toast small{display:block;font-size:12.5px;color:#86efac;font-weight:600}
-@media (max-width:900px){.ha-in{grid-template-columns:1fr;gap:10px}.ha-visual{order:-1}.ha-orbit{width:min(330px,84vw)}.ha-caps{grid-template-columns:1fr}.ha-btn{flex:1 1 100%}}
+@media (max-width:900px){.ha-in{grid-template-columns:1fr;gap:10px}.ha-visual{order:-1}.ha-orbit{width:min(290px,76vw)}.ha-caps{grid-template-columns:1fr}.ha-btn{flex:1 1 100%}}
 @media (prefers-reduced-motion:reduce){.ha-auto *,.ha-auto *::before,.ha-auto *::after{animation:none!important}.ha-toast:first-child{opacity:1;transform:none}}
 .ha-node:nth-of-type(1) .ha-node-i::after{animation-delay:0s}.ha-node:nth-of-type(2) .ha-node-i::after{animation-delay:2s}.ha-node:nth-of-type(3) .ha-node-i::after{animation-delay:4s}.ha-node:nth-of-type(4) .ha-node-i::after{animation-delay:6s}.ha-node:nth-of-type(5) .ha-node-i::after{animation-delay:8s}.ha-node:nth-of-type(6) .ha-node-i::after{animation-delay:10s}</style>
 <div class="shell">
@@ -3117,7 +3117,7 @@
 <span class="ha-pill"><i></i>Новое · Hansora Automation</span>
 <h2 id="ha-auto-title">ИИ-сотрудник, который<br><span class="ha-grad">никогда не спит.</span></h2>
 <p class="ha-sub">Отвечает клиентам в Instagram, WhatsApp, Telegram, Messenger и TikTok, принимает звонки и превращает переписки в заказы и записи — 24/7.</p>
-<div class="ha-caps"><div class="ha-cap"><span class="ic">💬</span><div><b>Отвечает во всех чатах</b><span>Директ и комментарии Instagram, WhatsApp, Telegram, Messenger и TikTok — на языке клиента.</span></div></div><div class="ha-cap"><span class="ic">📞</span><div><b>Принимает звонки</b><span>Отвечает на каждый звонок естественным голосом и записывает клиента.</span></div></div><div class="ha-cap"><span class="ic">🛍️</span><div><b>Принимает заказы и записи</b><span>Собирает заказ или находит свободное время и подтверждает.</span></div></div><div class="ha-cap"><span class="ic">🔥</span><div><b>Передаёт горячих клиентов</b><span>Готовые купить клиенты сразу приходят вам на телефон.</span></div></div></div>
+<div class="ha-caps"><div class="ha-cap"><span class="ic">💬</span><div><b>Отвечает во всех чатах</b><span>Instagram, WhatsApp, Telegram, Messenger, TikTok.</span></div></div><div class="ha-cap"><span class="ic">📞</span><div><b>Принимает звонки</b><span>Естественный голос, записывает клиента.</span></div></div><div class="ha-cap"><span class="ic">🛍️</span><div><b>Принимает заказы и записи</b><span>Оформляет заказ или запись.</span></div></div><div class="ha-cap"><span class="ic">🔥</span><div><b>Передаёт горячих клиентов</b><span>Готовые купить — сразу вам на телефон.</span></div></div></div>
 <div class="ha-ctas"><a class="ha-btn ha-btn-primary" href="/automation.html">Начать бесплатно<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="ha-btn ha-btn-ghost" href="/automation-pricing.html">Цены</a></div>
 </div>
 <div class="ha-visual" aria-hidden="true">
