@@ -1,5 +1,5 @@
 // netlify/functions/run-upscale.js
-// Submit Hansora Upscale tasks to KIE: image => nano-banana-pro, video => topaz/video-upscale.
+// Submit Hansora Upscale tasks to KIE.
 // Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SITE_BASE
 
 const KIE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
@@ -20,6 +20,8 @@ exports.handler = async (event) => {
   try {
     const headers = lowerKeys(event.headers || {});
     const body = safeJson(event.body);
+    const kind = normalizeKind(body.kind || body.media_type || body.mediaType || "");
+    if (kind === "video") return require('../../lib/kie/video-upscale.cjs').launch(event, body);
     const uid = String(body.uid || body.user_id || "").trim();
     if (!uid) return ok({ submitted: false, error: "missing_uid" });
 
@@ -32,20 +34,19 @@ exports.handler = async (event) => {
     const fileUrl = normalizeUrl(body.fileUrl || body.file_url || body.url || "");
     if (!fileUrl) return ok({ submitted: false, error: "missing_file_url" });
 
-    const kind = normalizeKind(body.kind || body.media_type || body.mediaType || "");
     const run_id = String(body.run_id || body.runId || `${uid}-upscale-${Date.now()}`).trim();
     const fileName = String(body.fileName || body.file_name || "uploaded-file").trim().slice(0, 180);
     const fileType = String(body.fileType || body.file_type || "").trim().slice(0, 120);
 
-    const config = buildConfig(kind, body);
+    const config = buildConfig(body);
     const cost = config.cost;
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     const existing = await getExistingTask(uid, run_id);
     if (existing && existing.taskId) return ok({ submitted: true, run_id, taskId: existing.taskId, already: true });
 
-    const provider = kind === "video" ? "topaz-video-upscale" : "nano-banana-pro";
-    const prompt = kind === "video" ? `Topaz video upscale ${config.upscaleFactor}x` : IMAGE_PROMPT;
+    const provider = "nano-banana-pro";
+    const prompt = IMAGE_PROMPT;
     await seedPlaceholder(uid, run_id, {
       provider,
       prompt,
@@ -57,23 +58,17 @@ exports.handler = async (event) => {
       config
     });
 
-    const kiePayload = kind === "video"
-      ? {
-          model: "topaz/video-upscale",
-          callBackUrl,
-          input: { video_url: fileUrl, upscale_factor: String(config.upscaleFactor) }
-        }
-      : {
-          model: "nano-banana-pro",
-          callBackUrl,
-          input: {
-            prompt: IMAGE_PROMPT,
-            image_input: [fileUrl],
-            aspect_ratio: "auto",
-            resolution: config.resolution,
-            output_format: "png"
-          }
-        };
+    const kiePayload = {
+      model: "nano-banana-pro",
+      callBackUrl,
+      input: {
+        prompt: IMAGE_PROMPT,
+        image_input: [fileUrl],
+        aspect_ratio: "auto",
+        resolution: config.resolution,
+        output_format: "png"
+      }
+    };
 
     const resp = await fetch(KIE_URL, {
       method: "POST",
@@ -97,15 +92,7 @@ exports.handler = async (event) => {
   }
 };
 
-function buildConfig(kind, body) {
-  if (kind === "video") {
-    const upscaleFactor = String(body.videoScale || body.upscale_factor || body.upscaleFactor || "2") === "4" ? "4" : "2";
-    const durationSeconds = Number(body.durationSeconds || body.duration_seconds || 0);
-    if (!Number.isFinite(durationSeconds) || durationSeconds < 4 || durationSeconds > 30) throw new Error("video_duration_must_be_4_to_30_seconds");
-    const perSecond = upscaleFactor === "4" ? 1 : 0.7;
-    const cost = Math.round(Math.ceil(durationSeconds) * perSecond * 10) / 10;
-    return { upscaleFactor, durationSeconds, cost };
-  }
+function buildConfig(body) {
   const resolution = String(body.imageResolution || body.resolution || "2K").toUpperCase() === "4K" ? "4K" : "2K";
   return { resolution, cost: resolution === "4K" ? 3 : 2 };
 }

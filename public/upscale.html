@@ -10,6 +10,7 @@
   <link href="/header.css" rel="stylesheet" />
   <script defer src="/header.js"></script>
   <script src="/kie-upload-bridge.js"></script>
+  <script src="/video-upscale-pricing.js"></script>
   <style>
     :root{
       --base-bg:#050714;
@@ -119,7 +120,7 @@
 <body>
   <div id="sharedHeader"></div>
   <main class="page-shell">
-    <p class="provider-notice" role="alert">Upscaling is temporarily unavailable due to a provider issue. Please try again later.</p>
+    <p id="providerNotice" class="provider-notice" role="alert">Upscaling is temporarily unavailable due to a provider issue. Please try again later.</p>
     <section class="hero">
       <div class="glass rounded-[34px] p-6 sm:p-8">
         <div class="flex items-start justify-between gap-4 mb-6">
@@ -166,10 +167,11 @@
           </div>
           <div id="videoControls" class="hidden space-y-4">
             <div>
-              <p class="small-label mb-2">Scale</p>
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" data-video-scale="2" class="pill active px-4 py-3 font-bold">2×</button>
-                <button type="button" data-video-scale="4" class="pill px-4 py-3 font-bold">4×</button>
+              <p class="small-label mb-2">Output size</p>
+              <div class="grid grid-cols-3 gap-2">
+                <button type="button" data-video-resolution="1080P" class="pill px-2 py-3 font-bold">1080p</button>
+                <button type="button" data-video-resolution="2K" class="pill active px-2 py-3 font-bold">2K</button>
+                <button type="button" data-video-resolution="4K" class="pill px-2 py-3 font-bold">4K</button>
               </div>
             </div>
           </div>
@@ -203,7 +205,9 @@
   const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   window.__HANSORA_SB__ = supabaseClient; window.hansoraSupabase = supabaseClient;
   const $ = (id)=>document.getElementById(id);
-  let currentUser=null,currentCredits=0,selectedFile=null,selectedKind='image',imageResolution='2K',videoScale='2',videoDuration=0,pollTimer=null,lastHistorySignature='';
+  let currentUser=null,currentCredits=0,selectedFile=null,selectedKind='image',imageResolution='2K',videoResolution='2K',videoDuration=0,pollTimer=null,lastHistorySignature='';
+  const videoUploads = new WeakMap();
+  let videoRetry = null;
   const IMAGE_PROMPT = 'Upscale and enhance this image with Nano Banana Pro. Preserve the original composition, identity, colors, and style. Improve resolution, natural detail, texture clarity, edge sharpness, lighting balance, and overall quality. Do not add new objects, text, logos, watermarks, or change the subject.';
   function parseCredits(value){const n=Number(String(value??'').replace(/[^\d.-]/g,''));return Number.isFinite(n)?n:0}
   function formatCredit(n){n=Number(n||0)*10;return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,'')}
@@ -218,18 +222,76 @@
   function isImage(file){return String(file&&file.type||'').startsWith('image/')||/\.(png|jpe?g|webp)$/i.test(String(file&&file.name||''))}
   function isVideo(file){return String(file&&file.type||'').startsWith('video/')||/\.(mp4|mov|webm|m4v)$/i.test(String(file&&file.name||''))}
   function formatDuration(seconds){const total=Math.max(0,Math.round(Number(seconds||0)));return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`}
-  function estimateCost(){if(selectedKind==='image')return imageResolution==='4K'?3:2;const seconds=Math.max(0,videoDuration||0);if(!seconds)return videoScale==='4'?1:0.7;return Math.ceil(seconds)*(videoScale==='4'?1:0.7)}
-  function updateCostUI(){const cost=estimateCost();$('costText').textContent=`${formatCredit(cost)} credits`;$('runBtn').textContent=`Upscale • ${formatCredit(cost)}⚡`;if(selectedKind==='image')$('costHint').textContent=`Image ${imageResolution} upscale.`;else $('costHint').textContent=videoDuration?`${formatDuration(videoDuration)} detected • ${videoScale}× video upscale.`:`Video price uses real duration.`}
+  function estimateCost(){
+    if (selectedKind === 'image') return imageResolution === '4K' ? 3 : 2;
+    if (videoDuration <= 0 || videoDuration > VideoUpscalePricing.maxSeconds) return null;
+    return VideoUpscalePricing.quote({resolution:videoResolution, seconds:videoDuration}).internalCredits;
+  }
+  function updateCostUI(){const cost=estimateCost();$('costText').textContent=`${cost === null ? '—' : formatCredit(cost)} credits`;$('runBtn').textContent=`Upscale • ${cost === null ? '—' : formatCredit(cost)}⚡`;if(selectedKind==='image')$('costHint').textContent=`Image ${imageResolution} upscale.`;else $('costHint').textContent=videoDuration>0&&videoDuration<=VideoUpscalePricing.maxSeconds?`${formatDuration(videoDuration)} detected • ${videoResolution} video upscale.`:`Up to 60 seconds and 50 MB. Price depends on duration.`}
   function selectedFileKind(){if(!selectedFile)return '';return isVideo(selectedFile)?'video':isImage(selectedFile)?'image':''}
   function updateModeAvailability(){const locked=selectedFileKind();$('imageModeBtn').disabled=locked==='video';$('videoModeBtn').disabled=locked==='image';}
-  function syncMode(kind){const locked=selectedFileKind();if(locked&&kind!==locked)kind=locked;selectedKind=kind;$('imageModeBtn').classList.toggle('active',kind==='image');$('videoModeBtn').classList.toggle('active',kind==='video');$('imageControls').classList.toggle('hidden',kind!=='image');$('videoControls').classList.toggle('hidden',kind!=='video');updateModeAvailability();updateCostUI()}
+  function syncMode(kind){const locked=selectedFileKind();if(locked&&kind!==locked)kind=locked;selectedKind=kind;$('providerNotice').hidden=kind==='video';$('imageModeBtn').classList.toggle('active',kind==='image');$('videoModeBtn').classList.toggle('active',kind==='video');$('imageControls').classList.toggle('hidden',kind!=='image');$('videoControls').classList.toggle('hidden',kind!=='video');updateModeAvailability();updateCostUI()}
   function readVideoDuration(file){return new Promise(resolve=>{try{const url=URL.createObjectURL(file);const v=document.createElement('video');v.preload='metadata';v.onloadedmetadata=()=>{const d=Number(v.duration||0);URL.revokeObjectURL(url);resolve(Number.isFinite(d)?d:0)};v.onerror=()=>{URL.revokeObjectURL(url);resolve(0)};v.src=url}catch{resolve(0)}})}
   function shortName(name){const s=String(name||'file');return s.length>22?s.slice(0,10)+'....'+s.slice(-8):s}
-  async function setFile(file){clearError();selectedFile=file||null;videoDuration=0;if(!selectedFile){$('previewWrap').classList.add('hidden');$('dropEmpty').classList.remove('hidden');updateModeAvailability();updateCostUI();return}if(!isImage(selectedFile)&&!isVideo(selectedFile)){selectedFile=null;updateModeAvailability();showError('Upload one image or one video.');return}if(isVideo(selectedFile)&&selectedFile.size>50*1024*1024){selectedFile=null;updateModeAvailability();showError('Video must be under 50MB.');return}selectedKind=isVideo(selectedFile)?'video':'image';syncMode(selectedKind);$('dropEmpty').classList.add('hidden');$('previewWrap').classList.remove('hidden');$('fileName').textContent=shortName(selectedFile.name);$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • reading...`;const url=URL.createObjectURL(selectedFile);$('previewBox').innerHTML=isVideo(selectedFile)?`<video src="${url}" controls muted playsinline></video>`:`<img src="${url}" alt="preview" />`;if(isVideo(selectedFile)){videoDuration=await readVideoDuration(selectedFile);if(videoDuration<4||videoDuration>30){showError('Video duration must be from 4 to 30 seconds.');}$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • video • ${formatDuration(videoDuration)}`;}else{$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • image`;}updateCostUI()}
+  async function setFile(file){clearError();selectedFile=file||null;videoDuration=0;if(!selectedFile){$('previewWrap').classList.add('hidden');$('dropEmpty').classList.remove('hidden');updateModeAvailability();updateCostUI();return}if(!isImage(selectedFile)&&!isVideo(selectedFile)){selectedFile=null;updateModeAvailability();showError('Upload one image or one video.');return}if(isVideo(selectedFile)&&selectedFile.size>VideoUpscalePricing.maxBytes){selectedFile=null;updateModeAvailability();showError("Video must be 50 MB or smaller.");return}selectedKind=isVideo(selectedFile)?'video':'image';syncMode(selectedKind);$('dropEmpty').classList.add('hidden');$('previewWrap').classList.remove('hidden');$('fileName').textContent=shortName(selectedFile.name);$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • reading...`;const url=URL.createObjectURL(selectedFile);$('previewBox').innerHTML=isVideo(selectedFile)?`<video src="${url}" controls muted playsinline></video>`:`<img src="${url}" alt="preview" />`;if(isVideo(selectedFile)){const seconds=await readVideoDuration(file);if(selectedFile!==file)return;videoDuration=seconds;if(videoDuration<=0||videoDuration>VideoUpscalePricing.maxSeconds){showError("Upload a readable video up to 60 seconds long.");}$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • video • ${formatDuration(videoDuration)}`;}else{$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • image`;}updateCostUI()}
   function wireUpload(){const input=$('mediaInput'),drop=$('dropZone');drop.addEventListener('click',(e)=>{if(e.target.closest('#removeFileBtn'))return;input.click()});input.addEventListener('change',()=>setFile(input.files&&input.files[0]));['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>setFile(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]));$('removeFileBtn').addEventListener('click',e=>{e.stopPropagation();input.value='';setFile(null)})}
-  function wireControls(){$('imageModeBtn').addEventListener('click',()=>syncMode('image'));$('videoModeBtn').addEventListener('click',()=>syncMode('video'));document.querySelectorAll('[data-image-resolution]').forEach(b=>b.addEventListener('click',()=>{imageResolution=b.dataset.imageResolution;document.querySelectorAll('[data-image-resolution]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}));document.querySelectorAll('[data-video-scale]').forEach(b=>b.addEventListener('click',()=>{videoScale=b.dataset.videoScale;document.querySelectorAll('[data-video-scale]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}))}
+  function wireControls(){$('imageModeBtn').addEventListener('click',()=>syncMode('image'));$('videoModeBtn').addEventListener('click',()=>syncMode('video'));document.querySelectorAll('[data-image-resolution]').forEach(b=>b.addEventListener('click',()=>{imageResolution=b.dataset.imageResolution;document.querySelectorAll('[data-image-resolution]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}));document.querySelectorAll('[data-video-resolution]').forEach(b=>b.addEventListener('click',()=>{videoResolution=b.dataset.videoResolution;document.querySelectorAll('[data-video-resolution]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}))}
   async function ensureUser(){const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(!currentUser)throw new Error('Please log in first.');return currentUser}
-  async function submit(e){e.preventDefault();clearError();const btn=$('runBtn'),old=btn.textContent;try{const user=await ensureUser();if(!selectedFile)throw new Error('Please upload one image or video first.');if(selectedKind==='video'){if(selectedFile.size>50*1024*1024)throw new Error('Video must be under 50MB.');if(videoDuration<4||videoDuration>30)throw new Error('Video duration must be from 4 to 30 seconds.')}const cost=estimateCost();const available=await getAvailableCredits(cost);if(available<cost)throw new Error(`Not enough credits. This needs ${formatCredit(cost)} credits.`);if(!window.kieUploadBridge||typeof window.kieUploadBridge.upload!=='function')throw new Error('upload_bridge_missing');const session=await supabaseClient.auth.getSession();const token=session?.data?.session?.access_token||'';if(!token)throw new Error('Please log in again.');btn.disabled=true;btn.textContent='Uploading...';const uploaded=await window.kieUploadBridge.upload(selectedFile);if(!uploaded||!uploaded.publicUrl)throw new Error('upload_failed');const runId=`${user.id}-upscale-${Date.now()}`;const body={uid:user.id,run_id:runId,kind:selectedKind,fileUrl:uploaded.publicUrl,fileName:selectedFile.name,fileType:selectedFile.type,durationSeconds:videoDuration,imageResolution,videoScale,prompt:IMAGE_PROMPT};addPending(runId);btn.textContent='Submitting...';const resp=await fetch('/.netlify/functions/run-upscale',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(body)});const data=await resp.json().catch(()=>({}));if(!data.submitted)throw new Error(data.error||'submit_failed');await refreshCredits();if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(90000,1500);startPolling()}catch(err){showError(String(err.message||err))}finally{btn.disabled=false;btn.textContent=old;updateCostUI()}}
+  async function submit(event){
+    event.preventDefault();
+    const button = $('runBtn');
+    if (button.disabled) return;
+    clearError();
+    button.disabled = true;
+    const file = selectedFile, kind = selectedKind, resolution = videoResolution;
+    const selectedImageResolution = imageResolution, cost = estimateCost();
+    try {
+      const user = await ensureUser();
+      if (!file) throw new Error("Please upload one image or video first.");
+      if (kind === 'video' && file.size > VideoUpscalePricing.maxBytes) throw new Error("Video must be 50 MB or smaller.");
+      if (cost === null) throw new Error("Upload a readable video up to 60 seconds long.");
+      if (await getAvailableCredits(cost) < cost) throw new Error("Not enough credits. This needs" + ' ' + formatCredit(cost) + ' ⚡.');
+      const session = await supabaseClient.auth.getSession();
+      const token = session?.data?.session?.access_token;
+      if (!token) throw new Error("Please log in again.");
+      let uploaded = kind === 'video' ? videoUploads.get(file) : null;
+      if (!uploaded) {
+        button.textContent = "Uploading…";
+        uploaded = await window.kieUploadBridge.upload(file);
+        if (!uploaded?.publicUrl) throw new Error("Upload failed.");
+        if (kind === 'video') videoUploads.set(file, uploaded);
+      }
+      const retry = kind === 'video' && videoRetry?.file === file && videoRetry.resolution === resolution;
+      const runId = retry ? videoRetry.runId : user.id + '-upscale-' + crypto.randomUUID();
+      if (kind === 'video') videoRetry = {file,resolution,runId};
+      const body = {
+        uid:user.id, run_id:runId, kind, fileUrl:uploaded.publicUrl, fileName:file.name, fileType:file.type,
+        imageResolution:selectedImageResolution, videoResolution:resolution, expected_credits:Math.round(cost*10)
+      };
+      button.textContent = "Submitting…";
+      const response = await fetch('/.netlify/functions/run-upscale',{
+        method:'POST',
+        headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+        body:JSON.stringify(body)
+      });
+      const data = await response.json().catch(()=>({}));
+      if (kind === 'video' && typeof data.submitted === 'boolean') videoRetry = null;
+      if (kind === 'video' && response.status === 409 && Number.isFinite(data.duration_seconds) && selectedFile === file) {
+        videoDuration = data.duration_seconds;
+        throw new Error("The verified price is shown below. Click Upscale again to confirm.");
+      }
+      if (!data.submitted) throw new Error(data.error || "Could not submit the upscale.");
+      addPending(runId);
+      await refreshCredits();
+      if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(90000,1500);
+      startPolling();
+    } catch (error) {
+      showError(String(error.message || error));
+    } finally {
+      button.disabled = false;
+      updateCostUI();
+    }
+  }
   function addPending(runId){$('emptyResults').classList.add('hidden');const div=document.createElement('div');div.className='result-card processing-card p-3';div.dataset.runId=runId;div.innerHTML='<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">Upscale</p><p class="text-xs text-slate-400 mt-1 safe-name">Processing...</p></div><span class="status-dot"></span></div><div class="result-media result-placeholder"><div class="processing-orb"></div><div class="processing-label mt-3">Creating...</div></div>';$('resultsList').prepend(div);Array.from($('resultsList').children).slice(12).forEach(node=>node.remove())}
   function isUsableUrl(url){const v=String(url||'').trim().toLowerCase();return /^https?:\/\//.test(v)&&!v.includes('callback')}
   function collectUrls(row){const meta=row.meta||{};const arr=[];if(row.result_url)arr.push(row.result_url);if(meta.result_url)arr.push(meta.result_url);if(Array.isArray(meta.result_urls))arr.push(...meta.result_urls);if(Array.isArray(meta.urls))arr.push(...meta.urls);return [...new Set(arr.filter(isUsableUrl))]}
@@ -237,17 +299,32 @@
   async function downloadMedia(url,name,type,btn){const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Downloading...'}try{const res=await fetch(url,{mode:'cors'});if(!res.ok)throw new Error('download_failed');const blob=await res.blob();const objectUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=objectUrl;a.download=downloadName(name,type);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),1200)}catch(e){const a=document.createElement('a');a.href=url;a.download=downloadName(name,type);document.body.appendChild(a);a.click();a.remove()}finally{if(btn){btn.disabled=false;btn.textContent=old||'Get'}}}
   function historySignature(rows){return rows.map(row=>{const meta=row.meta||{},urls=collectUrls(row);return [row.created_at||'',urls[0]||'',meta.status||'',meta.task_id||meta.taskId||'',meta.run_id||meta.runId||''].join('|')}).join('||')}
   function primeResultVideos(){document.querySelectorAll('#resultsList video').forEach(video=>{video.muted=true;video.playsInline=true;video.preload='auto';const seek=()=>{try{if(Number(video.duration||0)>0&&video.currentTime<0.05)video.currentTime=Math.min(.2,Math.max(.05,video.duration*.04))}catch{}};video.addEventListener('loadedmetadata',seek,{once:true});video.load()})}
-  async function loadRecentHistory(force=false){if(!currentUser)return;if($('previewOverlay').classList.contains('show')&&!force)return;const {data,error}=await supabaseClient.from('user_generations').select('provider,kind,prompt,result_url,meta,created_at').eq('user_id',currentUser.id).eq('kind','upscale').order('created_at',{ascending:false}).limit(12);if(error)return;const rows=(data||[]).slice(0,12);const signature=historySignature(rows);if(!force&&signature===lastHistorySignature)return;lastHistorySignature=signature;$('resultsList').innerHTML='';$('emptyResults').classList.toggle('hidden',rows.length>0);rows.forEach(row=>{const meta=row.meta||{},urls=collectUrls(row),url=urls[0]||'',type=String(meta.media_type||'image'),status=url?'ready':String(meta.status||'processing'),name=type==='video'?'Video Upscale':'Image Upscale',fileName=meta.file_name||row.prompt||name;const media=url?`<div class="result-media">${type==='video'?`<video src="${escapeHtml(url)}" muted playsinline preload="auto"></video>`:`<img src="${escapeHtml(url)}" alt="result" loading="lazy" />`}</div>`:`<div class="result-media result-placeholder">${status==='failed'?'Failed':'<div class="processing-orb"></div><div class="processing-label mt-3">Creating...</div>'}</div>`;const div=document.createElement('div');div.className=`result-card p-3 ${!url&&status!=='failed'?'processing-card':''}`;if(url){div.dataset.url=url;div.dataset.type=type;div.dataset.name=fileName}div.innerHTML=`<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">${escapeHtml(name)}</p><p class="text-xs text-slate-400 mt-1 safe-name">${escapeHtml(fileName)}</p></div><span class="status-dot ${url?'ready':status==='failed'?'failed':''}"></span></div>${media}${url?'<div class="mt-3"><button class="get-btn" type="button">Get</button></div>':''}`;if(url){div.querySelector('.get-btn').addEventListener('click',(e)=>{e.stopPropagation();downloadMedia(url,fileName,type,e.currentTarget)})}$('resultsList').appendChild(div)});primeResultVideos()}
+  async function loadRecentHistory(force=false){if(!currentUser)return;if($('previewOverlay').classList.contains('show')&&!force)return;const {data,error}=await supabaseClient.from('user_generations').select('provider,kind,prompt,result_url,meta,created_at').eq('user_id',currentUser.id).or('kind.eq.upscale,meta->>tool_feature.eq.video-upscale').order('created_at',{ascending:false}).limit(12);if(error)return;const rows=(data||[]).slice(0,12);const signature=historySignature(rows);if(!force&&signature===lastHistorySignature)return;lastHistorySignature=signature;$('resultsList').innerHTML='';$('emptyResults').classList.toggle('hidden',rows.length>0);rows.forEach(row=>{const meta=row.meta||{},urls=collectUrls(row),url=urls[0]||'',type=String(meta.media_type||'image'),status=url?'ready':String(meta.status||'processing'),name=type==='video'?'Video Upscale':'Image Upscale',fileName=meta.file_name||row.prompt||name;const media=url?`<div class="result-media">${type==='video'?`<video src="${escapeHtml(url)}" muted playsinline preload="auto"></video>`:`<img src="${escapeHtml(url)}" alt="result" loading="lazy" />`}</div>`:`<div class="result-media result-placeholder">${status==='failed'?'Failed':'<div class="processing-orb"></div><div class="processing-label mt-3">Creating...</div>'}</div>`;const div=document.createElement('div');div.className=`result-card p-3 ${!url&&status!=='failed'?'processing-card':''}`;if(url){div.dataset.url=url;div.dataset.type=type;div.dataset.name=fileName}div.innerHTML=`<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">${escapeHtml(name)}</p><p class="text-xs text-slate-400 mt-1 safe-name">${escapeHtml(fileName)}</p></div><span class="status-dot ${url?'ready':status==='failed'?'failed':''}"></span></div>${media}${url?'<div class="mt-3"><button class="get-btn" type="button">Get</button></div>':''}`;if(url){div.querySelector('.get-btn').addEventListener('click',(e)=>{e.stopPropagation();downloadMedia(url,fileName,type,e.currentTarget)})}$('resultsList').appendChild(div)});primeResultVideos()}
   function isResultVideoPlaying(){return Array.from(document.querySelectorAll('#resultsList video')).some(v=>!v.paused&&!v.ended&&v.readyState>2)}
-  function shouldCheckUpscaleRow(row){const meta=row&&row.meta?row.meta:{};const status=String(meta.status||'').toLowerCase();if(status==='failed'||status==='error'||status==='refunded')return false;return collectUrls(row).length===0&&!!(meta.run_id||meta.runId)&&!!(meta.task_id||meta.taskId)}
-  async function hitUpscaleCheck(row){if(!currentUser||!shouldCheckUpscaleRow(row))return false;const meta=row.meta||{};const runId=meta.run_id||meta.runId||'',taskId=meta.task_id||meta.taskId||'';try{await fetch(`/.netlify/functions/upscale-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`,{method:'GET',cache:'no-store',headers:{'Accept':'application/json'}});return true}catch{return false}}
-  async function checkPending(){if(!currentUser)return 0;const {data,error}=await supabaseClient.from('user_generations').select('result_url,meta,created_at').eq('user_id',currentUser.id).eq('kind','upscale').order('created_at',{ascending:false}).limit(30);if(error)return 0;const rows=(data||[]).filter(shouldCheckUpscaleRow);let checked=0;await Promise.all(rows.map(async row=>{if(await hitUpscaleCheck(row))checked++}));return checked}
+  function shouldCheckUpscaleRow(row){const meta=row&&row.meta?row.meta:{};const status=String(meta.status||'').toLowerCase();if(status==='failed'||status==='error'||status==='refunded')return false;return collectUrls(row).length===0&&!!(meta.run_id||meta.runId)&&!!(meta.task_id||meta.taskId||meta.tool_feature==='video-upscale')}
+  async function hitUpscaleCheck(row, token){
+    if (!currentUser || !shouldCheckUpscaleRow(row)) return false;
+    const meta = row.meta || {};
+    const params = new URLSearchParams({uid:currentUser.id, run_id:meta.run_id||meta.runId||'', taskId:meta.task_id||meta.taskId||''});
+    const isVideoUpscale = meta.tool_feature === 'video-upscale';
+    const checker = isVideoUpscale ? 'kling4-check' : 'upscale-check';
+    if (isVideoUpscale && !token) return false;
+    const headers = {'Accept':'application/json'};
+    if (isVideoUpscale) headers.Authorization = 'Bearer '+token;
+    try {
+      await fetch('/.netlify/functions/'+checker+'?'+params,{cache:'no-store',headers});
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function checkPending(){if(!currentUser)return 0;const {data,error}=await supabaseClient.from('user_generations').select('result_url,meta,created_at').eq('user_id',currentUser.id).or('kind.eq.upscale,meta->>tool_feature.eq.video-upscale').order('created_at',{ascending:false}).limit(30);if(error)return 0;const rows=(data||[]).filter(shouldCheckUpscaleRow);const token=rows.some(row=>row.meta?.tool_feature==='video-upscale')?(await supabaseClient.auth.getSession()).data?.session?.access_token:'';let checked=0;await Promise.all(rows.map(async row=>{if(await hitUpscaleCheck(row,token))checked++}));return checked}
   function startPolling(){if(pollTimer)clearInterval(pollTimer);let ticks=0;const runOnce=async()=>{ticks++;const p=await checkPending();if(!isResultVideoPlaying())await loadRecentHistory();if((p===0&&ticks>2)||ticks>80){clearInterval(pollTimer);pollTimer=null}};runOnce();pollTimer=setInterval(runOnce,3000)}
   function escapeHtml(str){return String(str||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
   function openPreview(url,type){if(!url)return;$('previewContent').innerHTML=type==='video'?`<video src="${escapeHtml(url)}" controls autoplay playsinline></video>`:`<img src="${escapeHtml(url)}" alt="Upscale preview" />`;$('previewOverlay').classList.add('show');$('previewOverlay').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
   function closePreview(){$('previewOverlay').classList.remove('show');$('previewOverlay').setAttribute('aria-hidden','true');$('previewContent').innerHTML='';document.body.style.overflow='';loadRecentHistory().catch(()=>{})}
   function wirePreview(){$('resultsList').addEventListener('click',(event)=>{if(event.target.closest('.get-btn'))return;const card=event.target.closest('.result-card[data-url]');if(!card)return;openPreview(card.dataset.url,card.dataset.type)});$('previewClose').addEventListener('click',closePreview);$('previewOverlay').addEventListener('click',(event)=>{if(event.target===$('previewOverlay'))closePreview()});document.addEventListener('keydown',(event)=>{if(event.key==='Escape')closePreview()})}
-  async function init(){wireUpload();wireControls();wirePreview();syncMode('image');$('upscaleForm').addEventListener('submit',submit);$('refreshResultsBtn').addEventListener('click',async()=>{const p=await checkPending();await loadRecentHistory(true);if(p>0)startPolling()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});window.addEventListener('focus',()=>{if(currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(currentUser){await refreshCredits();const pending=await checkPending();await loadRecentHistory(true);if(pending>0)startPolling()}if(window.HansoraHeader&&typeof window.HansoraHeader.init==='function'){try{window.HansoraHeader.init({supabaseClient})}catch{}}}
+  async function init(){wireUpload();wireControls();wirePreview();syncMode(new URLSearchParams(location.search).get('mode')==='video'?'video':'image');$('upscaleForm').addEventListener('submit',submit);$('refreshResultsBtn').addEventListener('click',async()=>{const p=await checkPending();await loadRecentHistory(true);if(p>0)startPolling()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});window.addEventListener('focus',()=>{if(currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(currentUser){await refreshCredits();const pending=await checkPending();await loadRecentHistory(true);if(pending>0)startPolling()}if(window.HansoraHeader&&typeof window.HansoraHeader.init==='function'){try{window.HansoraHeader.init({supabaseClient})}catch{}}}
   document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>
