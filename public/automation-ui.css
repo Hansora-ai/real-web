@@ -977,3 +977,7 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 .ui-pack-upsell{margin:0;padding:9px 12px;border:1px dashed var(--green);border-radius:var(--radius-sm);background:var(--green-soft);color:var(--text-2);font-size:13.5px;line-height:1.4}
 .ui-pack-upsell b{color:var(--green)}
 .ui-pack .ui-pack-more+.ui-pack-buy,.ui-pack .ui-pack-upsell+.ui-pack-buy{margin-top:0}
+
+/* Knowledge files: a long file name is cut with "…" instead of pushing the row out of the card. */
+.ui-kfiles,.ui-kfiles-list,.ui-kfile{min-width:0}
+.ui-kfiles-list{grid-template-columns:minmax(0,1fr)}
