@@ -3053,68 +3053,80 @@
 
 <section class="section ha-auto" aria-labelledby="ha-auto-title">
 <style>
-/* Hansora Automation promo: CSS-only animation (transform/opacity), skipped while off screen. */
-.ha-auto{content-visibility:auto;contain-intrinsic-size:auto 640px}
-.ha-auto-card{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:40px;align-items:center;padding:56px;border-radius:32px;border:1px solid rgba(255,255,255,.09);background:radial-gradient(70% 90% at 0% 0%,rgba(139,92,246,.22),transparent 60%),radial-gradient(60% 80% at 100% 100%,rgba(56,189,248,.16),transparent 60%),linear-gradient(160deg,#121427,#0b0d18)}
-.ha-auto-card::before{content:"";position:absolute;inset:0;z-index:-1;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:44px 44px;-webkit-mask:radial-gradient(70% 70% at 70% 50%,#000,transparent);mask:radial-gradient(70% 70% at 70% 50%,#000,transparent)}
-.ha-auto-kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.12);color:#d8ccff;font-size:.78rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
-.ha-auto-kicker i{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:ha-pulse 2s ease-out infinite}
-.ha-auto h2{margin:18px 0 14px;font-size:clamp(2rem,4vw,3.4rem);line-height:1.02;letter-spacing:-.04em}
-.ha-auto h2 em{font-style:normal;background:linear-gradient(90deg,#7dd3fc,#a78bfa 45%,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent}
-.ha-auto-copy p{margin:0;color:rgba(247,247,251,.66);font-size:1.05rem;line-height:1.6;max-width:520px}
-.ha-auto-points{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 28px;padding:0;list-style:none}
-.ha-auto-points li{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:.86rem;font-weight:750;color:#e9ebf5}
-.ha-auto-points li::before{content:"";width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#a78bfa)}
-.ha-auto-ctas{display:flex;flex-wrap:wrap;gap:12px}
-.ha-auto-cta{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 24px;border-radius:16px;font-weight:850;text-decoration:none;color:#fff;background:linear-gradient(90deg,#7c3aed,#6366f1 50%,#0ea5e9);box-shadow:0 14px 36px rgba(99,102,241,.4),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .18s ease,box-shadow .18s ease}
-.ha-auto-cta:hover{transform:translateY(-2px);box-shadow:0 18px 44px rgba(99,102,241,.55),inset 0 1px 0 rgba(255,255,255,.3)}
-.ha-auto-cta svg{width:18px;height:18px}
-.ha-auto-ghost{display:inline-flex;align-items:center;height:52px;padding:0 20px;border-radius:16px;font-weight:800;text-decoration:none;color:#e9ebf5;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04)}
-.ha-auto-stage{position:relative;height:420px}
-.ha-orbit{position:absolute;left:38%;top:46%;width:340px;height:340px;margin:-170px 0 0 -170px;border-radius:50%;border:1px dashed rgba(255,255,255,.12);animation:ha-spin 36s linear infinite}
-.ha-orbit-inner{position:absolute;left:38%;top:46%;width:210px;height:210px;margin:-105px 0 0 -105px;border-radius:50%;border:1px solid rgba(139,92,246,.22)}
-.ha-chip{position:absolute;left:50%;top:50%;width:0;height:0}
-.ha-chip span{position:absolute;display:inline-flex;align-items:center;gap:6px;transform:translate(-50%,-50%);padding:7px 11px;border-radius:999px;background:rgba(18,20,34,.92);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:.78rem;font-weight:800;white-space:nowrap;box-shadow:0 8px 22px rgba(0,0,0,.35);animation:ha-counter 36s linear infinite}
-.ha-chip span::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
-.ha-chip:nth-child(1){transform:rotate(0deg) translateY(-170px) rotate(0deg)}
-.ha-chip:nth-child(2){transform:rotate(60deg) translateY(-170px) rotate(-60deg)}
-.ha-chip:nth-child(3){transform:rotate(120deg) translateY(-170px) rotate(-120deg)}
-.ha-chip:nth-child(4){transform:rotate(180deg) translateY(-170px) rotate(-180deg)}
-.ha-chip:nth-child(5){transform:rotate(240deg) translateY(-170px) rotate(-240deg)}
-.ha-chip:nth-child(6){transform:rotate(300deg) translateY(-170px) rotate(-300deg)}
-.ha-core{position:absolute;left:38%;top:46%;width:96px;height:96px;margin:-48px 0 0 -48px;display:grid;place-items:center;border-radius:30px;background:linear-gradient(135deg,#38bdf8,#8b5cf6 55%,#ec4899);box-shadow:0 20px 60px rgba(139,92,246,.55),inset 0 1px 0 rgba(255,255,255,.4);color:#fff}
-.ha-core svg{width:46px;height:46px}
-.ha-core::before,.ha-core::after{content:"";position:absolute;inset:-14px;border-radius:40px;border:2px solid rgba(167,139,250,.5);animation:ha-ring 3s ease-out infinite}
-.ha-core::after{animation-delay:1.5s}
-.ha-chat{position:absolute;right:0;bottom:0;width:min(290px,52%);display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:22px;background:rgba(14,16,28,.88);border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 60px rgba(0,0,0,.45)}
-.ha-chat-head{display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:800;color:#cfd3e6}
-.ha-chat-head i{width:8px;height:8px;border-radius:50%;background:#4ade80}
-.ha-msg{max-width:88%;padding:9px 12px;border-radius:16px;font-size:.84rem;line-height:1.35;opacity:0;transform:translateY(8px);animation:ha-msg 12s ease infinite}
-.ha-msg.in{align-self:flex-start;background:rgba(255,255,255,.08);color:#e9ebf5;border-bottom-left-radius:5px}
-.ha-msg.out{align-self:flex-end;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border-bottom-right-radius:5px}
-.ha-msg:nth-of-type(2){animation-delay:.6s}.ha-msg:nth-of-type(3){animation-delay:2.4s}.ha-msg:nth-of-type(4){animation-delay:4.2s}.ha-msg:nth-of-type(5){animation-delay:6s}
-@keyframes ha-msg{0%{opacity:0;transform:translateY(8px)}4%,86%{opacity:1;transform:none}94%,100%{opacity:0;transform:translateY(-4px)}}
-@keyframes ha-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes ha-counter{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(-360deg)}}
-@keyframes ha-ring{0%{opacity:.8;transform:scale(.9)}100%{opacity:0;transform:scale(1.5)}}
-@keyframes ha-pulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.55)}70%,100%{box-shadow:0 0 0 7px rgba(74,222,128,0)}}
-@media (max-width:900px){.ha-auto-card{grid-template-columns:1fr;gap:24px;padding:28px 20px;border-radius:26px}.ha-auto-stage{height:auto}.ha-orbit{width:270px;height:270px;margin:-135px 0 0 -135px}.ha-orbit-inner{width:170px;height:170px;margin:-85px 0 0 -85px}.ha-chip:nth-child(1){transform:rotate(0deg) translateY(-135px) rotate(0deg)}.ha-chip:nth-child(2){transform:rotate(60deg) translateY(-135px) rotate(-60deg)}.ha-chip:nth-child(3){transform:rotate(120deg) translateY(-135px) rotate(-120deg)}.ha-chip:nth-child(4){transform:rotate(180deg) translateY(-135px) rotate(-180deg)}.ha-chip:nth-child(5){transform:rotate(240deg) translateY(-135px) rotate(-240deg)}.ha-chip:nth-child(6){transform:rotate(300deg) translateY(-135px) rotate(-300deg)}.ha-chip span{font-size:.72rem;padding:6px 9px}.ha-core{width:78px;height:78px;margin:-39px 0 0 -39px;border-radius:24px}.ha-core svg{width:38px;height:38px}.ha-auto-stage{height:auto;padding-top:330px}.ha-orbit,.ha-orbit-inner,.ha-core{left:50%;top:165px}.ha-chat{position:relative;right:auto;bottom:auto;width:100%;margin-top:28px}.ha-auto-cta,.ha-auto-ghost{flex:1 1 auto;justify-content:center}}
-@media (prefers-reduced-motion:reduce){.ha-orbit,.ha-chip span,.ha-core::before,.ha-core::after,.ha-auto-kicker i{animation:none}.ha-msg{animation:none;opacity:1;transform:none}}
-</style>
+/* Hansora Automation promo, styled like the ChatGPT Plugin page. CSS-only, skipped while off screen. */
+.ha-auto{content-visibility:auto;contain-intrinsic-size:auto 700px;position:relative;isolation:isolate}
+.ha-auto::before{content:"";position:absolute;inset:-40px 0;z-index:-1;pointer-events:none;background:radial-gradient(40% 55% at 78% 50%,rgba(16,185,129,.10),transparent 70%),radial-gradient(45% 60% at 20% 40%,rgba(124,92,255,.16),transparent 70%)}
+.ha-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.95fr);gap:48px;align-items:center}
+.ha-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.04);color:#d9deea;font-size:14px;font-weight:600}
+.ha-pill i{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle,#4ade80 35%,rgba(74,222,128,.25) 40%);animation:ha-blink 2s ease-in-out infinite}
+@keyframes ha-blink{50%{opacity:.55}}
+.ha-auto h2{margin:20px 0 0;font-size:clamp(34px,4.6vw,62px);line-height:1.02;letter-spacing:-.045em;font-weight:850}
+.ha-grad{background:linear-gradient(100deg,#fff 5%,#a78bfa 45%,#38bdf8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ha-sub{max-width:560px;margin:20px 0 0;color:rgba(247,247,251,.62);font-size:clamp(16px,1.5vw,18px);line-height:1.6}
+.ha-caps{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}
+.ha-cap{display:flex;gap:13px;align-items:flex-start;padding:15px 16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025);transition:border-color .25s,background .25s}
+.ha-cap:hover{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.05)}
+.ha-cap .ic{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,rgba(56,189,248,.18),rgba(167,139,250,.18));font-size:18px}
+.ha-cap b{display:block;margin-bottom:3px;font-size:15.5px;color:#fff}
+.ha-cap span{color:rgba(247,247,251,.58);font-size:13.5px;line-height:1.5}
+.ha-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.ha-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:11px;min-height:56px;padding:0 26px;border-radius:16px;font-size:17px;font-weight:700;text-decoration:none;color:#fff;transition:transform .2s,box-shadow .2s,background .2s}
+.ha-btn svg{width:20px;height:20px;flex:none}
+.ha-btn-primary{overflow:hidden;background:linear-gradient(120deg,#7c5cff,#a78bfa 45%,#38bdf8);background-size:200% 100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 14px 40px rgba(124,92,255,.4);animation:ha-shift 6s ease-in-out infinite}
+.ha-btn-primary::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);transform:translateX(-120%);animation:ha-shine 4s ease-in-out infinite}
+.ha-btn-primary:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 20px 50px rgba(124,92,255,.55)}
+.ha-btn-ghost{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04)}
+.ha-btn-ghost:hover{background:rgba(255,255,255,.09)}
+@keyframes ha-shift{50%{background-position:100% 0}}
+@keyframes ha-shine{55%,100%{transform:translateX(120%)}}
+.ha-orbit{position:relative;width:min(500px,100%);aspect-ratio:1;margin:0 auto}
+.ha-ring{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.08)}
+.ha-ring.r1{inset:12.5%}
+.ha-ring.r2{inset:0;border-style:dashed;border-color:rgba(255,255,255,.07);animation:ha-spin 120s linear infinite reverse}
+.ha-ring.r3{inset:28%;border-color:rgba(255,255,255,.05);background:radial-gradient(circle,rgba(16,185,129,.16),transparent 70%)}
+.ha-spin{position:absolute;inset:0;animation:ha-spin 60s linear infinite}
+@keyframes ha-spin{to{rotate:1turn}}
+.ha-beams{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ha-beams line{stroke:rgba(255,255,255,.07);stroke-width:.35}
+.ha-beams .hl line{stroke:url(#haBeam);stroke-width:.9;stroke-dasharray:2.2 2.2;opacity:0;animation:ha-flow 1s linear infinite,ha-on 12s linear infinite}
+@keyframes ha-flow{to{stroke-dashoffset:-4.4}}
+@keyframes ha-on{0%,15%{opacity:1}17%,100%{opacity:0}}
+.ha-node{position:absolute;width:15%;aspect-ratio:1;margin:-7.5% 0 0 -7.5%}
+.ha-node-i{position:relative;display:grid;place-items:center;width:100%;height:100%;border-radius:28%;color:#fff;background:linear-gradient(145deg,#232634,#0f1118);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 0 0 1px rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.5);animation:ha-spin 60s linear infinite reverse}
+.ha-node-i::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 2px var(--c),0 0 36px var(--c);opacity:0;animation:ha-on 12s linear infinite;animation-delay:inherit}
+.ha-node-i svg{width:48%;height:48%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ha-spark{position:absolute;width:5px;height:5px;margin:-2.5px;border-radius:50%;background:#fff;box-shadow:0 0 10px 2px rgba(167,139,250,.8);opacity:.7}
+.ha-core{position:absolute;left:50%;top:50%;width:27%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:30%;display:grid;place-items:center;background:#0b0d18;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 0 70px rgba(124,92,255,.45),0 0 140px rgba(16,185,129,.25)}
+.ha-core::before{content:"";position:absolute;inset:-2px;border-radius:inherit;padding:2px;background:linear-gradient(135deg,#38bdf8,#a78bfa 50%,rgba(167,139,250,.15));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.ha-core::after{content:"";position:absolute;inset:-30%;z-index:-1;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.45),transparent 65%);animation:ha-glow 4s ease-in-out infinite}
+@keyframes ha-glow{50%{opacity:.45}}
+.ha-core img{width:66%;height:66%}
+.ha-toasts{position:relative;width:min(290px,80%);height:58px;margin:6px auto 0}
+.ha-toast{position:absolute;inset:0;display:flex;align-items:center;gap:11px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(14,16,26,.92);box-shadow:0 18px 40px rgba(0,0,0,.5);opacity:0;transform:translateY(10px) scale(.96);animation:ha-toast 12s ease infinite}
+.ha-toast:nth-child(2){animation-delay:4s}.ha-toast:nth-child(3){animation-delay:8s}
+@keyframes ha-toast{0%{opacity:0;transform:translateY(10px) scale(.96)}4%,28%{opacity:1;transform:none}33%,100%{opacity:0;transform:translateY(-8px) scale(.98)}}
+.ha-toast em{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;font-style:normal;font-size:16px;background:linear-gradient(145deg,rgba(56,189,248,.2),rgba(167,139,250,.2))}
+.ha-toast b{display:block;font-size:13.5px;color:#fff}
+.ha-toast small{display:block;font-size:12.5px;color:#86efac;font-weight:600}
+@media (max-width:900px){.ha-in{grid-template-columns:1fr;gap:10px}.ha-visual{order:-1}.ha-orbit{width:min(330px,84vw)}.ha-caps{grid-template-columns:1fr}.ha-btn{flex:1 1 100%}}
+@media (prefers-reduced-motion:reduce){.ha-auto *,.ha-auto *::before,.ha-auto *::after{animation:none!important}.ha-toast:first-child{opacity:1;transform:none}}
+.ha-node:nth-of-type(1) .ha-node-i::after{animation-delay:0s}.ha-node:nth-of-type(2) .ha-node-i::after{animation-delay:2s}.ha-node:nth-of-type(3) .ha-node-i::after{animation-delay:4s}.ha-node:nth-of-type(4) .ha-node-i::after{animation-delay:6s}.ha-node:nth-of-type(5) .ha-node-i::after{animation-delay:8s}.ha-node:nth-of-type(6) .ha-node-i::after{animation-delay:10s}</style>
 <div class="shell">
-<div class="ha-auto-card">
-<div class="ha-auto-copy">
-<span class="ha-auto-kicker"><i></i>Նոր · Hansora Automation</span>
-<h2 id="ha-auto-title">AI աշխատակից, որը <em>երբեք չի քնում։</em></h2>
-<p>Պատասխանում է հաճախորդներին Instagram-ում, WhatsApp-ում, Telegram-ում, Messenger-ում, TikTok-ում և հեռախոսով։ Գրանցում է, ընդունում պատվերներ և խոսում հաճախորդի լեզվով՝ 24/7։</p>
-<ul class="ha-auto-points"><li>Պատասխան վայրկյանների ընթացքում</li><li>Գրանցում և վաճառում է</li><li>Ցանկացած լեզու</li></ul>
-<div class="ha-auto-ctas"><a class="ha-auto-cta" href="/automation.html">Փորձել<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="ha-auto-ghost" href="/automation-pricing.html">Գներ</a></div>
+<div class="ha-in">
+<div class="ha-copy">
+<span class="ha-pill"><i></i>Նոր · Hansora Automation</span>
+<h2 id="ha-auto-title">AI աշխատակից, որը<br><span class="ha-grad">երբեք չի քնում։</span></h2>
+<p class="ha-sub">Պատասխանում է հաճախորդներին Instagram-ում, WhatsApp-ում, Telegram-ում, Messenger-ում և TikTok-ում, ընդունում է զանգեր և զրույցները դարձնում պատվերներ ու գրանցումներ՝ 24/7։</p>
+<div class="ha-caps"><div class="ha-cap"><span class="ic">💬</span><div><b>Պատասխանում է բոլոր չաթերում</b><span>Instagram-ի direct և մեկնաբանություններ, WhatsApp, Telegram, Messenger և TikTok՝ հաճախորդի լեզվով։</span></div></div><div class="ha-cap"><span class="ic">📞</span><div><b>Պատասխանում է զանգերին</b><span>Պատասխանում է յուրաքանչյուր զանգի բնական ձայնով և գրանցում հաճախորդին։</span></div></div><div class="ha-cap"><span class="ic">🛍️</span><div><b>Ընդունում է պատվերներ և գրանցումներ</b><span>Հավաքում է պատվերը կամ գտնում ազատ ժամ և հաստատում։</span></div></div><div class="ha-cap"><span class="ic">🔥</span><div><b>Ուղարկում է թեժ հաճախորդներին</b><span>Գնելու պատրաստ հաճախորդներն անմիջապես գալիս են ձեր հեռախոսին։</span></div></div></div>
+<div class="ha-ctas"><a class="ha-btn ha-btn-primary" href="/automation.html">Սկսել անվճար<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="ha-btn ha-btn-ghost" href="/automation-pricing.html">Գներ</a></div>
 </div>
-<div class="ha-auto-stage" aria-hidden="true">
-<div class="ha-orbit-inner"></div>
-<div class="ha-orbit"><div class="ha-chip"><span style="--c:#e1306c">Instagram</span></div><div class="ha-chip"><span style="--c:#25d366">WhatsApp</span></div><div class="ha-chip"><span style="--c:#29a9eb">Telegram</span></div><div class="ha-chip"><span style="--c:#a259ff">Messenger</span></div><div class="ha-chip"><span style="--c:#ff2d55">TikTok</span></div><div class="ha-chip"><span style="--c:#f59e0b">Հեռախոս</span></div></div>
-<div class="ha-core"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 8V4.5M9.5 14h.01M14.5 14h.01M9.5 17h5"/><circle cx="12" cy="3.5" r="1"/></svg></div>
-<div class="ha-chat"><div class="ha-chat-head"><i></i>AI աշխատակից · առցանց</div><div class="ha-msg in">Բարև, M չափս ունե՞ք։</div><div class="ha-msg out">Այո, առկա է։ Պահե՞մ ձեզ համար։</div><div class="ha-msg in">Այո, խնդրում եմ։</div><div class="ha-msg out">Պատրաստ է ✓ Պատվեր #2481-ը հաստատված է։</div></div>
+<div class="ha-visual" aria-hidden="true">
+<div class="ha-orbit">
+<div class="ha-ring r2"></div><div class="ha-ring r1"></div><div class="ha-ring r3"></div>
+<div class="ha-spin"><svg class="ha-beams" viewBox="0 0 100 100"><defs><linearGradient id="haBeam" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs><line x1="50" y1="50" x2="50.00" y2="12.50"/><line x1="50" y1="50" x2="82.48" y2="31.25"/><line x1="50" y1="50" x2="82.48" y2="68.75"/><line x1="50" y1="50" x2="50.00" y2="87.50"/><line x1="50" y1="50" x2="17.52" y2="68.75"/><line x1="50" y1="50" x2="17.52" y2="31.25"/><g class="hl"><line x1="50" y1="50" x2="50.00" y2="12.50" style="animation-delay:0s,0s"/><line x1="50" y1="50" x2="82.48" y2="31.25" style="animation-delay:0s,2s"/><line x1="50" y1="50" x2="82.48" y2="68.75" style="animation-delay:0s,4s"/><line x1="50" y1="50" x2="50.00" y2="87.50" style="animation-delay:0s,6s"/><line x1="50" y1="50" x2="17.52" y2="68.75" style="animation-delay:0s,8s"/><line x1="50" y1="50" x2="17.52" y2="31.25" style="animation-delay:0s,10s"/></g></svg><span class="ha-node" style="left:50.00%;top:12.50%"><span class="ha-node-i" style="--c:#e1306c;animation-delay:0s"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r=".6"/></svg></span></span><span class="ha-node" style="left:82.48%;top:31.25%"><span class="ha-node-i" style="--c:#22c55e;animation-delay:0s"><svg viewBox="0 0 24 24"><path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.4z"/><path d="M9 8.6c0 3.3 3 6.4 6.4 6.4l1-1.4-2-1-1 .8a4.5 4.5 0 0 1-2.8-2.8l.8-1-1-2z"/></svg></span></span><span class="ha-node" style="left:82.48%;top:68.75%"><span class="ha-node-i" style="--c:#38bdf8;animation-delay:0s"><svg viewBox="0 0 24 24"><path d="M21.5 4.5 2.8 11.7l6 2 2.3 6.2 3.3-4 5.2 3.8z"/><path d="M8.8 13.7 18 7.6"/></svg></span></span><span class="ha-node" style="left:50.00%;top:87.50%"><span class="ha-node-i" style="--c:#a855f7;animation-delay:0s"><svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 6.8 3 11.5c0 2.6 1.2 4.9 3.2 6.4V21l3-1.6c.9.3 1.8.4 2.8.4 5 0 9-3.8 9-8.5S17 3 12 3z"/><path d="M7.5 13.5l3-3 2.5 2 3.5-3.2"/></svg></span></span><span class="ha-node" style="left:17.52%;top:68.75%"><span class="ha-node-i" style="--c:#f43f5e;animation-delay:0s"><svg viewBox="0 0 24 24"><path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5"/><path d="M14 3c.4 2.6 2.2 4.4 5 4.6"/></svg></span></span><span class="ha-node" style="left:17.52%;top:31.25%"><span class="ha-node-i" style="--c:#f59e0b;animation-delay:0s"><svg viewBox="0 0 24 24"><path d="M21 16.4v3a2 2 0 0 1-2.2 2A19.5 19.5 0 0 1 2.6 5.2 2 2 0 0 1 4.6 3h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.6 10.7a16 16 0 0 0 4.7 4.7l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></span></span><span class="ha-spark" style="left:96.98%;top:67.10%"></span><span class="ha-spark" style="left:32.90%;top:96.98%"></span><span class="ha-spark" style="left:3.02%;top:32.90%"></span><span class="ha-spark" style="left:67.10%;top:3.02%"></span></div>
+<div class="ha-core"><img src="/media/compare/hansora.png" alt="" loading="lazy" decoding="async"></div>
+</div>
+<div class="ha-toasts"><div class="ha-toast"><em>💬</em><div><b>Հաղորդագրություն Instagram-ում</b><small>Պատասխան 3 վայրկյանում</small></div></div><div class="ha-toast"><em>📞</em><div><b>Զանգն ընդունված է</b><small>Գրանցում · Շբ 16:30</small></div></div><div class="ha-toast"><em>🛍️</em><div><b>Նոր պատվեր #1043</b><small>320 $ · հաստատված</small></div></div></div>
 </div>
 </div>
 </div>
