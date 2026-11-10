@@ -22,9 +22,13 @@
 
   // Monthly plans (Dodo subscriptions). credits = ⚡ added every paid month. product = the Dodo subscription link.
   const PLANS = [
-    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQYSDnUbMHvi9Gt6yy', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 1, voiceMinute: 9 } },
-    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQrUC5gB5c3Jk8zZE9', note: 'Lots of Instagram comments', popular: true, rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 8 } },
-    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeR55QAhlX4ViGBTCF4', note: 'Every channel and phone calls', rates: { aiReply: 0.9, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 8 } },
+    { id: 'automation_lite_monthly', name: 'Lite', price: 25, credits: 2500, product: '', note: 'Try it with your business', rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 1, voiceMinute: 9 } },
+    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQYSDnUbMHvi9Gt6yy', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 0.8, voiceMinute: 8 } },
+    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQrUC5gB5c3Jk8zZE9', note: 'Lots of Instagram comments', popular: true, rates: { aiReply: 0.9, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 8 } },
+    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeR55QAhlX4ViGBTCF4', note: 'Every channel and phone calls', rates: { aiReply: 0.8, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 8 } }
+  ];
+  // No longer sold: shown only to owners who already have it ("You are on …").
+  const LEGACY_PLANS = [
     { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeRJQYrPCPCIK9zbEb1', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, voiceReply: 1, commentRun: 0.3, voiceMinute: 7 } }
   ];
 
@@ -123,7 +127,7 @@
 
   function renderCurrent() {
     const box = document.querySelector('#current-plan');
-    const current = activePlan(); const plan = PLANS.find(item => item.id === current?.plan_id);
+    const current = activePlan(); const plan = [...PLANS, ...LEGACY_PLANS].find(item => item.id === current?.plan_id);
     box.hidden = !plan; if (!plan) return;
     const end = current.current_period_end ? new Date(current.current_period_end).toLocaleDateString([], { day: 'numeric', month: 'long' }) : '';
     box.innerHTML = `<div><b>You are on ${plan.name}</b><p>${current.cancel_at_period_end ? `Cancelled · active until ${end}` : `${zap(plan.credits)} every month${end ? ` · renews ${end}` : ''}`}</p></div>${current.cancel_at_period_end ? '' : '<button class="ui-btn ghost sm" type="button" id="cancel-plan">Cancel plan</button>'}`;
@@ -137,7 +141,7 @@
     document.querySelector('#pricing-badge').textContent = mode === 'payg' ? 'Pay as you go · no subscription' : 'Monthly · cancel any time';
     document.querySelector('#pricing-lead').textContent = mode === 'payg'
       ? 'No monthly fees. Buy credits that never expire and use them whenever you want, on every channel.'
-      : 'Busy every month? Save on every AI reply, comment automation and phone call – up to 33% on replies and 70% on comments.';
+      : 'Busy every month? Save on every AI reply, comment automation and phone call – up to 33% on replies and 50% on comments.';
     const ruButton = document.querySelector('button[data-payment="ru"]');
     ruButton.disabled = mode === 'monthly'; ruButton.title = mode === 'monthly' ? 'Monthly plans are paid with an international card' : '';
     document.querySelector('#pricing-shared').textContent = payment === 'ru' ? 'Credits are shared with Hansora Creative – one balance for your whole Hansora account. Prices in Russian rubles.' : 'Credits are shared with Hansora Creative – one balance for your whole Hansora account. Prices in USD.';
