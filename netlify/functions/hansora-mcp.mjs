@@ -16,7 +16,7 @@ import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { useSavedFiles } from '../../lib/hansora-mcp/own-results.mjs';
 import { photoCount, recordPendingPhotos, recordPendingVideo, recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
-import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoPlan, simpleVideoOption, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoPlan, imageBackupOption, simpleVideoOption, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -700,6 +700,70 @@ async function firstVideoOnGrok(userId, input, balanceInternal) {
     ].filter(Boolean).join(' ')
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// An image that failed on the provider's side (a temporary issue, not the prompt or photo) is made once more on a
+// backup image model, under a fixed run id so it can never start twice, never for more than the failed try cost
+// (it was refunded). The card keeps following the original run id, shows the new image and says which model
+// made it. A picture made first for a video is left alone (that video follows the picture's own run).
+async function imageProviderRetry({ userId, token, origin, runId, presented, generation }) {
+  if (presented.status !== 'failed' || runId.endsWith(RETRY_SUFFIX) || generation?.kind !== 'image') return null;
+  if (!['temporary', 'unknown'].includes(presented.failure_kind)) return null;
+  const failedMeta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+  if (NEVER_RETRY_CONTENT.test(failureText(failedMeta))) return null;
+  const recipe = await getFirstVideoRecipe(userId, runId);
+  const failed = recipe ? getModel(recipe.model_id) : null;
+  if (!failed || failed.category !== 'image' || !recipe.prompt) return null;
+  const retryId = `${runId}${RETRY_SUFFIX}`;
+  let retry = await getGeneration(userId, retryId).catch(() => null);
+  let startedModel = null;
+  if (!retry) {
+    if (await getPendingVideo(userId, new Date(Date.now() - 15 * 60 * 1000).toISOString()).catch(() => null)) return null;
+    const firstTry = Number(failedMeta.charged_cost ?? failedMeta.charge_cost ?? failedMeta.refund_amount) * 10;
+    if (!(firstTry > 0)) return null;
+    const account = await getAccount(userId).catch(() => null);
+    if (!account) return null;
+    const request = {
+      prompt: String(recipe.prompt),
+      image_urls: Array.isArray(recipe.image_urls) ? recipe.image_urls : [],
+      ...(recipe.aspect_ratio ? { aspect_ratio: recipe.aspect_ratio } : {}),
+      ...(recipe.resolution ? { resolution: recipe.resolution } : {})
+    };
+    const option = imageBackupOption(failed.id, request, firstTry, Number(account.internal_credits || 0), alternativeFor(failed.id, new Set()));
+    const model = option ? getModel(option.model_id) : null;
+    const endpoint = model ? getRunner(model.id) : '';
+    if (!model || !endpoint) return null;
+    const payload = buildGenerationPayload(model.id, { ...request, ...option.settings }, userId, retryId);
+    try {
+      const { response } = await submitRun({ origin, token, userId, endpoint, model, prompt: request.prompt, usageMode: 'credits', payload, timeoutMs: 15000 });
+      if (!response.ok) return null;
+    } catch (error) {
+      if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) return null;
+    }
+    console.warn('hansora_mcp_image_retry', JSON.stringify({ runId, from: failed.id, to: model.id }));
+    startedModel = model;
+    retry = await getGeneration(userId, retryId).catch(() => null);
+  } else if (await refreshFromProvider(userId, [retry], origin).catch(() => false)) {
+    retry = (await getGeneration(userId, retryId).catch(() => null)) || retry;
+  }
+  const view = retry ? presentGeneration(retry, retryId) : { status: 'processing', media_type: 'image', kind: 'image', model_name: startedModel?.name || '', prompt: presented.prompt };
+  const retryMeta = retry?.meta && typeof retry.meta === 'object' ? retry.meta : {};
+  const credits = Number(retryMeta.charged_cost ?? retryMeta.charge_cost ?? retryMeta.refund_amount) * 10;
+  const retryName = view.model_name || startedModel?.name || 'another model';
+  const note = [`${failed.name} had a temporary issue on the provider's side, so this image was made with ${retryName} instead.`,
+    credits > 0 ? `You were charged the ${retryName} price (${Number(credits.toFixed(2))} credits).` : '',
+    `The ${failed.name} try was refunded.`].filter(Boolean).join(' ');
+  return {
+    ...view,
+    run_id: runId,
+    retry_run_id: retryId,
+    switch_note: note,
+    meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId },
+    ...(view.status === 'processing' ? {
+      message: note,
+      next_step: `${note} The card shows this and the new image by itself. In your next reply, tell the user this in one short line. This switch was only for this image: the user's next images use ${failed.name} again.`
+    } : {})
+  };
 }
 
 // What the user reads when a video was made with another model than the one they asked for.
@@ -1413,6 +1477,16 @@ export function createHansoraServer(ctx) {
       const firstVideo = retryable ? isFirstGeneration(userId).catch(() => false) : Promise.resolve(false);
       const startFrame = String(storedInput.first_frame_url || '') || startingFrame(model.id, storedInput);
       const keepRecipe = async () => {
+        // Images keep what they were made from too, so a provider failure is remade on a backup (imageProviderRetry).
+        if (model.category === 'image' && normalizedInput.usage_mode !== 'unlimited') {
+          recordVideoRecipe(userId, runId, model.id, {
+            prompt: String(normalizedInput.prompt || '').slice(0, 5000),
+            image_urls: Array.isArray(storedInput.image_urls) ? storedInput.image_urls.slice(0, 16) : [],
+            ...(storedInput.aspect_ratio ? { aspect_ratio: storedInput.aspect_ratio } : {}),
+            ...(normalizedInput.resolution ? { resolution: normalizedInput.resolution } : {})
+          }, waitUntil, { image: true });
+          return;
+        }
         const first = await firstVideo;
         if (!retryable || (!first && !RECIPE_MODELS.has(model.id))) return;
         recordVideoRecipe(userId, runId, model.id, {
@@ -1614,7 +1688,8 @@ export function createHansoraServer(ctx) {
         const automatic = await autoVideoFromPicture({ userId, token, origin, pictureRun: run_id, picture: generation, waitUntil }).catch(() => null);
         if (automatic) return jsonText(automatic);
       }
-      const retried = await providerRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
+      const retried = await providerRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null)
+        || await imageProviderRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
       if (retried) return jsonText(retried);
       // A refused first video (temporary issues already switch model on their own).
       if (presented.status === 'failed' && presented.failure_kind && presented.failure_kind !== 'temporary') {
