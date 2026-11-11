@@ -12,6 +12,7 @@ import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
 import { notifySale } from "../../lib/business/sale-alert.mjs";
 
 import { AUTOMATION_PLANS } from "../../lib/automation/billing.mjs";
+import { isAutoTopupEvent, handleAutoTopupWebhook } from "../../lib/business/auto-topup.mjs";
 
 // Hansora Automation monthly plans live in their own table (automation.automation_subscriptions), so a user can have a
 // Creative plan and an Automation plan at the same time. Their credits go to the pay-as-you-go bucket.
@@ -163,6 +164,22 @@ export async function handler(event) {
       status === "succeeded" ||
       status === "successful" ||
       (normalizedType === "payment" && !!transaction_id && !root.error_code && !data.error_code);
+
+    // Auto top-up (saved card, charged when the balance is low) has its own handling: the credits come from the
+    // charge row the server wrote before charging, never from the payload. See lib/business/auto-topup.mjs.
+    if (isAutoTopupEvent({ meta, productId: paidProductId })) {
+      const SUPABASE_URL = process.env.SUPABASE_URL;
+      const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const result = await handleAutoTopupWebhook({
+        type: normalizedType,
+        root,
+        data,
+        meta,
+        addCredits: (args) => addCreditsOnce({ SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ...args }),
+        notifySale: (sale) => notifySale(sale, { supabaseUrl: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_ROLE_KEY })
+      });
+      return json(result.status, result.body);
+    }
 
     // Track the checkout outcome against the original public.buy_click_events row.
     // This is analytics only: it never grants credits and never writes failed or

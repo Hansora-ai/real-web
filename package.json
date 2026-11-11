@@ -18,7 +18,8 @@
     "test:feedback": "node --test test/feedback/*.test.mjs",
     "test:lifecycle": "node --test test/lifecycle/*.test.mjs",
     "build:lifecycle-templates": "node scripts/build-lifecycle-templates.mjs",
-    "test:account": "node --test test/account-deletion/*.test.mjs"
+    "test:account": "node --test test/account-deletion/*.test.mjs",
+    "test:auto-topup": "node --test test/auto-topup/*.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/core": "^2.0.0",
