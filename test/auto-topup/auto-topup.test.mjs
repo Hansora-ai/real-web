@@ -17,14 +17,15 @@ const U1 = '11111111-1111-1111-1111-111111111111';
 const U2 = '22222222-2222-2222-2222-222222222222';
 
 // A tiny stand-in for Supabase REST + Dodo: tables in memory, PostgREST-style eq filters, every request recorded.
-function fakeBackend({ settings = [], charges = [], due = [], dodo = () => ({ status: 200, body: { payment_id: 'pay_1' } }), user = { id: U1, email: 'a@b.co' } } = {}) {
-  const tables = { auto_topups: settings.map((r) => ({ ...r })), auto_topup_charges: charges.map((r) => ({ ...r })) };
+function fakeBackend({ settings = [], charges = [], payments = [], due = [], dodo = () => ({ status: 200, body: { payment_id: 'pay_1' } }), user = { id: U1, email: 'a@b.co' } } = {}) {
+  const tables = { auto_topups: settings.map((r) => ({ ...r })), auto_topup_charges: charges.map((r) => ({ ...r })), payments: payments.map((r) => ({ ...r })) };
   let nextId = 100;
   const calls = [];
   const matches = (row, params) => [...params].every(([k, v]) => {
     if (['select', 'order', 'limit', 'on_conflict'].includes(k)) return true;
     if (v.startsWith('eq.')) return String(row[k]) === v.slice(3);
     if (v.startsWith('lt.')) return String(row[k]) < v.slice(3);
+    if (v.startsWith('in.(')) return v.slice(4, -1).split(',').includes(String(row[k]));
     return true;
   });
   const reply = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -323,4 +324,46 @@ test('packs match the Creative packs sold today', () => {
   assert.equal(packFor(91), null);
   assert.match(chargeBody({ userId: U1, chargeId: 1, pack: packFor(200) }).product_description, /2,000 credits/);
   assert.equal(checkoutBody({ cfg: config(ENV), userId: U1, email: null }).customer, undefined);
+});
+
+// ---------- pricing button, owner view ----------
+
+test('endpoint: tells the pricing page whether the person has ever paid', async () => {
+  const get = async (payments) => JSON.parse((await handle({ httpMethod: 'GET', headers: { Authorization: 'Bearer good' } }, { env: ENV, fetchImpl: fakeBackend({ payments }).fetchImpl })).body).has_purchase;
+  assert.equal(await get([]), false);
+  assert.equal(await get([{ transaction_id: 't1', uid: U2, status: 'succeeded' }]), false, 'someone else\'s payment');
+  assert.equal(await get([{ transaction_id: 't1', uid: U1, status: null }]), false, 'unfinished payment');
+  assert.equal(await get([{ transaction_id: 't1', uid: U1, status: 'succeeded' }]), true);
+});
+
+test('endpoint: a checkout from the pricing page comes back to the pricing page', async () => {
+  const b = fakeBackend({ dodo: () => ({ status: 200, body: { checkout_url: 'https://checkout.test/x' } }) });
+  await handle({ httpMethod: 'POST', headers: { Authorization: 'Bearer good' }, body: JSON.stringify({ action: 'setup', pack_credits: 90, threshold_credits: 30, return_path: '/pricing_arm.html' }) }, { env: ENV, fetchImpl: b.fetchImpl });
+  assert.equal(b.calls.find((c) => c.host === 'dodo.test').body.return_url, 'https://site.test/pricing_arm.html?auto_topup=saved');
+  const b2 = fakeBackend({ dodo: () => ({ status: 200, body: { checkout_url: 'https://checkout.test/x' } }) });
+  await handle({ httpMethod: 'POST', headers: { Authorization: 'Bearer good' }, body: JSON.stringify({ action: 'setup', return_path: 'https://evil.test/' }) }, { env: ENV, fetchImpl: b2.fetchImpl });
+  assert.equal(b2.calls.find((c) => c.host === 'dodo.test').body.return_url, 'https://site.test/profile.html?auto_topup=saved');
+});
+
+test('owner report: who set it up and which payments were auto top-ups', async () => {
+  const { autoTopupReport } = await import('../../lib/business/auto-topup.mjs');
+  const r = autoTopupReport({
+    settings: [activeRow({ created_at: '2026-11-01T00:00:00Z' }), { user_id: U2, enabled: false, status: 'pending', pack_credits: 200, threshold_credits: 50 }],
+    charges: [
+      { user_id: U1, credits: 90, amount_cents: 999, status: 'succeeded', payment_id: 'pay_1', created_at: '2026-11-10T00:00:00Z' },
+      { user_id: U1, credits: 90, amount_cents: 999, status: 'failed', error: 'CARD_DECLINED', created_at: '2026-11-09T00:00:00Z' }
+    ],
+    emails: { [U1]: 'a@b.co' }
+  });
+  assert.deepEqual(r.totals, { switched_on: 1, set_up: 1, checkout_not_finished: 1, topups: 1, topup_usd: 9.99, failed: 1 });
+  assert.equal(r.people[0].email, 'a@b.co');
+  assert.equal(r.people[0].pack_credits, 900);
+  assert.equal(r.people[1].state, 'card not saved');
+  assert.deepEqual([...r.payment_ids], ['pay_1']);
+});
+
+test('owner Telegram sale message says when it was an auto top-up', async () => {
+  const { saleMessage } = await import('../../lib/business/sale-alert.mjs');
+  assert.match(saleMessage({ provider: 'dodo', amountCents: 999, currency: 'USD', credits: 90, autoTopup: true }), /Dodo · 🔁 auto top-up/);
+  assert.doesNotMatch(saleMessage({ provider: 'dodo', amountCents: 999, currency: 'USD', credits: 90 }), /auto top-up/);
 });

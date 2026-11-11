@@ -15,6 +15,23 @@ On their profile page (all three languages), the **Auto top-up** card has:
   saved) and **remove saved card** (this cancels the mandate at Dodo).
 - Their last few top-ups, and the reason when a charge failed.
 
+## Pricing page
+
+Under the International / Russian card switch, people who have bought before see a small **🔁 Auto top-up** button.
+It opens the same choices in a popup. The pricing page doesn't wait for it: `public/auto-topup-widget.js` runs only
+after the page has loaded and asks the server whether the signed-in person has a paid payment. Signed-out visitors and
+people who never bought see nothing.
+
+## What the owner sees
+
+- **Business dashboard → Auto top-up:** how many people have it on, who saved a card, who opened the checkout but
+  didn't finish, the top-ups paid in the period, and failed charges with the reason.
+- **Business dashboard → Sales:** auto top-up payments show "Dodo · 🔁 auto top-up" in the Via column. Normal purchases
+  just show "Dodo".
+- **Telegram sale message:** auto top-ups say "🔁 auto top-up".
+- **In Supabase:** every auto top-up is a row in `auto_topup_charges`, and its `payment_id` is the Dodo payment id, so
+  it matches `payments.transaction_id`.
+
 ## How it works
 
 | Step | Where |

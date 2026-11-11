@@ -29,8 +29,14 @@ export async function handle(event, { fetchImpl = fetch, env = process.env } = {
 
   const store = db(cfg, fetchImpl);
   const available = Boolean(cfg.dodoKey && cfg.productId);
+  // Has this person ever paid (any pack, plan or card)? The pricing page shows auto top-up only to buyers.
+  const hasPurchase = async () => {
+    const result = await store.call(`payments?uid=eq.${encodeURIComponent(user.id)}&status=in.(succeeded,paid)&select=transaction_id&limit=1`);
+    return result.ok && Array.isArray(result.data) && result.data.length > 0;
+  };
   const view = async (extra = {}) => json(200, {
     available,
+    has_purchase: await hasPurchase(),
     settings: publicSettings(await store.settings(user.id)),
     packs: PACKS,
     thresholds: THRESHOLDS,
@@ -77,7 +83,7 @@ export async function handle(event, { fetchImpl = fetch, env = process.env } = {
 
   const saved = await store.saveSettings({ user_id: user.id, enabled: false, status: "pending", pack_credits: pack.credits, threshold_credits: threshold, failures: 0, last_error: null });
   if (!saved) return json(500, { error: "save_failed" });
-  const returnPath = /^\/profile(_ru|_arm)?\.html$/.test(String(body.return_path || "")) ? body.return_path : "/profile.html";
+  const returnPath = /^\/(profile|pricing)(_ru|_arm)?\.html$/.test(String(body.return_path || "")) ? body.return_path : "/profile.html";
   const result = await dodo(cfg, "/checkouts", { method: "POST", body: checkoutBody({ cfg, userId: user.id, email: user.email, returnPath }) }, fetchImpl);
   const checkoutUrl = result.data?.checkout_url;
   if (!result.ok || !checkoutUrl) {
