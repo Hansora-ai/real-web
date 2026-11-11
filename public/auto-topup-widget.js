@@ -63,11 +63,11 @@
   function injectStyles() {
     if (document.getElementById("autoTopupWidgetStyles")) return;
     var css = ""
-      + ".atw-chip{margin-top:8px;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(167,139,250,.45);border-radius:999px;padding:6px 12px;background:rgba(139,92,246,.14);color:#fff;font-size:11px;font-weight:900;cursor:pointer;transition:background .16s}"
+      + ".atw-chip{margin-top:0;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(167,139,250,.45);border-radius:999px;padding:6px 12px;background:rgba(139,92,246,.14);color:#fff;font-size:11px;font-weight:900;cursor:pointer;transition:background .16s}"
       + ".atw-chip:hover{background:rgba(139,92,246,.26)}"
       + ".atw-chip .atw-dot{width:7px;height:7px;border-radius:50%;background:rgba(226,232,240,.45)}"
       + ".atw-chip.is-on .atw-dot{background:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.2)}"
-      + ".atw-row{display:block}"
+      + ".atw-row{display:block;margin-top:16px}"
       + ".atw-modal{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:16px}"
       + ".atw-modal.is-open{display:flex}"
       + ".atw-backdrop{position:absolute;inset:0;background:rgba(3,6,14,.72);backdrop-filter:blur(6px)}"
