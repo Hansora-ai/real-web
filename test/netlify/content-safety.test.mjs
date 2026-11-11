@@ -131,8 +131,11 @@ test('the same words about things, or normal requests about people, still pass',
     'a sexy sports car', 'seductive perfume bottle on marble', 'lingerie product photo on a white background',
     'woman wearing a hat', 'man in a suit', 'female doctor smiling', 'a woman in a red dress walking',
     'the only hat in the shop', 'wet road after rain', 'a boy playing football', 'he takes off his helmet',
-    'she went to the market', 'она пошла домой', 'Կինը կարմիր զգեստով', 'a man wearing jeans and a shirt'
+    'she went to the market', 'она пошла домой', 'Կինը կարմիր զգեստով', 'a man wearing jeans and a shirt',
+    'a sexy red sports car with a woman driving'
   ]) assert.equal(evaluatePrompt(prompt).allowed, true, prompt);
+  assert.equal(evaluatePrompt('A seductive perfume bottle on black marble, luxury ad, that bottle in her hands', { hasImages: true }).allowed, true);
+  for (const prompt of ['make her seductive', 'seductive woman holding a perfume bottle']) assert.equal(evaluatePrompt(prompt).allowed, false, prompt);
   for (const prompt of ['remove the background', 'make it 4k', 'animate this photo', 'add a necklace to her']) {
     assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, true, prompt);
   }

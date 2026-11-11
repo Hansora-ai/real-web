@@ -218,10 +218,17 @@ const SUGGESTIVE_PATTERNS = [
   words(`${WB}(?:boudoir|pin up|pinup)${WE}`)
 ];
 
+// "A seductive perfume bottle ... in her hands": the word describes a thing, not the person. A suggestive
+// word directly in front of a thing (up to two describing words between) is removed before checking,
+// so "make her seductive" still blocks.
+const THING_NOUNS = 'bottle|bottles|perfume|perfumes|fragrance|fragrances|scent|scents|cologne|car|cars|sports car|supercar|vehicle|bike|motorcycle|watch|watches|phone|lipstick|wine|cocktail|drink|chocolate|dessert|cake|food|dish|burger|pizza|coffee|lighting|light|lights|colors|colours|color|colour|palette|font|logo|label|packaging|package|box|product|products|bag|handbag|shoe|shoes|heels|sneakers|ring|jewelry|jewellery|interior|room|hotel|villa|house|kitchen|sofa|chair|bed sheets|curtains|candle|candles|music|song|beat|voice over|melody|night|sunset|city|view|ocean|beach|landscape|design|ad|advert|advertisement|campaign|poster|banner|brand|slogan|scene lighting|духи|аромат|флакон|машина|автомобиль|ауди|օծանելիք|մեքենա|շշ';
+const THING_PHRASE = words(`${WB}(?:${stemPattern(SUGGESTIVE_STEMS)})${W}(?: [^ ]+){0,2} (?:${THING_NOUNS})${WE}`);
+
 function hasSexualizingContext(normalized, hasImages) {
   if (!hasImages && !mentionsPerson(normalized)) return false;
+  const text = normalized.replace(new RegExp(THING_PHRASE.source, 'gu'), ' thing ').replace(/ +/g, ' ').trim();
   return STRIP_PATTERNS.some((pattern) => pattern.test(normalized))
-    || SUGGESTIVE_PATTERNS.some((pattern) => pattern.test(normalized))
+    || SUGGESTIVE_PATTERNS.some((pattern) => pattern.test(text))
     || containsTerm(normalized, MINIMAL_CLOTHING_WORDS);
 }
 
