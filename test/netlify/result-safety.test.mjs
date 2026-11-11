@@ -7,7 +7,7 @@ const reply = (sexual, minors = false) => async () => ({ ok: true, json: async (
 
 test('a suggestive result image is blocked, a normal one passes, videos are not sent', async () => {
   process.env.OPENAI_API_KEY = 'test';
-  assert.equal((await checkResults(['https://x/a.png'], 'image', reply(0.7))).blocked, true);
+  assert.equal((await checkResults(['https://x/a.png'], 'image', reply(0.4))).blocked, true);
   assert.equal((await checkResults(['https://x/a.png'], 'image', reply(0.1))).blocked, false);
   assert.equal((await checkResults(['https://x/a.png'], 'image', reply(0.1, true))).category, 'sexual_content_involving_minors');
   let called = false;
