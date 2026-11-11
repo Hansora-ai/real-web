@@ -68,6 +68,8 @@ exports.handler = async (event) => {
     }
 
     if (state.done && state.urls.length) {
+      const blocked = await blockUnsafeResult({ row, ids, urls: state.urls });
+      if (blocked) return json(200, blocked);
       const savedUrls = await markDone({ row, ids, urls: state.urls, enqueueAudio: event.henshinFinishInline !== true });
       return json(200, {
         ok: true,
@@ -128,6 +130,8 @@ async function handlePost(event) {
 
   const urls = collectResultUrls(body, collectKnownInputUrls(row));
   if (urls.length) {
+    const blocked = await blockUnsafeResult({ row, ids, urls });
+    if (blocked) return json(200, blocked);
     const savedUrls = await markDone({ row, ids, urls });
     return json(200, {
       ok: true,
@@ -259,6 +263,24 @@ async function fetchKieState(taskId, excludeUrls = [], market = false) {
 
   if (sawFailed) return { failed: true, error: failReason || "kie_failed", code: failCode };
   return { pending: true };
+}
+
+// A sexual or suggestive result is never saved or shown: the generation fails and is refunded.
+async function blockUnsafeResult({ row, ids, urls }) {
+  const safety = require('../../lib/content-safety/result-check.cjs');
+  const check = await safety.checkResults(urls, row.kind);
+  if (!check.blocked) return null;
+  const refund = await failAndRefundOnce({ row, ids, reason: safety.BLOCKED_MESSAGE, code: 'CONTENT_POLICY_BLOCKED' });
+  if (refund.waiting_for_charge) return { ok: false, status: 'pending', waiting_for_charge: true };
+  return {
+    ok: false,
+    failed: true,
+    status: 'failed',
+    code: 'CONTENT_POLICY_BLOCKED',
+    error: safety.BLOCKED_MESSAGE,
+    refunded: !!refund.refunded,
+    refund_amount: refund.amount || 0
+  };
 }
 
 async function markDone({ row, ids, urls, enqueueAudio = true }) {

@@ -2,7 +2,7 @@
 
 const crypto = require('node:crypto');
 
-const POLICY_VERSION = '2026-10-23.1';
+const POLICY_VERSION = '2026-11-11.1';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const QUEUE_SECRET = process.env.HANSORA_QUEUE_SECRET || '';
@@ -23,7 +23,7 @@ const DIRECT_SEXUAL_TERMS = [
 // These words are ambiguous and only block when they describe a human.
 const HUMAN_NUDITY_WORDS = [
   'naked', 'nude', 'topless', 'desnuda', 'desnudo', 'nue', 'nu',
-  'голая', 'голый', 'обнаженная', 'обнаженный'
+  'голая', 'голый', 'обнаженная', 'обнаженный', 'մերկ'
 ];
 
 const HUMAN_NOUNS = [
@@ -163,18 +163,82 @@ function hasSexualActivityContext(normalized) {
   return patterns.some((pattern) => pattern.test(normalized));
 }
 
+// Google Play (Sexual Content and AI-Generated Content policies) also counts sexually suggestive
+// results: a real person made "seductive", minimally clothed or posed suggestively. These words are
+// fine about things ("a sexy sports car", "a seductive perfume bottle", "lingerie product photo on a
+// white background"), so they block only when the request is about a person: a human word in the
+// prompt, or a photo attached (then "make it more seductive" is about the person in the photo).
+const SUGGESTIVE_STEMS = [
+  'seductiv', 'seduce', 'seducing', 'sexy', 'sexier', 'sexiest', 'sensual', 'steamy', 'lustful',
+  'raunchy', 'risque', 'skimpy', 'scantily', 'erotic', 'lewd',
+  'соблазнит', 'сексуальн', 'сексапил', 'секси', 'эротич', 'эротик', 'чувственн', 'развратн',
+  'սեքսի', 'սեքսուալ', 'գայթակղ', 'էրոտիկ'
+];
+const MINIMAL_CLOTHING_WORDS = [
+  'lingerie', 'underwear', 'panties', 'thong', 'bra', 'bras', 'g string', 'nightie',
+  'белье', 'белья', 'трусики', 'стринги', 'лифчик', 'бюстгальтер',
+  'ներքնազգեստ', 'ներքնազգեստով'
+];
+const ONLY_WEARING_ITEMS = 'necklace|necklaces|jewelry|jewellery|jewels|towel|heels|stockings|choker|underwear|lingerie|bra|bikini|apron|sheet|bedsheet|blanket|smile|ожерелье|колье|украшения|полотенце|полотенцем|чулки|чулках|վզնոց|սրբիչ';
+const CLOTHING_ITEMS = 'clothes|clothing|dress|shirt|t shirt|top|blouse|bra|pants|trousers|jeans|skirt|bikini|swimsuit|underwear|outfit|robe|towel|одежду|одежда|одежды|платье|рубашку|футболку|юбку|лифчик|белье|հագուստ|հագուստը|հագուստի';
+const EXTRA_HUMAN_WORDS = ['she', 'he', 'girlfriend', 'boyfriend', 'wife', 'husband',
+  'она', 'он', 'ее', 'её', 'нее', 'неё', 'ней', 'его', 'него', 'ему', 'девушка', 'девушку', 'девушке', 'женщина', 'женщину',
+  'женщине', 'мужчина', 'мужчину', 'парень', 'парня', 'человек', 'человека',
+  'աղջիկ', 'աղջիկը', 'աղջկան', 'աղջկա', 'կին', 'կինը', 'կնոջ', 'տղամարդ', 'տղամարդը', 'տղա', 'տղան', 'նա', 'նրան', 'մարդ', 'մարդը'];
+
+// JavaScript's \b only knows Latin letters; the prompt is normalized to words separated by single spaces,
+// so a word starts after a space (or the start) and ends before a space (or the end).
+const WB = '(?:^| )';
+const WE = '(?= |$)';
+const W = '[^ ]*';
+function stemPattern(stems) {
+  return stems.map((stem) => normalizePrompt(stem).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+}
+function words(source) { return new RegExp(source, 'u'); }
+
+function mentionsPerson(normalized) {
+  return containsTerm(normalized, HUMAN_REFERENCES) || containsTerm(normalized, EXTRA_HUMAN_WORDS);
+}
+
+const ARTICLE = '(?:(?:a|an|her|his|their|the) )?';
+const STRIP_PATTERNS = [
+  words(`${WB}(?:wearing|wears|wear|with|has|have|put) (?:absolutely )?nothing${WE}`),
+  words(`${WB}nothing on${WE}`),
+  words(`${WB}(?:only|just) ${ARTICLE}(?:${ONLY_WEARING_ITEMS})${WE}`),
+  words(`${WB}(?:${ONLY_WEARING_ITEMS}) (?:only|and nothing else|nothing else)${WE}`),
+  words(`${WB}(?:только|лишь) (?:в |с )?(?:${ONLY_WEARING_ITEMS})${WE}`),
+  words(`${WB}(?:remove|removes|removing|removed|take off|takes off|taking off|took off|strip off|strips off|pull off|rip off|without|no|lose|loses|losing|сними|снимает|снять|без|հանիր|հանել|առանց) (?:(?:her|his|their|the|all|of|any|its|с нее|с него) ){0,3}(?:${CLOTHING_ITEMS})${WE}`),
+  words(`${WB}(?:see through|see thru|transparent|sheer|wet|прозрачн${W}|мокр${W}) (?:white |thin )?(?:${CLOTHING_ITEMS})${WE}`),
+  words(`${WB}(?:undress|undressed|undressing|unclothed|half naked|half dressed|barely dressed|barely clothed|scantily clad|cleavage|bare chested|bare skin|разден${W}|оголи${W}|голышом|մերկացր${W})${WE}`)
+];
+const SUGGESTIVE_PATTERNS = [
+  words(`${WB}(?:${stemPattern(SUGGESTIVE_STEMS)})${W}${WE}`),
+  words(`${WB}(?:hot|sexy) (?:pose|poses|posing|body|look|photoshoot|selfie)${WE}`),
+  words(`${WB}bedroom (?:pose|poses|posing|selfie|eyes)${WE}`),
+  words(`${WB}(?:boudoir|pin up|pinup)${WE}`)
+];
+
+function hasSexualizingContext(normalized, hasImages) {
+  if (!hasImages && !mentionsPerson(normalized)) return false;
+  return STRIP_PATTERNS.some((pattern) => pattern.test(normalized))
+    || SUGGESTIVE_PATTERNS.some((pattern) => pattern.test(normalized))
+    || containsTerm(normalized, MINIMAL_CLOTHING_WORDS);
+}
+
 // ChatGPT often adds safety notes to its prompts ("no NSFW", "nothing sexual", "non-sexual, no nudity").
 // Those words say the opposite of what the filter looks for, so drop them before checking. Only
 // negations directly in front of a sexual word count: "no limits sexual video" is still checked.
 const NEGATED_SEXUAL_WORDS = /\b(?:no|not|non|nothing|without|avoid|avoiding|never|zero|free of|free from)\s+(?:(?:explicit|graphic|adult|suggestive|sexual|sexualized|sexy|or|and|any)\s+){0,3}(?:nsfw|nudity|nude|naked|sexual|sexualized|sexualised|sex|explicit|erotic|erotica|porn|pornographic|suggestive)(?:\s+(?:content|material|elements|themes|imagery|scenes|details|acts))?\b/g;
 
-function evaluatePrompt(prompt) {
+function evaluatePrompt(prompt, options) {
+  const hasImages = Boolean(options && options.hasImages);
   const normalized = normalizePrompt(prompt).replace(NEGATED_SEXUAL_WORDS, ' ').replace(/\s+/g, ' ').trim();
   if (!normalized) return { allowed: true, category: null, policyVersion: POLICY_VERSION };
 
   const sexual = containsTerm(normalized, DIRECT_SEXUAL_TERMS)
     || hasSexualActivityContext(normalized)
-    || hasHumanNudityContext(normalized);
+    || hasHumanNudityContext(normalized)
+    || hasSexualizingContext(normalized, hasImages);
   const minor = containsTerm(normalized, MINOR_TERMS);
   if (sexual && minor) return { allowed: false, category: 'sexual_content_involving_minors', policyVersion: POLICY_VERSION };
   if (sexual) return { allowed: false, category: 'nsfw_sexual_content', policyVersion: POLICY_VERSION };
@@ -195,10 +259,15 @@ function evaluatePrompt(prompt) {
 // free moderation model reads the whole prompt (context, typos, any language) and decides on sexual
 // content. The word filter still blocks first, and it alone decides if moderation is unavailable.
 const MODERATION_URL = 'https://api.openai.com/v1/moderations';
-const MODERATION_SEXUAL_THRESHOLD = 0.8;
-async function moderationSaysSexual(text) {
+// 0.8 let "make it more seductive" and "wear only a necklace" through (Google Play, Nov 2026). A
+// request about a person in an attached photo is checked more strictly than plain text.
+const MODERATION_SEXUAL_THRESHOLD = 0.5;
+const MODERATION_SEXUAL_THRESHOLD_WITH_IMAGES = 0.3;
+const IMAGE_SEXUAL_THRESHOLD = 0.5;
+async function moderationSaysSexual(text, threshold) {
   const key = process.env.OPENAI_API_KEY || '';
   if (!key || !text) return null;
+  const limit = Number.isFinite(threshold) ? threshold : MODERATION_SEXUAL_THRESHOLD;
   try {
     const response = await fetch(MODERATION_URL, {
       method: 'POST',
@@ -214,18 +283,69 @@ async function moderationSaysSexual(text) {
     // OpenAI's own flag fires on borderline scores too (a dog "running like a human" was flagged), so
     // block only when the model is confident. Clearly sexual prompts score far above this.
     const score = Number(result?.category_scores?.sexual);
-    if (Number.isFinite(score)) return score >= MODERATION_SEXUAL_THRESHOLD ? 'nsfw_sexual_content' : '';
+    if (Number.isFinite(score)) return score >= limit ? 'nsfw_sexual_content' : '';
     return categories.sexual ? 'nsfw_sexual_content' : '';
   } catch {
     return null;
   }
 }
 
-async function evaluateWithModeration(prompt) {
-  const decision = evaluatePrompt(prompt);
+// Uploaded photos are checked too: a revealing photo with an innocent prompt ("animate this", "make it
+// 4K") must not pass. omni-moderation reads images for free; each photo is checked in parallel.
+async function moderationImageCategory(url) {
+  const key = process.env.OPENAI_API_KEY || '';
+  if (!key || !url) return null;
+  try {
+    const response = await fetch(MODERATION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: 'omni-moderation-latest', input: [{ type: 'image_url', image_url: { url } }] }),
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!response.ok) return null;
+    const result = (await response.json())?.results?.[0];
+    if (!result?.categories) return null;
+    if (result.categories['sexual/minors']) return 'sexual_content_involving_minors';
+    const score = Number(result?.category_scores?.sexual);
+    if (Number.isFinite(score)) return score >= IMAGE_SEXUAL_THRESHOLD ? 'nsfw_sexual_content' : '';
+    return result.categories.sexual ? 'nsfw_sexual_content' : '';
+  } catch {
+    return null;
+  }
+}
+
+function collectImageUrls(value, parentKey, output, depth) {
+  if (depth > 8 || value == null || output.length >= 8) return;
+  const key = String(parentKey || '').toLowerCase();
+  if (typeof value === 'string') {
+    if (/^https:\/\//i.test(value) && (/(?:image|img|photo|picture|frame|reference|ref|input|source|face|avatar|first|last|start|end)/.test(key)
+      || /\.(?:png|jpe?g|webp|gif|heic|avif)(?:\?|$)/i.test(value)) && !/\.(?:mp4|mov|webm|mp3|wav|m4a)(?:\?|$)/i.test(value)) {
+      if (!output.includes(value)) output.push(value);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.slice(0, 20).forEach((item) => collectImageUrls(item, key, output, depth + 1));
+    return;
+  }
+  if (typeof value === 'object') {
+    Object.entries(value).slice(0, 200).forEach(([childKey, childValue]) => collectImageUrls(childValue, childKey, output, depth + 1));
+  }
+}
+
+async function evaluateWithModeration(prompt, options) {
+  const imageUrls = (options && Array.isArray(options.imageUrls)) ? options.imageUrls.slice(0, 4) : [];
+  const hasImages = imageUrls.length > 0 || Boolean(options && options.hasImages);
+  const decision = evaluatePrompt(prompt, { hasImages });
   if (!decision.allowed) return decision;
-  const category = await moderationSaysSexual(String(prompt || '').trim());
-  return category ? { allowed: false, category, policyVersion: POLICY_VERSION, source: 'moderation' } : decision;
+  const [textCategory, ...imageCategories] = await Promise.all([
+    moderationSaysSexual(String(prompt || '').trim(), hasImages ? MODERATION_SEXUAL_THRESHOLD_WITH_IMAGES : MODERATION_SEXUAL_THRESHOLD),
+    ...imageUrls.map(moderationImageCategory)
+  ]);
+  if (textCategory) return { allowed: false, category: textCategory, policyVersion: POLICY_VERSION, source: 'moderation' };
+  const imageCategory = imageCategories.find(Boolean);
+  if (imageCategory) return { allowed: false, category: imageCategory, policyVersion: POLICY_VERSION, source: 'image_moderation' };
+  return decision;
 }
 
 function publicMessage(decision) {
@@ -576,7 +696,9 @@ exports.handler = async function handler(event) {
   collectPromptLikeText(request.payload, 'payload', promptParts, 0);
   const moderationText = Array.from(new Set(promptParts.map((part) => String(part || '').trim()).filter(Boolean))).join('\n');
 
-  const decision = await evaluateWithModeration(moderationText);
+  const imageUrls = [];
+  collectImageUrls(request.payload, 'payload', imageUrls, 0);
+  const decision = await evaluateWithModeration(moderationText, { imageUrls });
   const decisionId = crypto.randomUUID();
   const promptHash = crypto.createHash('sha256').update(moderationText).digest('hex').slice(0, 16);
   console.info('content_safety_decision', JSON.stringify({
@@ -755,5 +877,6 @@ exports.handler = async function handler(event) {
 
 exports.evaluatePrompt = evaluatePrompt;
 exports.evaluateWithModeration = evaluateWithModeration;
+exports.collectImageUrls = collectImageUrls;
 exports.POLICY_VERSION = POLICY_VERSION;
 exports.unlimitedEligibility = unlimitedEligibility;
