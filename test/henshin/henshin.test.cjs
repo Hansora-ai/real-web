@@ -227,9 +227,20 @@ test('Concurrent server finishers claim the soundtrack only once',async()=>{
  const original=global.fetch,services=finishServices({status:'restoring_audio'});global.fetch=services.fetch;
  try{const worker=require('../../netlify/functions/henshin-finish-background');await Promise.all([worker.handler(backgroundEvent(services.row.id)),worker.handler(backgroundEvent(services.row.id))]);assert.equal(services.row.meta.audio_attempts,1);assert.equal(services.row.meta.audio_restored,true);}finally{global.fetch=original;}
 });
-test('Duration mismatch stays an explicit audio failure and never publishes a mismatched final video',async()=>{
+test('Duration mismatch never publishes an out-of-sync final video: the user gets the generated video without the original sound',async()=>{
  const original=global.fetch,services=finishServices({status:'restoring_audio',duration:7});global.fetch=services.fetch;
- try{await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.row.id));assert.equal(services.row.meta.status,'audio_failed');assert.equal(services.row.result_url,null);assert.equal(services.row.meta.audio_restored,undefined);assert.match(services.row.meta.audio_error,/duration differs/);assert.equal(services.row.meta.refunded,undefined);}finally{global.fetch=original;}
+ const generated=services.row.meta.generated_video_url||services.row.result_url;
+ try{
+  await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.row.id));
+  assert.ok(require('../../lib/henshin/common.cjs').mediaURL(generated));
+  assert.equal(services.row.meta.status,'done');
+  assert.equal(services.row.result_url,generated);
+  assert.doesNotMatch(services.row.result_url,/henshin-final\.mp4$/);
+  assert.equal(services.row.meta.audio_fallback,true);
+  assert.equal(services.row.meta.audio_restored,true);
+  assert.match(services.row.meta.audio_error,/duration differs/);
+  assert.equal(services.row.meta.refunded,undefined);
+ }finally{global.fetch=original;}
 });
 test('Transient finishing errors persist a retry job rather than relying on the user page',async()=>{
  const original=global.fetch,services=finishServices({status:'restoring_audio',downloadFailure:true});global.fetch=services.fetch;
