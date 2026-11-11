@@ -3,7 +3,7 @@
 // POST { action: "setup", pack_credits, threshold_credits } → switches on; returns checkout_url when a card must be saved.
 // POST { action: "off" } → stops top-ups, keeps the saved card so switching on again needs no checkout.
 // POST { action: "remove_card" } → cancels the Dodo mandate; switching on again opens a new checkout.
-import { PACKS, THRESHOLDS, DEFAULTS, MAX_PER_DAY, config, db, dodo, checkoutBody, packFor, validThreshold } from "../../lib/business/auto-topup.mjs";
+import { PACKS, THRESHOLDS, DEFAULTS, MAX_PER_DAY, config, db, dodo, checkoutBody, packFor, validThreshold, findSavedCard, activateCard } from "../../lib/business/auto-topup.mjs";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -45,11 +45,20 @@ export async function handle(event, { fetchImpl = fetch, env = process.env } = {
     ...extra
   });
 
-  if (event.httpMethod === "GET") return view();
+  // Card saved at Dodo but the webhook never told us: look it up so nobody is sent to a second checkout.
+  const reconcile = async () => {
+    const row = await store.settings(user.id);
+    if (!row || row.status !== "pending" || !available) return row;
+    const found = await findSavedCard({ cfg, userId: user.id, email: user.email, fetchImpl }).catch(() => null);
+    if (!found) return row;
+    return (await activateCard(store, { uid: user.id, ...found })) || row;
+  };
+
+  if (event.httpMethod === "GET") { await reconcile(); return view(); }
 
   let body = {};
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "bad_json" }); }
-  const current = await store.settings(user.id);
+  const current = body.action === "setup" ? await reconcile() : await store.settings(user.id);
   const filter = `user_id=eq.${encodeURIComponent(user.id)}`;
 
   if (body.action === "off") {

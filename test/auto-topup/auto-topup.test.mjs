@@ -378,3 +378,55 @@ test('the product setting accepts the bare id or a pasted checkout link', async 
   assert.equal(config({ ...ENV, DODO_AUTO_TOPUP_PRODUCT_ID: 'https://checkout.dodopayments.com/buy/pdt_X1?quantity=1' }).productId, 'pdt_X1');
   assert.equal(isAutoTopupEvent({ productId: 'pdt_X1', env: { DODO_AUTO_TOPUP_PRODUCT_ID: 'https://checkout.dodopayments.com/buy/pdt_X1?quantity=1' } }), true);
 });
+
+// ---------- card saved but the webhook never arrived ----------
+
+const pendingRow = { user_id: U1, enabled: false, status: 'pending', pack_credits: 200, threshold_credits: 50, subscription_id: null, failures: 0 };
+const subsReply = (items) => (path, body, method) => path === '/subscriptions' ? { status: 200, body: { items } } : { status: 200, body: { checkout_url: 'https://checkout.test/again' } };
+
+test('endpoint: a card saved at Dodo is found even without the webhook, by uid in metadata', async () => {
+  const b = fakeBackend({ settings: [pendingRow], dodo: subsReply([{ subscription_id: 'sub_other', metadata: { uid: U2 }, customer: { email: 'x@y.co' } }, { subscription_id: 'sub_mine', metadata: { uid: U1 }, customer: { customer_id: 'cus_9', email: 'a@b.co' } }]) });
+  const out = JSON.parse((await handle({ httpMethod: 'GET', headers: { Authorization: 'Bearer good' } }, { env: ENV, fetchImpl: b.fetchImpl })).body);
+  assert.equal(out.settings.enabled, true);
+  assert.equal(out.settings.card_saved, true);
+  assert.equal(out.settings.pack_credits, 200, 'keeps the chosen pack');
+  assert.equal(b.tables.auto_topups[0].subscription_id, 'sub_mine');
+  const lookup = b.calls.find((c) => c.host === 'dodo.test');
+  assert.match(lookup.search, /product_id=pdt_auto/);
+});
+
+test('endpoint: falls back to the account email when the subscription has no uid', async () => {
+  const b = fakeBackend({ settings: [pendingRow], dodo: subsReply([{ subscription_id: 'sub_mail', metadata: {}, customer: { email: 'A@B.co' } }]) });
+  const out = JSON.parse((await handle({ httpMethod: 'GET', headers: { Authorization: 'Bearer good' } }, { env: ENV, fetchImpl: b.fetchImpl })).body);
+  assert.equal(out.settings.card_saved, true);
+  assert.equal(b.tables.auto_topups[0].subscription_id, 'sub_mail');
+});
+
+test('endpoint: a cancelled subscription at Dodo is not treated as a saved card', async () => {
+  const b = fakeBackend({ settings: [pendingRow], dodo: subsReply([{ subscription_id: 'sub_old', status: 'cancelled', metadata: { uid: U1 } }]) });
+  const out = JSON.parse((await handle({ httpMethod: 'GET', headers: { Authorization: 'Bearer good' } }, { env: ENV, fetchImpl: b.fetchImpl })).body);
+  assert.equal(out.settings.card_saved, false);
+});
+
+test('endpoint: turning on again with a card saved at Dodo does not open a second checkout', async () => {
+  const b = fakeBackend({ settings: [pendingRow], dodo: subsReply([{ subscription_id: 'sub_mine', metadata: { uid: U1 } }]) });
+  const out = JSON.parse((await handle({ httpMethod: 'POST', headers: { Authorization: 'Bearer good' }, body: JSON.stringify({ action: 'setup', pack_credits: 90, threshold_credits: 30 }) }, { env: ENV, fetchImpl: b.fetchImpl })).body);
+  assert.equal(out.checkout_url, undefined);
+  assert.equal(out.settings.enabled, true);
+  assert.equal(out.settings.pack_credits, 90);
+  assert.equal(b.calls.filter((c) => c.path === '/checkouts').length, 0);
+});
+
+test('endpoint: no saved card at Dodo still opens the checkout', async () => {
+  const b = fakeBackend({ settings: [pendingRow], dodo: subsReply([]) });
+  const out = JSON.parse((await handle({ httpMethod: 'POST', headers: { Authorization: 'Bearer good' }, body: JSON.stringify({ action: 'setup', pack_credits: 90, threshold_credits: 30 }) }, { env: ENV, fetchImpl: b.fetchImpl })).body);
+  assert.equal(out.checkout_url, 'https://checkout.test/again');
+});
+
+test('webhook: the $0 card-saving payment also switches auto top-up on', async () => {
+  const b = fakeBackend({ settings: [pendingRow] });
+  const r = await handleAutoTopupWebhook({ type: 'payment.succeeded', root: {}, data: { payment_id: 'pay_0', subscription_id: 'sub_7', total_amount: 0, customer: { customer_id: 'cus_7' } }, meta: { uid: U1, auto_topup: '1' }, env: ENV, fetchImpl: b.fetchImpl, addCredits: async () => assert.fail('no credits for the $0 payment') });
+  assert.equal(r.body.auto_topup, 'card_saved');
+  assert.equal(b.tables.auto_topups[0].enabled, true);
+  assert.equal(b.tables.auto_topups[0].subscription_id, 'sub_7');
+});
