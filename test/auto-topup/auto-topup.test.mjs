@@ -283,6 +283,8 @@ test('endpoint: first setup opens a card-saving checkout with nothing charged', 
   assert.deepEqual(checkout.body.metadata, { uid: U1, auto_topup: '1' });
   assert.equal(checkout.body.return_url, 'https://site.test/profile_ru.html?auto_topup=saved');
   assert.deepEqual(checkout.body.product_cart, [{ product_id: 'pdt_auto', quantity: 1 }]);
+  assert.equal(checkout.body.minimal_address, true, 'short form: no street address');
+  assert.deepEqual(checkout.body.feature_flags, { allow_phone_number_collection: false, allow_discount_code: false });
   assert.equal(b.tables.auto_topups[0].status, 'pending');
   assert.equal(b.tables.auto_topups[0].pack_credits, 200);
 });
