@@ -3,7 +3,8 @@
 --   thumbs_up/down ratings of those first videos (generation_ratings, from the result card)
 --   bought         of those users, how many paid afterwards
 --   result_link_opened  how many opened "check your generations" (hansora.co/usage.html?from=chatgpt_result)
--- Grok half: user ids ending in an odd hex digit; Wan half: even (lib/hansora-mcp/credits.mjs firstVideoGroup).
+-- Groups (lib/hansora-mcp/credits.mjs firstVideoGroup): Grok = user ids ending in 1, 3, 5 or 7 (25%), Wan = the rest
+-- (75%, since 11 Nov; 10-11 Nov it was 50/50 by odd/even).
 with firsts as (
   select distinct on (user_id) user_id, model_id, run_id, created_at
   from public.chatgpt_events
