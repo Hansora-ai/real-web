@@ -570,6 +570,7 @@
                 <select id="autoTopupLevel" class="mt-1 w-full rounded-xl bg-black/30 border border-white/15 px-3 py-2 text-sm text-white"></select>
               </label>
             </div>
+            <p id="autoTopupCardSaved" class="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold" hidden></p>
             <p id="autoTopupCheckoutNote" class="mt-3 text-xs opacity-60">Քարտը պահպանվում է Dodo Payments-ի անվտանգ էջում։ Ոչինչ չի գանձվում, մինչև հաշվեկշիռը չնվազի։</p>
             <div class="mt-4 flex flex-wrap items-center gap-3">
               <button id="autoTopupSave" type="button" class="btn-brand px-4 py-2 rounded-xl text-sm font-semibold">Միացնել ավտոլիցքավորումը</button>
@@ -1271,6 +1272,10 @@
       document.getElementById('autoTopupOff').hidden = !s.enabled;
       document.getElementById('autoTopupRemove').hidden = !s.card_saved;
       document.getElementById('autoTopupCheckoutNote').hidden = Boolean(s.card_saved);
+      const savedCard = s.card_saved && s.card && s.card.last4 ? s.card : null;
+      const savedCardEl = document.getElementById('autoTopupCardSaved');
+      savedCardEl.hidden = !savedCard;
+      savedCardEl.textContent = savedCard ? `💳 Պահպանված քարտ: ${String(savedCard.brand || '').toUpperCase()} •••• ${savedCard.last4}${savedCard.exp_month && savedCard.exp_year ? ` · մինչև ${savedCard.exp_month}/${savedCard.exp_year}` : ''}` : '';
       if (!state.available) autoTopupMessage(T.unavailable);
       else if (!s.enabled && s.card_saved && s.last_error && s.failures) autoTopupMessage(T.pausedFail.replace('{code}', s.last_error), true);
       else if (s.enabled && s.last_error) autoTopupMessage(T.failed.replace('{code}', s.last_error), true);

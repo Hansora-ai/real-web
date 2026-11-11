@@ -14,19 +14,19 @@
       note: "You will save your card on a secure Dodo Payments page. Nothing is charged until your credits run low.", credits: "credits",
       saving: "Saving…", opening: "Opening secure checkout…", saved: "Saved. Auto top-up is on.", turnedOff: "Auto top-up is off. Your card stays saved.", removed: "Saved card removed.",
       waiting: "Card saved. Switching on auto top-up…", failed: "Your last top-up failed ({code}).", pausedFail: "Auto top-up was switched off after failed charges ({code}). Check your card, then turn it on again.",
-      error: "Could not save right now. Please try again.", unavailable: "Auto top-up is not available yet.", confirmRemove: "Remove your saved card? Auto top-up will stop." },
+      error: "Could not save right now. Please try again.", unavailable: "Auto top-up is not available yet.", confirmRemove: "Remove your saved card? Auto top-up will stop.", savedCard: "Saved card", expires: "exp." },
     ru: { chip: "Автопополнение", on: "Вкл.", title: "Автопополнение", intro: "Не останавливайтесь посреди проекта. Когда кредитов станет меньше выбранного уровня, мы спишем с сохранённой карты выбранный пакет. Это не ежемесячная подписка: пока кредитов хватает, ничего не списывается. Не больше {max} пополнений в день.",
       pack: "Пакет", level: "Пополнять, когда кредитов меньше", turnOn: "Включить автопополнение", save: "Сохранить", off: "Выключить", remove: "Удалить карту", close: "Закрыть",
       note: "Карта сохраняется на защищённой странице Dodo Payments (международные карты). Ничего не списывается, пока кредиты не закончатся.", credits: "кредитов",
       saving: "Сохраняем…", opening: "Открываем безопасную оплату…", saved: "Сохранено. Автопополнение включено.", turnedOff: "Автопополнение выключено. Карта остаётся сохранённой.", removed: "Сохранённая карта удалена.",
       waiting: "Карта сохранена. Включаем автопополнение…", failed: "Последнее пополнение не прошло ({code}).", pausedFail: "Автопополнение выключено после неудачных списаний ({code}). Проверьте карту и включите снова.",
-      error: "Не удалось сохранить. Попробуйте ещё раз.", unavailable: "Автопополнение пока недоступно.", confirmRemove: "Удалить сохранённую карту? Автопополнение остановится." },
+      error: "Не удалось сохранить. Попробуйте ещё раз.", unavailable: "Автопополнение пока недоступно.", confirmRemove: "Удалить сохранённую карту? Автопополнение остановится.", savedCard: "Сохранённая карта", expires: "до" },
     hy: { chip: "Ավտոլիցքավորում", on: "Միացված", title: "Ավտոլիցքավորում", intro: "Մի կանգնեք նախագծի կեսին։ Երբ կրեդիտները իջնեն ընտրված մակարդակից, մենք պահպանված քարտից կգանձենք ընտրված փաթեթը։ Սա ամսական բաժանորդագրություն չէ․ քանի դեռ կրեդիտները բավարար են, ոչինչ չի գանձվում։ Օրական առավելագույնը {max} լիցքավորում։",
       pack: "Փաթեթ", level: "Լիցքավորել, երբ կրեդիտները պակաս են", turnOn: "Միացնել ավտոլիցքավորումը", save: "Պահպանել", off: "Անջատել", remove: "Հեռացնել քարտը", close: "Փակել",
       note: "Քարտը պահպանվում է Dodo Payments-ի անվտանգ էջում։ Ոչինչ չի գանձվում, մինչև կրեդիտները չնվազեն։", credits: "կրեդիտ",
       saving: "Պահպանում ենք…", opening: "Բացում ենք անվտանգ վճարումը…", saved: "Պահպանված է։ Ավտոլիցքավորումը միացված է։", turnedOff: "Ավտոլիցքավորումն անջատված է։ Քարտը մնում է պահպանված։", removed: "Պահպանված քարտը հեռացված է։",
       waiting: "Քարտը պահպանված է։ Միացնում ենք ավտոլիցքավորումը…", failed: "Վերջին լիցքավորումը չհաջողվեց ({code})։", pausedFail: "Ավտոլիցքավորումն անջատվել է անհաջող գանձումներից հետո ({code})։ Ստուգեք քարտը և նորից միացրեք։",
-      error: "Չհաջողվեց պահպանել։ Փորձեք կրկին։", unavailable: "Ավտոլիցքավորումը դեռ հասանելի չէ։", confirmRemove: "Հեռացնե՞լ պահպանված քարտը։ Ավտոլիցքավորումը կդադարի։" }
+      error: "Չհաջողվեց պահպանել։ Փորձեք կրկին։", unavailable: "Ավտոլիցքավորումը դեռ հասանելի չէ։", confirmRemove: "Հեռացնե՞լ պահպանված քարտը։ Ավտոլիցքավորումը կդադարի։", savedCard: "Պահպանված քարտ", expires: "մինչև" }
   };
   function T() {
     var lang = String(document.documentElement.lang || "en").slice(0, 2);
@@ -83,6 +83,7 @@
       + ".atw-secondary{border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 16px;font-size:14px;color:#fff;background:transparent;cursor:pointer}"
       + ".atw-link{border:0;background:none;color:rgba(255,255,255,.65);font-size:12px;text-decoration:underline;cursor:pointer;padding:0}"
       + ".atw-panel button:disabled{opacity:.55;cursor:default}"
+      + ".atw-card{margin-top:14px!important;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;background:rgba(255,255,255,.04);color:#fff!important;font-size:13px!important;font-weight:700}"
       + ".atw-msg{margin-top:12px!important;min-height:1em}"
       + ".atw-msg.is-error{color:#fca5a5!important}";
     var style = document.createElement("style");
@@ -109,6 +110,7 @@
       + '<label><span data-atw="packLabel"></span><select data-atw="pack"></select></label>'
       + '<label><span data-atw="levelLabel"></span><select data-atw="level"></select></label>'
       + '<p class="atw-note" data-atw="note"></p>'
+      + '<p class="atw-card" data-atw="card" hidden></p>'
       + '<div class="atw-actions"><button type="button" class="atw-primary" data-atw="save"></button>'
       + '<button type="button" class="atw-secondary" data-atw="off" hidden></button>'
       + '<button type="button" class="atw-link" data-atw="remove" hidden></button></div>'
@@ -145,6 +147,9 @@
     el("level").value = String(s.threshold_credits);
     el("note").textContent = t.note;
     el("note").hidden = Boolean(s.card_saved);
+    var card = s.card_saved && s.card && s.card.last4 ? s.card : null;
+    el("card").hidden = !card;
+    el("card").textContent = card ? "💳 " + t.savedCard + ": " + String(card.brand || "").toUpperCase() + " •••• " + card.last4 + (card.exp_month && card.exp_year ? " · " + t.expires + " " + card.exp_month + "/" + card.exp_year : "") : "";
     el("save").textContent = s.enabled ? t.save : t.turnOn;
     el("save").disabled = !state.available;
     el("off").textContent = t.off;
