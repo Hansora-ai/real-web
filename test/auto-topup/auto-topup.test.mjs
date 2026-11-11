@@ -297,7 +297,7 @@ test('endpoint: with a saved card, setup switches on without a checkout', async 
   assert.equal(out.settings.enabled, true);
   assert.equal(out.settings.pack_credits, 1050);
   assert.equal(out.settings.failures, 0);
-  assert.equal(b.calls.filter((c) => c.host === 'dodo.test').length, 0);
+  assert.equal(b.calls.filter((c) => c.path === '/checkouts').length, 0, 'no checkout');
 });
 
 test('endpoint: only the listed packs and levels are accepted', async () => {
@@ -316,7 +316,7 @@ test('endpoint: off keeps the card; remove_card cancels the Dodo mandate', async
   assert.equal(out.settings.card_saved, true);
   out = JSON.parse((await post({ action: 'remove_card' })).body);
   assert.equal(out.settings.card_saved, false);
-  const cancel = b.calls.find((c) => c.host === 'dodo.test');
+  const cancel = b.calls.find((c) => c.host === 'dodo.test' && c.method === 'PATCH');
   assert.equal(cancel.method, 'PATCH');
   assert.equal(cancel.path, '/subscriptions/sub_1');
 });
@@ -429,4 +429,25 @@ test('webhook: the $0 card-saving payment also switches auto top-up on', async (
   assert.equal(r.body.auto_topup, 'card_saved');
   assert.equal(b.tables.auto_topups[0].enabled, true);
   assert.equal(b.tables.auto_topups[0].subscription_id, 'sub_7');
+});
+
+test('endpoint: shows the saved card as network and last 4 digits only', async () => {
+  const dodo = (path) => {
+    if (path === '/subscriptions/sub_1') return { status: 200, body: { subscription_id: 'sub_1', payment_method_id: 'pm_2', customer: { customer_id: 'cus_1' } } };
+    if (path === '/customers/cus_1/payment-methods') return { status: 200, body: { items: [
+      { payment_method_id: 'pm_1', payment_method: 'card', card: { last4_digits: '1111', card_network: 'MASTERCARD' } },
+      { payment_method_id: 'pm_2', payment_method: 'card', card: { last4_digits: '4242', card_network: 'VISA', expiry_month: '4', expiry_year: '2029' } }
+    ] } };
+    return { status: 404, body: {} };
+  };
+  const b = fakeBackend({ settings: [activeRow({ customer_id: 'cus_1' })], dodo });
+  const out = JSON.parse((await handle({ httpMethod: 'GET', headers: { Authorization: 'Bearer good' } }, { env: ENV, fetchImpl: b.fetchImpl })).body);
+  assert.deepEqual(out.settings.card, { brand: 'VISA', last4: '4242', exp_month: '04', exp_year: '29' });
+});
+
+test('endpoint: works without card details when Dodo does not give them', async () => {
+  const b = fakeBackend({ settings: [activeRow()], dodo: () => ({ status: 502, body: {} }) });
+  const res = await handle({ httpMethod: 'GET', headers: { Authorization: 'Bearer good' } }, { env: ENV, fetchImpl: b.fetchImpl });
+  assert.equal(res.statusCode, 200);
+  assert.equal(JSON.parse(res.body).settings.card, null);
 });

@@ -3,7 +3,7 @@
 // POST { action: "setup", pack_credits, threshold_credits } → switches on; returns checkout_url when a card must be saved.
 // POST { action: "off" } → stops top-ups, keeps the saved card so switching on again needs no checkout.
 // POST { action: "remove_card" } → cancels the Dodo mandate; switching on again opens a new checkout.
-import { PACKS, THRESHOLDS, DEFAULTS, MAX_PER_DAY, config, db, dodo, checkoutBody, packFor, validThreshold, findSavedCard, activateCard } from "../../lib/business/auto-topup.mjs";
+import { PACKS, THRESHOLDS, DEFAULTS, MAX_PER_DAY, config, db, dodo, checkoutBody, packFor, validThreshold, findSavedCard, activateCard, savedCardSummary } from "../../lib/business/auto-topup.mjs";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -34,16 +34,21 @@ export async function handle(event, { fetchImpl = fetch, env = process.env } = {
     const result = await store.call(`payments?uid=eq.${encodeURIComponent(user.id)}&status=in.(succeeded,paid)&select=transaction_id&limit=1`);
     return result.ok && Array.isArray(result.data) && result.data.length > 0;
   };
-  const view = async (extra = {}) => json(200, {
-    available,
-    has_purchase: await hasPurchase(),
-    settings: publicSettings(await store.settings(user.id)),
-    packs: PACKS,
-    thresholds: THRESHOLDS,
-    max_per_day: MAX_PER_DAY,
-    charges: await store.recentCharges(user.id),
-    ...extra
-  });
+  const view = async (extra = {}) => {
+    const row = await store.settings(user.id);
+    const settings = publicSettings(row);
+    if (settings.card_saved) settings.card = await savedCardSummary({ cfg, subscriptionId: row.subscription_id, customerId: row.customer_id, fetchImpl }).catch(() => null);
+    return json(200, {
+      available,
+      has_purchase: await hasPurchase(),
+      settings,
+      packs: PACKS,
+      thresholds: THRESHOLDS,
+      max_per_day: MAX_PER_DAY,
+      charges: await store.recentCharges(user.id),
+      ...extra
+    });
+  };
 
   // Card saved at Dodo but the webhook never told us: look it up so nobody is sent to a second checkout.
   const reconcile = async () => {
