@@ -367,3 +367,12 @@ test('owner Telegram sale message says when it was an auto top-up', async () => 
   assert.match(saleMessage({ provider: 'dodo', amountCents: 999, currency: 'USD', credits: 90, autoTopup: true }), /Dodo · 🔁 auto top-up/);
   assert.doesNotMatch(saleMessage({ provider: 'dodo', amountCents: 999, currency: 'USD', credits: 90 }), /auto top-up/);
 });
+
+test('the product setting accepts the bare id or a pasted checkout link', async () => {
+  const { productIdFrom } = await import('../../lib/business/auto-topup.mjs');
+  assert.equal(productIdFrom('pdt_0Nrj7SN523dHTfHDFo3tE'), 'pdt_0Nrj7SN523dHTfHDFo3tE');
+  assert.equal(productIdFrom(' https://checkout.dodopayments.com/buy/pdt_0Nrj7SN523dHTfHDFo3tE?quantity=1 '), 'pdt_0Nrj7SN523dHTfHDFo3tE');
+  assert.equal(productIdFrom(''), '');
+  assert.equal(config({ ...ENV, DODO_AUTO_TOPUP_PRODUCT_ID: 'https://checkout.dodopayments.com/buy/pdt_X1?quantity=1' }).productId, 'pdt_X1');
+  assert.equal(isAutoTopupEvent({ productId: 'pdt_X1', env: { DODO_AUTO_TOPUP_PRODUCT_ID: 'https://checkout.dodopayments.com/buy/pdt_X1?quantity=1' } }), true);
+});
