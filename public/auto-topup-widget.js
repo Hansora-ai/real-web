@@ -67,7 +67,7 @@
       + ".atw-chip:hover{background:rgba(139,92,246,.26)}"
       + ".atw-chip .atw-dot{width:7px;height:7px;border-radius:50%;background:rgba(226,232,240,.45)}"
       + ".atw-chip.is-on .atw-dot{background:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.2)}"
-      + ".atw-row{display:block;margin-top:16px}"
+      + ".atw-row{display:block;margin-top:40px}@media (max-width:767px){.atw-row{margin-top:20px}}"
       + ".atw-modal{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:16px}"
       + ".atw-modal.is-open{display:flex}"
       + ".atw-backdrop{position:absolute;inset:0;background:rgba(3,6,14,.72);backdrop-filter:blur(6px)}"
