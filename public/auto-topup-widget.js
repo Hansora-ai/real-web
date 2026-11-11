@@ -63,11 +63,11 @@
   function injectStyles() {
     if (document.getElementById("autoTopupWidgetStyles")) return;
     var css = ""
-      + ".atw-chip{margin-top:0;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(167,139,250,.45);border-radius:999px;padding:6px 12px;background:rgba(139,92,246,.14);color:#fff;font-size:11px;font-weight:900;cursor:pointer;transition:background .16s}"
+      + ".atw-chip{margin-top:0;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(167,139,250,.55);border-radius:999px;padding:11px 20px;background:rgba(139,92,246,.18);color:#fff;font-size:15px;line-height:1.2;box-shadow:0 10px 26px rgba(0,0,0,.28);font-weight:900;cursor:pointer;transition:background .16s}"
       + ".atw-chip:hover{background:rgba(139,92,246,.26)}"
-      + ".atw-chip .atw-dot{width:7px;height:7px;border-radius:50%;background:rgba(226,232,240,.45)}"
+      + ".atw-chip .atw-dot{width:9px;height:9px;border-radius:50%;background:rgba(226,232,240,.45)}"
       + ".atw-chip.is-on .atw-dot{background:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.2)}"
-      + ".atw-row{display:block;margin-top:100px;text-align:center}@media (max-width:767px){.atw-row{margin-top:20px}}"
+      + ".atw-row{display:block;margin-top:96px;text-align:center}.atw-row.is-mobile{margin-top:18px;order:4}html[data-pricing-plan-mode=\"monthly\"] .atw-row.is-mobile{display:none}"
       + ".atw-modal{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:16px}"
       + ".atw-modal.is-open{display:flex}"
       + ".atw-backdrop{position:absolute;inset:0;background:rgba(3,6,14,.72);backdrop-filter:blur(6px)}"
@@ -207,7 +207,16 @@
     chip.className = "atw-chip";
     chip.addEventListener("click", open);
     row.appendChild(chip);
-    toggle.insertAdjacentElement("afterend", row);
+    // Desktop: under the card switch. Phones: under the feature pills (No monthly subscription, …).
+    var mobile = window.matchMedia("(max-width: 767px)");
+    var place = function () {
+      var benefits = document.querySelector("#pricing .pricing-benefits");
+      var onPhone = mobile.matches && benefits;
+      row.classList.toggle("is-mobile", Boolean(onPhone));
+      (onPhone ? benefits : toggle).insertAdjacentElement("afterend", row);
+    };
+    place();
+    if (mobile.addEventListener) mobile.addEventListener("change", place); else if (mobile.addListener) mobile.addListener(place);
     renderChip();
     // pricing.html switches between English and Russian with the card switch: keep the label in step.
     new MutationObserver(function () { renderChip(); if (modal && modal.classList.contains("is-open")) renderModal(); })
