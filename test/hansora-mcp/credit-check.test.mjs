@@ -1492,17 +1492,18 @@ test('fewer round trips: list_models brings the account, a Seedance/Kling quote 
 });
 
 
-test('first-video test: new users are split by user id between Grok (720p, 6 s) and Wan 3.0 (480p, 5 s, the 30 free credits)', async () => {
+test('first-video test: new users are split by user id, 75% Wan 3.0 (480p, 5 s, the 30 free credits) and 25% Grok (720p, 6 s)', async () => {
   const { firstVideoGroup, firstVideoPlan } = await import('../../lib/hansora-mcp/credits.mjs');
   const wanUser = '00000000-0000-0000-0000-00000000000a';
-  const grokUser = '00000000-0000-0000-0000-00000000000b';
+  const grokUser = '00000000-0000-0000-0000-000000000003';
   assert.equal(firstVideoGroup(wanUser), 'wan');
   assert.equal(firstVideoGroup(grokUser), 'grok');
   assert.equal(firstVideoGroup('user-1'), 'grok');
-  // About half and half over many ids.
+  // About 75% Wan over many ids; everyone in the Grok group now was in it before (odd last digit).
   const ids = Array.from({ length: 1000 }, (_, index) => `00000000-0000-0000-0000-${index.toString(16).padStart(12, '0')}`);
   const wans = ids.filter((id) => firstVideoGroup(id) === 'wan').length;
-  assert.ok(wans > 400 && wans < 600);
+  assert.ok(wans > 700 && wans < 800, String(wans));
+  assert.ok(ids.filter((id) => firstVideoGroup(id) === 'grok').every((id) => parseInt(id.slice(-1), 16) % 2 === 1));
   assert.deepEqual({ ...firstVideoPlan(wanUser), internal_credits: undefined }, { model_id: 'wan-3', model_name: 'Wan 3.0', settings: { duration: 5, resolution: '480p' }, credits: 30, internal_credits: undefined, group: 'wan' });
   assert.equal(firstVideoPlan(grokUser).credits, 18);
 
