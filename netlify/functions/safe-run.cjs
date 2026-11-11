@@ -222,23 +222,6 @@ const SUGGESTIVE_PATTERNS = [
 // word directly in front of a thing (up to two describing words between) is removed before checking,
 // so "make her seductive" still blocks.
 const THING_NOUNS = 'bottle|bottles|perfume|perfumes|fragrance|fragrances|scent|scents|cologne|car|cars|sports car|supercar|vehicle|bike|motorcycle|watch|watches|phone|lipstick|wine|cocktail|drink|chocolate|dessert|cake|food|dish|burger|pizza|coffee|lighting|light|lights|colors|colours|color|colour|palette|font|logo|label|packaging|package|box|product|products|bag|handbag|shoe|shoes|heels|sneakers|ring|jewelry|jewellery|interior|room|hotel|villa|house|kitchen|sofa|chair|bed sheets|curtains|candle|candles|music|song|beat|voice over|melody|night|sunset|city|view|ocean|beach|landscape|design|ad|advert|advertisement|campaign|poster|banner|brand|slogan|scene lighting|духи|аромат|флакон|машина|автомобиль|ауди|օծանելիք|մեքենա|շշ';
-// Image models (GPT Image especially) sexualize women on their own from innocent prompts. When a
-// request involves a person, this instruction is added to the prompt before it reaches the model.
-const MODEST_INSTRUCTION = 'Keep every person fully and modestly clothed, with no cleavage, no revealing or see-through clothing, no lingerie or swimwear, and no suggestive or sexual pose or expression.';
-function addModestInstruction(payload, depth = 0) {
-  if (!payload || typeof payload !== 'object' || depth > 3) return 0;
-  let changed = 0;
-  for (const [key, value] of Object.entries(payload)) {
-    if (typeof value === 'string' && /^(?:prompt|text_prompt|positive_prompt)$/i.test(key) && !value.includes(MODEST_INSTRUCTION)) {
-      payload[key] = `${value.trim()}\n\n${MODEST_INSTRUCTION}`;
-      changed += 1;
-    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
-      changed += addModestInstruction(value, depth + 1);
-    }
-  }
-  return changed;
-}
-
 const THING_PHRASE = words(`${WB}(?:${stemPattern(SUGGESTIVE_STEMS)})${W}(?: [^ ]+){0,2} (?:${THING_NOUNS})${WE}`);
 
 function hasSexualizingContext(normalized, hasImages) {
@@ -758,11 +741,6 @@ exports.handler = async function handler(event) {
     }, { 'X-Content-Safety': 'approved' });
   }
 
-  if (!/^audio$/i.test(mediaKind) && (imageUrls.length || mentionsPerson(normalizePrompt(moderationText)))) {
-    request.payload = JSON.parse(JSON.stringify(request.payload));
-    addModestInstruction(request.payload);
-  }
-
   const baseUrl = requestBaseUrl(event);
   if (!baseUrl) {
     return json(503, {
@@ -907,6 +885,5 @@ exports.handler = async function handler(event) {
 exports.evaluatePrompt = evaluatePrompt;
 exports.evaluateWithModeration = evaluateWithModeration;
 exports.collectImageUrls = collectImageUrls;
-exports.addModestInstruction = addModestInstruction;
 exports.POLICY_VERSION = POLICY_VERSION;
 exports.unlimitedEligibility = unlimitedEligibility;

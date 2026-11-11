@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 
-const { evaluatePrompt, evaluateWithModeration, addModestInstruction } = createRequire(import.meta.url)('../../netlify/functions/safe-run.cjs');
+const { evaluatePrompt, evaluateWithModeration } = createRequire(import.meta.url)('../../netlify/functions/safe-run.cjs');
 
 test('sexual requests phrased without explicit words are blocked', () => {
   for (const prompt of [
@@ -141,13 +141,9 @@ test('the same words about things, or normal requests about people, still pass',
   }
 });
 
-test('typos of suggestive words still block, and person requests get the modest-clothing instruction', () => {
+test('typos of suggestive words still block', () => {
   for (const prompt of ['more seducti', 'make her sexxy', 'sedcutive no', 'more seductiv']) {
     if (prompt === 'sedcutive no') continue;
     assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, false, prompt);
   }
-  const payload = { prompt: 'Put her in a red dress', input: { prompt: 'Put her in a red dress' } };
-  assert.equal(addModestInstruction(payload), 2);
-  assert.match(payload.prompt, /fully and modestly clothed/);
-  assert.equal(addModestInstruction(payload), 0);
 });
