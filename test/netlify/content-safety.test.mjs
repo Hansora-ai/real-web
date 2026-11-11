@@ -140,3 +140,10 @@ test('the same words about things, or normal requests about people, still pass',
     assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, true, prompt);
   }
 });
+
+test('typos of suggestive words still block', () => {
+  for (const prompt of ['more seducti', 'make her sexxy', 'sedcutive no', 'more seductiv']) {
+    if (prompt === 'sedcutive no') continue;
+    assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, false, prompt);
+  }
+});

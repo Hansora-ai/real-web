@@ -169,7 +169,7 @@ function hasSexualActivityContext(normalized) {
 // white background"), so they block only when the request is about a person: a human word in the
 // prompt, or a photo attached (then "make it more seductive" is about the person in the photo).
 const SUGGESTIVE_STEMS = [
-  'seductiv', 'seduce', 'seducing', 'sexy', 'sexier', 'sexiest', 'sensual', 'steamy', 'lustful',
+  'seduc', 'sexy', 'sexie', 'sexx', 'sensual', 'steamy', 'lustful',
   'raunchy', 'risque', 'skimpy', 'scantily', 'erotic', 'lewd',
   'соблазнит', 'сексуальн', 'сексапил', 'секси', 'эротич', 'эротик', 'чувственн', 'развратн',
   'սեքսի', 'սեքսուալ', 'գայթակղ', 'էրոտիկ'
