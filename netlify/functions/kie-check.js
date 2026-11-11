@@ -309,9 +309,9 @@ async function markDone({ row, ids, urls, enqueueAudio = true }) {
   };
 
   if (['reapi','kie-kling4'].includes(row.meta?.source)) {
-    // KIE's unbounded output bitrate can produce videos too large for
-    // history storage. Keep a working provider download for those clips.
-    const oversizedUpscale = row.meta?.tool_feature === 'video-upscale'
+    // Upscales may exceed history storage limits. Keep the provider
+    // download when the result is too large to archive.
+    const oversizedUpscale = ['video-upscale', 'image-upscale'].includes(row.meta?.tool_feature)
       && archive.errors.some(error => /archive_file_too_large|archive_upload_413|entity too large|maximum allowed size/i.test(error));
     if (!archive.paths.length && !oversizedUpscale) throw Error('Result archival is pending.');
     const audio = row.meta.source_feature === 'henshin' && !require('../../lib/henshin/jobs.cjs').isNativeLite(row) && (row.meta.source_audio_url || row.meta.finish_video);
