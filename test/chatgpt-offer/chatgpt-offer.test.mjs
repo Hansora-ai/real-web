@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { config, db, offerView, creditsForPayment, offerCredits, isActive, OFFER_PACKS, OFFER_HOURS, GRACE_MINUTES, STARTER } from '../../lib/business/chatgpt-offer.mjs';
+import { config, db, offerView, previewView, validSince, creditsForPayment, offerCredits, isActive, OFFER_PACKS, OFFER_HOURS, GRACE_MINUTES, STARTER } from '../../lib/business/chatgpt-offer.mjs';
 import { handle } from '../../netlify/functions/chatgpt-offer.mjs';
 
 const ENV = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'service', DODO_CHATGPT_STARTER_PRODUCT: 'https://checkout.dodopayments.com/buy/pdt_starter?quantity=1' };
@@ -185,4 +185,44 @@ test('the endpoint needs a signed-in user and answers with the offer', async () 
   assert.equal(ok.statusCode, 200);
   assert.equal(JSON.parse(ok.body).active, true);
   assert.equal((await handle({ httpMethod: 'POST', headers: {} }, { fetchImpl: b.fetchImpl, env: ENV })).statusCode, 405);
+});
+
+test('a clock seen while logged out carries into the new account: same deadline, never longer', async () => {
+  const b = backend();
+  const sawAt = T0 - 3 * HOUR;
+  const offer = await offerView({ cfg, store: db(cfg, b.fetchImpl), userId: U1, start: true, since: sawAt, now: T0 });
+  assert.equal(offer.expires_at, new Date(sawAt + OFFER_HOURS * HOUR).toISOString());
+  assert.equal(offer.seconds_left, 5 * 3600);
+  // From any page, not only pricing, once a clock was shown.
+  const other = backend();
+  assert.equal((await offerView({ cfg, store: db(cfg, other.fetchImpl), userId: U1, since: sawAt, now: T0 })).seconds_left, 5 * 3600);
+  // A later "since" sent again changes nothing: the first deadline stays.
+  assert.equal((await offerView({ cfg, store: db(cfg, b.fetchImpl), userId: U1, start: true, since: T0, now: T0 + HOUR })).expires_at, offer.expires_at);
+});
+
+test('a logged-out clock that already ran out gives the new account no offer', async () => {
+  const b = backend();
+  const offer = await offerView({ cfg, store: db(cfg, b.fetchImpl), userId: U1, start: true, since: T0 - 9 * HOUR, now: T0 });
+  assert.equal(offer.active, false);
+  assert.equal(b.tables.chatgpt_offers.length, 1);
+});
+
+test('since: only a time in the past, at most 30 days back; a time in the future is ignored', () => {
+  assert.equal(validSince(T0 - HOUR, T0), T0 - HOUR);
+  assert.equal(validSince(T0 + HOUR, T0), null);
+  assert.equal(validSince(T0 - 31 * 24 * HOUR, T0), null);
+  assert.equal(validSince('abc', T0), null);
+  assert.equal(validSince(null, T0), null);
+});
+
+test('logged-out visitors get the offer without a clock from ?preview=1', async () => {
+  const view = previewView(cfg);
+  assert.equal(view.enabled, true);
+  assert.equal(view.offer_hours, OFFER_HOURS);
+  assert.deepEqual(view.packs.map((p) => p.offer_credits), [113, 225, 563, 1125]);
+  assert.equal(view.starter.price_cents, 499);
+  assert.deepEqual(previewView(config({ CHATGPT_OFFER: 'off' })), { enabled: false });
+  const res = await handle({ httpMethod: 'GET', headers: {}, queryStringParameters: { preview: '1' } }, { env: ENV });
+  assert.equal(res.statusCode, 200);
+  assert.equal(JSON.parse(res.body).bonus_percent, 25);
 });

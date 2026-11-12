@@ -1675,11 +1675,19 @@ img, video { max-width: 100%; height: auto; }
       console.error('Unable to open checkout.', error);
     }
   }
+  // The welcome offer (public/chatgpt-offer.js) must know about a purchase made right after signing up: wait for it,
+  // at most 2.5 seconds, before opening the checkout.
+  function waitForWelcomeOffer(){
+    const api = window.HansoraWelcomeOffer;
+    if (!api || typeof api.sync !== 'function') return Promise.resolve();
+    return Promise.race([Promise.resolve(api.sync()).catch(function(){}), new Promise(function(resolve){ setTimeout(resolve, 2500); })]);
+  }
   async function openPaygCheckout(btn){
     if (!beginCheckoutOpening(btn)) return;
     try {
       const user = await getUser();
       if (!user?.id) { endCheckoutOpening(btn); askToLogIn(btn); return; }
+      await waitForWelcomeOffer();
       const credits = Number(btn.getAttribute('data-credits') || '0');
       if (!Number.isFinite(credits) || credits <= 0) { endCheckoutOpening(btn); return; }
       const mode = document.documentElement.getAttribute('data-payment-mode') === 'ru' ? 'ru' : 'international';
