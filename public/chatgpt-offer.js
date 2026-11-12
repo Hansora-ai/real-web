@@ -1,5 +1,5 @@
-/* ChatGPT welcome offer (see lib/business/chatgpt-offer.mjs). Loaded on every page by header.js.
-   Shown only to signed-in people who used the ChatGPT plugin and never bought. The 8-hour timer starts the first
+/* Welcome offer (see lib/business/chatgpt-offer.mjs). Loaded on every page by header.js.
+   Shown only to signed-in people who never bought (wherever they signed up: the site or the ChatGPT plugin). The 8-hour timer starts the first
    time they open the pricing page; it is kept on the server, so a refresh or another device shows the same time.
    The pages load and work as before: this file runs after the page and adds the offer when the server answers.
      - every page: a small floating pill that opens the pricing page (with the countdown once the timer runs);
@@ -22,25 +22,25 @@
 
   var TEXT = {
     en: {
-      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "ChatGPT welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", stripEnds: "Ends in",
+      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "Welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", stripEnds: "Ends in",
       badge: "🎁 +{p}% FREE", cardCredits: "credits", split: "{base} + <b>{free} free</b>", h: "hrs", m: "min", sec: "sec", starterLink: "🎁 Starter pack: {credits} credits for {price}",
-      popTag: "ChatGPT welcome offer · one time", popTitle: "Try Hansora for just {price}", popText: "A small pack made for your first purchase. You will not find it on the pricing page.",
+      popTag: "Welcome offer · one time", popTitle: "Try Hansora for just {price}", popText: "A small pack made for your first purchase. You will not find it on the pricing page.",
       popCredits: "{credits} credits", popOnce: "one payment", popBuy: "Get {credits} credits for {price}", popNo: "No thanks", popEnds: "Offer ends in",
-      popFacts: ["Works in ChatGPT right away", "No subscription", "Credits never expire"], close: "Close welcome offer"
+      popFacts: ["Works on Hansora and in ChatGPT", "No subscription", "Credits never expire"], close: "Close welcome offer"
     },
     ru: {
-      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Предложение для пользователей ChatGPT", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", stripEnds: "Осталось",
+      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Приветственное предложение", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", stripEnds: "Осталось",
       badge: "🎁 +{p}% В ПОДАРОК", cardCredits: "кредитов", split: "{base} + <b>{free} в подарок</b>", h: "ч", m: "мин", sec: "сек", starterLink: "🎁 Стартовый пакет: {credits} кредитов за {price}",
-      popTag: "Предложение для пользователей ChatGPT · один раз", popTitle: "Попробуйте Hansora всего за {price}", popText: "Небольшой пакет для первой покупки. На странице цен его нет.",
+      popTag: "Приветственное предложение · один раз", popTitle: "Попробуйте Hansora всего за {price}", popText: "Небольшой пакет для первой покупки. На странице цен его нет.",
       popCredits: "{credits} кредитов", popOnce: "разовый платёж", popBuy: "Получить {credits} кредитов за {price}", popNo: "Нет, спасибо", popEnds: "Осталось",
-      popFacts: ["Сразу работает в ChatGPT", "Без подписки", "Кредиты не сгорают"], close: "Закрыть предложение"
+      popFacts: ["Работает на Hansora и в ChatGPT", "Без подписки", "Кредиты не сгорают"], close: "Закрыть предложение"
     },
     hy: {
-      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ ChatGPT-ի օգտատերերին", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", stripEnds: "Մնաց",
+      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", stripEnds: "Մնաց",
       badge: "🎁 +{p}% ԱՆՎՃԱՐ", cardCredits: "կրեդիտ", split: "{base} + <b>{free} անվճար</b>", h: "ժ", m: "ր", sec: "վ", starterLink: "🎁 Մեկնարկային փաթեթ՝ {credits} կրեդիտ {price}-ով",
-      popTag: "Առաջարկ ChatGPT-ի օգտատերերին · մեկ անգամ", popTitle: "Փորձեք Hansora-ն ընդամենը {price}-ով", popText: "Փոքր փաթեթ առաջին գնման համար։ Գների էջում այն չկա։",
+      popTag: "Ողջույնի առաջարկ · մեկ անգամ", popTitle: "Փորձեք Hansora-ն ընդամենը {price}-ով", popText: "Փոքր փաթեթ առաջին գնման համար։ Գների էջում այն չկա։",
       popCredits: "{credits} կրեդիտ", popOnce: "մեկանգամյա վճարում", popBuy: "Ստանալ {credits} կրեդիտ {price}-ով", popNo: "Ոչ, շնորհակալություն", popEnds: "Մնաց",
-      popFacts: ["Անմիջապես աշխատում է ChatGPT-ում", "Առանց բաժանորդագրության", "Կրեդիտները չեն սպառվում"], close: "Փակել առաջարկը"
+      popFacts: ["Աշխատում է Hansora-ում և ChatGPT-ում", "Առանց բաժանորդագրության", "Կրեդիտները չեն սպառվում"], close: "Փակել առաջարկը"
     }
   };
   function lang() {

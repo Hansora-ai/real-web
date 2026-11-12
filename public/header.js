@@ -5132,7 +5132,7 @@
     setTimeout(finish, 10000);
   }
 
-  // The ChatGPT welcome offer (public/chatgpt-offer.js): loaded after the page, only for signed-in visitors.
+  // The welcome offer for people who never bought (public/chatgpt-offer.js): loaded after the page, only for signed-in visitors.
   // It shows nothing unless the server says this person has a running offer.
   function loadChatgptOffer() {
     if (window.top !== window.self || document.querySelector('script[data-chatgpt-offer]')) return;
