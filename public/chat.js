@@ -203,7 +203,9 @@
     ui.panel.classList.toggle("open", open);
     ui.launcher.setAttribute("aria-label", open ? T.close : T.open);
     try { sessionStorage.setItem("hansora_chat_open_" + KEY, open ? "1" : "0"); } catch (_) {}
-    if (open) { unread = 0; renderBadge(); scroll(); setTimeout(function () { (needForm() ? (ui.form.querySelector("input") || ui.input) : ui.input).focus(); }, 50); }
+    // Focus the message box when a visitor opens the chat (never in the dashboard preview: it would take the cursor
+    // away from the settings the owner is typing in).
+    if (open) { unread = 0; renderBadge(); scroll(); if (!PREVIEW) setTimeout(function () { (needForm() ? (ui.form.querySelector("input") || ui.input) : ui.input).focus(); }, 50); }
     schedule(0);
   }
 
