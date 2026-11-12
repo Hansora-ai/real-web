@@ -145,7 +145,7 @@ export async function handler(event) {
     const chat_session_id = meta.chat_session_id || null;
     const { productId: paidProductId, quantity: paidQuantity } = productFromPayload(data);
     const knownPlan = PLAN_PRODUCTS[paidProductId] || null;
-    // The $4.99 ChatGPT starter pack (lib/business/chatgpt-offer.mjs) is a pack like the others.
+    // The $4.99 starter pack of the welcome offer (lib/business/chatgpt-offer.mjs) is a pack like the others.
     const chatgptOffer = chatgptOfferConfig();
     const isChatgptStarter = Boolean(chatgptOffer.starterProductId) && paidProductId === chatgptOffer.starterProductId;
     const knownPackCredits = isChatgptStarter ? CHATGPT_STARTER.credits : (PACK_PRODUCT_CREDITS[paidProductId] || 0);
@@ -317,12 +317,12 @@ export async function handler(event) {
     // Small helper
     async function sjson(res) { try { return await res.json(); } catch { return null; } }
 
-    // ChatGPT welcome offer: a first purchase inside the buyer's 8-hour window gets 25% of the pack's base credits
+    // Welcome offer: a first purchase inside the buyer's 8-hour window gets 25% of the pack's base credits
     // free. Decided here from the offer row, never from the checkout link. Any problem grants the normal amount.
     const offerGrant = await creditsForPayment({
       cfg: chatgptOffer, userId: uid, productId: paidProductId, quantity: paidQuantity, credits, transactionId: transaction_id, paidAt: paid_at
     });
-    if (offerGrant.offer) console.log("ChatGPT offer applied", { offer: offerGrant.offer, product: paidProductId, normal: credits, granted: offerGrant.credits });
+    if (offerGrant.offer) console.log("Welcome offer applied", { offer: offerGrant.offer, product: paidProductId, normal: credits, granted: offerGrant.credits });
     credits = offerGrant.credits;
 
     // ---- 0) Ensure a payments row exists (status may be null initially) ----

@@ -53,7 +53,8 @@ test('offer credits: 25% of the base credits free, never less than the pack give
 test('the starter product is read from a pasted Dodo link or a bare id', () => {
   assert.equal(cfg.starterProductId, 'pdt_starter');
   assert.equal(config({ DODO_CHATGPT_STARTER_PRODUCT: 'pdt_abc123' }).starterCheckout, 'https://checkout.dodopayments.com/buy/pdt_abc123');
-  assert.equal(config({}).starterCheckout, '');
+  // Without the setting, the starter product created in Dodo is used.
+  assert.equal(config({}).starterCheckout, 'https://checkout.dodopayments.com/buy/pdt_0NrmWsHzjAdxHAYd4QOSG');
 });
 
 test('other pages never start the timer: the offer waits until the pricing page is opened', async () => {
@@ -67,7 +68,7 @@ test('other pages never start the timer: the offer waits until the pricing page 
   assert.equal((await peek(b, T0 + 25 * HOUR)).expires_at, started.expires_at);
 });
 
-test('a ChatGPT user who never bought gets an 8-hour offer on the first look at pricing', async () => {
+test('anyone who never bought gets an 8-hour offer on the first look at pricing', async () => {
   const b = chatgptUser();
   const first = await view(b, T0);
   assert.equal(first.active, true);
@@ -97,12 +98,12 @@ test('after 8 hours the offer is over for good', async () => {
   assert.equal(b.tables.chatgpt_offers.length, 1);
 });
 
-test('people who never used ChatGPT, or already bought, get no offer and no timer', async () => {
+test('someone who never used ChatGPT gets the offer too; someone who already bought gets no offer and no timer', async () => {
   const stranger = backend();
-  assert.deepEqual(await view(stranger, T0), { eligible: false, active: false });
+  assert.equal((await view(stranger, T0)).active, true);
   const buyer = backend({ events: [{ id: 1, user_id: U1 }], payments: [{ uid: U1, status: 'succeeded', transaction_id: 'old' }] });
   assert.deepEqual(await view(buyer, T0), { eligible: false, active: false });
-  assert.equal(stranger.tables.chatgpt_offers.length + buyer.tables.chatgpt_offers.length, 0);
+  assert.equal(buyer.tables.chatgpt_offers.length, 0);
 });
 
 test('someone who paid another way while the timer runs no longer sees the offer', async () => {

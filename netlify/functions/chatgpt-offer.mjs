@@ -1,7 +1,7 @@
-// The ChatGPT welcome offer for the signed-in person (see lib/business/chatgpt-offer.mjs).
+// The welcome offer for the signed-in person (see lib/business/chatgpt-offer.mjs).
 // GET → { eligible, active, expires_at, seconds_left, bonus_percent, packs, starter }, or { pending: true } while
-// the timer has not started. GET ?start=1 (sent by the pricing page) starts the 8-hour timer for someone who used
-// the ChatGPT plugin and never bought; later calls return the same deadline.
+// the timer has not started. GET ?start=1 (sent by the pricing page) starts the 8-hour timer for someone who
+// never bought; later calls return the same deadline.
 import { config, db, offerView } from "../../lib/business/chatgpt-offer.mjs";
 
 const CORS = {
