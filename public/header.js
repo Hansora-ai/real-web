@@ -5057,6 +5057,8 @@
         });
       },
       getCurrentCredits: function () { return currentCredits; },
+      // Lets other scripts (public/chatgpt-offer.js) save a named event for the signed-in person in click_events.
+      recordEvent: function (name, details) { return recordRegisteredClickEvent(name, details); },
       toDisplayCredits,
       creditDisplayMultiplier: CREDIT_DISPLAY_MULTIPLIER,
       openAuth,
@@ -5135,7 +5137,9 @@
   // The welcome offer for people who never bought (public/chatgpt-offer.js): loaded after the page, only for signed-in visitors.
   // It shows nothing unless the server says this person has a running offer.
   function loadChatgptOffer() {
-    if (window.top !== window.self || document.querySelector('script[data-chatgpt-offer]')) return;
+    // Inside a frame only the pricing page shows it (the pricing popup the header opens for new users).
+    if (window.top !== window.self && !/^\/pricing(_ru|_arm)?(\.html)?\/?$/.test(location.pathname)) return;
+    if (document.querySelector('script[data-chatgpt-offer]')) return;
     let signedIn = false;
     try {
       for (let i = 0; i < localStorage.length; i++) {
