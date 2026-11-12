@@ -10,14 +10,17 @@
    nothing and the pages work as before. International cards only (Dodo). */
 (function () {
   "use strict";
-  if (window.__hansoraChatgptOffer || window.top !== window.self) return;
+  // In a frame it runs only on the pricing page: that is the pricing popup the header opens for new users.
+  var IN_FRAME = window.top !== window.self;
+  if (window.__hansoraChatgptOffer || (IN_FRAME && !/^\/pricing(_ru|_arm)?(\.html)?\/?$/.test(location.pathname))) return;
   window.__hansoraChatgptOffer = true;
 
   var ENDPOINT = "/.netlify/functions/chatgpt-offer";
   var CACHE_PREFIX = "hansora:cgoffer:";
   var NOT_ELIGIBLE_CACHE_MS = 2 * 60 * 60 * 1000;
   var POPUP_DELAY_MS = 40 * 1000;
-  var POPUP_SEEN_KEY = "hansora:cgoffer:starter-seen";
+  // The starter popup opens by itself once per person (remembered in this browser); after that only the button opens it.
+  var POPUP_AUTO_KEY = "hansora:cgoffer:starter-auto:";
   var MULTIPLIER = 10; // stored credits -> credits as shown on the site
 
   var TEXT = {
@@ -39,7 +42,7 @@
       pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", stripEnds: "Մնաց",
       badge: "🎁 +{p}% ԱՆՎՃԱՐ", cardCredits: "կրեդիտ", split: "{base} + <b>{free} անվճար</b>", h: "ժ", m: "ր", sec: "վ", starterLink: "🎁 Մեկնարկային փաթեթ՝ {credits} կրեդիտ {price}-ով",
       popTag: "Ողջույնի առաջարկ · մեկ անգամ", popTitle: "Փորձեք Hansora-ն ընդամենը {price}-ով", popText: "Փոքր փաթեթ առաջին գնման համար։ Գների էջում այն չկա։",
-      popCredits: "{credits} կրեդիտ", popOnce: "մեկանգամյա վճարում", popBuy: "Ստանալ {credits} կրեդիտ {price}-ով", popNo: "Ոչ, շնորհակալություն", popEnds: "Մնաց",
+      popCredits: "{credits} կրեդիտ", popOnce: "մեկանգամյա վճարում", popBuy: "Գնել {credits} կրեդիտ՝ {price}", popNo: "Ոչ, շնորհակալություն", popEnds: "Մնաց",
       popFacts: ["Աշխատում է Hansora-ում և ChatGPT-ում", "Առանց բաժանորդագրության", "Կրեդիտները չեն սպառվում"], close: "Փակել առաջարկը"
     }
   };
@@ -204,6 +207,7 @@
     [pill, strip, popup].forEach(function (el) { if (el && el.parentNode) el.parentNode.removeChild(el); });
     pill = strip = popup = null;
     document.querySelectorAll(".cgo-card, .cgo-badge").forEach(function (el) { el.remove(); });
+    document.querySelectorAll("[data-cgo-save]").forEach(function (el) { el.textContent = el.getAttribute("data-cgo-save"); el.removeAttribute("data-cgo-save"); });
     document.documentElement.classList.remove("cgo-on");
   }
 
@@ -257,11 +261,9 @@
     strip.querySelector(".cgo-strip-text").textContent = fill(T().strip, { p: offer.bonus_percent });
     strip.querySelector(".cgo-strip-sub").textContent = T().stripSub;
     strip.querySelector(".cgo-strip-ends").textContent = T().stripEnds;
-    // The starter link appears only after the popup was shown once, so it never competes with the packs first.
+    // The starter button is always there while the offer runs.
     var link = strip.querySelector(".cgo-starter-link");
-    var seen = false;
-    try { seen = sessionStorage.getItem(POPUP_SEEN_KEY) === "1"; } catch (_) {}
-    if (offer.starter && seen) {
+    if (offer.starter) {
       link.hidden = false;
       link.textContent = fill(T().starterLink, { credits: shown(offer.starter.credits), price: money(offer.starter.price_cents) });
     } else link.hidden = true;
@@ -297,6 +299,17 @@
         row.insertBefore(badge, row.firstChild);
       }
       if (badge && badge.textContent !== badgeText) badge.textContent = badgeText;
+      // "Save $5" counts only the price cut. With the offer the buyer also gets free credits, worth their share of
+      // the pack price, so the pill shows both: $5 + (230 free / 900) x $9.99 = $7.50 ($15, $37.50 and $75 on the bigger packs).
+      var save = row ? row.querySelector("span:not(.cgo-badge)") : null;
+      if (save && /\$\s?[\d.,]+/.test(save.textContent) && !save.hasAttribute("data-cgo-save")) {
+        var was = parseFloat((save.textContent.match(/\$\s?([\d.,]+)/) || [])[1].replace(/,/g, ""));
+        var baseCredits = BASE[String(pack.credits)] || pack.credits;
+        var extra = (pack.offer_credits - baseCredits) / baseCredits * (pack.price_cents / 100);
+        var total = Math.round((was + extra) * 2) / 2; // to the nearest 50 cents
+        save.setAttribute("data-cgo-save", save.textContent);
+        save.textContent = save.textContent.replace(/\$\s?[\d.,]+/, "$" + (total % 1 ? total.toFixed(2) : String(total)));
+      }
       var html = (row ? '' : '<span class="cgo-badge">' + badgeText + '</span>') +
         '<div class="cgo-big"><s>' + shown(pack.credits) + '</s><strong>' + shown(pack.offer_credits) + '</strong><span>' + T().cardCredits + '</span></div>' +
         '<div class="cgo-split">' + fill(T().split, { base: shown(base), free: shown(pack.offer_credits - base) }) + '</div>';
@@ -307,17 +320,17 @@
 
   // ---------- pricing page: starter pack popup ----------
   function armStarterPopup() {
-    if (!offer || !offer.starter || popupTimer) return;
-    var seen = false;
-    try { seen = sessionStorage.getItem(POPUP_SEEN_KEY) === "1"; } catch (_) {}
-    if (seen) return;
+    // Not inside the header's pricing popup (a popup over a popup); the button is there instead.
+    if (!offer || !offer.starter || popupArmed || IN_FRAME) return;
+    popupArmed = true;
+    if (autoShown()) return;
     var bought = false;
     document.addEventListener("click", function (event) {
       var target = event.target && event.target.closest ? event.target.closest(".buy-credits, .buy-subscription") : null;
       if (target) bought = true;
     }, true);
     function maybeOpen(reason) {
-      if (bought || popup || !offer) return;
+      if (bought || popup || !offer || autoShown()) return;
       if (document.documentElement.getAttribute("data-payment-mode") === "ru") return;
       openStarter(reason);
     }
@@ -327,9 +340,16 @@
       if (!event.relatedTarget && event.clientY <= 0) maybeOpen("leaving");
     });
   }
+  var popupArmed = false, shownByItself = false;
+  function autoShown() {
+    if (shownByItself) return true;
+    try { return localStorage.getItem(POPUP_AUTO_KEY + (user ? user.id : "")) === "1"; } catch (_) { return false; }
+  }
   function openStarter(reason) {
     if (!offer || !offer.starter || popup) return;
-    try { sessionStorage.setItem(POPUP_SEEN_KEY, "1"); } catch (_) {}
+    // Once it has been open, it never opens by itself again.
+    shownByItself = true;
+    try { localStorage.setItem(POPUP_AUTO_KEY + (user ? user.id : ""), "1"); } catch (_) {}
     var t = T();
     var values = { credits: shown(offer.starter.credits), price: money(offer.starter.price_cents) };
     popup = document.createElement("div");
@@ -439,10 +459,10 @@
       "html.cgo-on[data-payment-mode='international'] .cgo-has-offer > .mt-3.text-5xl,html.cgo-on[data-payment-mode='international'] .cgo-has-offer .hs-gift-split,html.cgo-on[data-payment-mode='international'] .cgo-has-offer .hs-gift-badge,html.cgo-on[data-payment-mode='international'] .cgo-has-offer .hs-gift-line,html.cgo-on[data-payment-mode='international'] .cgo-has-offer .hs-upsell,html.cgo-on[data-payment-mode='international'] .cgo-has-offer > .flex.items-center.justify-between > .text-sm{display:none}",
       "html.cgo-on[data-payment-mode='international'] .cgo-has-offer{border-color:rgba(110,231,183,.45)}",
       "html[data-payment-mode='ru'] .cgo-strip,html[data-payment-mode='ru'] .cgo-card,html[data-payment-mode='ru'] .cgo-badge,html[data-pricing-plan-mode='monthly'] .cgo-strip{display:none}",
-      ".cgo-pop{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(3,5,10,.74);backdrop-filter:blur(6px);font-family:Inter,system-ui,sans-serif;opacity:0;transition:opacity .25s ease}",
+      ".cgo-pop{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:flex-start;justify-content:center;padding:44px 16px 16px;overflow-y:auto;overscroll-behavior:contain;background:rgba(3,5,10,.74);backdrop-filter:blur(6px);font-family:Inter,system-ui,sans-serif;opacity:0;transition:opacity .25s ease}",
       ".cgo-pop.cgo-open{opacity:1}",
       ".cgo-pop.cgo-closing{background:rgba(3,5,10,0);backdrop-filter:none;transition:background .4s ease;pointer-events:none}",
-      ".cgo-pop-card{position:relative;width:100%;max-width:400px;border-radius:26px;padding:26px 22px 18px;margin-top:30px;text-align:center;color:#e5e7eb;border:1px solid rgba(192,132,252,.55);background:linear-gradient(180deg,#221a45,#0f1220 70%);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(168,85,247,.25),0 0 70px rgba(139,92,246,.35);transform:translateY(18px) scale(.94);transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .45s ease}",
+      ".cgo-pop-card{position:relative;width:100%;max-width:400px;border-radius:26px;padding:26px 22px 18px;margin:auto;text-align:center;color:#e5e7eb;border:1px solid rgba(192,132,252,.55);background:linear-gradient(180deg,#221a45,#0f1220 70%);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(168,85,247,.25),0 0 70px rgba(139,92,246,.35);transform:translateY(18px) scale(.94);transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .45s ease}",
       ".cgo-pop.cgo-open .cgo-pop-card{transform:none}",
       "@media (prefers-reduced-motion:reduce){.cgo-pop,.cgo-pop-card{transition:none}.cgo-pop-gift,.cgo-pop-buy,.cgo-strip::before{animation:none}}",
       ".cgo-pop-x{position:absolute;right:12px;top:10px;width:34px;height:34px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#fff;font-size:20px;line-height:1;cursor:pointer}",
@@ -466,7 +486,9 @@
       ".cgo-pop-facts{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;font-size:13px;color:rgba(226,232,240,.86)}",
       ".cgo-pop-facts li{padding:6px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);font-size:12px;font-weight:600;white-space:nowrap}",
       ".cgo-pop-facts li::before{content:'✓';margin-right:6px;color:#34d399;font-weight:900}",
-      ".cgo-pop-no{display:block;margin:12px auto 0;border:0;background:none;color:rgba(226,232,240,.55);font:600 13px Inter,system-ui,sans-serif;cursor:pointer}"
+      ".cgo-pop-no{display:block;margin:12px auto 0;border:0;background:none;color:rgba(226,232,240,.55);font:600 13px Inter,system-ui,sans-serif;cursor:pointer}",
+      // Phones: a shorter card that fits the screen with room around it, in every language.
+      "@media (max-width:560px){.cgo-pop{padding:40px 22px 18px}.cgo-pop-card{max-width:340px;border-radius:22px;padding:18px 16px 12px}.cgo-pop-gift{width:50px;height:50px;margin:-42px auto 8px;border-radius:16px;font-size:26px}.cgo-pop-tag{padding:5px 10px;font-size:11px}.cgo-pop-card h3{margin-top:10px;font-size:19px}.cgo-pop-text{display:none}.cgo-pop-deal{margin-top:11px;padding:11px 12px;border-radius:15px}.cgo-pop-price strong{font-size:40px}.cgo-pop-price span{font-size:11px;padding-bottom:4px}.cgo-pop-credits{margin-top:4px;font-size:17px}.cgo-pop-timer{margin-top:10px;padding:8px 11px;border-radius:13px}.cgo-pop-timer .cgo-seg b{min-width:36px;padding:4px;font-size:18px;line-height:24px;border-radius:9px}.cgo-pop-timer .cgo-clock em{line-height:32px;font-size:18px}.cgo-pop-timer .cgo-seg i{font-size:9px}.cgo-pop-buy{margin-top:10px;padding:13px 8px;font-size:14.5px;border-radius:13px}.cgo-pop-facts{margin-top:9px;gap:2px 10px}.cgo-pop-facts li{padding:0;border:0;background:none;font-size:10.5px}.cgo-pop-no{margin-top:8px;font-size:12px}.cgo-pop-x{width:30px;height:30px;right:9px;top:8px;font-size:18px}}"
     ].join("\n");
     document.head.appendChild(style);
   }
