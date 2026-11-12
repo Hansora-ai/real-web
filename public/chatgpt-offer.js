@@ -177,7 +177,7 @@
     if (popupTimer) { clearTimeout(popupTimer); popupTimer = null; }
     [pill, strip, popup].forEach(function (el) { if (el && el.parentNode) el.parentNode.removeChild(el); });
     pill = strip = popup = null;
-    document.querySelectorAll(".cgo-card").forEach(function (el) { el.remove(); });
+    document.querySelectorAll(".cgo-card, .cgo-badge").forEach(function (el) { el.remove(); });
     document.documentElement.classList.remove("cgo-on");
   }
 
@@ -259,7 +259,17 @@
       }
       // Base credits are what the pack gives without any gift; everything above them is free.
       var base = BASE[String(pack.credits)] || pack.credits;
-      var html = '<span class="cgo-badge">' + fill(T().badge, { p: offer.bonus_percent }) + '</span>' +
+      // The "+25% FREE" badge sits in the card's top row, next to its "Save $..." pill.
+      var row = card.querySelector(":scope > .flex.items-center.justify-between");
+      var badgeText = fill(T().badge, { p: offer.bonus_percent });
+      var badge = row ? row.querySelector(".cgo-badge") : null;
+      if (row && !badge) {
+        badge = document.createElement("span");
+        badge.className = "cgo-badge";
+        row.insertBefore(badge, row.firstChild);
+      }
+      if (badge && badge.textContent !== badgeText) badge.textContent = badgeText;
+      var html = (row ? '' : '<span class="cgo-badge">' + badgeText + '</span>') +
         '<div class="cgo-big"><s>' + shown(pack.credits) + '</s><strong>' + shown(pack.offer_credits) + '</strong><span>' + T().cardCredits + '</span></div>' +
         '<div class="cgo-split">' + fill(T().split, { base: shown(base), free: shown(pack.offer_credits - base) }) + '</div>';
       if (block.innerHTML !== html) block.innerHTML = html;
@@ -386,18 +396,19 @@
       ".cgo-starter-link:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(139,92,246,.35)}",
       ".cgo-chip-land{animation:cgoLand 1.2s ease-out}",
       "@keyframes cgoLand{0%{transform:scale(.8);box-shadow:0 0 0 0 rgba(168,85,247,.7)}35%{transform:scale(1.08)}100%{transform:scale(1);box-shadow:0 0 0 16px rgba(168,85,247,0)}}",
-      ".cgo-card{margin-top:12px}",
+      ".cgo-card{margin-top:6px}",
       ".cgo-badge{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:900;letter-spacing:.01em;color:#052e1b;background:linear-gradient(135deg,#34d399,#a7f3d0);box-shadow:0 8px 22px rgba(52,211,153,.35)}",
       ".cgo-big{margin-top:12px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;line-height:1}",
-      ".cgo-big s{font-size:22px;font-weight:800;color:rgba(226,232,240,.45);text-decoration-thickness:2px}",
-      ".cgo-big strong{font-size:48px;font-weight:900;letter-spacing:-.04em;background:linear-gradient(90deg,#6ee7b7,#7dd3fc);-webkit-background-clip:text;background-clip:text;color:transparent}",
-      ".cgo-big span{font-size:22px;font-weight:800;color:#fff}",
+      ".cgo-big s{font-size:18px;font-weight:800;color:rgba(226,232,240,.45);text-decoration-thickness:2px}",
+      ".cgo-big strong{font-size:40px;font-weight:900;letter-spacing:-.04em;background:linear-gradient(90deg,#6ee7b7,#7dd3fc);-webkit-background-clip:text;background-clip:text;color:transparent}",
+      ".cgo-big span{font-size:18px;font-weight:800;color:#fff}",
+      "@media (max-width:767px){.cgo-big s{font-size:22px}.cgo-big strong{font-size:48px}.cgo-big span{font-size:22px}}",
       ".cgo-split{margin-top:8px;font-size:15px;font-weight:600;color:rgba(226,232,240,.75)}",
       ".cgo-split b{color:#6ee7b7;font-weight:800}",
       // While the offer runs, each card shows the offer amount in place of its usual title and gift lines.
       "html.cgo-on[data-payment-mode='international'] .cgo-has-offer > .mt-3.text-5xl,html.cgo-on[data-payment-mode='international'] .cgo-has-offer .hs-gift-split,html.cgo-on[data-payment-mode='international'] .cgo-has-offer .hs-gift-badge,html.cgo-on[data-payment-mode='international'] .cgo-has-offer .hs-gift-line,html.cgo-on[data-payment-mode='international'] .cgo-has-offer .hs-upsell,html.cgo-on[data-payment-mode='international'] .cgo-has-offer > .flex.items-center.justify-between > .text-sm{display:none}",
       "html.cgo-on[data-payment-mode='international'] .cgo-has-offer{border-color:rgba(110,231,183,.45)}",
-      "html[data-payment-mode='ru'] .cgo-strip,html[data-payment-mode='ru'] .cgo-card,html[data-pricing-plan-mode='monthly'] .cgo-strip{display:none}",
+      "html[data-payment-mode='ru'] .cgo-strip,html[data-payment-mode='ru'] .cgo-card,html[data-payment-mode='ru'] .cgo-badge,html[data-pricing-plan-mode='monthly'] .cgo-strip{display:none}",
       ".cgo-pop{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(3,5,10,.74);backdrop-filter:blur(6px);font-family:Inter,system-ui,sans-serif;opacity:0;transition:opacity .25s ease}",
       ".cgo-pop.cgo-open{opacity:1}",
       ".cgo-pop.cgo-closing{background:rgba(3,5,10,0);backdrop-filter:none;transition:background .4s ease;pointer-events:none}",
@@ -422,8 +433,9 @@
       "@keyframes cgoPulse{0%,100%{box-shadow:0 12px 34px rgba(99,102,241,.45)}50%{box-shadow:0 12px 44px rgba(168,85,247,.85),0 0 0 6px rgba(168,85,247,.14)}}",
       ".cgo-pop-buy:disabled{opacity:.6;cursor:default}",
       ".cgo-pop-price{justify-content:center}",
-      ".cgo-pop-facts{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;font-size:13px;color:rgba(226,232,240,.86)}",
-      ".cgo-pop-facts li::before{content:'✓';margin-right:8px;color:#34d399;font-weight:900}",
+      ".cgo-pop-facts{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;font-size:13px;color:rgba(226,232,240,.86)}",
+      ".cgo-pop-facts li{padding:6px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);font-size:12px;font-weight:600;white-space:nowrap}",
+      ".cgo-pop-facts li::before{content:'✓';margin-right:6px;color:#34d399;font-weight:900}",
       ".cgo-pop-no{display:block;margin:12px auto 0;border:0;background:none;color:rgba(226,232,240,.55);font:600 13px Inter,system-ui,sans-serif;cursor:pointer}"
     ].join("\n");
     document.head.appendChild(style);
