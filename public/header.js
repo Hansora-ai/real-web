@@ -403,6 +403,17 @@
     } catch (_) { return ''; }
   }
 
+  // Logging in from a pricing page (the header's Login, not only Buy) comes back to that pricing page, not the home
+  // page. A Buy click saves its own entry first (with the package to buy); that one is kept.
+  function rememberPricingAuthReturn() {
+    if (!/^\/pricing(?:_ru|_arm)?(?:\.html)?$/.test(location.pathname)) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem('hansora:pricing-buy-return') || 'null');
+      if (saved && Date.now() - Number(saved.createdAt || 0) < 15 * 60 * 1000) return;
+      localStorage.setItem('hansora:pricing-buy-return', JSON.stringify({ path: `${location.pathname}${location.search}`, createdAt: Date.now() }));
+    } catch (_) {}
+  }
+
   // A page to come back to after logging in, saved for 15 minutes: the pricing page (Buy clicked while logged out,
   // saved by pricing*.html) or the history page (opened logged out from ChatGPT, saved by usage*.html).
   function pendingPageReturn() {
@@ -3600,6 +3611,7 @@
 
   function openAuth(mode) {
     rememberCourseAuthReturn(location.pathname);
+    rememberPricingAuthReturn();
     const savedVerification = readPendingEmailVerification();
     const requestedSignup = mode === 'signup';
     emailAuthOpenedFromChooser = false;
