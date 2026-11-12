@@ -13,6 +13,8 @@
   let step = params.get('test') === '1' ? 4 : 1;
   // True after "Edit settings" on a number the business already has: the steps only change settings, nothing is bought.
   let editing = false;
+  // A comments-only AI employee has no business information yet, so phone setup sends the owner to create it first.
+  let needsEmployee = false;
   // Step 2 or 3 opened inside the Test step (see openInline); declared early because render() reads it.
   const inline = { pane:null, home:null };
 
@@ -74,6 +76,7 @@
   // Comments-only accounts have no business information yet: the test would not know the business.
   if (!api.isLocalPreview) Promise.resolve(api.db.from('automation_businesses').select('setup_mode').eq('id', businessId).maybeSingle()).then(result => {
     if (result?.data?.setup_mode !== 'comments') return;
+    needsEmployee = true; render();
     const try_ = $('#phone-try'); const link = document.createElement('a');
     link.className = 'ui-btn primary sm'; link.href = `automation-setup.html?id=${encodeURIComponent(businessId)}`; link.textContent = 'Create my AI employee first';
     link.title = 'Your AI employee needs your business information before it can answer calls';
@@ -160,6 +163,7 @@
     $('#test-call').scrollIntoView({ behavior:'smooth', block:'center' });
   });
   $('#phone-next').addEventListener('click', async () => {
+    if (needsEmployee) { location.href = `automation-setup.html?id=${encodeURIComponent(businessId)}`; return; }
     if (step === 1 && !line.where) { showError('Choose where your business is first.'); $('#line-where').focus(); return; }
     if (step === 1 && mode() === 'none') { showError('Choose how customers reach you.'); return; }
     if (step === 1 && mode() === 'new' && line.where && numberIn(line.where)) { showError(`You already have a ${countryName(line.where)} number. Choose another country, or press Edit settings on your number.`); return; }
@@ -327,7 +331,7 @@
     document.querySelectorAll('.ui-stepper li').forEach(item => { const n = Number(item.dataset.step); item.classList.toggle('active', n === step); item.classList.toggle('done', n < step); });
     $('.ui-stepper').style.setProperty('--progress-num', String((step - 1) / 3));
     $('#phone-previous').hidden = step === 1;
-    $('#phone-next').textContent = step === 4 ? (canGetNumber() ? getNumberLabel() : editing ? 'Save changes' : 'Save phone setup') : 'Continue';
+    $('#phone-next').textContent = needsEmployee ? 'Create my AI employee first' : step === 4 ? (canGetNumber() ? getNumberLabel() : editing ? 'Save changes' : 'Save phone setup') : 'Continue';
     // With a number already live, step 1 has nothing to continue to until the owner picks something new to add.
     $('#phone-next').hidden = step === 1 && mode() === 'none' && liveNumbers().length > 0;
     if (liveNumbers().length) $('#phone-save-state').textContent = 'These settings apply to all this AI employee’s numbers';
@@ -587,7 +591,10 @@
   }
   function formatTimer(seconds) { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; }
   function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-  function showError(message) { const box = $('#phone-error'); box.textContent = message; box.hidden = false; }
+  function showError(message) {
+    const box = $('#phone-error'); box.textContent = message; box.hidden = false;
+    const shown = box.getBoundingClientRect(); if (shown.top < 0 || shown.bottom > innerHeight) ui?.toast?.(message, 'error');
+  }
   function fail(message) { $('#phone-loading').hidden = true; showError(message); }
   function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 })();
