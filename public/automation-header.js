@@ -17,11 +17,14 @@
   const realSite = !api?.isLocalPreview;
   let cachedLoggedIn = false;
   try { cachedLoggedIn = localStorage.getItem('hansora.header.loggedIn') === '1'; } catch (_) {}
+  // The photo header.js saved last time, so it does not flash an "H" on every page.
+  let cachedAvatar = 'https://ui-avatars.com/api/?name=H&background=6366f1&color=fff';
+  try { const saved = localStorage.getItem('hansora.header.avatar'); if (/^(https:|data:image\/)/.test(saved || '')) cachedAvatar = saved.replace(/"/g, '%22'); } catch (_) {}
   const accountArea = realSite
-    ? `<span class="auto-account"><button class="auto-auth-link" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Log in</button><span class="auto-credits" id="navCredits" title="Your credits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"></span><button class="auto-avatar" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"><img id="navAvatarImg" alt="" src="https://ui-avatars.com/api/?name=H&background=6366f1&color=fff"></button></span>`
+    ? `<span class="auto-account"><button class="auto-auth-link" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Log in</button><span class="auto-credits" id="navCredits" title="Your credits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"></span><button class="auto-avatar" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"><img id="navAvatarImg" alt="" src="${cachedAvatar}"></button></span>`
     : (appPage ? '' : `<a class="auto-auth-link" href="automation-dashboard.html${previewQuery}">Dashboard</a>`);
   const accountMenu = realSite ? `<div class="auto-user-menu" id="navMenu"><a href="automation-dashboard.html">AI employees</a><a href="automation-profile.html">Profile</a><a href="automation-pricing.html">Buy credits</a><a href="/">Hansora Creative</a><button type="button" id="autoLogout">Log out</button></div>` : '';
-  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><a class="auto-back" href="/">Hansora Creative ↗</a>${themeButton}${['dashboard','setup'].includes(page) ? '' : `<a class="auto-cta" href="automation-setup.html${previewQuery}">${appPage ? 'New AI employee' : 'Get started'}</a>`}${accountArea}</nav>${accountMenu}</header>`;
+  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><button class="auto-help" type="button" data-need-help="">Need help?</button><a class="auto-back" href="/">Hansora Creative ↗</a>${themeButton}${['dashboard','setup'].includes(page) ? '' : `<a class="auto-cta" href="automation-setup.html${previewQuery}">${appPage ? 'New AI employee' : 'Get started'}</a>`}${accountArea}</nav>${accountMenu}</header>`;
 
   const syncThemeLabels = () => {
     const light = document.documentElement.getAttribute('data-theme') === 'light';
@@ -311,4 +314,61 @@
       }).catch(() => {});
     }
   }
+  // "Need help?": the owner leaves a WhatsApp or Telegram and the Hansora team messages them to set things up.
+  // One popup for the whole site; any element with data-need-help="topic" opens it.
+  const NEED_HELP_METHODS = { whatsapp: ['WhatsApp', '+1 555 010 0000'], telegram: ['Telegram', '@username'] };
+  let helpDialog = null;
+  function openNeedHelp(topic = '') {
+    if (!helpDialog) {
+      helpDialog = document.createElement('dialog');
+      helpDialog.className = 'ui-dialog auto-help-dialog';
+      helpDialog.innerHTML = `<form method="dialog" class="auto-help-form" novalidate>
+        <div class="auto-help-head"><h2>Need help?</h2><button class="ui-btn ghost icon sm" type="button" data-help-close aria-label="Close">✕</button></div>
+        <p class="auto-help-intro">Leave your WhatsApp or Telegram. Our team messages you and sets it up with you, usually within a day.</p>
+        <div class="auto-help-row"><select class="ui-input" data-help-method aria-label="How should we contact you?">${Object.entries(NEED_HELP_METHODS).map(([value, [label]]) => `<option value="${value}">${label}</option>`).join('')}</select><input class="ui-input" data-help-value autocomplete="tel" placeholder="${NEED_HELP_METHODS.whatsapp[1]}" aria-label="Your WhatsApp number"></div>
+        <textarea class="ui-textarea" data-help-note rows="3" maxlength="800" placeholder="What do you need help with? (optional)"></textarea>
+        <p class="auto-help-error" role="alert" hidden></p>
+        <div class="auto-help-actions"><a class="ui-link" href="https://t.me/Hansora_support" target="_blank" rel="noopener">Or write to @Hansora_support</a><button class="ui-btn primary" type="submit" data-help-send>Send</button></div>
+      </form>`;
+      document.body.appendChild(helpDialog);
+      const form = helpDialog.querySelector('form');
+      const method = helpDialog.querySelector('[data-help-method]'); const value = helpDialog.querySelector('[data-help-value]');
+      const error = helpDialog.querySelector('.auto-help-error');
+      method.addEventListener('change', () => { value.placeholder = NEED_HELP_METHODS[method.value][1]; value.setAttribute('aria-label', `Your ${NEED_HELP_METHODS[method.value][0]}`); });
+      helpDialog.querySelector('[data-help-close]').addEventListener('click', () => helpDialog.close());
+      helpDialog.addEventListener('click', event => { if (event.target === helpDialog) helpDialog.close(); });
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const contact = value.value.trim();
+        const valid = method.value === 'whatsapp' ? /^\+?[\d\s()-]{7,20}$/.test(contact) : /^@?[A-Za-z0-9_]{4,32}$|^\+?[\d\s()-]{7,20}$/.test(contact);
+        if (!valid) { error.textContent = method.value === 'whatsapp' ? 'Enter your WhatsApp number with the country code, for example +1 555 010 0000.' : 'Enter your Telegram @username or phone number.'; error.hidden = false; value.focus(); return; }
+        error.hidden = true;
+        const send = helpDialog.querySelector('[data-help-send]'); send.disabled = true; send.textContent = 'Sending…';
+        try {
+          if (api?.isLocalPreview) throw Object.assign(new Error('preview'), { preview: true });
+          const user = await api?.getUser?.().catch(() => null);
+          const note = helpDialog.querySelector('[data-help-note]').value.trim();
+          const message = [`Need help${helpDialog.dataset.topic ? ` – ${helpDialog.dataset.topic}` : ''}`, `${NEED_HELP_METHODS[method.value][0]}: ${contact}`, user?.id ? `Hansora account: ${user.email || user.id}` : 'Not signed in', `Page: ${location.pathname}${location.search}`, note ? `Message: ${note}` : ''].filter(Boolean).join('\n');
+          const response = await fetch('/.netlify/functions/contact-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: user?.email || 'not signed in', message }) });
+          if (!response.ok) throw new Error('send_failed');
+          helpDialog.close(); form.reset(); value.placeholder = NEED_HELP_METHODS.whatsapp[1];
+          window.HansoraUI?.toast?.('Thanks! We’ll message you, usually within a day.', 'success');
+        } catch (sendError) {
+          error.textContent = sendError.preview ? 'This works on the live site, not in the local preview.' : 'Could not send right now. Please try again, or write to @Hansora_support on Telegram.';
+          error.hidden = false;
+        } finally { send.disabled = false; send.textContent = 'Send'; }
+      });
+    }
+    helpDialog.dataset.topic = topic;
+    helpDialog.querySelector('.auto-help-error').hidden = true;
+    if (!helpDialog.open) helpDialog.showModal();
+    setTimeout(() => helpDialog.querySelector('[data-help-value]').focus(), 50);
+  }
+  window.HansoraNeedHelp = { open: openNeedHelp };
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('[data-need-help]');
+    if (!trigger) return;
+    event.preventDefault();
+    openNeedHelp(trigger.dataset.needHelp || '');
+  });
 })();
