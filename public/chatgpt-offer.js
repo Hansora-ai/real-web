@@ -116,6 +116,31 @@
     return false;
   }
 
+  // What people do with the offer, saved in click_events through header.js (element_label = the event name,
+  // element_id = the detail):
+  //   welcome_offer_shown           the banner with the clock appeared on the pricing page (once per visit)
+  //   welcome_offer_pill_clicked    the pill on another page was clicked
+  //   welcome_starter_shown         the $4.99 popup appeared (details: waited / leaving / link)
+  //   welcome_starter_closed        it was closed (details: x / no_thanks / outside)
+  //   welcome_starter_reopened      the small "Starter pack" button was clicked
+  //   welcome_starter_buy_clicked   its Buy button was clicked
+  // Purchases themselves are in chatgpt_offers (used_at, used_product). See docs/sql/welcome-offer-funnel.sql.
+  function track(name, detail) {
+    try {
+      var api = window.HansoraHeader;
+      if (!api || typeof api.recordEvent !== "function") return;
+      var result = api.recordEvent(name, { elementType: "offer", elementId: detail || name, destination: location.pathname });
+      if (result && typeof result.catch === "function") result.catch(function () {});
+    } catch (_) {}
+  }
+  function trackOnce(name, detail) {
+    try {
+      if (sessionStorage.getItem("hansora:cgoffer:ev:" + name)) return;
+      sessionStorage.setItem("hansora:cgoffer:ev:" + name, "1");
+    } catch (_) {}
+    track(name, detail);
+  }
+
   var offer = null;      // the server's answer while the offer is running
   var endsAt = 0;
   var user = null;
@@ -155,6 +180,7 @@
       pill.className = "cgo-pill";
       pill.href = pricingHref();
       pill.setAttribute("data-cgo", "pill-waiting");
+      pill.addEventListener("click", function () { track("welcome_offer_pill_clicked", "waiting"); });
       document.body.appendChild(pill);
     }
     pill.innerHTML = '<span class="cgo-pill-text"></span><span class="cgo-pill-time"><b></b></span>';
@@ -202,6 +228,7 @@
       pill.className = "cgo-pill";
       pill.href = pricingHref();
       pill.setAttribute("data-cgo", "pill");
+      pill.addEventListener("click", function () { track("welcome_offer_pill_clicked", "running"); });
       pill.innerHTML = '<span class="cgo-pill-text"></span><span class="cgo-pill-time"><span data-cgo-ends></span> <b data-cgo-clock></b></span>';
       document.body.appendChild(pill);
     }
@@ -223,7 +250,8 @@
         '<div class="cgo-strip-timer"><span class="cgo-strip-ends"></span>' + segmentsHtml() + '</div>' +
         '<button type="button" class="cgo-starter-link" hidden></button>';
       grid.parentNode.insertBefore(strip, grid);
-      strip.querySelector(".cgo-starter-link").addEventListener("click", function () { openStarter("link"); });
+      trackOnce("welcome_offer_shown");
+      strip.querySelector(".cgo-starter-link").addEventListener("click", function () { track("welcome_starter_reopened"); openStarter("link"); });
     }
     strip.querySelector(".cgo-strip-tag").textContent = "🎁 " + T().stripTag;
     strip.querySelector(".cgo-strip-text").textContent = fill(T().strip, { p: offer.bonus_percent });
@@ -323,6 +351,7 @@
       '<button type="button" class="cgo-pop-no">' + t.popNo + '</button>' +
       '</div>';
     document.body.appendChild(popup);
+    track("welcome_starter_shown", reason || "");
     setSegments(endsAt - Date.now());
     requestAnimationFrame(function () { if (popup) popup.classList.add("cgo-open"); });
     // Closing shrinks the card into the small starter button above the packs, so it can be opened again.
@@ -347,8 +376,9 @@
       setTimeout(function () { chip.classList.remove("cgo-chip-land"); }, 1400);
     }
     popup.addEventListener("click", function (event) {
-      if (event.target === popup || event.target.closest(".cgo-pop-x") || event.target.closest(".cgo-pop-no")) close();
-      else if (event.target.closest("[data-cgo-buy]")) buyStarter(event.target.closest("[data-cgo-buy]"));
+      var how = event.target === popup ? "outside" : event.target.closest(".cgo-pop-x") ? "x" : event.target.closest(".cgo-pop-no") ? "no_thanks" : "";
+      if (how) { track("welcome_starter_closed", how); close(); }
+      else if (event.target.closest("[data-cgo-buy]")) { track("welcome_starter_buy_clicked"); buyStarter(event.target.closest("[data-cgo-buy]")); }
     });
   }
   function buyStarter(button) {

@@ -5057,6 +5057,8 @@
         });
       },
       getCurrentCredits: function () { return currentCredits; },
+      // Lets other scripts (public/chatgpt-offer.js) save a named event for the signed-in person in click_events.
+      recordEvent: function (name, details) { return recordRegisteredClickEvent(name, details); },
       toDisplayCredits,
       creditDisplayMultiplier: CREDIT_DISPLAY_MULTIPLIER,
       openAuth,
