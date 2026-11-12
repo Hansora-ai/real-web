@@ -27,21 +27,21 @@
 
   var TEXT = {
     en: {
-      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "Welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", anonSub: "For new customers: create a free account and buy before the clock hits zero. One time only.", lostTitle: "The welcome offer is not available on this account", lostText: "It is for new accounts, once, for 8 hours. This account has already used it, its 8 hours have ended, or it has bought before. Nothing was charged; the regular packs are below.", lostOk: "OK, show the packs", stripEnds: "Ends in",
+      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "Welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", anonSub: "For new customers: create a free account and buy before the clock hits zero. One time only.", lostTitle: "Welcome back! Prices are still 30% off", lostText: "The +25% welcome bonus is only for new accounts, so it is not on this one. Every pack is still at our launch price, 30% off.", lostContinue: "Continue: {credits} credits for {price}", lostOk: "See all packs", stripEnds: "Ends in",
       badge: "🎁 +{p}% FREE", cardCredits: "credits", split: "{base} + <b>{free} free</b>", h: "hrs", m: "min", sec: "sec", starterLink: "🎁 Starter pack: {credits} credits for {price}",
       popTag: "Welcome offer · one time", popTitle: "Try Hansora for just {price}", popText: "A small pack made for your first purchase. You will not find it on the pricing page.",
       popCredits: "{credits} credits", popOnce: "one payment", popBuy: "Get {credits} credits for {price}", popNo: "No thanks", popEnds: "Offer ends in",
       popFacts: ["Works on Hansora and in ChatGPT", "No subscription", "Credits never expire"], close: "Close welcome offer"
     },
     ru: {
-      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Приветственное предложение", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", anonSub: "Для новых клиентов: создайте бесплатный аккаунт и купите, пока таймер не дошёл до нуля. Только один раз.", lostTitle: "Приветственное предложение недоступно для этого аккаунта", lostText: "Оно для новых аккаунтов, один раз, на 8 часов. Этот аккаунт уже использовал его, его 8 часов закончились или он уже покупал. Ничего не списано; обычные пакеты ниже.", lostOk: "Понятно, показать пакеты", stripEnds: "Осталось",
+      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Приветственное предложение", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", anonSub: "Для новых клиентов: создайте бесплатный аккаунт и купите, пока таймер не дошёл до нуля. Только один раз.", lostTitle: "С возвращением! Цены по-прежнему со скидкой 30%", lostText: "Бонус +25% действует только для новых аккаунтов, поэтому на этом аккаунте его нет. Все пакеты по-прежнему по стартовой цене со скидкой 30%.", lostContinue: "Продолжить: {credits} кредитов за {price}", lostOk: "Все пакеты", stripEnds: "Осталось",
       badge: "🎁 +{p}% В ПОДАРОК", cardCredits: "кредитов", split: "{base} + <b>{free} в подарок</b>", h: "ч", m: "мин", sec: "сек", starterLink: "🎁 Стартовый пакет: {credits} кредитов за {price}",
       popTag: "Приветственное предложение · один раз", popTitle: "Попробуйте Hansora всего за {price}", popText: "Небольшой пакет для первой покупки. На странице цен его нет.",
       popCredits: "{credits} кредитов", popOnce: "разовый платёж", popBuy: "Получить {credits} кредитов за {price}", popNo: "Нет, спасибо", popEnds: "Осталось",
       popFacts: ["Работает на Hansora и в ChatGPT", "Без подписки", "Кредиты не сгорают"], close: "Закрыть предложение"
     },
     hy: {
-      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", anonSub: "Նոր հաճախորդների համար՝ ստեղծեք անվճար հաշիվ և գնեք, մինչև ժամանակը կլրանա։ Միայն մեկ անգամ։", lostTitle: "Ողջույնի առաջարկը հասանելի չէ այս հաշվի համար", lostText: "Այն նոր հաշիվների համար է, մեկ անգամ, 8 ժամով։ Այս հաշիվն արդեն օգտագործել է այն, 8 ժամը լրացել է, կամ արդեն գնումներ է կատարել։ Ոչինչ չի գանձվել. սովորական փաթեթները ներքևում են։", lostOk: "Լավ, ցույց տալ փաթեթները", stripEnds: "Մնաց",
+      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", anonSub: "Նոր հաճախորդների համար՝ ստեղծեք անվճար հաշիվ և գնեք, մինչև ժամանակը կլրանա։ Միայն մեկ անգամ։", lostTitle: "Բարի վերադարձ։ Գները դեռ 30% զեղչված են", lostText: "+25% բոնուսը միայն նոր հաշիվների համար է, ուստի այս հաշվում այն չկա։ Բոլոր փաթեթները դեռ մեկնարկային գնով են՝ 30% զեղչով։", lostContinue: "Շարունակել՝ {credits} կրեդիտ {price}-ով", lostOk: "Բոլոր փաթեթները", stripEnds: "Մնաց",
       badge: "🎁 +{p}% ԱՆՎՃԱՐ", cardCredits: "կրեդիտ", split: "{base} + <b>{free} անվճար</b>", h: "ժ", m: "ր", sec: "վ", starterLink: "🎁 Մեկնարկային փաթեթ՝ {credits} կրեդիտ {price}-ով",
       popTag: "Ողջույնի առաջարկ · մեկ անգամ", popTitle: "Փորձեք Hansora-ն ընդամենը {price}-ով", popText: "Փոքր փաթեթ առաջին գնման համար։ Գների էջում այն չկա։",
       popCredits: "{credits} կրեդիտ", popOnce: "մեկանգամյա վճարում", popBuy: "Գնել {credits} կրեդիտ՝ {price}", popNo: "Ոչ, շնորհակալություն", popEnds: "Մնաց",
@@ -292,7 +292,9 @@
         if (lostUntil && Date.now() < lostUntil) { lostUntil = 0; return Object.assign({}, data || {}, { offer_unavailable: true }); }
         return data;
       });
-    }
+    },
+    // Called by the pricing page with the Buy button whose checkout it held back.
+    held: function (button) { if (button) offerContinue(button); }
   };
   function showLostNotice() {
     if (document.querySelector(".cgo-lost")) return;
@@ -302,13 +304,39 @@
     box.className = "cgo-pop cgo-lost cgo-open";
     box.setAttribute("data-cgo", "offer-unavailable");
     box.innerHTML = '<div class="cgo-pop-card" role="alertdialog" aria-modal="true" aria-labelledby="cgoLostTitle">' +
+      '<div class="cgo-pop-gift" aria-hidden="true">👋</div>' +
       '<h3 id="cgoLostTitle">' + t.lostTitle + '</h3><p class="cgo-pop-text cgo-lost-text">' + t.lostText + '</p>' +
-      '<button type="button" class="cgo-pop-buy cgo-lost-ok">' + t.lostOk + '</button></div>';
+      '<button type="button" class="cgo-pop-buy cgo-lost-continue" hidden></button>' +
+      '<button type="button" class="cgo-lost-ok">' + t.lostOk + '</button></div>';
     document.body.appendChild(box);
     track("welcome_offer_unavailable_after_signin");
     box.addEventListener("click", function (event) {
+      if (event.target.closest(".cgo-lost-continue")) {
+        box.remove();
+        track("welcome_offer_unavailable_continue");
+        if (heldButton) heldButton.click();
+        return;
+      }
       if (event.target === box || event.target.closest(".cgo-lost-ok")) box.remove();
     });
+    if (heldButton) offerContinue(heldButton);
+  }
+  // The pack they clicked Buy on while logged out: the notice offers to continue to its checkout at the regular
+  // (already discounted) price.
+  var heldButton = null;
+  function offerContinue(button) {
+    heldButton = button;
+    var box = document.querySelector(".cgo-lost");
+    var go = box && box.querySelector(".cgo-lost-continue");
+    if (!go) return;
+    var credits = Number(button.getAttribute("data-credits") || 0);
+    var card = button.closest(".rounded-2xl, .plan-cell");
+    var priceEl = card && card.querySelector(".text-4xl, .plan-price");
+    var price = priceEl ? (priceEl.childNodes[0] && priceEl.childNodes[0].nodeValue || priceEl.textContent).trim() : "";
+    go.textContent = credits && price ? fill(T().lostContinue, { credits: shown(credits), price: price }) : T().lostOk;
+    go.hidden = false;
+    var ok = box.querySelector(".cgo-lost-ok");
+    if (ok) ok.classList.add("cgo-lost-secondary");
   }
 
   // The timer has not started yet: the pill only says an offer is waiting on the pricing page.
@@ -635,7 +663,10 @@
       ".cgo-pop-facts{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;font-size:13px;color:rgba(226,232,240,.86)}",
       ".cgo-pop-facts li{padding:6px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);font-size:12px;font-weight:600;white-space:nowrap}",
       ".cgo-pop-facts li::before{content:'✓';margin-right:6px;color:#34d399;font-weight:900}",
-      ".cgo-lost .cgo-pop-card{margin:auto;padding-top:24px}.cgo-lost .cgo-lost-text{display:block!important;font-size:14px!important}.cgo-lost .cgo-pop-buy{animation:none}",
+      ".cgo-lost .cgo-pop-card{margin:auto}.cgo-lost .cgo-lost-text{display:block!important;font-size:14px!important;margin-top:8px}.cgo-lost .cgo-pop-buy{animation:none}",
+      ".cgo-lost-continue[hidden]{display:none!important}",
+      ".cgo-lost-ok{display:block;width:100%;margin-top:14px;padding:15px;border:0;border-radius:15px;color:#fff;font:800 16px Inter,system-ui,sans-serif;cursor:pointer;background:linear-gradient(90deg,#a855f7,#6366f1 55%,#0ea5e9)}",
+      ".cgo-lost-ok.cgo-lost-secondary{margin-top:8px;padding:10px;background:none;color:rgba(226,232,240,.7);font-weight:600;font-size:14px}",
       ".cgo-pop-no{display:block;margin:12px auto 0;border:0;background:none;color:rgba(226,232,240,.55);font:600 13px Inter,system-ui,sans-serif;cursor:pointer}",
       // Phones: a shorter card that fits the screen with room around it, in every language.
       "@media (max-width:560px){.cgo-pop{padding:40px 22px 18px}.cgo-pop-card{max-width:340px;border-radius:22px;padding:18px 16px 12px}.cgo-pop-gift{width:50px;height:50px;margin:-42px auto 8px;border-radius:16px;font-size:26px}.cgo-pop-tag{padding:5px 10px;font-size:11px}.cgo-pop-card h3{margin-top:10px;font-size:19px}.cgo-pop-text{display:none}.cgo-pop-deal{margin-top:11px;padding:11px 12px;border-radius:15px}.cgo-pop-price strong{font-size:40px}.cgo-pop-price span{font-size:11px;padding-bottom:4px}.cgo-pop-credits{margin-top:4px;font-size:17px}.cgo-pop-timer{margin-top:10px;padding:8px 11px;border-radius:13px}.cgo-pop-timer .cgo-seg b{min-width:36px;padding:4px;font-size:18px;line-height:24px;border-radius:9px}.cgo-pop-timer .cgo-clock em{line-height:32px;font-size:18px}.cgo-pop-timer .cgo-seg i{font-size:9px}.cgo-pop-buy{margin-top:10px;padding:13px 8px;font-size:14.5px;border-radius:13px}.cgo-pop-facts{margin-top:9px;gap:2px 10px}.cgo-pop-facts li{padding:0;border:0;background:none;font-size:10.5px}.cgo-pop-no{margin-top:8px;font-size:12px}.cgo-pop-x{width:30px;height:30px;right:9px;top:8px;font-size:18px}}"

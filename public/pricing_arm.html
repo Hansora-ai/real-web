@@ -1689,7 +1689,11 @@ img, video { max-width: 100%; height: auto; }
       if (!user?.id) { endCheckoutOpening(btn); askToLogIn(btn); return; }
       // The offer shown before signing in is not available on this account: the notice explains it, no checkout.
       const offerState = await waitForWelcomeOffer();
-      if (offerState && offerState.offer_unavailable) { endCheckoutOpening(btn); return; }
+      if (offerState && offerState.offer_unavailable) {
+        endCheckoutOpening(btn);
+        try { window.HansoraWelcomeOffer.held(btn); } catch (_) {}
+        return;
+      }
       const credits = Number(btn.getAttribute('data-credits') || '0');
       if (!Number.isFinite(credits) || credits <= 0) { endCheckoutOpening(btn); return; }
       const mode = document.documentElement.getAttribute('data-payment-mode') === 'ru' ? 'ru' : 'international';
