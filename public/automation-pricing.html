@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://checkout.dodopayments.com" crossorigin><link rel="preconnect" href="https://yoomoney.ru" crossorigin>
   <link rel="stylesheet" href="automation-header.css?v=20261107-inbox"><link rel="stylesheet" href="automation-ui.css?v=20261110"><link rel="stylesheet" href="automation-compare.css?v=20261022">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261107-inbox"></script><script defer src="automation-pricing.js?v=20261109"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261112"></script><script defer src="automation-pricing.js?v=20261109"></script>
 </head>
 <body class="ui" data-automation-page="pricing">
   <div data-automation-header></div>
@@ -25,6 +25,7 @@
         <div class="ui-filter-pills ui-platform-switch" role="group" aria-label="How do you want to pay?"><button type="button" class="active" data-mode="payg" aria-pressed="true">Pay as you go <em>save 30%</em></button><button type="button" data-mode="monthly" aria-pressed="false">Monthly <em>lowest price per action</em></button></div>
         <div class="ui-filter-pills ui-platform-switch" role="group" aria-label="Payment method"><button type="button" class="active" data-payment="international" aria-pressed="true">International card</button><button type="button" data-payment="ru" aria-pressed="false">Russian card</button></div>
       </div>
+      <div data-auto-topup-slot></div>
     </header>
 
     <div class="ui-card ui-plan-current" id="current-plan" hidden></div>
@@ -110,5 +111,6 @@
       <div class="ui-dialog-actions"><button class="ui-btn ghost" value="keep" type="submit">Keep my plan</button><button class="ui-btn danger" id="confirm-cancel" type="button">Cancel plan</button></div>
     </form>
   </dialog>
+  <script defer src="/auto-topup-widget.js"></script>
 </body>
 </html>

@@ -97,7 +97,7 @@ export async function handle(event, { fetchImpl = fetch, env = process.env } = {
 
   const saved = await store.saveSettings({ user_id: user.id, enabled: false, status: "pending", pack_credits: pack.credits, threshold_credits: threshold, failures: 0, last_error: null });
   if (!saved) return json(500, { error: "save_failed" });
-  const returnPath = /^\/(profile|pricing)(_ru|_arm)?\.html$/.test(String(body.return_path || "")) ? body.return_path : "/profile.html";
+  const returnPath = /^\/((profile|pricing)(_ru|_arm)?|automation-(pricing|profile))\.html$/.test(String(body.return_path || "")) ? body.return_path : "/profile.html";
   const result = await dodo(cfg, "/checkouts", { method: "POST", body: checkoutBody({ cfg, userId: user.id, email: user.email, returnPath }) }, fetchImpl);
   const checkoutUrl = result.data?.checkout_url;
   if (!result.ok || !checkoutUrl) {

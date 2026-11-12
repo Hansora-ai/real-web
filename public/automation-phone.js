@@ -158,6 +158,7 @@
     $('#test-call').scrollIntoView({ behavior:'smooth', block:'center' });
   });
   $('#phone-next').addEventListener('click', async () => {
+    if (step === 1 && !line.where) { showError('Choose where your business is first.'); $('#line-where').focus(); return; }
     if (step === 1 && mode() === 'none') { showError('Choose how customers reach you.'); return; }
     if (step === 1 && mode() === 'new' && line.where && numberIn(line.where)) { showError(`You already have a ${countryName(line.where)} number. Choose another country, or press Edit settings on your number.`); return; }
     if (step === 1 && mode() === 'forward' && !/^\+?[\d\s()-]{8,20}$/.test($('#phone-number').value.trim())) { showError('Enter the business number to forward.'); return; }

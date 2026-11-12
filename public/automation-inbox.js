@@ -74,9 +74,18 @@
     const button = event.target.closest('button[data-filter]'); if (!button) return;
     activeFilter = button.dataset.filter;
     document.querySelectorAll('#inbox-filters button').forEach(item => item.classList.toggle('active', item === button));
+    // "Needs you 2" must show those 2: a stage chosen earlier (Done, Ready…) no longer hides them.
+    activeStage = ''; document.querySelectorAll('#stage-filters button').forEach(item => item.classList.remove('active'));
     renderList();
   });
   document.querySelector('#inbox-search').addEventListener('input', renderList);
+  document.querySelector('#conversation-list').addEventListener('click', event => {
+    if (!event.target.closest('[data-clear-filters]')) return;
+    activeFilter = 'all'; activeStage = ''; activePlatform = ''; document.querySelector('#inbox-search').value = '';
+    document.querySelectorAll('#inbox-filters button').forEach(item => item.classList.toggle('active', item.dataset.filter === 'all'));
+    document.querySelectorAll('#stage-filters button').forEach(item => item.classList.remove('active'));
+    renderList();
+  });
   document.querySelector('#conversation-list').addEventListener('click', async event => {
     const button = event.target.closest('[data-conversation-id]'); if (!button) return;
     selectedId = button.dataset.conversationId;
@@ -194,7 +203,7 @@
     document.querySelector('#conversation-list').innerHTML = visible.length ? visible.map(conversation => {
       const state = conversation.resolved ? '' : conversation.attention ? '<span class="ui-badge red sm">Needs you</span>' : conversation.human ? '<span class="ui-badge amber sm">Your team</span>' : '';
       return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}${conversation.attention && !conversation.resolved ? ' urgent' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${stageChip(conversation)}${outcomeBadges(conversation)}${state}</span></button>`;
-    }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match.' : 'New conversations from your connected apps appear here.'}</div>`;
+    }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match these filters. <button class="ui-btn ghost sm" type="button" data-clear-filters>Show all</button>' : 'New conversations from your connected apps appear here.'}</div>`;
     updateTopCounts();
   }
 

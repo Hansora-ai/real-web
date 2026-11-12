@@ -66,7 +66,7 @@
       ['agent', 'Overview', 'sparkle', q ? `automation-agent.html?id=${encodeURIComponent(businessId)}${preview}` : ''],
       ['inbox', 'Inbox', 'message', q ? `automation-inbox.html?${q}` : ''],
       ['contacts', 'Contacts', 'user', q ? `automation-contacts.html?${q}` : ''],
-      ['workflows', 'Automations', 'comment', q ? `automation-workflows.html?${q}` : '', ['comments']],
+      ['workflows', 'Comments & DMs', 'comment', q ? `automation-workflows.html?${q}` : '', ['comments']],
       ['operations', 'Orders & bookings', 'bag', q ? `automation-operations.html?${q}` : ''],
       ['products', 'Products', 'box', q ? `automation-products.html?${q}` : ''],
       ['tools', 'Business tools', 'spark', q ? `automation-tools.html?${q}` : ''],
@@ -119,6 +119,7 @@
       const n = Math.max(0, Number(count) || 0);
       try { sessionStorage.setItem(key, String(n)); } catch (_) {}
       document.querySelectorAll('a[href^="automation-inbox.html"]').forEach(link => {
+        if (link.closest('.auto-switch')) return; // employees in the switcher show their own count
         let badge = link.querySelector('.auto-badge');
         if (!n) { badge?.remove(); return; }
         if (!badge) { badge = document.createElement('b'); badge.className = 'auto-badge'; link.appendChild(badge); }
@@ -159,13 +160,15 @@
       const sub = current ? (current.ig ? current.name : 'No Instagram connected') : `${list.length} AI employee${list.length === 1 ? '' : 's'}`;
       boxes.forEach(box => {
         const open = box.classList.contains('open');
-        box.innerHTML = `<button class="auto-switch-button" type="button" aria-haspopup="menu" aria-expanded="${open}" title="Change AI employee"><span class="auto-switch-ig">${icon('instagram')}</span><span class="auto-switch-text"><b>${escape(label)}</b><small>${escape(sub)}</small></span><span class="auto-switch-chev" aria-hidden="true">⌄</span></button><div class="auto-switch-menu" role="menu"${open ? '' : ' hidden'}>${list.map(item => `<a role="menuitem" href="${escape(targetFor(item.id))}" class="${item.id === businessId ? 'current' : ''}"><span class="auto-switch-ig sm">${icon('instagram')}</span><span><b>${escape(item.ig || item.name)}</b><small>${escape(item.ig ? item.name : 'No Instagram connected')}</small></span>${item.id === businessId ? '<i aria-hidden="true">✓</i>' : ''}</a>`).join('')}<a role="menuitem" class="auto-switch-new" href="automation-setup.html${preview ? '?preview=1' : ''}">+ New AI employee</a></div>`;
+        box.innerHTML = `<button class="auto-switch-button" type="button" aria-haspopup="menu" aria-expanded="${open}" title="Change AI employee"><span class="auto-switch-ig">${icon('instagram')}</span><span class="auto-switch-text"><b>${escape(label)}</b><small>${escape(sub)}</small></span><span class="auto-switch-chev" aria-hidden="true">⌄</span></button><div class="auto-switch-menu" role="menu"${open ? '' : ' hidden'}>${list.map(item => `<a role="menuitem" href="${escape(targetFor(item.id))}" class="${item.id === businessId ? 'current' : ''}"><span class="auto-switch-ig sm">${icon('instagram')}</span><span><b>${escape(item.ig || item.name)}</b><small>${escape(item.ig ? item.name : 'No Instagram connected')}</small></span>${item.id === businessId ? '<i aria-hidden="true">✓</i>' : ''}${waiting[item.id] ? `<b class="auto-badge" aria-label="${waiting[item.id]} chat${waiting[item.id] === 1 ? '' : 's'} need you">${waiting[item.id] > 99 ? '99+' : waiting[item.id]}</b>` : ''}</a>`).join('')}<a role="menuitem" class="auto-switch-new" href="automation-setup.html${preview ? '?preview=1' : ''}">+ New AI employee</a></div>`;
         box.querySelector('.auto-switch-button').addEventListener('click', event => { event.stopPropagation(); const now = !box.classList.contains('open'); box.classList.toggle('open', now); box.querySelector('.auto-switch-menu').hidden = !now; event.currentTarget.setAttribute('aria-expanded', String(now)); });
       });
     };
     document.addEventListener('click', event => { boxes.forEach(box => { if (!box.contains(event.target) && box.classList.contains('open')) { box.classList.remove('open'); box.querySelector('.auto-switch-menu').hidden = true; box.querySelector('.auto-switch-button').setAttribute('aria-expanded', 'false'); } }); });
     let cached = [];
     try { cached = JSON.parse(sessionStorage.getItem(CACHE) || '[]'); } catch (_) {}
+    // Chats waiting for a person, per AI employee (same rule as the Inbox badge).
+    let waiting = {};
     render(cached);
     if (api?.isLocalPreview) return render([{ id: 'preview', name: 'Luma Assistant', ig: '@luma.studio' }, { id: 'preview-2', name: 'Second shop', ig: '' }]);
     api?.db?.from('automation_businesses').select('id,name,updated_at,automation_agents(display_name),automation_channel_connections(channel_type,status,connected_account_label)').order('updated_at', { ascending: false }).then(({ data }) => {
@@ -177,6 +180,9 @@
       });
       try { sessionStorage.setItem(CACHE, JSON.stringify(list)); localStorage.setItem('hansora_automation_has_employees', list.length ? '1' : '0'); } catch (_) {}
       render(list);
+      if (list.length > 1) Promise.resolve(api.db.from('automation_conversations').select('business_id').in('business_id', list.map(item => item.id))
+        .or('status.eq.needs_attention,and(ai_enabled.eq.false,status.not.in.(human_handling,resolved,archived))').limit(5000))
+        .then(result => { if (result?.error || !Array.isArray(result?.data)) return; waiting = {}; result.data.forEach(row => { waiting[row.business_id] = (waiting[row.business_id] || 0) + 1; }); render(list); }).catch(() => {});
     }).catch(() => {});
   }
 
