@@ -1,6 +1,8 @@
 /* ChatGPT welcome offer (see lib/business/chatgpt-offer.mjs). Loaded on every page by header.js.
-   Shown only to signed-in people who used the ChatGPT plugin and never bought, for 8 hours from their first look:
-     - every page: a small floating pill with the countdown that opens the pricing page;
+   Shown only to signed-in people who used the ChatGPT plugin and never bought. The 8-hour timer starts the first
+   time they open the pricing page; it is kept on the server, so a refresh or another device shows the same time.
+   The pages load and work as before: this file runs after the page and adds the offer when the server answers.
+     - every page: a small floating pill that opens the pricing page (with the countdown once the timer runs);
      - pricing pages: a countdown strip above the packs and, on each pack, the credits the offer gives (+25% free);
      - pricing pages: a popup with the $4.99 starter pack, shown when the visitor is leaving or has waited a while
        without buying. The starter pack is never in the pack list.
@@ -20,21 +22,21 @@
 
   var TEXT = {
     en: {
-      pill: "Welcome offer: +{p}% credits", ends: "ends in", stripTag: "ChatGPT welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", stripEnds: "Ends in",
+      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "ChatGPT welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", stripEnds: "Ends in",
       badge: "🎁 +{p}% FREE", cardCredits: "credits", split: "{base} + <b>{free} free</b>", h: "hrs", m: "min", sec: "sec", starterLink: "🎁 Starter pack: {credits} credits for {price}",
       popTag: "ChatGPT welcome offer · one time", popTitle: "Try Hansora for just {price}", popText: "A small pack made for your first purchase. You will not find it on the pricing page.",
       popCredits: "{credits} credits", popOnce: "one payment", popBuy: "Get {credits} credits for {price}", popNo: "No thanks", popEnds: "Offer ends in",
       popFacts: ["Works in ChatGPT right away", "No subscription", "Credits never expire"], close: "Close welcome offer"
     },
     ru: {
-      pill: "Приветственное предложение: +{p}% кредитов", ends: "осталось", stripTag: "Предложение для пользователей ChatGPT", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", stripEnds: "Осталось",
+      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Предложение для пользователей ChatGPT", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", stripEnds: "Осталось",
       badge: "🎁 +{p}% В ПОДАРОК", cardCredits: "кредитов", split: "{base} + <b>{free} в подарок</b>", h: "ч", m: "мин", sec: "сек", starterLink: "🎁 Стартовый пакет: {credits} кредитов за {price}",
       popTag: "Предложение для пользователей ChatGPT · один раз", popTitle: "Попробуйте Hansora всего за {price}", popText: "Небольшой пакет для первой покупки. На странице цен его нет.",
       popCredits: "{credits} кредитов", popOnce: "разовый платёж", popBuy: "Получить {credits} кредитов за {price}", popNo: "Нет, спасибо", popEnds: "Осталось",
       popFacts: ["Сразу работает в ChatGPT", "Без подписки", "Кредиты не сгорают"], close: "Закрыть предложение"
     },
     hy: {
-      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", ends: "մնաց", stripTag: "Ողջույնի առաջարկ ChatGPT-ի օգտատերերին", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", stripEnds: "Մնաց",
+      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ ChatGPT-ի օգտատերերին", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", stripEnds: "Մնաց",
       badge: "🎁 +{p}% ԱՆՎՃԱՐ", cardCredits: "կրեդիտ", split: "{base} + <b>{free} անվճար</b>", h: "ժ", m: "ր", sec: "վ", starterLink: "🎁 Մեկնարկային փաթեթ՝ {credits} կրեդիտ {price}-ով",
       popTag: "Առաջարկ ChatGPT-ի օգտատերերին · մեկ անգամ", popTitle: "Փորձեք Hansora-ն ընդամենը {price}-ով", popText: "Փոքր փաթեթ առաջին գնման համար։ Գների էջում այն չկա։",
       popCredits: "{credits} կրեդիտ", popOnce: "մեկանգամյա վճարում", popBuy: "Ստանալ {credits} կրեդիտ {price}-ով", popNo: "Ոչ, շնորհակալություն", popEnds: "Մնաց",
@@ -128,20 +130,40 @@
     var cached = readCache(user.id);
     var now = Date.now();
     var freshVisit = cameFromChatgpt();
-    if (cached && !cached.active && !freshVisit && now - Number(cached.checked_at || 0) < NOT_ELIGIBLE_CACHE_MS) return;
+    if (cached && !cached.active && !cached.pending && !freshVisit && now - Number(cached.checked_at || 0) < NOT_ELIGIBLE_CACHE_MS) return;
     // A running offer is shown from the cache at once (no flicker between pages); the server still has the last word.
     if (cached && cached.active && Date.parse(cached.expires_at) > now) start(cached);
+    else if (cached && cached.pending && !isPricingPage()) showWaiting(cached);
+    // Only the pricing page starts the timer.
+    var url = ENDPOINT + (isPricingPage() ? "?start=1" : "");
     accessToken(session.access_token).then(function (token) {
       if (!token) return null;
-      return fetch(ENDPOINT, { headers: { Authorization: "Bearer " + token } }).then(function (res) { return res.ok ? res.json() : null; });
+      return fetch(url, { headers: { Authorization: "Bearer " + token } }).then(function (res) { return res.ok ? res.json() : null; });
     }).then(function (data) {
       if (!data) return;
       writeCache(user.id, Object.assign({ checked_at: Date.now() }, data));
-      if (data.active && Date.parse(data.expires_at) > Date.now()) start(data); else stop();
+      if (data.active && Date.parse(data.expires_at) > Date.now()) start(data);
+      else { stop(); if (data.pending && !isPricingPage()) showWaiting(data); }
     }).catch(function () {});
   }
 
+  // The timer has not started yet: the pill only says an offer is waiting on the pricing page.
+  function showWaiting(data) {
+    addStyles();
+    if (!pill) {
+      pill = document.createElement("a");
+      pill.className = "cgo-pill";
+      pill.href = pricingHref();
+      pill.setAttribute("data-cgo", "pill-waiting");
+      document.body.appendChild(pill);
+    }
+    pill.innerHTML = '<span class="cgo-pill-text"></span><span class="cgo-pill-time"><b></b></span>';
+    pill.querySelector(".cgo-pill-text").textContent = "🎁 " + fill(T().pill, { p: data.bonus_percent || 25 });
+    pill.querySelector(".cgo-pill-time b").textContent = T().pillWaiting + " →";
+  }
+
   function start(data) {
+    if (pill && pill.getAttribute("data-cgo") === "pill-waiting") { pill.remove(); pill = null; }
     offer = data;
     endsAt = Date.parse(data.expires_at);
     addStyles();

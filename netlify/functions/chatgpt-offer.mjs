@@ -1,6 +1,7 @@
 // The ChatGPT welcome offer for the signed-in person (see lib/business/chatgpt-offer.mjs).
-// GET → { eligible, active, expires_at, seconds_left, bonus_percent, packs, starter }.
-// The first GET from someone who used the ChatGPT plugin and never bought starts their 8-hour timer.
+// GET → { eligible, active, expires_at, seconds_left, bonus_percent, packs, starter }, or { pending: true } while
+// the timer has not started. GET ?start=1 (sent by the pricing page) starts the 8-hour timer for someone who used
+// the ChatGPT plugin and never bought; later calls return the same deadline.
 import { config, db, offerView } from "../../lib/business/chatgpt-offer.mjs";
 
 const CORS = {
@@ -27,7 +28,8 @@ export async function handle(event, { fetchImpl = fetch, env = process.env, now 
   if (!user?.id) return json(401, { error: "invalid_auth" });
 
   try {
-    return json(200, await offerView({ cfg, store: db(cfg, fetchImpl), userId: user.id, now }));
+    const start = String(event.queryStringParameters?.start || "") === "1";
+    return json(200, await offerView({ cfg, store: db(cfg, fetchImpl), userId: user.id, start, now }));
   } catch (error) {
     console.error("chatgpt-offer failed", error?.message || error);
     // The page works without the offer: answer "nothing to show" instead of an error.

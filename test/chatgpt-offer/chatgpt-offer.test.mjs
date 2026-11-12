@@ -39,7 +39,9 @@ function backend({ offers = [], events = [], payments = [], user = { id: U1, ema
   return { tables, fetchImpl };
 }
 const cfg = config(ENV);
-const view = (b, now) => offerView({ cfg, store: db(cfg, b.fetchImpl), userId: U1, now });
+// `view` is the pricing page (it starts the timer); `peek` is any other page.
+const view = (b, now) => offerView({ cfg, store: db(cfg, b.fetchImpl), userId: U1, start: true, now });
+const peek = (b, now) => offerView({ cfg, store: db(cfg, b.fetchImpl), userId: U1, now });
 const pay = (b, extra) => creditsForPayment({ cfg, store: db(cfg, b.fetchImpl), userId: U1, productId: PACK_999, credits: 90, transactionId: 'pay_1', paidAt: new Date(T0 + HOUR).toISOString(), now: T0 + HOUR, ...extra });
 const chatgptUser = () => backend({ events: [{ id: 1, user_id: U1 }] });
 
@@ -54,7 +56,18 @@ test('the starter product is read from a pasted Dodo link or a bare id', () => {
   assert.equal(config({}).starterCheckout, '');
 });
 
-test('a ChatGPT user who never bought gets an 8-hour offer on the first look', async () => {
+test('other pages never start the timer: the offer waits until the pricing page is opened', async () => {
+  const b = chatgptUser();
+  assert.deepEqual(await peek(b, T0), { eligible: true, active: false, pending: true, bonus_percent: 25 });
+  assert.deepEqual(await peek(b, T0 + 20 * HOUR), { eligible: true, active: false, pending: true, bonus_percent: 25 });
+  assert.equal(b.tables.chatgpt_offers.length, 0);
+  // The pricing page starts it, a day later, with the full 8 hours; other pages then show the same deadline.
+  const started = await view(b, T0 + 24 * HOUR);
+  assert.equal(started.seconds_left, OFFER_HOURS * 3600);
+  assert.equal((await peek(b, T0 + 25 * HOUR)).expires_at, started.expires_at);
+});
+
+test('a ChatGPT user who never bought gets an 8-hour offer on the first look at pricing', async () => {
   const b = chatgptUser();
   const first = await view(b, T0);
   assert.equal(first.active, true);
@@ -163,10 +176,11 @@ test('isActive: used or expired offers are not active', () => {
 
 test('the endpoint needs a signed-in user and answers with the offer', async () => {
   const b = chatgptUser();
-  const call = (headers) => handle({ httpMethod: 'GET', headers }, { fetchImpl: b.fetchImpl, env: ENV, now: T0 });
+  const call = (headers, query) => handle({ httpMethod: 'GET', headers, queryStringParameters: query }, { fetchImpl: b.fetchImpl, env: ENV, now: T0 });
   assert.equal((await call({})).statusCode, 401);
   assert.equal((await call({ authorization: 'Bearer bad' })).statusCode, 401);
-  const ok = await call({ Authorization: 'Bearer good' });
+  assert.equal(JSON.parse((await call({ Authorization: 'Bearer good' })).body).pending, true);
+  const ok = await call({ Authorization: 'Bearer good' }, { start: '1' });
   assert.equal(ok.statusCode, 200);
   assert.equal(JSON.parse(ok.body).active, true);
   assert.equal((await handle({ httpMethod: 'POST', headers: {} }, { fetchImpl: b.fetchImpl, env: ENV })).statusCode, 405);
