@@ -13,6 +13,7 @@ import { notifySale } from "../../lib/business/sale-alert.mjs";
 
 import { AUTOMATION_PLANS } from "../../lib/automation/billing.mjs";
 import { isAutoTopupEvent, handleAutoTopupWebhook } from "../../lib/business/auto-topup.mjs";
+import { config as chatgptOfferConfig, creditsForPayment, STARTER as CHATGPT_STARTER } from "../../lib/business/chatgpt-offer.mjs";
 
 // Hansora Automation monthly plans live in their own table (automation.automation_subscriptions), so a user can have a
 // Creative plan and an Automation plan at the same time. Their credits go to the pay-as-you-go bucket.
@@ -144,10 +145,13 @@ export async function handler(event) {
     const chat_session_id = meta.chat_session_id || null;
     const { productId: paidProductId, quantity: paidQuantity } = productFromPayload(data);
     const knownPlan = PLAN_PRODUCTS[paidProductId] || null;
-    const knownPackCredits = PACK_PRODUCT_CREDITS[paidProductId] || 0;
+    // The $4.99 ChatGPT starter pack (lib/business/chatgpt-offer.mjs) is a pack like the others.
+    const chatgptOffer = chatgptOfferConfig();
+    const isChatgptStarter = Boolean(chatgptOffer.starterProductId) && paidProductId === chatgptOffer.starterProductId;
+    const knownPackCredits = isChatgptStarter ? CHATGPT_STARTER.credits : (PACK_PRODUCT_CREDITS[paidProductId] || 0);
     const plan_id = knownPlan || meta.plan_id || null;
     const planConfig = plan_id ? (SUBSCRIPTION_PLANS[plan_id] || automationPlanConfig(plan_id)) : null;
-    const credits = knownPackCredits ? knownPackCredits * paidQuantity : Number(meta.credits || 0);
+    let credits = knownPackCredits ? knownPackCredits * paidQuantity : Number(meta.credits || 0);
     if (knownPackCredits && Number(meta.credits || 0) && Number(meta.credits) !== credits) console.warn("Dodo metadata credits ignored", { product: paidProductId, metadata: meta.credits, granted: credits });
     if (knownPlan && meta.plan_id && meta.plan_id !== knownPlan) console.warn("Dodo metadata plan ignored", { product: paidProductId, metadata: meta.plan_id, plan: knownPlan });
     // Plans: the monthly amount comes from the server-side plan when the product (or the plan) is known.
@@ -312,6 +316,14 @@ export async function handler(event) {
 
     // Small helper
     async function sjson(res) { try { return await res.json(); } catch { return null; } }
+
+    // ChatGPT welcome offer: a first purchase inside the buyer's 8-hour window gets 25% of the pack's base credits
+    // free. Decided here from the offer row, never from the checkout link. Any problem grants the normal amount.
+    const offerGrant = await creditsForPayment({
+      cfg: chatgptOffer, userId: uid, productId: paidProductId, quantity: paidQuantity, credits, transactionId: transaction_id, paidAt: paid_at
+    });
+    if (offerGrant.offer) console.log("ChatGPT offer applied", { offer: offerGrant.offer, product: paidProductId, normal: credits, granted: offerGrant.credits });
+    credits = offerGrant.credits;
 
     // ---- 0) Ensure a payments row exists (status may be null initially) ----
     {

@@ -5132,6 +5132,24 @@
     setTimeout(finish, 10000);
   }
 
+  // The ChatGPT welcome offer (public/chatgpt-offer.js): loaded after the page, only for signed-in visitors.
+  // It shows nothing unless the server says this person has a running offer.
+  function loadChatgptOffer() {
+    if (window.top !== window.self || document.querySelector('script[data-chatgpt-offer]')) return;
+    let signedIn = false;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        if (/^sb-.*-auth-token$/.test(localStorage.key(i) || '')) { signedIn = true; break; }
+      }
+    } catch (_) {}
+    if (!signedIn) return;
+    const script = document.createElement('script');
+    script.src = '/chatgpt-offer.js';
+    script.defer = true;
+    script.setAttribute('data-chatgpt-offer', '1');
+    document.head.appendChild(script);
+  }
+
   // Someone opened hansora.co from the account link ChatGPT shows when credits run out
   // (?from=chatgpt_credits). Recorded once per visit, so we can count: stopped for credits
   // in ChatGPT -> opened the link -> bought.
@@ -5191,6 +5209,7 @@
     bindEvents();
     bindGlobalClickTracking();
     recordChatgptCreditsLinkOpen();
+    loadChatgptOffer();
     bindCourseLessonFunnelTracking();
     preserveAffiliateRefAcrossPageLinks();
     authCallbackArrivalWrite = captureAuthCallbackArrival().catch(function (error) {
