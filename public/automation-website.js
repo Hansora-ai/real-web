@@ -70,9 +70,14 @@
   }
 
   function bind() {
-    const changed = () => { dirty = true; $('#web-save-state').textContent = 'Unsaved changes'; $('#web-preview-domain').textContent = $('#web-domains').value.split(/[\s,]+/).filter(Boolean)[0]?.replace(/^https?:\/\//, '').split('/')[0] || 'yourwebsite.com'; renderPreview(); };
-    ['#web-domains', '#web-title', '#web-greeting', '#web-limit'].forEach(selector => $(selector).addEventListener('input', changed));
-    ['#web-branding', '#web-auto', '#web-delay', '#web-color'].forEach(selector => $(selector).addEventListener('change', changed));
+    // Only changes to how the bubble looks redraw the preview; the website, limits and reply settings don't.
+    const touched = () => { dirty = true; $('#web-save-state').textContent = 'Unsaved changes'; };
+    const changed = () => { touched(); renderPreview(); };
+    $('#web-domains').addEventListener('input', () => { touched(); $('#web-preview-domain').textContent = $('#web-domains').value.split(/[\s,]+/).filter(Boolean)[0]?.replace(/^https?:\/\//, '').split('/')[0] || 'yourwebsite.com'; });
+    $('#web-limit').addEventListener('input', touched);
+    ['#web-title', '#web-greeting'].forEach(selector => $(selector).addEventListener('input', changed));
+    ['#web-branding', '#web-color'].forEach(selector => $(selector).addEventListener('change', changed));
+    ['#web-auto', '#web-delay'].forEach(selector => $(selector).addEventListener('change', touched));
     $('#web-color').addEventListener('input', () => { setColor($('#web-color').value); changed(); });
     document.querySelectorAll('input[name="web-position"]').forEach(input => input.addEventListener('change', changed));
     document.querySelectorAll('input[name="web-ask"]').forEach(input => input.addEventListener('change', () => { $('#web-fields').hidden = input.value === 'off' && input.checked; changed(); }));
@@ -140,7 +145,7 @@
     if (frame.dataset.loading) return;
     frame.dataset.loading = '1';
     const config = JSON.stringify(previewConfig()).replace(/</g, '\\u003c').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui,sans-serif;background:#fafafa;color:#9ca3af}.fake{padding:28px}.fake div{height:14px;background:#e5e7eb;border-radius:7px;margin:0 0 12px}.fake .h{height:26px;width:55%;background:#d1d5db;margin-bottom:22px}</style></head><body><div class="fake"><div class="h"></div><div style="width:90%"></div><div style="width:80%"></div><div style="width:85%"></div><div style="width:60%"></div></div><script src="${location.origin}/chat.js?v=20261112" data-preview data-config="${config}"><\/script></body></html>`;
+    frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui,sans-serif;background:#fafafa;color:#9ca3af}.fake{padding:28px}.fake div{height:14px;background:#e5e7eb;border-radius:7px;margin:0 0 12px}.fake .h{height:26px;width:55%;background:#d1d5db;margin-bottom:22px}</style></head><body><div class="fake"><div class="h"></div><div style="width:90%"></div><div style="width:80%"></div><div style="width:85%"></div><div style="width:60%"></div></div><script src="${location.origin}/chat.js?v=20261112b" data-preview data-config="${config}"><\/script></body></html>`;
     frame.addEventListener('load', () => { frameReady = true; delete frame.dataset.loading; renderPreview(); }, { once: true });
   }
 
