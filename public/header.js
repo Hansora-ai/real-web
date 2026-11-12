@@ -5134,19 +5134,21 @@
     setTimeout(finish, 10000);
   }
 
-  // The welcome offer for people who never bought (public/chatgpt-offer.js): loaded after the page, only for signed-in visitors.
+  // The welcome offer for people who never bought (public/chatgpt-offer.js): loaded after the page.
   // It shows nothing unless the server says this person has a running offer.
   function loadChatgptOffer() {
     // Inside a frame only the pricing page shows it (the pricing popup the header opens for new users).
     if (window.top !== window.self && !/^\/pricing(_ru|_arm)?(\.html)?\/?$/.test(location.pathname)) return;
     if (document.querySelector('script[data-chatgpt-offer]')) return;
-    let signedIn = false;
+    // Signed in, on a pricing page, or a logged-out visitor whose offer clock is already running in this browser.
+    let needed = /^\/pricing(_ru|_arm)?(\.html)?\/?$/.test(location.pathname);
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        if (/^sb-.*-auth-token$/.test(localStorage.key(i) || '')) { signedIn = true; break; }
+      if (localStorage.getItem('hansora:cgoffer:anon')) needed = true;
+      for (let i = 0; !needed && i < localStorage.length; i++) {
+        if (/^sb-.*-auth-token$/.test(localStorage.key(i) || '')) needed = true;
       }
     } catch (_) {}
-    if (!signedIn) return;
+    if (!needed) return;
     const script = document.createElement('script');
     script.src = '/chatgpt-offer.js';
     script.defer = true;

@@ -1,5 +1,7 @@
 /* Welcome offer (see lib/business/chatgpt-offer.mjs). Loaded on every page by header.js.
-   Shown only to signed-in people who never bought (wherever they signed up: the site or the ChatGPT plugin). The 8-hour timer starts the first
+   Shown to signed-in people who never bought (wherever they signed up: the site or the ChatGPT plugin), and to
+   logged-out visitors: their clock starts on their first look at the pricing page, is kept in their browser and
+   carries into their account when they sign up (never restarted, never longer). The 8-hour timer starts the first
    time they open the pricing page; it is kept on the server, so a refresh or another device shows the same time.
    The pages load and work as before: this file runs after the page and adds the offer when the server answers.
      - every page: a small floating pill that opens the pricing page (with the countdown once the timer runs);
@@ -25,21 +27,21 @@
 
   var TEXT = {
     en: {
-      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "Welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", stripEnds: "Ends in",
+      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "Welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", anonSub: "Create a free account and buy before the clock hits zero. One time only.", stripEnds: "Ends in",
       badge: "🎁 +{p}% FREE", cardCredits: "credits", split: "{base} + <b>{free} free</b>", h: "hrs", m: "min", sec: "sec", starterLink: "🎁 Starter pack: {credits} credits for {price}",
       popTag: "Welcome offer · one time", popTitle: "Try Hansora for just {price}", popText: "A small pack made for your first purchase. You will not find it on the pricing page.",
       popCredits: "{credits} credits", popOnce: "one payment", popBuy: "Get {credits} credits for {price}", popNo: "No thanks", popEnds: "Offer ends in",
       popFacts: ["Works on Hansora and in ChatGPT", "No subscription", "Credits never expire"], close: "Close welcome offer"
     },
     ru: {
-      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Приветственное предложение", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", stripEnds: "Осталось",
+      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Приветственное предложение", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", anonSub: "Создайте бесплатный аккаунт и купите, пока таймер не дошёл до нуля. Только один раз.", stripEnds: "Осталось",
       badge: "🎁 +{p}% В ПОДАРОК", cardCredits: "кредитов", split: "{base} + <b>{free} в подарок</b>", h: "ч", m: "мин", sec: "сек", starterLink: "🎁 Стартовый пакет: {credits} кредитов за {price}",
       popTag: "Приветственное предложение · один раз", popTitle: "Попробуйте Hansora всего за {price}", popText: "Небольшой пакет для первой покупки. На странице цен его нет.",
       popCredits: "{credits} кредитов", popOnce: "разовый платёж", popBuy: "Получить {credits} кредитов за {price}", popNo: "Нет, спасибо", popEnds: "Осталось",
       popFacts: ["Работает на Hansora и в ChatGPT", "Без подписки", "Кредиты не сгорают"], close: "Закрыть предложение"
     },
     hy: {
-      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", stripEnds: "Մնաց",
+      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", anonSub: "Ստեղծեք անվճար հաշիվ և գնեք, մինչև ժամանակը կլրանա։ Միայն մեկ անգամ։", stripEnds: "Մնաց",
       badge: "🎁 +{p}% ԱՆՎՃԱՐ", cardCredits: "կրեդիտ", split: "{base} + <b>{free} անվճար</b>", h: "ժ", m: "ր", sec: "վ", starterLink: "🎁 Մեկնարկային փաթեթ՝ {credits} կրեդիտ {price}-ով",
       popTag: "Ողջույնի առաջարկ · մեկ անգամ", popTitle: "Փորձեք Hansora-ն ընդամենը {price}-ով", popText: "Փոքր փաթեթ առաջին գնման համար։ Գների էջում այն չկա։",
       popCredits: "{credits} կրեդիտ", popOnce: "մեկանգամյա վճարում", popBuy: "Գնել {credits} կրեդիտ՝ {price}", popNo: "Ոչ, շնորհակալություն", popEnds: "Մնաց",
@@ -151,29 +153,112 @@
   var pill = null, strip = null, popup = null;
   var popupTimer = null;
 
+  var ANON_KEY = "hansora:cgoffer:anon";
+  var PREVIEW_KEY = "hansora:cgoffer:preview";
+  var PENDING_STARTER_KEY = "hansora:cgoffer:pending-starter";
+  var PENDING_MS = 15 * 60 * 1000;
+  var accountRequest = null;
+
   function load() {
     var session = storedSession();
-    if (!session) return;
+    if (session) loadAccount(session); else loadAnonymous();
+  }
+
+  // ---------- logged-out visitors ----------
+  // The clock lives in this browser: { started_at } from the first look at the pricing page. Without storage there is
+  // no honest clock to show, so nothing is shown.
+  function readAnon() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(ANON_KEY) || "null");
+      return saved && Number(saved.started_at) > 0 ? saved : null;
+    } catch (_) { return null; }
+  }
+  function startAnon() {
+    try { localStorage.setItem(ANON_KEY, JSON.stringify({ started_at: Date.now() })); } catch (_) { return null; }
+    return readAnon();
+  }
+  function preview() {
+    try {
+      var cached = JSON.parse(localStorage.getItem(PREVIEW_KEY) || "null");
+      if (cached && Date.now() - Number(cached.at || 0) < 60 * 60 * 1000 && cached.data) return Promise.resolve(cached.data);
+    } catch (_) {}
+    return fetch(ENDPOINT + "?preview=1").then(function (res) { return res.ok ? res.json() : null; }).then(function (data) {
+      if (data) { try { localStorage.setItem(PREVIEW_KEY, JSON.stringify({ at: Date.now(), data: data })); } catch (_) {} }
+      return data;
+    });
+  }
+  function loadAnonymous() {
+    var anon = readAnon();
+    if (!anon && !isPricingPage()) return;
+    preview().then(function (data) {
+      if (!data || !data.enabled || storedSession()) return;
+      anon = anon || startAnon();
+      if (!anon) return;
+      var ends = Number(anon.started_at) + Number(data.offer_hours || 8) * 3600000;
+      if (ends <= Date.now()) return;
+      start(Object.assign({}, data, { active: true, anonymous: true, expires_at: new Date(ends).toISOString() }));
+      watchForLogin();
+    }).catch(function () {});
+  }
+  // Signing in on this page (the email login popup) switches to the account's offer, which continues this clock.
+  var loginWatch = null;
+  function watchForLogin() {
+    if (loginWatch) return;
+    var began = Date.now();
+    loginWatch = setInterval(function () {
+      var session = storedSession();
+      if (!session && Date.now() - began < 30 * 60 * 1000) return;
+      clearInterval(loginWatch);
+      if (session && !accountRequest) loadAccount(session);
+    }, 1500);
+  }
+
+  // ---------- signed-in people ----------
+  function loadAccount(session) {
     user = session.user;
+    var anon = readAnon();
     var cached = readCache(user.id);
     var now = Date.now();
-    var freshVisit = cameFromChatgpt();
-    if (cached && !cached.active && !cached.pending && !freshVisit && now - Number(cached.checked_at || 0) < NOT_ELIGIBLE_CACHE_MS) return;
+    var freshVisit = cameFromChatgpt() || Boolean(anon);
+    if (cached && !cached.active && !cached.pending && !freshVisit && now - Number(cached.checked_at || 0) < NOT_ELIGIBLE_CACHE_MS) return Promise.resolve(cached);
     // A running offer is shown from the cache at once (no flicker between pages); the server still has the last word.
     if (cached && cached.active && Date.parse(cached.expires_at) > now) start(cached);
-    else if (cached && cached.pending && !isPricingPage()) showWaiting(cached);
-    // Only the pricing page starts the timer.
-    var url = ENDPOINT + (isPricingPage() ? "?start=1" : "");
-    accessToken(session.access_token).then(function (token) {
+    else if (cached && cached.pending && !isPricingPage() && !anon) showWaiting(cached);
+    // The pricing page starts the timer; so does a clock this browser showed before signing in (it continues).
+    var params = [];
+    if (isPricingPage() || anon) params.push("start=1");
+    if (anon) params.push("since=" + encodeURIComponent(String(anon.started_at)));
+    var url = ENDPOINT + (params.length ? "?" + params.join("&") : "");
+    accountRequest = accessToken(session.access_token).then(function (token) {
       if (!token) return null;
       return fetch(url, { headers: { Authorization: "Bearer " + token } }).then(function (res) { return res.ok ? res.json() : null; });
     }).then(function (data) {
-      if (!data) return;
+      if (!data) return null;
       writeCache(user.id, Object.assign({ checked_at: Date.now() }, data));
       if (data.active && Date.parse(data.expires_at) > Date.now()) start(data);
       else { stop(); if (data.pending && !isPricingPage()) showWaiting(data); }
-    }).catch(function () {});
+      resumePendingStarter(data);
+      return data;
+    }).catch(function () { return null; });
+    return accountRequest;
   }
+  // The $4.99 Buy was clicked while logged out: now that they are signed in, open its checkout.
+  function resumePendingStarter(data) {
+    var at = 0;
+    try { at = Number(localStorage.getItem(PENDING_STARTER_KEY) || 0); localStorage.removeItem(PENDING_STARTER_KEY); } catch (_) {}
+    if (!at || Date.now() - at > PENDING_MS || !data || !data.active || !data.starter) return;
+    buyStarter(null);
+  }
+  // The pricing pages wait for this (at most a moment) before opening a checkout, so a purchase right after signing
+  // up already counts for the offer.
+  window.HansoraWelcomeOffer = {
+    sync: function () {
+      if (accountRequest) return accountRequest;
+      var session = storedSession();
+      if (!session) return Promise.resolve(null);
+      return loadAccount(session);
+    }
+  };
 
   // The timer has not started yet: the pill only says an offer is waiting on the pricing page.
   function showWaiting(data) {
@@ -259,7 +344,7 @@
     }
     strip.querySelector(".cgo-strip-tag").textContent = "🎁 " + T().stripTag;
     strip.querySelector(".cgo-strip-text").textContent = fill(T().strip, { p: offer.bonus_percent });
-    strip.querySelector(".cgo-strip-sub").textContent = T().stripSub;
+    strip.querySelector(".cgo-strip-sub").textContent = offer.anonymous ? T().anonSub : T().stripSub;
     strip.querySelector(".cgo-strip-ends").textContent = T().stripEnds;
     // The starter button is always there while the offer runs.
     var link = strip.querySelector(".cgo-starter-link");
@@ -343,7 +428,9 @@
   var popupArmed = false, shownByItself = false;
   function autoShown() {
     if (shownByItself) return true;
-    try { return localStorage.getItem(POPUP_AUTO_KEY + (user ? user.id : "")) === "1"; } catch (_) { return false; }
+    try {
+      return localStorage.getItem(POPUP_AUTO_KEY) === "1" || Boolean(user && localStorage.getItem(POPUP_AUTO_KEY + user.id) === "1");
+    } catch (_) { return false; }
   }
   function openStarter(reason) {
     if (!offer || !offer.starter || popup) return;
@@ -402,8 +489,19 @@
     });
   }
   function buyStarter(button) {
-    if (!offer || !offer.starter || !user) return;
-    button.disabled = true;
+    if (!offer || !offer.starter) return;
+    if (!user) {
+      // Logged out: sign up first, then the checkout opens (here, or on the pricing page after a Google login).
+      try {
+        localStorage.setItem(PENDING_STARTER_KEY, String(Date.now()));
+        localStorage.setItem("hansora:pricing-buy-return", JSON.stringify({ path: location.pathname + location.search, buy: "starter:" + offer.starter.credits, mode: "international", createdAt: Date.now() }));
+      } catch (_) {}
+      if (popup) { popup.remove(); popup = null; }
+      var api = window.HansoraHeader;
+      if (api && typeof api.openAuth === "function") api.openAuth("signup");
+      return;
+    }
+    if (button) button.disabled = true;
     var url = new URL(offer.starter.checkout_url);
     url.searchParams.set("quantity", "1");
     url.searchParams.set("redirect_url", "https://hansora.co/profile.html?checkout=success");
