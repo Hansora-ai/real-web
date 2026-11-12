@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Website chat — Hansora Automation</title><link rel="icon" href="/favicon.png" type="image/png"><link rel="apple-touch-icon" href="/favicon.png">
+  <meta name="description" content="Add your AI employee to your own website as a chat bubble.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js?v=20261008"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css?v=20261107-inbox"><link rel="stylesheet" href="automation-ui.css?v=20261112-web"><link rel="stylesheet" href="automation-website.css?v=20261112">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261112-web"></script><script defer src="automation-header.js?v=20261107-inbox"></script><script defer src="automation-website.js?v=20261112"></script>
+</head>
+<body class="ui" data-automation-page="employees">
+  <div data-automation-header></div>
+  <main class="ui-page web-page">
+    <div id="web-loading" class="ui-skeleton" style="height:520px;border-radius:16px;margin-top:24px" aria-label="Loading"></div>
+    <div class="ui-alert" id="web-error" role="alert" hidden></div>
+    <div id="web-app" class="ui-enter" hidden>
+      <nav class="ui-crumbs" aria-label="Breadcrumb"><a id="web-back" href="automation.html">← Back to your AI employee</a></nav>
+      <header class="web-head">
+        <span class="ui-icon-tile website web-logo" data-icon="globe" aria-hidden="true"></span>
+        <div class="web-title">
+          <h1>Website chat</h1>
+          <p><span class="web-dot" id="web-dot"></span><span id="web-status">Not live yet</span> · Your AI employee answers visitors of your own website</p>
+        </div>
+        <div class="web-actions">
+          <span class="ui-save-state" id="web-save-state" aria-live="polite"></span>
+          <button class="ui-btn ghost sm" id="web-pause" type="button" hidden>Pause</button>
+          <button class="ui-btn secondary sm" id="web-save" type="button">Save</button>
+          <button class="ui-btn accent sm" id="web-live" type="button">Go live</button>
+        </div>
+      </header>
+
+      <div class="web-layout">
+        <div class="web-steps">
+          <section class="ui-card web-step">
+            <h2><span>1</span>Your website</h2>
+            <p class="ui-hint">The chat bubble only works on these websites (and their subdomains), so nobody can put your chat on their site.</p>
+            <label class="ui-field"><span class="ui-label">Website address</span>
+              <textarea class="ui-textarea" id="web-domains" rows="2" placeholder="myshop.com" aria-describedby="web-domains-hint"></textarea></label>
+            <p class="ui-hint" id="web-domains-hint">One per line, for example <b>myshop.com</b>. Up to 10.</p>
+          </section>
+
+          <section class="ui-card web-step">
+            <h2><span>2</span>How it looks</h2>
+            <div class="web-grid">
+              <label class="ui-field"><span class="ui-label">Chat title</span><input class="ui-input" id="web-title" maxlength="60" placeholder="Your business name"></label>
+              <label class="ui-field"><span class="ui-label">Colour</span>
+                <span class="web-colors" id="web-colors"><input type="color" id="web-color" value="#7c3aed" aria-label="Pick a colour"></span></label>
+            </div>
+            <label class="ui-field"><span class="ui-label">Welcome message (optional)</span><textarea class="ui-textarea" id="web-greeting" rows="2" maxlength="300" placeholder="Hi! 👋 How can we help you today?"></textarea></label>
+            <div class="web-grid">
+              <div class="ui-field"><span class="ui-label">Position</span>
+                <div class="ui-segmented"><label><input type="radio" name="web-position" value="right" checked><span>Bottom right</span></label><label><input type="radio" name="web-position" value="left"><span>Bottom left</span></label></div></div>
+              <label class="web-toggle"><input type="checkbox" class="ui-switch" id="web-branding" checked><span><b>Show “Powered by Hansora AI”</b><small>A small line under the chat.</small></span></label>
+            </div>
+          </section>
+
+          <section class="ui-card web-step">
+            <h2><span>3</span>Visitor details</h2>
+            <p class="ui-hint">Ask visitors for their details before they start chatting, so you can reach them later.</p>
+            <div class="ui-options">
+              <label class="ui-option"><input type="radio" name="web-ask" value="off" checked><span class="ui-option-text"><strong>Don’t ask</strong><small>Visitors start chatting right away. The AI asks for a phone number when an order or booking needs one.</small></span><span class="ui-option-radio"></span></label>
+              <label class="ui-option"><input type="radio" name="web-ask" value="optional"><span class="ui-option-text"><strong>Ask, but let them skip</strong><small>A short form first, with a “Skip” button.</small></span><span class="ui-option-radio"></span></label>
+              <label class="ui-option"><input type="radio" name="web-ask" value="required"><span class="ui-option-text"><strong>Required before chatting</strong><small>More contacts, but some visitors won’t start a chat.</small></span><span class="ui-option-radio"></span></label>
+            </div>
+            <div class="web-fields" id="web-fields" hidden>
+              <span class="ui-label">Ask for</span>
+              <label><input type="checkbox" value="name" checked> Name</label>
+              <label><input type="checkbox" value="phone" checked> Phone number</label>
+              <label><input type="checkbox" value="email"> Email</label>
+            </div>
+          </section>
+
+          <section class="ui-card web-step">
+            <h2><span>4</span>Replies</h2>
+            <label class="web-toggle"><input type="checkbox" class="ui-switch" id="web-auto" checked><span><b>AI answers automatically</b><small>Turn off to answer every chat yourself from the inbox.</small></span></label>
+            <div class="web-grid">
+              <label class="ui-field"><span class="ui-label">Wait before replying</span>
+                <select class="ui-select" id="web-delay"><option value="0">Reply right away</option><option value="3">3 seconds</option><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="20">20 seconds</option><option value="30">30 seconds</option></select></label>
+              <label class="ui-field"><span class="ui-label">Most visitor messages per day</span>
+                <input class="ui-input" id="web-limit" type="number" min="50" max="5000" step="50" value="500"></label>
+            </div>
+            <p class="ui-hint">Each AI reply costs the same credits as an Instagram or WhatsApp reply. The daily limit protects your credits from spam; each visitor can also send at most 8 messages a minute.</p>
+          </section>
+
+          <section class="ui-card web-step">
+            <h2><span>5</span>Add it to your website</h2>
+            <p class="ui-hint">Paste this line into your website, just before <code>&lt;/body&gt;</code>. You only do this once: changes you make here show up by themselves.</p>
+            <div class="web-snippet"><code id="web-snippet">…</code><button class="ui-btn secondary sm" id="web-copy" type="button" data-icon="copy">Copy</button></div>
+            <div class="web-guides" id="web-guides">
+              <details><summary>WordPress</summary><p>Install the free plugin <b>WPCode</b> (or “Insert Headers and Footers”) → Code Snippets → Header &amp; Footer → paste the line into <b>Footer</b> → Save.</p></details>
+              <details><summary>Shopify</summary><p>Online Store → Themes → ⋯ → <b>Edit code</b> → open <b>theme.liquid</b> → paste the line just before <code>&lt;/body&gt;</code> → Save.</p></details>
+              <details><summary>Wix</summary><p>Settings → <b>Custom code</b> (Advanced) → Add custom code → paste the line → choose “All pages” and place it in <b>Body – end</b> → Apply. Needs a Wix premium plan with a connected domain.</p></details>
+              <details><summary>Tilda</summary><p>Site settings → <b>More</b> → <b>HTML code for the HEAD section</b> → paste the line → Save → <b>Publish all pages</b>.</p></details>
+              <details><summary>Squarespace</summary><p>Settings → Advanced → <b>Code Injection</b> → paste the line into <b>Footer</b> → Save.</p></details>
+              <details><summary>Any other website</summary><p>Ask whoever manages your website to add this line to every page, just before <code>&lt;/body&gt;</code>.</p></details>
+            </div>
+          </section>
+        </div>
+
+        <aside class="web-preview" aria-label="Preview">
+          <p class="web-preview-label">Preview</p>
+          <div class="web-frame"><div class="web-browser"><i></i><i></i><i></i><span id="web-preview-domain">myshop.com</span></div><iframe id="web-preview" title="Chat bubble preview" loading="lazy"></iframe></div>
+          <p class="ui-hint">This is how visitors see the chat. To try real answers, use <b>Live test</b> on your AI employee’s page; on your website, test from a private window.</p>
+        </aside>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

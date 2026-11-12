@@ -9,7 +9,7 @@
   if(!api.isLocalPreview&&!/^[0-9a-f-]{36}$/i.test(businessId))return fail('This contacts link is invalid.');
   $('#contacts-back').href=`automation-agent.html?id=${encodeURIComponent(businessId)}${previewSuffix}`;
   let contacts=[];let conversations={};
-  const PLATFORM={instagram_dm:'instagram',instagram_comments:'instagram',whatsapp:'whatsapp',telegram:'telegram',messenger:'messenger',tiktok:'tiktok',phone:'phone'};
+  const PLATFORM={instagram_dm:'instagram',instagram_comments:'instagram',whatsapp:'whatsapp',telegram:'telegram',messenger:'messenger',tiktok:'tiktok',website:'website',phone:'phone'};
   try{await load()}catch(error){return fail(api.displayError(error))}
   $('#contacts-loading').hidden=true;$('#contacts-app').hidden=false;render();refreshPhotos();
   ['#contacts-search','#contacts-channel','#contacts-tag'].forEach(selector=>$(selector).addEventListener('input',render));
@@ -59,7 +59,7 @@
     const photo=/^https:\/\//.test(String(item.profile.profile_pic||''))?`<img src="${escapeAttribute(item.profile.profile_pic)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:'';
     const avatar=`<span class="contact-avatar"><i>${letter}</i>${photo}${platform?`<em class="ui-convo-channel ${platform}">${ui.icon(platform)}</em>`:''}</span>`;
     const fields={...(item.profile.fields||{}),...(item.primary_email?{email:item.primary_email}:{}),...(item.primary_phone?{phone:item.primary_phone}:{})};
-    const chat=conversations[item.id];const channels={instagram_dm:'Instagram',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',telegram:'Telegram',messenger:'Messenger',tiktok:'TikTok',phone:'Phone',manual:'Manual'};
+    const chat=conversations[item.id];const channels={instagram_dm:'Instagram',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',telegram:'Telegram',messenger:'Messenger',tiktok:'TikTok',website:'Website chat',phone:'Phone',manual:'Manual'};
     return`<div class="contacts-row" role="row"><div class="contact-who">${avatar}<span><b>${escapeHtml(name)}</b><small>${escapeHtml(channels[item.channel_type]||item.channel_type)}${handle?` · ${escapeHtml(handle)}`:''}</small></span></div><div class="contact-tags">${(item.profile.tags||[]).map(tag=>`<span>${escapeHtml(tag)}<button type="button" data-remove-tag="${escapeAttribute(tag)}" data-contact="${escapeAttribute(item.id)}" aria-label="Remove tag">×</button></span>`).join('')}<button class="add-tag" type="button" data-add-tag="${escapeAttribute(item.id)}">+ Tag</button></div><div class="contact-fields">${Object.entries(fields).slice(0,4).map(([key,value])=>`<div><em>${escapeHtml(key)}:</em> ${escapeHtml(value)}</div>`).join('')||'<em>—</em>'}</div><span class="ui-faint">${escapeHtml(relative(item.last_seen_at))}</span>${chat?`<a class="ui-btn ghost sm contact-open" href="automation-inbox.html?business=${encodeURIComponent(businessId)}&conversation=${encodeURIComponent(chat)}${previewSuffix}">Open chat</a>`:'<span></span>'}</div>`;
   }
   function previewContacts(){const now=Date.now();return[
