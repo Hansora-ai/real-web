@@ -256,14 +256,16 @@
     }).then(function (data) {
       if (!data) return null;
       writeCache(user.id, Object.assign({ checked_at: Date.now() }, data));
-      if (promised) {
+      // Decided on the pricing page only, where it can be explained next to the packs (after a login the home page
+      // sends the visitor back there). Elsewhere the logged-out clock is left as it is until then.
+      if (promised && isPricingPage()) {
         // The logged-out clock has done its job: from now on the account decides.
         try { localStorage.removeItem(ANON_KEY); } catch (_) {}
         if (!data.active) {
           lostUntil = Date.now() + 20000;
-          try { localStorage.removeItem(PENDING_STARTER_KEY); } catch (_) {}
           showLostNotice();
         }
+        if (!data.active) { try { localStorage.removeItem(PENDING_STARTER_KEY); } catch (_) {} }
       }
       if (data.active && Date.parse(data.expires_at) > Date.now()) start(data);
       else { stop(); if (data.pending && !isPricingPage()) showWaiting(data); }
