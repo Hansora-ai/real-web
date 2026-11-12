@@ -21,11 +21,17 @@
   // The photo header.js saved last time, so it does not flash an "H" on every page.
   let cachedAvatar = 'https://ui-avatars.com/api/?name=H&background=6366f1&color=fff';
   try { const saved = localStorage.getItem('hansora.header.avatar'); if (/^(https:|data:image\/)/.test(saved || '')) cachedAvatar = saved.replace(/"/g, '%22'); } catch (_) {}
+  // One rule for the main button on every page: "Dashboard" when the account has AI employees, "Get started" when not.
+  // Decided from what the browser remembers (instant), then checked in the background.
+  let knownEmployees = false;
+  try { knownEmployees = cachedLoggedIn && (localStorage.getItem('hansora_automation_has_employees') === '1' || /^[0-9a-f-]{36}$/i.test(localStorage.getItem('hansora_automation_business') || '')); } catch (_) {}
+  if (appPage && page !== 'setup') knownEmployees = true;
+  const ctaHtml = has => has ? `<a class="auto-cta" href="automation-dashboard.html${previewQuery}">Dashboard</a>` : `<a class="auto-cta" href="automation-setup.html${previewQuery}">Get started</a>`;
   const accountArea = realSite
     ? `<span class="auto-account"><button class="auto-auth-link" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Log in</button><span class="auto-credits" id="navCredits" title="Your credits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"></span><button class="auto-avatar" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"><img id="navAvatarImg" alt="" src="${cachedAvatar}"></button></span>`
     : (appPage ? '' : `<a class="auto-auth-link" href="automation-dashboard.html${previewQuery}">Dashboard</a>`);
   const accountMenu = realSite ? `<div class="auto-user-menu" id="navMenu"><a href="automation-dashboard.html">AI employees</a><a href="automation-profile.html">Profile</a><a href="automation-pricing.html">Buy credits</a><a href="/">Hansora Creative</a><button type="button" id="autoLogout">Log out</button></div>` : '';
-  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><button class="auto-help" type="button" data-need-help="">Need help?</button><a class="auto-back" href="/">Hansora Creative ↗</a>${themeButton}${['dashboard','setup'].includes(page) ? '' : `<a class="auto-cta" href="automation-setup.html${previewQuery}">${appPage ? 'New AI employee' : 'Get started'}</a>`}${accountArea}</nav>${accountMenu}</header>`;
+  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><button class="auto-help" type="button" data-need-help="">Need help?</button><a class="auto-back" href="/">Hansora Creative ↗</a>${themeButton}${['dashboard','setup'].includes(page) ? '' : ctaHtml(knownEmployees)}${accountArea}</nav>${accountMenu}</header>`;
 
   const syncThemeLabels = () => {
     const light = document.documentElement.getAttribute('data-theme') === 'light';
@@ -183,6 +189,7 @@
         return { id: row.id, name: agent?.display_name || row.name || 'AI employee', ig: label ? (label.startsWith('@') ? label : `@${label}`) : '' };
       });
       try { sessionStorage.setItem(CACHE, JSON.stringify(list)); localStorage.setItem('hansora_automation_has_employees', list.length ? '1' : '0'); } catch (_) {}
+      setCta(list.length > 0);
       render(list);
       if (list.length > 1) Promise.resolve(api.db.from('automation_conversations').select('business_id').in('business_id', list.map(item => item.id))
         .or('status.eq.needs_attention,and(ai_enabled.eq.false,status.not.in.(human_handling,resolved,archived))').limit(5000))
@@ -259,7 +266,7 @@
     if (cachedLoggedIn) showBar();
     apply();
     api?.getUser?.().then(async user => {
-      if (!user) { hasEmployees = false; businessId = ''; hideBar(); apply(); return; }
+      if (!user) { hasEmployees = false; businessId = ''; setCta(false); hideBar(); apply(); return; }
       showBar();
       const result = await api.db.from('automation_businesses').select('id').order('updated_at', { ascending: false }).limit(1);
       if (result?.error) return;
@@ -268,6 +275,7 @@
       if (!first) businessId = '';
       else if (!businessId) businessId = first.id;
       try { localStorage.setItem('hansora_automation_has_employees', hasEmployees ? '1' : '0'); if (!hasEmployees) localStorage.removeItem('hansora_automation_business'); } catch (_) {}
+      setCta(hasEmployees);
       apply();
       if (businessId) inboxBadge(businessId);
     }).catch(() => {});
@@ -306,12 +314,14 @@
       setTimeout(open, 600);
     };
     document.body.appendChild(script);
-    if (page === 'landing' && api && typeof api.getUser === 'function') {
-      api.getUser().then(user => {
-        const cta = root.querySelector('.auto-cta');
-        if (!cta || !user) return;
-        cta.textContent = 'Dashboard';
-        cta.href = 'automation-dashboard.html';
+    // Pages other than the landing page (which checks above) and the app pages (which list the employees).
+    if (!appPage && page !== 'landing' && api && typeof api.getUser === 'function') {
+      api.getUser().then(async user => {
+        if (!user) return setCta(false);
+        const result = await api.db.from('automation_businesses').select('id').limit(1);
+        if (result?.error || !Array.isArray(result?.data)) return;
+        try { localStorage.setItem('hansora_automation_has_employees', result.data.length ? '1' : '0'); } catch (_) {}
+        setCta(result.data.length > 0);
       }).catch(() => {});
     }
   }
@@ -366,6 +376,12 @@
     setTimeout(() => helpDialog.querySelector('[data-help-value]').focus(), 50);
   }
   window.HansoraNeedHelp = { open: openNeedHelp };
+  function setCta(has) {
+    const cta = root.querySelector('.auto-cta');
+    if (!cta) return;
+    cta.textContent = has ? 'Dashboard' : 'Get started';
+    cta.href = `${has ? 'automation-dashboard.html' : 'automation-setup.html'}${previewQuery}`;
+  }
   document.addEventListener('click', event => {
     const trigger = event.target.closest('[data-need-help]');
     if (!trigger) return;
