@@ -27,21 +27,21 @@
 
   var TEXT = {
     en: {
-      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "Welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", anonSub: "Create a free account and buy before the clock hits zero. One time only.", stripEnds: "Ends in",
+      pill: "Welcome offer: +{p}% credits", pillWaiting: "See offer", ends: "ends in", stripTag: "Welcome offer", strip: "+{p}% FREE credits on your first pack", stripSub: "One time only. When the clock hits zero, it is gone.", anonSub: "For new customers: create a free account and buy before the clock hits zero. One time only.", stripEnds: "Ends in",
       badge: "🎁 +{p}% FREE", cardCredits: "credits", split: "{base} + <b>{free} free</b>", h: "hrs", m: "min", sec: "sec", starterLink: "🎁 Starter pack: {credits} credits for {price}",
       popTag: "Welcome offer · one time", popTitle: "Try Hansora for just {price}", popText: "A small pack made for your first purchase. You will not find it on the pricing page.",
       popCredits: "{credits} credits", popOnce: "one payment", popBuy: "Get {credits} credits for {price}", popNo: "No thanks", popEnds: "Offer ends in",
       popFacts: ["Works on Hansora and in ChatGPT", "No subscription", "Credits never expire"], close: "Close welcome offer"
     },
     ru: {
-      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Приветственное предложение", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", anonSub: "Создайте бесплатный аккаунт и купите, пока таймер не дошёл до нуля. Только один раз.", stripEnds: "Осталось",
+      pill: "Приветственное предложение: +{p}% кредитов", pillWaiting: "Открыть", ends: "осталось", stripTag: "Приветственное предложение", strip: "+{p}% кредитов В ПОДАРОК к первой покупке", stripSub: "Только один раз. Когда таймер дойдёт до нуля, предложение исчезнет.", anonSub: "Для новых клиентов: создайте бесплатный аккаунт и купите, пока таймер не дошёл до нуля. Только один раз.", stripEnds: "Осталось",
       badge: "🎁 +{p}% В ПОДАРОК", cardCredits: "кредитов", split: "{base} + <b>{free} в подарок</b>", h: "ч", m: "мин", sec: "сек", starterLink: "🎁 Стартовый пакет: {credits} кредитов за {price}",
       popTag: "Приветственное предложение · один раз", popTitle: "Попробуйте Hansora всего за {price}", popText: "Небольшой пакет для первой покупки. На странице цен его нет.",
       popCredits: "{credits} кредитов", popOnce: "разовый платёж", popBuy: "Получить {credits} кредитов за {price}", popNo: "Нет, спасибо", popEnds: "Осталось",
       popFacts: ["Работает на Hansora и в ChatGPT", "Без подписки", "Кредиты не сгорают"], close: "Закрыть предложение"
     },
     hy: {
-      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", anonSub: "Ստեղծեք անվճար հաշիվ և գնեք, մինչև ժամանակը կլրանա։ Միայն մեկ անգամ։", stripEnds: "Մնաց",
+      pill: "Ողջույնի առաջարկ՝ +{p}% կրեդիտ", pillWaiting: "Տեսնել", ends: "մնաց", stripTag: "Ողջույնի առաջարկ", strip: "+{p}% ԱՆՎՃԱՐ կրեդիտ առաջին գնման համար", stripSub: "Միայն մեկ անգամ։ Երբ ժամանակը լրանա, առաջարկը կվերանա։", anonSub: "Նոր հաճախորդների համար՝ ստեղծեք անվճար հաշիվ և գնեք, մինչև ժամանակը կլրանա։ Միայն մեկ անգամ։", stripEnds: "Մնաց",
       badge: "🎁 +{p}% ԱՆՎՃԱՐ", cardCredits: "կրեդիտ", split: "{base} + <b>{free} անվճար</b>", h: "ժ", m: "ր", sec: "վ", starterLink: "🎁 Մեկնարկային փաթեթ՝ {credits} կրեդիտ {price}-ով",
       popTag: "Ողջույնի առաջարկ · մեկ անգամ", popTitle: "Փորձեք Hansora-ն ընդամենը {price}-ով", popText: "Փոքր փաթեթ առաջին գնման համար։ Գների էջում այն չկա։",
       popCredits: "{credits} կրեդիտ", popOnce: "մեկանգամյա վճարում", popBuy: "Գնել {credits} կրեդիտ՝ {price}", popNo: "Ոչ, շնորհակալություն", popEnds: "Մնաց",
@@ -187,7 +187,25 @@
       return data;
     });
   }
+  // Someone who was signed in on this browser before (a past buyer, or an account whose offer ended) is a returning
+  // customer, not a new visitor: logged out, they see their account's running offer or nothing, never a new clock.
+  function knownAccountOffer() {
+    var found = null;
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i) || "";
+        if (!/^hansora:cgoffer:[0-9a-f-]{36}$/i.test(key)) continue;
+        var saved = JSON.parse(localStorage.getItem(key) || "null");
+        if (!saved) continue;
+        found = found || { active: false };
+        if (saved.active && Date.parse(saved.expires_at) > Date.now()) found = saved;
+      }
+    } catch (_) {}
+    return found;
+  }
   function loadAnonymous() {
+    var known = knownAccountOffer();
+    if (known) { if (known.active) start(known); return; }
     var anon = readAnon();
     if (!anon && !isPricingPage()) return;
     preview().then(function (data) {
