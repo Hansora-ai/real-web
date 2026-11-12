@@ -147,3 +147,17 @@ body.auto-sidebar-collapsed .auto-sidebar .auto-switch-menu{left:0;right:auto;wi
 .auto-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:auto;padding:0 5px;border-radius:9px;background:#ef4444;color:#fff;font:700 11px/1 inherit;font-style:normal}
 body.auto-sidebar-collapsed .auto-side-link .auto-badge{position:absolute;left:24px;top:4px;min-width:16px;height:16px;padding:0 4px;font-size:10px}
 .auto-tab .auto-badge{position:absolute;top:6px;left:calc(50% + 4px);margin:0;min-width:17px;height:17px;font-size:10.5px}
+
+/* "Need help?" in the header and its popup. */
+.auto-header .auto-help{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--border-2,rgba(255,255,255,.14));border-radius:999px;background:transparent;color:var(--text,#f5f5f6);font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.auto-header .auto-help:hover{background:var(--surface-2,rgba(255,255,255,.06))}
+.auto-help-dialog{width:min(460px,calc(100vw - 32px))}
+.auto-help-form{display:grid;gap:12px;padding:20px}
+.auto-help-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.auto-help-head h2{margin:0;font-size:19px}
+.auto-help-intro{margin:0;color:var(--text-2);font-size:14px;line-height:1.5}
+.auto-help-row{display:flex;gap:8px}.auto-help-row select{flex:none;width:auto;min-width:128px}.auto-help-row input{flex:1;min-width:0}
+.auto-help-error{margin:0;color:#f87171;font-size:13px}
+.auto-help-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.auto-help-actions .ui-link{font-size:13px}
+@media(max-width:480px){.auto-help-row{flex-direction:column}.auto-help-row select{width:100%}}

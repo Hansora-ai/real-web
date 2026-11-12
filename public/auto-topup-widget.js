@@ -67,7 +67,7 @@
       + ".atw-chip:hover{background:rgba(139,92,246,.26)}"
       + ".atw-chip .atw-dot{width:9px;height:9px;border-radius:50%;background:rgba(226,232,240,.45)}"
       + ".atw-chip.is-on .atw-dot{background:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.2)}"
-      + ".atw-row{display:block;margin-top:96px;text-align:center}.atw-row.is-mobile{margin-top:18px;order:4}html[data-pricing-plan-mode=\"monthly\"] .atw-row.is-mobile{display:none}"
+      + ".atw-row{display:block;margin-top:96px;text-align:center}.atw-row.is-mobile{margin-top:18px;order:4}html[data-pricing-plan-mode=\"monthly\"] .atw-row.is-mobile{display:none}.atw-row.is-slot{margin-top:16px}.ui-pricing[data-pricing-mode=\"monthly\"] .atw-row.is-slot{display:none}"
       + ".atw-modal{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:16px}"
       + ".atw-modal.is-open{display:flex}"
       + ".atw-backdrop{position:absolute;inset:0;background:rgba(3,6,14,.72);backdrop-filter:blur(6px)}"
@@ -197,7 +197,9 @@
   }
 
   async function start() {
-    var toggle = document.querySelector(".payment-method-box .payment-method-toggle");
+    // Hansora Creative: under the card switch. Hansora Automation: where the page puts [data-auto-topup-slot].
+    var slot = document.querySelector("[data-auto-topup-slot]");
+    var toggle = document.querySelector(".payment-method-box .payment-method-toggle") || slot;
     if (!toggle) return;
     // Wait (briefly, in the background) for the page's Supabase library; nothing on the page waits for this.
     for (var i = 0; i < 20 && !client(); i++) await new Promise(function (r) { setTimeout(r, 250); });
@@ -206,7 +208,7 @@
     if (!state || !state.has_purchase) return;
     injectStyles();
     var row = document.createElement("div");
-    row.className = "atw-row";
+    row.className = slot && toggle === slot ? "atw-row is-slot" : "atw-row";
     chip = document.createElement("button");
     chip.type = "button";
     chip.className = "atw-chip";

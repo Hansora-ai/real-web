@@ -51,6 +51,8 @@
   // Owners type their country; names in their own language and in English both match.
   const englishName = code => { try { return new Intl.DisplayNames(['en'], { type:'region' }).of(code) || code; } catch (_) { return code; } };
   const countryFor = text => { const value = String(text || '').trim().toLowerCase(); return value ? ALL_COUNTRIES.find(code => [countryName(code), englishName(code), code].some(item => item.toLowerCase() === value)) || '' : ''; };
+  // Browsers restore radio buttons on reload or Back: start from nothing chosen, then the saved choice.
+  document.querySelector('input[name="number-mode"][value="none"]').checked = true;
   applySaved(saved);
   $('#line-where').value = line.where ? countryName(line.where) : '';
   $('#phone-loading').hidden = true; $('#phone-app').hidden = false;
@@ -158,6 +160,7 @@
     $('#test-call').scrollIntoView({ behavior:'smooth', block:'center' });
   });
   $('#phone-next').addEventListener('click', async () => {
+    if (step === 1 && !line.where) { showError('Choose where your business is first.'); $('#line-where').focus(); return; }
     if (step === 1 && mode() === 'none') { showError('Choose how customers reach you.'); return; }
     if (step === 1 && mode() === 'new' && line.where && numberIn(line.where)) { showError(`You already have a ${countryName(line.where)} number. Choose another country, or press Edit settings on your number.`); return; }
     if (step === 1 && mode() === 'forward' && !/^\+?[\d\s()-]{8,20}$/.test($('#phone-number').value.trim())) { showError('Enter the business number to forward.'); return; }
@@ -425,7 +428,7 @@
     if (finishing) $('#line-numbers').innerHTML += finishing;
     $('#line-title').textContent = numbers.length ? 'Add another number' : finishing ? 'Or connect another way' : 'How customers reach you';
     $('#line-subtitle').textContent = numbers.length ? 'Only choose one of these to add something new. To change the voice, greeting or languages, press Edit settings above.' : 'Pick one. You can change it later.';
-    $('#line-contact').innerHTML = where && !local ? contactCard() : '';
+    $('#line-contact').innerHTML = where && !local ? contactCard() : where && !numbers.length ? `<div class="contact-box" style="margin:0 0 18px;padding:14px 18px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span><strong style="display:block;font-size:14px">Need help setting it up?</strong><small class="ui-hint">Leave your WhatsApp or Telegram and we’ll set it up with you.</small></span><button class="ui-btn secondary sm" type="button" data-need-help="Phone setup · ${name}">Get help</button></div>` : '';
     $('#sip-import').innerHTML = sipImportHtml();
     renderOutgoing();
     // Each option's details sit right under the options.
