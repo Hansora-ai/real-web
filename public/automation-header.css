@@ -161,3 +161,8 @@ body.auto-sidebar-collapsed .auto-side-link .auto-badge{position:absolute;left:2
 .auto-help-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .auto-help-actions .ui-link{font-size:13px}
 @media(max-width:480px){.auto-help-row{flex-direction:column}.auto-help-row select{width:100%}}
+
+/* Pricing with the sale badge, like the Hansora Creative header. */
+.auto-header .auto-pricing{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.1}
+.auto-header .auto-pricing em{padding:1px 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:9.5px;font-style:normal;font-weight:800;letter-spacing:.04em}
+@media(max-width:900px){.auto-header .auto-pricing{flex-direction:row;gap:8px}}

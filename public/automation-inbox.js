@@ -98,6 +98,15 @@
   document.querySelector('#toggle-ai').addEventListener('click', toggleAi);
   // One button next to the reply box: take over from the AI, or hand the conversation back to it.
   document.querySelector('#take-over').addEventListener('click', () => (current()?.human ? toggleAi() : takeOver()));
+  // Clicking or typing in the reply box of a chat the AI has takes it over (once).
+  let takingOver = false;
+  const takeOverOnTyping = async () => {
+    const conversation = current();
+    if (takingOver || !conversation || conversation.human || conversation.resolved || instagramClosed()) return;
+    takingOver = true;
+    try { await takeOver(); window.HansoraUI?.toast?.('You took over this chat. The AI is paused here until you give it back.', 'info'); } finally { takingOver = false; }
+  };
+  ['focus', 'pointerdown', 'input'].forEach(name => document.querySelector('#human-message').addEventListener(name, takeOverOnTyping));
   // "Call with AI": the AI phones this customer from the business's number and says why it is calling.
   const callBox = document.querySelector('#ai-call-box');
   document.querySelector('#ai-call').addEventListener('click', () => {
@@ -304,16 +313,18 @@
   async function takeOver() { const conversation = current(); conversation.aiActive = false; conversation.human = true; conversation.attention = false; if (!api.isLocalPreview) { const result=await api.db.from('automation_conversations').update({ai_enabled:false,status:'human_handling'}).eq('id',conversation.id).eq('business_id',businessId); if(result.error)return showError(api.displayError(result.error)); } renderConversation(); renderList(); document.querySelector('#human-message').focus(); }
   function setComposerState() {
     const enabled = current().human && !current().resolved && !instagramClosed();
+    // Typing takes the chat over, so the reply box stays usable while the AI is on.
+    const canTakeOver = !current().human && !current().resolved && !instagramClosed();
     const useTemplate = templateMode();
     renderWindow();
     document.querySelector('#human-message').hidden = useTemplate;
     document.querySelector('#template-picker').hidden = !useTemplate;
     if (useTemplate && enabled) loadTemplates();
-    document.querySelector('#human-message').disabled = !enabled;
+    document.querySelector('#human-message').disabled = !enabled && !canTakeOver;
     document.querySelector('#template-select').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').textContent = useTemplate ? 'Send template' : 'Send';
-    document.querySelector('#composer-help').textContent = instagramClosed() ? `${appName(current().channelType)}’s ${windowHours(current().channelType)}-hour window has closed. You can reply after the customer writes again.` : !enabled ? 'The AI is replying. Take over to write yourself.' : current().attention ? 'The AI handed this chat to you. Reply here; the AI stays paused until you give it back.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
+    document.querySelector('#composer-help').textContent = instagramClosed() ? `${appName(current().channelType)}’s ${windowHours(current().channelType)}-hour window has closed. You can reply after the customer writes again.` : canTakeOver ? (current().attention ? 'The AI handed this chat to you. Start typing to reply; the AI pauses in this chat.' : 'The AI is replying. Start typing to take over; the AI pauses in this chat.') : !enabled ? 'The AI is replying. Take over to write yourself.' : current().attention ? 'The AI handed this chat to you. Reply here; the AI stays paused until you give it back.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
     document.querySelector('#take-over').hidden = current().resolved;
     document.querySelector('#ai-call').hidden = !current().phone;
     document.querySelector('#take-over').textContent = current().human ? 'Give back to AI' : 'Take over';
