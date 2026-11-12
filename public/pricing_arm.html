@@ -1680,14 +1680,20 @@ img, video { max-width: 100%; height: auto; }
   function waitForWelcomeOffer(){
     const api = window.HansoraWelcomeOffer;
     if (!api || typeof api.sync !== 'function') return Promise.resolve();
-    return Promise.race([Promise.resolve(api.sync()).catch(function(){}), new Promise(function(resolve){ setTimeout(resolve, 2500); })]);
+    return Promise.race([Promise.resolve(api.sync()).catch(function(){ return null; }), new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 2500); })]);
   }
   async function openPaygCheckout(btn){
     if (!beginCheckoutOpening(btn)) return;
     try {
       const user = await getUser();
       if (!user?.id) { endCheckoutOpening(btn); askToLogIn(btn); return; }
-      await waitForWelcomeOffer();
+      // The offer shown before signing in is not available on this account: the notice explains it, no checkout.
+      const offerState = await waitForWelcomeOffer();
+      if (offerState && offerState.offer_unavailable) {
+        endCheckoutOpening(btn);
+        try { window.HansoraWelcomeOffer.held(btn); } catch (_) {}
+        return;
+      }
       const credits = Number(btn.getAttribute('data-credits') || '0');
       if (!Number.isFinite(credits) || credits <= 0) { endCheckoutOpening(btn); return; }
       const mode = document.documentElement.getAttribute('data-payment-mode') === 'ru' ? 'ru' : 'international';
