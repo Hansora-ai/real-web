@@ -39,7 +39,7 @@ const post = (event, headers = { authorization: AUTH }) => ({ httpMethod: 'POST'
 test('the products match the website packs and plans', () => {
   assert.deepEqual(Object.values(APP_PACKS), [90, 200, 510, 1050]);
   for (const plan of Object.values(APP_PLANS)) assert.ok(CREATIVE_PLANS[plan] || AUTOMATION_PLANS[plan], plan);
-  assert.equal(Object.keys(APP_PLANS).length, 7);
+  assert.equal(Object.keys(APP_PLANS).length, 8); // 3 Creative + Lite, Starter, Growth, Business, Scale (Scale: existing subscribers only)
 });
 
 test('a call without the RevenueCat password is refused', async () => {
