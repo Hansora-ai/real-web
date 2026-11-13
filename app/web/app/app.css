@@ -282,3 +282,6 @@ html.hansora-app .monthly-unlimited-badge { display: none !important; }
 html.hansora-app .auto-header:has(.auto-credits:not([style*="none"])) .app-title,
 html.hansora-app #siteHeader:has(.hansora-mobile-pricing) .app-title { display: none !important; }
 html.hansora-app .auto-header-tools { gap: 8px !important; }
+/* Signed in (credits showing): never show "Log in" next to the photo. */
+html.hansora-app .auto-account:has(.auto-credits:not([style*="none"])) .auto-auth-link,
+html.hansora-app #siteHeader:has(#navCredits:not([style*="none"])) #btnLoginSignup { display: none !important; }
