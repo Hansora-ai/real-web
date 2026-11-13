@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.13-11';
+  var HANSORA_BUILD = '2026.11.13-12';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -74,6 +74,8 @@
     var original = sb.auth.signInWithOAuth.bind(sb.auth);
     sb.auth.signInWithOAuth = async function (args) {
       var options = Object.assign({}, args && args.options);
+      // Apple: the iPhone's own Apple sheet (no web page, no server secret needed).
+      if (args && args.provider === 'apple' && applePlugin()) return appleNativeSignIn(sb, options.redirectTo);
       try { localStorage.setItem(RETURN_KEY, options.redirectTo || location.href); } catch (_) {}
       options.redirectTo = CALLBACK;
       options.skipBrowserRedirect = true;
@@ -639,6 +641,27 @@
 
   // Sign in with Apple (Apple 4.8: required next to Google sign-in). iPhone only: Apple's own sheet (AppDelegate.swift,
   // "hansoraApple"), then Supabase signs in with Apple's identity token.
+  async function appleNativeSignIn(sb, back) {
+    var hex = function (bytes) { return Array.from(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); };
+    var raw = hex(crypto.getRandomValues(new Uint8Array(32)));
+    var hashed = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw))));
+    var res;
+    try {
+      res = (await applePlugin().authorize({ clientId: 'co.hansora.app', redirectURI: 'https://hansora.co', scopes: 'email name', nonce: hashed })).response;
+    } catch (e) {
+      if (/cancel|1001/i.test(String((e && (e.message || e.code)) || ''))) return { data: {}, error: null };
+      return { data: {}, error: { message: 'Apple sign-in failed. Please try again.' } };
+    }
+    var out = await sb.auth.signInWithIdToken({ provider: 'apple', token: res.identityToken, nonce: raw });
+    if (out.error) return out;
+    var name = [res.givenName, res.familyName].filter(Boolean).join(' ');
+    if (name) { try { await sb.auth.updateUser({ data: { full_name: name, name: name } }); } catch (_) {} }
+    var path = '/';
+    try { var u = new URL(back || '/', location.href); path = u.pathname + u.search + u.hash; } catch (_) {}
+    if (/login/.test(path)) path = '/';
+    location.replace(path);
+    return out;
+  }
   // Apple's sheet comes from the Sign in with Apple plugin (registered by Capacitor itself, no custom screen needed).
   function applePlugin() { return native && Cap.getPlatform() === 'ios' && Plugins.SignInWithApple ? Plugins.SignInWithApple : null; }
   function addAppleButton() {
