@@ -265,3 +265,10 @@ html.hansora-app #navCredits, html.hansora-app .credits-pill { cursor: pointer; 
 .app-report-cancel { background: #2a2c34; color: #f3f4f6; }
 .app-report-send { background: #fff; color: #0b0b0f; }
 .app-report-link { display: block; padding: 12px 16px; color: inherit; opacity: .8; font-size: 14px; text-decoration: none; }
+
+/* App: Creative monthly plans are not sold in the app (owner decision); only credit packs on the Creative pricing page. */
+html.hansora-app [data-pricing-choice="monthly"],
+html.hansora-app .monthly-plans,
+html.hansora-app .monthly-benefits,
+html.hansora-app .monthly-unlimited-badge { display: none !important; }
+
