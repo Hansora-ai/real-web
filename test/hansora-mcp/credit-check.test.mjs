@@ -12,13 +12,14 @@ const { resetHealthCache, unavailableFromRuns } = await import('../../lib/hansor
 const token = `x.${Buffer.from(JSON.stringify({ client_id: 'chatgpt', scope: 'email' })).toString('base64url')}.y`;
 
 // Drives the real /mcp handler; only Supabase and the generation runner are simulated.
-async function callTool(name, args, { credits, generations = [], runner = () => ({ status: 202, body: { ok: true, submitted: true } }), kieCheck = null, rest = null, files = {}, veoChosen = false }) {
+async function callTool(name, args, { credits, generations = [], runner = () => ({ status: 202, body: { ok: true, submitted: true } }), kieCheck = null, rest = null, files = {}, veoChosen = false, userId = 'user-1' }) {
   const submitted = [];
+  const bearer = userId === 'user-1' ? token : `x.${Buffer.from(JSON.stringify({ client_id: 'chatgpt', scope: 'email', sub: userId })).toString('base64url')}.y`;
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, options = {}) => {
     const href = String(url);
     const reply = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-    if (href.endsWith('/auth/v1/user')) return reply(200, { id: 'user-1', email: 'user@example.com' });
+    if (href.endsWith('/auth/v1/user')) return reply(200, { id: userId, email: 'user@example.com' });
     const custom = rest && href.includes('/rest/v1/') ? await rest(href, options) : undefined;
     if (custom) return custom;
     // A first video already steered to Grok once, so this Veo request is ChatGPT's deliberate exception.
@@ -40,7 +41,7 @@ async function callTool(name, args, { credits, generations = [], runner = () => 
     const response = await hansoraMcp(new Request('https://hansora.test/mcp', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${bearer}`,
         'Content-Type': 'application/json',
         Accept: 'application/json, text/event-stream',
         'MCP-Protocol-Version': '2025-06-18'
@@ -367,12 +368,12 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /only Veo 3\.1 Lite \(8 seconds\), Gemini Omni Flash and Gemini Omni \(up to 10 seconds\) can speak it/);
   assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
   assert.match(guide, /not from how long or detailed your own prompt is/);
-  assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - A new user's first video \(no video yet\): Grok Video, 720p, 6 seconds, or 8 seconds if the user asked for 7 or 8 seconds\. Use Veo 3\.1 Lite \(8 seconds, 720p\) only if people in the video must speak a language other than English \(Chinese included\)\./);
+  assert.match(guide, /3\. Simple: generate directly, do not ask\. If the user already has a video in this conversation, step 8 comes first: keep that model\.\n   - A new user's first video \(no video yet\): use first_video from the account when it is there \(Grok Video, 720p, 6 seconds, or Wan 3\.0, 480p, 5 seconds; Hansora picks it per user\)\. Without it: Grok Video, 720p, 6 seconds, or 8 seconds if the user asked for 7 or 8 seconds \(Grok only\)\. Use Veo 3\.1 Lite \(8 seconds, 720p\) only if people in the video must speak a language other than English \(Chinese included\)\./);
   assert.match(guide, /7\. Not for a new user's first video \(step 3 uses Wan 3\.0 for that\)\. Only when the user sent their own photo and wants it changed .*Grok Video and Veo 3\.1 Lite use a photo only as the first frame, so with them first make the changed picture with Nano Banana 2\.1 \(1K, 3 credits\).*Without a photo from the user, never make a picture first, neither with Hansora nor with your own image tool: send the text straight to the video model\..*Start the video as soon as the picture is ready \(get_generation\), without asking.*Models that take reference images \(Seedance 2\.5, Kling 4\.0, Wan 3\.0, Gemini Omni Flash, Gemini Omni\) get the photo as the character reference instead, with no picture step\./);
   assert.match(guide, /If you are not sure, treat it as complex/);
   // One short question with plain choices, so users who know no model names can pick. The model of
   // the user's last video comes first, so "ok" keeps the price they already know.
-  assert.match(guide, /4\. Complex: first call get_account to see the balance and last_video \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with these options/);
+  assert.match(guide, /4\. Complex: first read the balance and last_video from the account \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with these options/);
   assert.match(guide, /If the balance covers none of the options, do not ask and do not show their prices/);
   assert.match(guide, /   - Same quality as your last video: .*it always comes first and is the default\.\n   - Our best, cinema quality: Seedance 2\.5, 720p\n   - High quality, lower price: Kling 4\.0, 720p\n   - Good quality, budget: Wan 3\.0, 720p\n/);
   assert.match(guide, /list it only once, first, as "Same quality as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, list Kling 4\.0 first as "Recommended: great quality, smooth motion", then Seedance 2\.5, then Wan 3\.0\./);
@@ -387,7 +388,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /13\. Sexual or NSFW requests: Hansora does not create them with any model\. Do not submit them\./);
   assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
   assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
-  assert.match(guide, /8\. Stay with the model\. .*also when Hansora started their first video on a model their free credits cover\. Keep using it and its resolution for the next simple videos without asking; for complex videos ask step 4 with it listed first\. Never move to a model that costs more on your own.*start only after they agree\./);
+  assert.match(guide, /8\. Stay with the model\. .*also when Hansora started their first video on a model their free credits cover\. Keep using it and its resolution for the next simple videos without asking \(except after Seedance 2\.5, Seedance 2\.0 or Kling 4\.0: then ask the step 3 question, once per conversation\); for complex videos ask step 4 with it listed first\. Never move to a model that costs more on your own.*start only after they agree\./);
   assert.ok(list.result.structuredContent.models.every((model) => !('video_selection_guide' in model)));
 
   const seedance = await callTool('get_model', { model_id: 'seedance25' }, { credits: 30 });
@@ -717,7 +718,9 @@ test('the balance names the model of the user\'s last video, so ChatGPT can offe
     [{ provider: 'Wan 3.0', meta: { model: 'wan/3-0-video', engine: 'wan-3' } }, 'wan-3'],
     [{ provider: 'Kling-5s', meta: { model: 'kling/v2-5-turbo-image-to-video-pro' } }, 'kling25'],
     [{ provider: 'Seedance 2.5', meta: { model: 'bytedance/seedance-2-5', engine: 'seedance-2.5' } }, 'seedance25'],
-    [{ provider: 'Gemini Omni 1.1 Flash', meta: { model: 'gemini-omni-flash-1-1', engine: 'gemini-omni-flash-1-1' } }, 'gemini-omni-flash-1-1'],
+    // ChatGPT uses Gemini Omni 1.2 Flash in place of 1.1, so a last video on 1.1 is offered as 1.2.
+    [{ provider: 'Gemini Omni 1.1 Flash', meta: { model: 'gemini-omni-flash-1-1', engine: 'gemini-omni-flash-1-1' } }, 'gemini-omni-flash-1-2'],
+    [{ provider: 'Gemini Omni 1.2 Flash', meta: { model: 'google/gemini-omni-flash-1-2', engine: 'gemini-omni-flash-1-2', model_id: 'gemini-omni-flash-1-2' } }, 'gemini-omni-flash-1-2'],
     [{ provider: 'Kling 3 Turbo', meta: { model: 'kling/v3-turbo-text-to-video', engine: 'kling-v3-turbo' } }, 'kling3-turbo']
   ];
   for (const [row, modelId] of saved) {
@@ -1421,4 +1424,210 @@ test('a photo ChatGPT leaves out after Hansora switched the model is put back be
   const later = await callTool('create_generation', { model_id: 'grok-video', prompt: 'Two foxes in a meadow', duration: 6, resolution: '720p' }, { credits: 3, rest: world({ started: [{ id: 'g1' }] }) });
   assert.equal(later.submitted.length, 1);
   assert.ok(!JSON.stringify(later.submitted[0].payload).includes(photo));
+});
+
+test('a credit refusal shows the real price of the model that will be used, and always the hansora.co account line', async () => {
+  // The owner's case on 8 Nov: a 6-second video on Seedance 2.5 (the model of their last video) with 10 credits.
+  // The price shown is the one they will pay after adding credits, never a cheaper model's.
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'seedance25', prompt: 'A nature video: mountains, meadows and a stream at sunrise', duration: 6, resolution: '720p'
+  }, { credits: 1, rest: returningUser });
+  assert.equal(submitted.length, 0);
+  const value = result.structuredContent;
+  assert.equal(value.credits_available, 10);
+  assert.equal(value.credits_required, 228);
+  assert.equal(value.lowest_price_video, undefined);
+  assert.match(value.next_step, /this request needs 228 Hansora credits and their balance is 10 credits/);
+  assert.equal(value.account_url, 'https://hansora.co/?from=chatgpt_credits');
+  assert.ok(value.next_step.includes('"Your Hansora balance and account are at [hansora.co](https://hansora.co/?from=chatgpt_credits)."'));
+  assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
+
+  // A request that some option covers still ends with the account line.
+  const covered = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A cat', duration: 30, resolution: '1080p' }, { credits: 3, rest: returningUser });
+  assert.ok(covered.result.structuredContent.options_within_balance.length > 0);
+  assert.match(covered.result.structuredContent.next_step, /Your Hansora balance and account are at \[hansora\.co\]/);
+});
+
+test('a simple video after an expensive model asks once: same quality as the last video, or a cheaper model', async () => {
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.match(VIDEO_SELECTION_GUIDE, /Exception, a simple video after an expensive one: if the user's last video .* was made with Seedance 2\.5, Seedance 2\.0 or Kling 4\.0, do not generate directly\./);
+  assert.match(VIDEO_SELECTION_GUIDE, /1\) "Same quality as your last video": that model at the resolution of the last video \(first, the default\); 2\) "More affordable, great for a simple video like this": Grok Video, 720p/);
+  assert.match(VIDEO_SELECTION_GUIDE, /If the user answers vaguely \("ok", "go", "you choose"\), use option 1\./);
+  assert.match(VIDEO_SELECTION_GUIDE, /ask this only once per conversation/);
+  assert.match(VIDEO_SELECTION_GUIDE, /except after Seedance 2\.5, Seedance 2\.0 or Kling 4\.0: then ask the step 3 question, once per conversation/);
+});
+
+test('with too few credits after an expensive model, a simple request also hears the Grok price', async () => {
+  // The owner's test on 8 Nov: a 6-second cosmos documentary, last video Seedance 2.5, 10 credits.
+  const { result } = await callTool('create_generation', { model_id: 'seedance25', prompt: 'A 6 second documentary about the cosmos', duration: 6, resolution: '720p' }, { credits: 1, rest: returningUser });
+  const value = result.structuredContent;
+  assert.equal(value.credits_required, 228);
+  assert.deepEqual(value.simple_video_option, { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18 });
+  assert.match(value.next_step, /a simple video like this can also be made with Grok Video, 720p, for 18 credits, while Seedance 2\.5 matches the quality of their last video\. Do not start either one\./);
+  assert.ok(value.next_step.includes('hansora.co/?from=chatgpt_credits'));
+  assert.doesNotMatch(JSON.stringify(result), /buy|purchase|top.?up|upgrade|subscribe/i);
+  // Odd lengths round up to Grok's even lengths; cheap models get no extra line.
+  const seven = await callTool('create_generation', { model_id: 'kling40', prompt: 'A lake', duration: 7, resolution: '720p' }, { credits: 1, rest: returningUser });
+  assert.equal(seven.result.structuredContent.simple_video_option.settings.duration, 8);
+  const grok = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A lake', duration: 10, resolution: '720p' }, { credits: 1, rest: returningUser });
+  assert.equal(grok.result.structuredContent.simple_video_option, undefined);
+});
+
+test('fewer round trips: list_models brings the account, a Seedance/Kling quote brings the Grok price', async () => {
+  const list = await callTool('list_models', { category: 'video' }, { credits: 1 });
+  const value = list.result.structuredContent;
+  assert.equal(value.account.credits, 10);
+  assert.ok(value.video_selection_guide.includes('list_models (for video) includes the user\'s balance and last_video as "account"; use it and call get_account only when it is missing.'));
+  // Image lists stay as they were.
+  const images = await callTool('list_models', { category: 'image' }, { credits: 1 });
+  assert.equal('account' in images.result.structuredContent, false);
+
+  const seedance = await callTool('quote_generation', { model_id: 'seedance25', duration: 6, resolution: '720p' }, { credits: 1 });
+  assert.equal(seedance.result.structuredContent.credits, 228);
+  assert.deepEqual(seedance.result.structuredContent.simple_video_option, { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: 18 });
+  const grok = await callTool('quote_generation', { model_id: 'grok-video', duration: 6, resolution: '720p' }, { credits: 1 });
+  assert.equal(grok.result.structuredContent.simple_video_option, undefined);
+  const withVideo = await callTool('quote_generation', { model_id: 'seedance25', duration: 6, resolution: '720p', has_video_input: true, source_video_duration: 5 }, { credits: 1 });
+  assert.equal(withVideo.result.structuredContent.simple_video_option, undefined);
+});
+
+
+test('first-video test: new users are split by user id, 75% Wan 3.0 (480p, 5 s, the 30 free credits) and 25% Grok (720p, 6 s)', async () => {
+  const { firstVideoGroup, firstVideoPlan } = await import('../../lib/hansora-mcp/credits.mjs');
+  const wanUser = '00000000-0000-0000-0000-00000000000a';
+  const grokUser = '00000000-0000-0000-0000-000000000003';
+  assert.equal(firstVideoGroup(wanUser), 'wan');
+  assert.equal(firstVideoGroup(grokUser), 'grok');
+  assert.equal(firstVideoGroup('user-1'), 'grok');
+  // About 75% Wan over many ids; everyone in the Grok group now was in it before (odd last digit).
+  const ids = Array.from({ length: 1000 }, (_, index) => `00000000-0000-0000-0000-${index.toString(16).padStart(12, '0')}`);
+  const wans = ids.filter((id) => firstVideoGroup(id) === 'wan').length;
+  assert.ok(wans > 700 && wans < 800, String(wans));
+  assert.ok(ids.filter((id) => firstVideoGroup(id) === 'grok').every((id) => parseInt(id.slice(-1), 16) % 2 === 1));
+  assert.deepEqual({ ...firstVideoPlan(wanUser), internal_credits: undefined }, { model_id: 'wan-3', model_name: 'Wan 3.0', settings: { duration: 5, resolution: '480p' }, credits: 30, internal_credits: undefined, group: 'wan' });
+  assert.equal(firstVideoPlan(grokUser).credits, 18);
+
+  // The account tells ChatGPT the plan for a user with no video on the free credits.
+  const account = await callTool('get_account', {}, { credits: 3, userId: wanUser });
+  assert.deepEqual(account.result.structuredContent.first_video, { model_id: 'wan-3', model_name: 'Wan 3.0', settings: { duration: 5, resolution: '480p' }, credits: 30 });
+  const list = await callTool('list_models', { category: 'video' }, { credits: 3, userId: grokUser });
+  assert.equal(list.result.structuredContent.account.first_video.model_id, 'grok-video');
+  // Not for a user who bought credits.
+  const paid = await callTool('get_account', {}, { credits: 90, userId: wanUser });
+  assert.equal(paid.result.structuredContent.first_video, undefined);
+
+  // A Wan-half first video sent to Grok comes back once with Wan 3.0; nothing is submitted.
+  const steered = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A cat chef cooks pasta in a sunny kitchen', duration: 6, resolution: '720p' }, { credits: 3, userId: wanUser });
+  assert.equal(steered.submitted.length, 0);
+  const value = steered.result.structuredContent;
+  assert.equal(value.error, 'first_video_on_wan');
+  assert.deepEqual(value.next_option, { model_id: 'wan-3', model_name: 'Wan 3.0', settings: { duration: 5, resolution: '480p' }, credits: 30 });
+  assert.match(value.next_step, /call create_generation right now with model_id wan-3, duration 5, resolution 480p/);
+  assert.match(value.next_step, /only if people in the video must speak a language other than English .* exactly as before with grok-video/);
+  // The Grok half sent to Grok goes straight through.
+  const grok = await callTool('create_generation', { model_id: 'grok-video', prompt: 'A cat chef cooks pasta', duration: 6, resolution: '720p' }, { credits: 3, userId: grokUser });
+  assert.equal(grok.submitted.length, 1);
+  // A Wan-half first video from a photo keeps the photo rules (no Wan steer).
+  const photo = await callTool('create_generation', { model_id: 'grok-video', prompt: 'Animate this photo', duration: 6, resolution: '720p', image_urls: ['https://example.com/me.png'] }, { credits: 3, userId: wanUser });
+  assert.notEqual(photo.result.structuredContent?.error, 'first_video_on_wan');
+});
+
+test('a new Wan-half user whose free credits do not cover the request starts on Wan 3.0, 5 s, 480p', async () => {
+  const { result, submitted } = await callTool('create_generation', { model_id: 'seedance25', prompt: 'A dragon fights a knight on a castle wall', duration: 10, resolution: '720p' }, { credits: 3, userId: '00000000-0000-0000-0000-00000000000c' });
+  assert.equal(submitted.length, 0);
+  const value = result.structuredContent;
+  assert.equal(value.first_generation, true);
+  assert.deepEqual(value.options_within_balance[0].settings, { duration: 5, resolution: '480p' });
+  assert.equal(value.options_within_balance[0].model_id, 'wan-3');
+  assert.match(value.next_step, /Call create_generation right now with model_id wan-3 and duration 5, resolution 480p/);
+});
+
+test('every ready result points to the user\'s Hansora history; the guide has prompt-writing rules', async () => {
+  const ready = await callTool('get_generation', { run_id: 'run-ready' }, {
+    credits: 3, generations: [{ id: 'g1', created_at: new Date().toISOString(), provider: 'Grok', kind: 'video', result_url: 'https://cdn.test/v.mp4', meta: { run_id: 'run-ready', status: 'done' } }]
+  });
+  const step = JSON.stringify(ready.result.structuredContent);
+  assert.ok(step.includes('https://hansora.co/usage.html?from=chatgpt_result'), step.slice(0, 400));
+  assert.doesNotMatch(step, /buy|purchase|top.?up|upgrade|subscribe/i);
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.match(VIDEO_SELECTION_GUIDE, /14\. Writing the prompt \(every model, every video\)/);
+  assert.match(VIDEO_SELECTION_GUIDE, /a laptop or phone screen faces the viewer/);
+  assert.match(VIDEO_SELECTION_GUIDE, /one clear main action per 5 to 6 seconds/);
+});
+
+test('an image that fails on the provider side is remade once on a backup at no more than its price; the card follows', async () => {
+  const reply = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const old = 'user-1-mcp-1794400000000-img00001';
+  // 1. Creating an image saves what it was made from.
+  const saved = [];
+  await callTool('create_generation', { model_id: 'nano-banana-2-1', prompt: 'A realistic cosmos with a spiral galaxy', resolution: '1K', aspect_ratio: '16:9' }, {
+    credits: 3, rest: (href, options) => { if (href.includes('/rest/v1/chatgpt_events') && options?.method === 'POST') { saved.push(JSON.parse(options.body)); return new Response(null, { status: 201 }); } return undefined; }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const recipe = saved.find((row) => row.tool === 'image_recipe');
+  assert.ok(recipe, 'image recipe saved');
+  assert.equal(recipe.model_id, 'nano-banana-2-1');
+  assert.equal(recipe.details.prompt, 'A realistic cosmos with a spiral galaxy');
+  assert.equal(recipe.details.aspect_ratio, '16:9');
+
+  // 2. It fails with a temporary issue: the next check starts it once on Nano Banana 2 Lite (3 credits, not more).
+  const failedRow = { id: 'i-old', kind: 'image', provider: 'Nano Banana 2.1', created_at: '2026-11-10T19:50:00Z', result_url: null,
+    meta: { run_id: old, model: 'nano-banana-2-1', model_id: 'nano-banana-2-1', status: 'failed', error: 'Internal server error, please try again later.', charged_cost: 0.3, refund_amount: 0.3 } };
+  const world = ({ retryRow = null, pendingVideo = false } = {}) => (href) => {
+    if (href.includes('/rest/v1/chatgpt_events') && href.includes('image_recipe')) return reply([{ model_id: 'nano-banana-2-1', details: recipe.details }]);
+    if (href.includes('/rest/v1/chatgpt_events') && href.includes('pending_video')) return reply(pendingVideo ? [{ model_id: 'grok-video', details: { picture_run: old } }] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(encodeURIComponent(`${old}-retry`))) return reply(retryRow ? [retryRow] : []);
+    if (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`)) return reply([failedRow]);
+    if (href.includes('/rest/v1/user_generations')) return reply([]);
+    return undefined;
+  };
+  const first = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world() });
+  assert.equal(first.submitted.length, 1);
+  assert.equal(first.submitted[0].model_id, 'nano-banana-2-lite');
+  assert.equal(first.submitted[0].payload.run_id, `${old}-retry`);
+  const shown = first.result.structuredContent;
+  assert.equal(shown.run_id, old);
+  assert.equal(shown.status, 'processing');
+  assert.match(shown.message, /^Nano Banana 2\.1 had a temporary issue on the provider's side, so this image was made with Nano Banana 2 Lite instead\./);
+
+  // 3. Later checks follow the new run and start nothing more.
+  const retryRow = { id: 'i-new', kind: 'image', provider: 'Nano Banana 2 Lite', created_at: '2026-11-10T19:51:00Z',
+    result_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/user-1/new.png',
+    meta: { run_id: `${old}-retry`, model_id: 'nano-banana-2-lite', status: 'done', charged_cost: 0.3 } };
+  const later = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world({ retryRow }) });
+  assert.equal(later.submitted.length, 0);
+  assert.equal(later.result.structuredContent.status, 'ready');
+  assert.equal(later.result.structuredContent.result_url, retryRow.result_url);
+
+  // 4. A picture made first for a video is left alone; a content refusal is not retried.
+  const pending = await callTool('get_generation', { run_id: old }, { credits: 3, rest: world({ pendingVideo: true }) });
+  assert.equal(pending.submitted.length, 0);
+  const blockedRow = { ...failedRow, meta: { ...failedRow.meta, error: 'The prompt may contain nudity or sexual content.' } };
+  const blocked = await callTool('get_generation', { run_id: old }, { credits: 3, rest: (href) => (href.includes('/rest/v1/user_generations') && href.includes(`eq.${encodeURIComponent(old)}`) ? reply([blockedRow]) : world()(href)) });
+  assert.equal(blocked.submitted.length, 0);
+});
+
+
+test('ChatGPT lists Gemini Omni 1.2 Flash instead of 1.1, priced per second at a 35% margin, with Kie 1.2 inputs', async () => {
+  const { listModels, getModel, quote, buildGenerationPayload } = await import('../../lib/hansora-mcp/registry.mjs');
+  const ids = listModels({ category: 'video' }).map((model) => model.id);
+  assert.ok(ids.includes('gemini-omni-flash-1-2'));
+  assert.ok(!ids.includes('gemini-omni-flash-1-1'));
+  assert.equal(getModel('gemini-omni-flash-1-1').id, 'gemini-omni-flash-1-2');
+  assert.equal(getModel('gemini-omni-flash-1-2').availability, 'available');
+  assert.equal(quote('gemini-omni-flash-1-2', { duration: 4, resolution: '720p' }).displayedCredits, 28);
+  assert.equal(quote('gemini-omni-flash-1-2', { duration: 10, resolution: '1080p' }).displayedCredits, 77);
+  assert.equal(quote('gemini-omni-flash-1-2', { duration: 15, resolution: '1080p' }).displayedCredits, 116);
+  // An edit is billed by its input video's length.
+  assert.equal(quote('gemini-omni-flash-1-2', { resolution: '720p', has_video_input: true, source_video_duration: 8 }).displayedCredits, 56);
+  // Reference images (up to 6), 'auto' shape with a photo, integer duration, no Gemini voices.
+  const refs = buildGenerationPayload('gemini-omni-flash-1-2', { prompt: 'Make them dance', image_urls: Array.from({ length: 8 }, (_, i) => `https://cdn.test/${i}.png`), duration: 12, resolution: '1080p' }, 'user-1', 'run-12345678');
+  assert.equal(refs.image_urls.length, 6);
+  assert.equal(refs.aspect_ratio, 'auto');
+  assert.equal(refs.duration, 12);
+  assert.equal(refs.audio_ids, undefined);
+  const text = buildGenerationPayload('gemini-omni-flash-1-2', { prompt: 'A city at night', duration: 20, resolution: '4K' }, 'user-1', 'run-12345679');
+  assert.equal(text.aspect_ratio, '16:9');
+  assert.equal(text.duration, 15);
+  assert.equal(text.resolution, '4k');
 });

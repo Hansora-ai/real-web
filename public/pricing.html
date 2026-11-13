@@ -1688,7 +1688,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
     if (!beginCheckoutOpening(btn)) return;
     try {
       const user = await getUser();
-      if (!user?.id) { endCheckoutOpening(btn); return; }
+      if (!user?.id) { endCheckoutOpening(btn); askToLogIn(btn); return; }
       const base = (btn.getAttribute('data-product') || '').trim();
       const planId = (btn.getAttribute('data-plan-id') || '').trim();
       if (!base || !planId) { endCheckoutOpening(btn); return; }
@@ -1702,11 +1702,25 @@ Pay once, use credits across image, video, product card, audio, and creative too
       console.error('Unable to open checkout.', error);
     }
   }
+  // The welcome offer (public/chatgpt-offer.js) must know about a purchase made right after signing up: wait for it,
+  // at most 2.5 seconds, before opening the checkout.
+  function waitForWelcomeOffer(){
+    const api = window.HansoraWelcomeOffer;
+    if (!api || typeof api.sync !== 'function') return Promise.resolve();
+    return Promise.race([Promise.resolve(api.sync()).catch(function(){ return null; }), new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 2500); })]);
+  }
   async function openPaygCheckout(btn){
     if (!beginCheckoutOpening(btn)) return;
     try {
       const user = await getUser();
-      if (!user?.id) { endCheckoutOpening(btn); return; }
+      if (!user?.id) { endCheckoutOpening(btn); askToLogIn(btn); return; }
+      // The offer shown before signing in is not available on this account: the notice explains it, no checkout.
+      const offerState = await waitForWelcomeOffer();
+      if (offerState && offerState.offer_unavailable) {
+        endCheckoutOpening(btn);
+        try { window.HansoraWelcomeOffer.held(btn); } catch (_) {}
+        return;
+      }
       const credits = Number(btn.getAttribute('data-credits') || '0');
       if (!Number.isFinite(credits) || credits <= 0) { endCheckoutOpening(btn); return; }
       const mode = document.documentElement.getAttribute('data-payment-mode') === 'ru' ? 'ru' : 'international';
@@ -1729,6 +1743,59 @@ Pay once, use credits across image, video, product card, audio, and creative too
     } catch (error) {
       endCheckoutOpening(btn);
       console.error('Unable to open checkout.', error);
+    }
+  }
+  // A logged-out visitor who clicks Buy: open the login popup and remember the package. After logging in
+  // (email in the popup, or Google, which comes back to this page through header.js), checkout opens for it.
+  const PENDING_BUY_KEY = 'hansora:pricing-buy-return';
+  const PENDING_BUY_MS = 15 * 60 * 1000;
+  let loginWatch = null;
+  function askToLogIn(btn){
+    const planId = btn.getAttribute('data-plan-id');
+    const credits = btn.getAttribute('data-credits');
+    const pending = {
+      path: `${location.pathname}${location.search}`,
+      buy: planId ? `plan:${planId}` : `credits:${credits}`,
+      mode: document.documentElement.getAttribute('data-payment-mode') === 'ru' ? 'ru' : 'international',
+      createdAt: Date.now()
+    };
+    try { localStorage.setItem(PENDING_BUY_KEY, JSON.stringify(pending)); } catch (_) {}
+    if (window.HansoraHeader && typeof window.HansoraHeader.openAuth === 'function') window.HansoraHeader.openAuth('login');
+    if (loginWatch) return;
+    const started = Date.now();
+    loginWatch = setInterval(function(){
+      if (Date.now() - started > PENDING_BUY_MS) { clearInterval(loginWatch); loginWatch = null; return; }
+      getUser().then(function(user){
+        if (!user?.id || !loginWatch) return;
+        clearInterval(loginWatch); loginWatch = null;
+        resumePendingBuy();
+      }).catch(function(){});
+    }, 1500);
+  }
+  function readPendingBuy(){
+    try {
+      const saved = JSON.parse(localStorage.getItem(PENDING_BUY_KEY) || 'null');
+      if (!saved || Date.now() - Number(saved.createdAt || 0) > PENDING_BUY_MS) return null;
+      return saved;
+    } catch (_) { return null; }
+  }
+  function resumePendingBuy(){
+    const saved = readPendingBuy();
+    try { localStorage.removeItem(PENDING_BUY_KEY); } catch (_) {}
+    if (!saved || typeof saved.buy !== 'string') return;
+    try { if (window.HansoraHeader && typeof window.HansoraHeader.closeAuth === 'function') window.HansoraHeader.closeAuth(); } catch (_) {}
+    const [kind, value] = saved.buy.split(':');
+    if (!/^[a-z0-9_]{1,40}$/i.test(value || '')) return;
+    if (kind === 'plan') {
+      setPlanMode('monthly');
+      const btn = document.querySelector(`.buy-subscription[data-plan-id="${value}"]`);
+      if (btn) openSubscriptionCheckout(btn);
+    } else if (kind === 'credits') {
+      setPlanMode('payg');
+      setPaymentMode(saved.mode === 'ru' ? 'ru' : 'international');
+      const buttons = Array.from(document.querySelectorAll(`.buy-credits[data-credits="${value}"]`));
+      const btn = buttons.find(function(item){ return item.offsetParent !== null; }) || buttons[0];
+      if (btn) openPaygCheckout(btn);
     }
   }
   const checkoutWarmup = getUser().then(function(user){
@@ -1775,6 +1842,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
       if (payg) { ev.preventDefault(); openPaygCheckout(payg); }
     }, true);
     const user = await checkoutWarmup;
+    if (user?.id && readPendingBuy()) resumePendingBuy();
     if (user?.id) {
       const sub = await loadCurrentSubscription(user.id);
       if (sub?.plan_id) markCurrentPlan(sub.plan_id);
@@ -2032,4 +2100,5 @@ Pay once, use credits across image, video, product card, audio, and creative too
 </script>
 <script defer src="/header.js"></script>
 
+<script defer src="/auto-topup-widget.js"></script>
 </body></html>

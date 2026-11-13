@@ -1,3 +1,4 @@
+import { sendWaitingNote } from '../../lib/automation/waiting-note.mjs';
 import { isKeptAvatar, keepAvatar } from '../../lib/automation/avatars.mjs';
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
@@ -142,7 +143,7 @@ export async function handler(event){
     // A photo, video or shared post the AI could understand is answered too; a story mention is not.
     const aiText=String(message.text||'').trim()||(message.kind!=='story_mention'?understood?.aiText||'':'');
     if(!aiText){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,no_text:true});}
-    if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
+    if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await sendWaitingNote({businessId:account.business_id,conversation,settings,provider:'instagram',send:text=>sendInstagramText({instagramUserId:account.provider_resource_id,recipientId:message.senderId,text,accessToken:decryptSecret(credential)})});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
 
     pendingReply={businessId:account.business_id,conversationId:conversation.id,customer:contact.display_name,channel:'Instagram DM'};
     const session=take(await sessionP);

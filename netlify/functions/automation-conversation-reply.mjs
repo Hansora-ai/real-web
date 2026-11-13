@@ -22,10 +22,13 @@ export async function handler(event){
     if(!isUuid(body.business_id)||!isUuid(body.conversation_id)||(!template&&(!message||message.length>1000)))return json(400,{error:'invalid_reply'});
     const business=await first(`/rest/v1/automation_businesses?id=eq.${body.business_id}&owner_user_id=eq.${user.id}&select=id&limit=1`);if(!business)return json(404,{error:'business_not_found'});
     const conversation=await first(`/rest/v1/automation_conversations?id=eq.${body.conversation_id}&business_id=eq.${business.id}&select=*&limit=1`);if(!conversation)return json(404,{error:'conversation_not_found'});
-    if(conversation.ai_enabled||conversation.status!=='human_handling')return json(409,{error:'take_over_before_replying'});
+    // The AI handed this chat over (AI off) or the team took it: the owner can reply without pressing Take over.
+    if(conversation.ai_enabled!==false||['resolved','archived'].includes(conversation.status))return json(409,{error:'take_over_before_replying'});
     const contact=await first(`/rest/v1/automation_contacts?id=eq.${conversation.contact_id}&business_id=eq.${business.id}&select=*&limit=1`);if(!contact)return json(404,{error:'contact_not_found'});
-    if(!['instagram_dm','whatsapp','telegram','messenger','tiktok'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
+    if(!['instagram_dm','whatsapp','telegram','messenger','tiktok','website'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
     let providerMessageId='',provider='meta';
+    // Website chat: the reply is saved and the visitor's chat bubble shows it within a few seconds (it checks for new messages).
+    if(conversation.channel_type==='website'){if(template)return json(400,{error:'template_whatsapp_only'});provider='website';return await saveReply();}
     // A TikTok comment chat: TikTok does not allow messaging someone who only commented.
     if(conversation.channel_type==='tiktok'&&String(conversation.external_thread_id||'').startsWith('comment:'))return json(409,{error:'tiktok_comment_thread',message:'This person only commented. TikTok doesn’t allow sending them a message; reply under the comment in the TikTok app.'});
     // TikTok: replies are possible for 48 hours after the customer's last message.
@@ -73,7 +76,7 @@ export async function handler(event){
     async function saveReply(){
       const idempotency=`human:${user.id}:${body.conversation_id}:${providerMessageId||Date.now()}`;
       const saved=await serviceInsert('automation_messages',{business_id:business.id,conversation_id:conversation.id,external_message_id:providerMessageId||null,idempotency_key:idempotency,direction:'outbound',sender_type:'human',content_type:'text',content:message,status:'sent',billable:false,provider,provider_message_id:providerMessageId||null,metadata:{sent_by_user_id:user.id,...(template?{whatsapp_template:{name:template.name,language:template.language}}:{})},occurred_at:new Date().toISOString()});
-      await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:message.slice(0,1000),last_message_at:new Date().toISOString(),human_owner_user_id:user.id});
+      await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:message.slice(0,1000),last_message_at:new Date().toISOString(),human_owner_user_id:user.id,status:'human_handling'});
       return json(200,{ok:true,message_id:saved?.id||null});
     }
   }catch(error){console.error('automation-conversation-reply error',{message:error?.message,status:error?.status,providerStatus:error?.providerStatus});return json(Number(error?.status)||500,{error:Number(error?.status)>=500?'manual_reply_unavailable':String(error?.message||'manual_reply_failed')});}

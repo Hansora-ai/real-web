@@ -1,5 +1,5 @@
 const crypto=require('node:crypto');
-const {json,db}=require('../../lib/henshin/common.cjs');
+const {json,db,mediaURL}=require('../../lib/henshin/common.cjs');
 const {internal,audioPending}=require('../../lib/henshin/jobs.cjs');
 const {restoreSoundtrack}=require('../../lib/henshin/server-media.cjs');
 const shared=require('./kie-check.js');
@@ -35,6 +35,13 @@ exports.handler=async event=>{
   return json(200,{ok:true});
  }catch(e){
   const terminal=!!e.permanent||attempts>=3;
+  // Never leave a paid, finished video undelivered: when the original soundtrack cannot be added after the last try,
+  // the user gets the generated video as it is (without the original sound) instead of nothing.
+  const fallback=terminal&&mediaURL(meta.generated_video_url)?meta.generated_video_url:'';
+  if(fallback){
+   await db(`user_generations?id=eq.${id}&meta->>audio_lease=eq.${lease}`,{method:'PATCH',body:JSON.stringify({result_url:fallback,meta:{...meta,status:'done',audio_restored:true,audio_fallback:true,audio_restored_at:new Date().toISOString(),audio_lease_until:0,audio_retry_at:null,audio_error:e.message,completed_at:new Date().toISOString()}})});
+   return json(200,{ok:true,status:'done',audio_fallback:true});
+  }
   await db(`user_generations?id=eq.${id}&meta->>audio_lease=eq.${lease}`,{method:'PATCH',body:JSON.stringify({meta:{...meta,status:terminal?'audio_failed':'audio_retry',audio_lease_until:0,audio_error:e.message,audio_retry_at:terminal?null:new Date(Date.now()+60000*2**(attempts-1)).toISOString()}})});
   return json(200,{ok:false,status:terminal?'audio_failed':'audio_retry'});
  }

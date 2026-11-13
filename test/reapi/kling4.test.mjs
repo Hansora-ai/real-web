@@ -7,17 +7,20 @@ import {PGlite} from '@electric-sql/pglite';
 const require=createRequire(import.meta.url);
 process.env.SUPABASE_URL='https://example.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY='test-service';
+process.env.SUPABASE_BUCKET='uploads';
 process.env.REAPI_API_KEY='test-reapi';
 process.env.KIE_API_KEY='test-kie';
 const pricing=require('../../public/kling4-pricing.js');
 const {build}=require('../../lib/kling4/request.cjs');
 const launch25=require('../../netlify/functions/run-kling-40.js').handler;
+const launchUpscale=require('../../netlify/functions/run-upscale.js').handler;
 const lite=require('../../netlify/functions/run-henshin.js').handler;
 const checker=require('../../netlify/functions/kling4-check.js').handler;
 const {transition}=require('../../lib/reapi/billing.cjs');
 const db=new PGlite(),uid=randomUUID(),other=randomUUID();
 const source='https://example.supabase.co/storage/v1/object/public/generation-history/source.mp4';
 const fixture=await readFile(new URL('../henshin/fixtures/source.mp4',import.meta.url));
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6JcAAAAASUVORK5CYII=', 'base64');
 const originalFetch=globalThis.fetch;
 let posts=[],stored=[],tasks=new Map(),reject=false,uncertain=false,providerStatus=200,failArchive=false,inputFixture=fixture;
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
@@ -31,6 +34,7 @@ before(async()=>{
  create table user_generations(id uuid primary key,user_id uuid,provider text,kind text,prompt text,result_url text,meta jsonb,created_at timestamptz default now());grant select,update on user_generations to authenticated,service_role;`);
  await db.exec(await readFile(new URL('../../supabase/18_reapi_generation_billing.sql',import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../../supabase/20_kling4_generation_billing.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../../supabase/33_kie_image_upscale_billing.sql',import.meta.url),'utf8'));
  globalThis.fetch=async(raw,opts={})=>{
   const u=new URL(raw),body=opts.body&&typeof opts.body==='string'?JSON.parse(opts.body):null;
   if(u.hostname==='api.kie.ai'){
@@ -44,6 +48,7 @@ before(async()=>{
    }
    return json({code:200,data:tasks.get(u.searchParams.get('taskId'))},providerStatus);
   }
+  if(u.hostname==='cdn.kie.ai' && u.pathname.endsWith('.png'))return new Response(png,{headers:{'content-type':'image/png'}});
   if(u.hostname==='cdn.kie.ai')return failArchive?new Response(null,{status:503}):new Response(fixture,{headers:{'content-type':'video/mp4'}});
   if(u.pathname.includes('/auth/'))return json({id:opts.headers.Authorization==='Bearer other'?other:uid});
   if(u.pathname.includes('/storage/')){
@@ -94,6 +99,79 @@ test('Kling 25% quotes and the explicit Lite price use the same units as the UI'
  assert.equal(pricing.quote({duration:10,inputSeconds:15}).billedSeconds,25);
  assert.equal(pricing.quote({inputSeconds:10.08,lite:true}).duration,11);
  assert.throws(()=>pricing.quote({resolution:'480p'}));
+});
+
+test('video upscale verifies the clip price before reserving once and submitting the KIE resolution', async () => {
+ const uploadUrl = 'https://example.supabase.co/storage/v1/object/public/uploads/images/user-uploads/2026/11/10/source.mp4';
+ const request = event({kind:'video', fileUrl:uploadUrl, videoResolution:'2K', durationSeconds:1, expected_credits:3});
+ const stale = await launchUpscale(request);
+ assert.equal(stale.statusCode, 409, stale.body);
+ const quote = JSON.parse(stale.body);
+ assert.equal(quote.duration_seconds, 5);
+ assert.equal(quote.displayed_credits, 12);
+ assert.equal(posts.length, 0);
+ assert.equal(await balance(), 1000);
+
+ request.body = JSON.stringify({...JSON.parse(request.body), expected_credits:12});
+ const results = await Promise.all([launchUpscale(request), launchUpscale(request)]);
+ assert.ok(results.every(result => [200, 201].includes(result.statusCode)), JSON.stringify(results));
+ assert.equal(posts.length, 1);
+ assert.equal(posts[0].model, 'video/upscale');
+ assert.equal(posts[0].input.resolution, '2K');
+ assert.notEqual(posts[0].input.video_url, uploadUrl);
+ assert.deepEqual(stored[0].bytes, fixture);
+ const row = (await saved())[0];
+ assert.equal(row.meta.tool_feature, 'video-upscale');
+ assert.equal(await balance(), 998.8);
+
+ tasks.get(row.meta.task_id).state = 'fail';
+ await Promise.all([checker(polling(row)), checker(polling(row))]);
+ assert.equal(await balance(), 1000);
+});
+test('KIE Image Upscale verifies dimensions, reserves once, saves images and refunds failures', async () => {
+ const imagePricing = require('../../public/image-upscale-pricing.js');
+ for (const [factor, credits] of [[1,2], [2,2], [4,4], [8,10]]) {
+  assert.equal(imagePricing.quote({factor, width:1024, height:1024}).displayedCredits, credits);
+ }
+ assert.equal(imagePricing.quote({factor:2, width:1200, height:1200}).displayedCredits, 4);
+ assert.throws(() => imagePricing.quote({factor:8, width:1200, height:1200}), /too large/);
+ assert.throws(() => imagePricing.quote({factor:2, width:9000, height:400}), /too large/);
+ const fileUrl = 'https://example.supabase.co/storage/v1/object/public/uploads/images/user-uploads/2026/11/11/source.png';
+ inputFixture = png;
+ const options = {kind:'image', fileUrl, upscale_factor:4, expected_credits:2};
+ const stale = await launchUpscale(event({...options, expected_credits:1}));
+ assert.equal(stale.statusCode, 409, stale.body);
+ assert.equal(JSON.parse(stale.body).displayed_credits, 2);
+ assert.equal(posts.length, 0);
+ assert.equal(await balance(), 1000);
+
+ const request = event(options);
+ const results = await Promise.all([launchUpscale(request), launchUpscale(request)]);
+ assert.ok(results.every(response => [200, 201].includes(response.statusCode)), JSON.stringify(results));
+ assert.equal(posts.length, 1);
+ assert.equal(posts[0].model, 'kie/image-upscale');
+ assert.equal(posts[0].input.upscale_factor, '4');
+ assert.notEqual(posts[0].input.image_url, fileUrl);
+ assert.deepEqual(stored[0].bytes, png);
+ const row = (await saved())[0];
+ assert.equal(row.kind, 'upscale');
+ assert.equal(row.meta.media_type, 'image');
+ assert.equal(row.meta.output_width, 4);
+ assert.equal(await balance(), 999.8);
+
+ Object.assign(tasks.get(row.meta.task_id), {
+  state:'success', model:'image/upscale', resultJson:JSON.stringify({resultUrls:['https://cdn.kie.ai/result.png']})
+ });
+ const done = JSON.parse((await checker(polling(row))).body);
+ assert.equal(done.status, 'done');
+ assert.match(done.image_url, /generation-history.*\.png$/);
+ assert.equal(await balance(), 999.8);
+
+ await launchUpscale(event(options));
+ const failed = (await saved()).find(job => job.id !== row.id);
+ tasks.get(failed.meta.task_id).state = 'fail';
+ await Promise.all([checker(polling(failed)), checker(polling(failed))]);
+ assert.equal(await balance(), 999.8);
 });
 test('documented Kling task IDs containing model-version dots are accepted',async()=>{
  const id='task_kling-4.0-reference-to-video_abc123';assert.equal(require('../../lib/kling4/client.cjs').taskId({code:200,data:{taskId:id}}),id);

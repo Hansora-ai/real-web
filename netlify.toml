@@ -17,6 +17,10 @@
 [functions."run-heygen-avatar"]
   timeout = 60
 
+[functions."run-upscale"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
 [functions."heygen-check"]
   timeout = 60
 

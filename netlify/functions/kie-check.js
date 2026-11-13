@@ -41,9 +41,13 @@ exports.handler = async (event) => {
     }
 
     const inputUrls = collectKnownInputUrls(row);
-    const state = await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin" || row.meta?.provider_api === "market");
+    // GPT Image 2.6 runs on reAPI but is saved and refunded like every other image here.
+    const state = row.meta?.provider_api === "reapi-image"
+      ? await require('../../lib/reapi/client.cjs').imageState(ids.taskId)
+      : await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin" || row.meta?.provider_api === "market");
 
     if (state.failed) {
+      if (/insufficient credits\. required|credits? insufficient|balance isn.?t enough|insufficient (kie )?balance|please top up|provider temporarily unavailable\. nothing was charged/i.test(String(state.error || ""))) await import('../../lib/business/provider-balance.mjs').then((m) => m.alertProviderError(state.error)).catch(() => {});
       const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed", code: state.code ?? null });
       if (refund.waiting_for_charge) {
         return json(200, {
@@ -64,6 +68,8 @@ exports.handler = async (event) => {
     }
 
     if (state.done && state.urls.length) {
+      const blocked = await blockUnsafeResult({ row, ids, urls: state.urls });
+      if (blocked) return json(200, blocked);
       const savedUrls = await markDone({ row, ids, urls: state.urls, enqueueAudio: event.henshinFinishInline !== true });
       return json(200, {
         ok: true,
@@ -103,6 +109,7 @@ async function handlePost(event) {
 
   const status = callbackStatus(body);
   if (status === "failed") {
+    if (/insufficient credits\. required|credits? insufficient|balance isn.?t enough|insufficient (kie )?balance|please top up|provider temporarily unavailable\. nothing was charged/i.test(String(failureReason(body) || ""))) await import('../../lib/business/provider-balance.mjs').then((m) => m.alertProviderError(failureReason(body))).catch(() => {});
     const refund = await failAndRefundOnce({ row, ids, reason: failureReason(body), code: failureCode(body) });
     if (refund.waiting_for_charge) {
       return json(200, {
@@ -123,6 +130,8 @@ async function handlePost(event) {
 
   const urls = collectResultUrls(body, collectKnownInputUrls(row));
   if (urls.length) {
+    const blocked = await blockUnsafeResult({ row, ids, urls });
+    if (blocked) return json(200, blocked);
     const savedUrls = await markDone({ row, ids, urls });
     return json(200, {
       ok: true,
@@ -256,6 +265,24 @@ async function fetchKieState(taskId, excludeUrls = [], market = false) {
   return { pending: true };
 }
 
+// A sexual or suggestive result is never saved or shown: the generation fails and is refunded.
+async function blockUnsafeResult({ row, ids, urls }) {
+  const safety = require('../../lib/content-safety/result-check.cjs');
+  const check = await safety.checkResults(urls, row.kind);
+  if (!check.blocked) return null;
+  const refund = await failAndRefundOnce({ row, ids, reason: safety.BLOCKED_MESSAGE, code: 'CONTENT_POLICY_BLOCKED' });
+  if (refund.waiting_for_charge) return { ok: false, status: 'pending', waiting_for_charge: true };
+  return {
+    ok: false,
+    failed: true,
+    status: 'failed',
+    code: 'CONTENT_POLICY_BLOCKED',
+    error: safety.BLOCKED_MESSAGE,
+    refunded: !!refund.refunded,
+    refund_amount: refund.amount || 0
+  };
+}
+
 async function markDone({ row, ids, urls, enqueueAudio = true }) {
   const archive = await archiveResultUrls({ row, urls });
   if (row.meta?.source_feature === 'henshin' && row.meta.source_audio_url && !archive.paths.length) {
@@ -282,7 +309,11 @@ async function markDone({ row, ids, urls, enqueueAudio = true }) {
   };
 
   if (['reapi','kie-kling4'].includes(row.meta?.source)) {
-    if (!archive.paths.length) throw Error('Result archival is pending.');
+    // Upscales may exceed history storage limits. Keep the provider
+    // download when the result is too large to archive.
+    const oversizedUpscale = ['video-upscale', 'image-upscale'].includes(row.meta?.tool_feature)
+      && archive.errors.some(error => /archive_file_too_large|archive_upload_413|entity too large|maximum allowed size/i.test(error));
+    if (!archive.paths.length && !oversizedUpscale) throw Error('Result archival is pending.');
     const audio = row.meta.source_feature === 'henshin' && !require('../../lib/henshin/jobs.cjs').isNativeLite(row) && (row.meta.source_audio_url || row.meta.finish_video);
     const completion = await require('../../lib/reapi/billing.cjs').transition('complete', row.id, row.user_id, {
       result_url: audio ? null : savedUrls[0],

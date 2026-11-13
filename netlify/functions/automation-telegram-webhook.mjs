@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { first, serviceInsert, serviceUpdate, supabaseRequest } from '../../lib/automation/db.mjs';
+import { first, rows, serviceInsert, serviceUpdate, supabaseRequest } from '../../lib/automation/db.mjs';
 import { telegramApi, telegramBot, telegramWebhookSecret } from '../../lib/automation/telegram.mjs';
 
 // The bot answers the owner in their Telegram app language (Armenian, Russian, else English). Telegram has no official
@@ -12,7 +12,8 @@ const TEXTS = {
     step1: bot => `✅ Step 1 done. Now the last step:\n\nTelegram → Settings → Telegram Business → Chatbots → add @${bot}, choose which chats it may answer, and allow "Reply to messages".\n\nYour AI employee will then answer your customers here, as you.`,
     notLinked: 'This Telegram account is not linked to Hansora yet. Open Hansora → your AI employee → Channels → Telegram, press Connect and follow the link first.',
     connected: '✅ Connected. Go back to Hansora and press "Go live" to let your AI employee answer your Telegram customers.',
-    allowReply: 'Almost done: in Telegram Business → Chatbots, allow the bot to "Reply to messages".'
+    allowReply: 'Almost done: in Telegram Business → Chatbots, allow the bot to "Reply to messages".',
+    inUse: name => `⚠️ This Telegram account is already connected to the AI employee "${name}" in Hansora.\n\nOne Telegram account answers for one AI employee. To use it here, first open "${name}" → Channels → Telegram and press Disconnect, then press Connect here again.`
   },
   hy: {
     help: 'Բարև։ Սա Hansora-ի օգնական բոտն է։ Միացնելու համար բացեք Hansora → ձեր AI աշխատակիցը → Channels → Telegram և սեղմեք Connect։',
@@ -21,7 +22,8 @@ const TEXTS = {
     step1: bot => `✅ Առաջին քայլն ավարտված է։ Վերջին քայլը՝\n\nTelegram → Settings → Telegram Business → Chatbots → ավելացրեք @${bot}, ընտրեք, թե որ չատերին կարող է պատասխանել, և թույլատրեք «Reply to messages»։\n\nԴրանից հետո ձեր AI աշխատակիցը կպատասխանի ձեր հաճախորդներին այստեղ՝ ձեր անունից։`,
     notLinked: 'Այս Telegram հաշիվը դեռ միացված չէ Hansora-ին։ Բացեք Hansora → ձեր AI աշխատակիցը → Channels → Telegram, սեղմեք Connect և նախ անցեք հղումով։',
     connected: '✅ Միացված է։ Վերադարձեք Hansora և սեղմեք «Go live», որպեսզի ձեր AI աշխատակիցը սկսի պատասխանել Telegram-ի հաճախորդներին։',
-    allowReply: 'Գրեթե պատրաստ է․ Telegram Business → Chatbots բաժնում թույլատրեք բոտին «Reply to messages»։'
+    allowReply: 'Գրեթե պատրաստ է․ Telegram Business → Chatbots բաժնում թույլատրեք բոտին «Reply to messages»։',
+    inUse: name => `⚠️ Այս Telegram հաշիվն արդեն միացված է Hansora-ի «${name}» AI աշխատակցին։\n\nՄեկ Telegram հաշիվը պատասխանում է միայն մեկ AI աշխատակցի համար։ Այստեղ օգտագործելու համար նախ բացեք «${name}» → Channels → Telegram, սեղմեք Disconnect, ապա այստեղ նորից սեղմեք Connect։`
   },
   ru: {
     help: 'Здравствуйте! Это бот-помощник Hansora. Чтобы подключить его, откройте Hansora → ваш AI-сотрудник → Channels → Telegram и нажмите Connect.',
@@ -30,7 +32,8 @@ const TEXTS = {
     step1: bot => `✅ Первый шаг выполнен. Последний шаг:\n\nTelegram → Настройки → Telegram для бизнеса → Чат-боты → добавьте @${bot}, выберите, в каких чатах он может отвечать, и разрешите «Отвечать на сообщения».\n\nПосле этого ваш AI-сотрудник будет отвечать клиентам здесь от вашего имени.`,
     notLinked: 'Этот аккаунт Telegram ещё не связан с Hansora. Откройте Hansora → ваш AI-сотрудник → Channels → Telegram, нажмите Connect и сначала перейдите по ссылке.',
     connected: '✅ Подключено. Вернитесь в Hansora и нажмите «Go live», чтобы AI-сотрудник начал отвечать вашим клиентам в Telegram.',
-    allowReply: 'Почти готово: в Telegram для бизнеса → Чат-боты разрешите боту «Отвечать на сообщения».'
+    allowReply: 'Почти готово: в Telegram для бизнеса → Чат-боты разрешите боту «Отвечать на сообщения».',
+    inUse: name => `⚠️ Этот аккаунт Telegram уже подключён к AI-сотруднику «${name}» в Hansora.\n\nОдин аккаунт Telegram отвечает только за одного AI-сотрудника. Чтобы использовать его здесь, сначала откройте «${name}» → Channels → Telegram и нажмите Disconnect, затем снова нажмите Connect здесь.`
   }
 };
 const textsFor = user => TEXTS[String(user?.language_code || '').slice(0, 2).toLowerCase()] || TEXTS.en;
@@ -76,7 +79,28 @@ async function handleStart(message) {
     await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { safe_config: { ...resource.safe_config, premium: false, checked_user_id: String(message.from?.id || '') }, updated_at: new Date().toISOString() });
     return reply(t.premium);
   }
+  // One Telegram account answers for one AI employee: if it is already live on another employee, say so and stop.
+  // (An unfinished earlier attempt that never went live is simply replaced when this one connects.)
+  const live = rows(await supabaseRequest(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&status=eq.active&business_id=neq.${resource.business_id}&safe_config->>telegram_user_id=eq.${encodeURIComponent(String(message.from.id))}&select=business_id&limit=5`).catch(() => []));
+  for (const other of live) {
+    const channel = await first(`/rest/v1/automation_channel_connections?business_id=eq.${other.business_id}&channel_type=eq.telegram&select=status&limit=1`).catch(() => null);
+    if (channel?.status !== 'connected') continue;
+    const owner = await first(`/rest/v1/automation_businesses?id=eq.${other.business_id}&select=name,automation_agents(display_name)&limit=1`).catch(() => null);
+    const agent = Array.isArray(owner?.automation_agents) ? owner.automation_agents[0] : owner?.automation_agents;
+    const name = String(agent?.display_name || owner?.name || 'another AI employee').slice(0, 80);
+    await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { safe_config: { ...resource.safe_config, premium: true, in_use_by: name, checked_user_id: String(message.from.id) }, updated_at: new Date().toISOString() });
+    return reply(t.inUse(name));
+  }
   await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { safe_config: { ...resource.safe_config, premium: true, telegram_user_id: String(message.from.id), telegram_username: String(message.from.username || ''), telegram_name: [message.from.first_name, message.from.last_name].filter(Boolean).join(' '), linked_at: new Date().toISOString() }, updated_at: new Date().toISOString() });
+  // The bot may already be in this owner's Telegram Business (connected before, to this or another employee):
+  // Telegram then sends no new "added" update, so ask Telegram and finish the connection right away.
+  const earlier = await first(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&id=neq.${resource.id}&safe_config->>telegram_user_id=eq.${encodeURIComponent(String(message.from.id))}&safe_config->>business_connection_id=not.is.null&select=safe_config&order=updated_at.desc&limit=1`).catch(() => null);
+  const connectionId = earlier?.safe_config?.business_connection_id;
+  if (connectionId) {
+    const existing = await telegramApi('getBusinessConnection', { business_connection_id: connectionId }).catch(() => null);
+    const connection = existing?.result || existing;
+    if (connection?.is_enabled && String(connection.user?.id || '') === String(message.from.id)) return handleConnection(connection);
+  }
   const bot = await telegramBot().catch(() => ({ username: '' }));
   return reply(t.step1(bot.username));
 }
@@ -97,6 +121,13 @@ async function handleConnection(connection) {
   }
   // A reconnect can reuse the same connection id: an old, disconnected row with it would block this one.
   await supabaseRequest(`/rest/v1/automation_provider_resources?business_id=eq.${resource.business_id}&provider=eq.telegram&resource_type=eq.telegram_account&provider_resource_id=eq.${encodeURIComponent(String(connection.id))}&id=neq.${resource.id}`, { method: 'DELETE' }).catch(() => null);
+  // One Telegram account answers for one AI employee: a link to another employee (an earlier attempt) is ended,
+  // otherwise its messages could keep going to that employee.
+  const others = await supabaseRequest(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&status=in.(pending,active)&business_id=neq.${resource.business_id}&or=(provider_resource_id.eq.${encodeURIComponent(String(connection.id))},safe_config->>telegram_user_id.eq.${encodeURIComponent(userId)})&select=id,business_id`).then(rows).catch(() => []);
+  for (const other of others) {
+    await serviceUpdate('automation_provider_resources', `id=eq.${other.id}`, { status: 'revoked', updated_at: new Date().toISOString() }).catch(() => null);
+    await serviceUpdate('automation_channel_connections', `business_id=eq.${other.business_id}&channel_type=eq.telegram`, { status: 'not_connected', connected_account_label: null, connected_at: null, updated_at: new Date().toISOString() }).catch(() => null);
+  }
   await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { provider_resource_id: String(connection.id), status: 'active', safe_config: { ...resource.safe_config, business_connection_id: String(connection.id), user_chat_id: String(connection.user_chat_id || ''), can_reply: canReply, connected_at: new Date().toISOString() }, last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   await serviceUpdate('automation_channel_connections', `business_id=eq.${resource.business_id}&channel_type=eq.telegram`, { status: 'connecting', provider: 'telegram', connected_account_label: label, connected_at: new Date().toISOString(), last_error_code: canReply ? null : 'telegram_reply_not_allowed', updated_at: new Date().toISOString() });
   await notify(canReply ? t.connected : t.allowReply);
@@ -106,6 +137,8 @@ async function queueMessage(event, message) {
   if (!message.business_connection_id || message.chat?.type !== 'private') return;
   // Sent by a bot on the owner's behalf (our own replies and photos): not a customer message and not the owner typing.
   if (message.sender_business_bot) return;
+  // The owner's own chat with a bot (for example our "✅ Connected" messages): not a customer.
+  if (message.from?.is_bot || message.chat?.is_bot) return;
   const externalEventId = `telegram:${message.business_connection_id}:${message.chat.id}:${message.message_id}`;
   const inserted = await serviceInsert('automation_webhook_events', { provider: 'telegram', external_event_id: externalEventId, event_type: 'telegram_business_message', payload: message, status: 'received' }, { ignoreDuplicates: true });
   const row = inserted || await first(`/rest/v1/automation_webhook_events?provider=eq.telegram&external_event_id=eq.${encodeURIComponent(externalEventId)}&select=id,status&limit=1`);
