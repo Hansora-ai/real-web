@@ -41,7 +41,8 @@ const PLAN_PRODUCTS = {
   pdt_0NpeQYSDnUbMHvi9Gt6yy: "automation_starter_monthly",
   pdt_0NpeQrUC5gB5c3Jk8zZE9: "automation_growth_monthly",
   pdt_0NpeR55QAhlX4ViGBTCF4: "automation_business_monthly",
-  pdt_0NpeRJQYrPCPCIK9zbEb1: "automation_scale_monthly"
+  // Was Scale ($199, retired with no subscribers); the same Dodo product is now sold as Lite Monthly ($25).
+  pdt_0NpeRJQYrPCPCIK9zbEb1: "automation_lite_monthly"
 };
 
 // Dodo signs every webhook (Standard Webhooks): HMAC-SHA256 of "<webhook-id>.<webhook-timestamp>.<body>" with the
