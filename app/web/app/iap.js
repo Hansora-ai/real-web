@@ -19,6 +19,7 @@
     premium_monthly: 'co.hansora.app.creative.premium.monthly',
     pro_monthly: 'co.hansora.app.creative.pro.monthly',
     pro_max_monthly: 'co.hansora.app.creative.promax.monthly',
+    automation_lite_monthly: 'co.hansora.app.automation.lite.monthly',
     automation_starter_monthly: 'co.hansora.app.automation.starter.monthly',
     automation_growth_monthly: 'co.hansora.app.automation.growth.monthly',
     automation_business_monthly: 'co.hansora.app.automation.business.monthly',

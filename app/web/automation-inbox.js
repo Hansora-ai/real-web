@@ -34,7 +34,7 @@
   let selectedId = conversations.some(item => item.id === params.get('conversation')) ? params.get('conversation') : conversations[0]?.id || null;
   let activeFilter = 'all', activeStage = '', activePlatform = '';
   // Platform chips: only the apps this AI employee is connected to (plus any app that already has chats here).
-  const PLATFORMS = [['instagram','Instagram'],['tiktok','TikTok'],['telegram','Telegram'],['phone','Phone']];
+  const PLATFORMS = [['instagram','Instagram'],['tiktok','TikTok'],['whatsapp','WhatsApp'],['telegram','Telegram'],['website','Website'],['phone','Phone']];
   let connectedPlatforms = new Set();
   try {
     if (!api.isLocalPreview) {
@@ -49,14 +49,43 @@
   app.hidden = false;
   renderList(); renderConversation();
   refreshPhotos();
+  // New messages appear without reloading: the list is checked every 30 seconds while the page is open.
+  // Chats that changed are marked unread (bold), and the open chat gets its new messages.
+  if (!api.isLocalPreview) setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const fresh = await loadConversations();
+      const before = new Map(conversations.map(item => [item.id, item]));
+      let openChanged = false;
+      conversations = fresh.map(item => {
+        const old = before.get(item.id);
+        if (!old) return { ...item, unread: true };
+        const changed = item.lastAt && item.lastAt !== old.lastAt;
+        if (changed && item.id === selectedId) openChanged = true;
+        return { ...item, avatarUrl: old.avatarUrl || item.avatarUrl, messages: old.messages, lastCustomerAt: old.lastCustomerAt, unread: changed ? item.id !== selectedId : old.unread };
+      });
+      if (openChanged && current()) await loadMessages(current());
+      renderList();
+      if (openChanged) renderConversation();
+    } catch (_) {}
+  }, 30000);
 
   document.querySelector('#inbox-filters').addEventListener('click', event => {
     const button = event.target.closest('button[data-filter]'); if (!button) return;
     activeFilter = button.dataset.filter;
     document.querySelectorAll('#inbox-filters button').forEach(item => item.classList.toggle('active', item === button));
+    // "Needs you 2" must show those 2: a stage chosen earlier (Done, Ready…) no longer hides them.
+    activeStage = ''; document.querySelectorAll('#stage-filters button').forEach(item => item.classList.remove('active'));
     renderList();
   });
   document.querySelector('#inbox-search').addEventListener('input', renderList);
+  document.querySelector('#conversation-list').addEventListener('click', event => {
+    if (!event.target.closest('[data-clear-filters]')) return;
+    activeFilter = 'all'; activeStage = ''; activePlatform = ''; document.querySelector('#inbox-search').value = '';
+    document.querySelectorAll('#inbox-filters button').forEach(item => item.classList.toggle('active', item.dataset.filter === 'all'));
+    document.querySelectorAll('#stage-filters button').forEach(item => item.classList.remove('active'));
+    renderList();
+  });
   document.querySelector('#conversation-list').addEventListener('click', async event => {
     const button = event.target.closest('[data-conversation-id]'); if (!button) return;
     selectedId = button.dataset.conversationId;
@@ -69,6 +98,15 @@
   document.querySelector('#toggle-ai').addEventListener('click', toggleAi);
   // One button next to the reply box: take over from the AI, or hand the conversation back to it.
   document.querySelector('#take-over').addEventListener('click', () => (current()?.human ? toggleAi() : takeOver()));
+  // Clicking or typing in the reply box of a chat the AI has takes it over (once).
+  let takingOver = false;
+  const takeOverOnTyping = async () => {
+    const conversation = current();
+    if (takingOver || !conversation || conversation.human || conversation.resolved || instagramClosed()) return;
+    takingOver = true;
+    try { await takeOver(); window.HansoraUI?.toast?.('You took over this chat. The AI is paused here until you give it back.', 'info'); } finally { takingOver = false; }
+  };
+  ['focus', 'pointerdown', 'input'].forEach(name => document.querySelector('#human-message').addEventListener(name, takeOverOnTyping));
   // "Call with AI": the AI phones this customer from the business's number and says why it is calling.
   const callBox = document.querySelector('#ai-call-box');
   document.querySelector('#ai-call').addEventListener('click', () => {
@@ -96,7 +134,7 @@
     } catch (error) { status.textContent = error.message; button.disabled = false; }
   });
   document.querySelector('#resolve-conversation').addEventListener('click', async () => {
-    const conversation = current(); conversation.resolved = !conversation.resolved;
+    const conversation = current(); conversation.resolved = !conversation.resolved; conversation.attention = false;
     if (!api.isLocalPreview) {
       const result = await api.db.from('automation_conversations').update({status:conversation.resolved?'resolved':conversation.human?'human_handling':'open',resolved_at:conversation.resolved?new Date().toISOString():null}).eq('id',conversation.id).eq('business_id',businessId);
       if (result.error) return showError(api.displayError(result.error));
@@ -123,6 +161,7 @@
         if (!response.ok) { if (result.error === 'whatsapp_template_required') { current().lastCustomerAt = 0; setComposerState(); } return showError(replyError(result.error)); }
       }
       current().messages.push({role:'human',text,time:'Now',counted:false}); input.value = '';
+      if (current().attention) { current().attention = false; renderList(); window.HansoraInboxBadge?.refresh(); }
       if (template) { document.querySelector('#template-select').value = ''; renderTemplateFields(); }
       renderMessages(); renderUsage();
     } finally { setComposerState(); }
@@ -169,11 +208,11 @@
       const matchesFilter = activeFilter === 'all' || (activeFilter === 'unread' && conversation.unread) || (activeFilter === 'attention' && conversation.attention) || (activeFilter === 'human' && conversation.human);
       return matchesFilter && (!activePlatform || platformOf(conversation.channelType || conversation.channel) === activePlatform) && (!activeStage || conversation.stage === activeStage) && (!query || `${conversation.name} ${conversation.handle} ${conversation.preview} ${conversation.channel} ${conversation.interest || ''}`.toLowerCase().includes(query));
     });
-    const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone','Telegram':'telegram','Messenger':'messenger','TikTok':'tiktok'};
+    const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone','Telegram':'telegram','Messenger':'messenger','TikTok':'tiktok','Website chat':'globe'};
     document.querySelector('#conversation-list').innerHTML = visible.length ? visible.map(conversation => {
       const state = conversation.resolved ? '' : conversation.attention ? '<span class="ui-badge red sm">Needs you</span>' : conversation.human ? '<span class="ui-badge amber sm">Your team</span>' : '';
-      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${stageChip(conversation)}${outcomeBadges(conversation)}${state}</span></button>`;
-    }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match.' : 'New conversations from your connected apps appear here.'}</div>`;
+      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}${conversation.attention && !conversation.resolved ? ' urgent' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${stageChip(conversation)}${outcomeBadges(conversation)}${state}</span></button>`;
+    }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match these filters. <button class="ui-btn ghost sm" type="button" data-clear-filters>Show all</button>' : 'New conversations from your connected apps appear here.'}</div>`;
     updateTopCounts();
   }
 
@@ -264,26 +303,30 @@
   }
 
   async function toggleAi() {
-    const conversation = current(); conversation.aiActive = !conversation.aiActive; conversation.human = !conversation.aiActive;
+    const conversation = current(); conversation.aiActive = !conversation.aiActive; conversation.human = !conversation.aiActive; conversation.attention = false;
     if (!api.isLocalPreview) {
       const result = await api.db.from('automation_conversations').update({ai_enabled:conversation.aiActive,status:conversation.human?'human_handling':'open'}).eq('id',conversation.id).eq('business_id',businessId);
       if (result.error) return showError(api.displayError(result.error));
     }
     renderConversation(); renderList();
   }
-  async function takeOver() { const conversation = current(); conversation.aiActive = false; conversation.human = true; if (!api.isLocalPreview) { const result=await api.db.from('automation_conversations').update({ai_enabled:false,status:'human_handling'}).eq('id',conversation.id).eq('business_id',businessId); if(result.error)return showError(api.displayError(result.error)); } renderConversation(); renderList(); document.querySelector('#human-message').focus(); }
+  async function takeOver() { const conversation = current(); conversation.aiActive = false; conversation.human = true; conversation.attention = false; if (!api.isLocalPreview) { const result=await api.db.from('automation_conversations').update({ai_enabled:false,status:'human_handling'}).eq('id',conversation.id).eq('business_id',businessId); if(result.error)return showError(api.displayError(result.error)); } renderConversation(); renderList(); document.querySelector('#human-message').focus(); }
   function setComposerState() {
     const enabled = current().human && !current().resolved && !instagramClosed();
+    // Typing takes the chat over, so the reply box stays usable while the AI is on.
+    const canTakeOver = !current().human && !current().resolved && !instagramClosed();
     const useTemplate = templateMode();
     renderWindow();
     document.querySelector('#human-message').hidden = useTemplate;
     document.querySelector('#template-picker').hidden = !useTemplate;
     if (useTemplate && enabled) loadTemplates();
-    document.querySelector('#human-message').disabled = !enabled;
+    document.querySelector('#human-message').disabled = !enabled && !canTakeOver;
     document.querySelector('#template-select').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').textContent = useTemplate ? 'Send template' : 'Send';
-    document.querySelector('#composer-help').textContent = instagramClosed() ? `${appName(current().channelType)}’s ${windowHours(current().channelType)}-hour window has closed. You can reply after the customer writes again.` : !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
+    const lastWrote = current().lastCustomerAt ? new Date(current().lastCustomerAt).toLocaleDateString([], { day: 'numeric', month: 'short' }) : '';
+    document.querySelector('#human-message').placeholder = instagramClosed() ? `Replies open again when ${current().name || 'the customer'} writes` : 'Write a reply…';
+    document.querySelector('#composer-help').textContent = instagramClosed() ? `${appName(current().channelType)} only allows replies within ${windowHours(current().channelType)} hours of the customer’s last message${lastWrote ? ` (${lastWrote})` : ''}. This is ${appName(current().channelType)}’s rule, not Hansora’s: when they write again, you can reply here.` : canTakeOver ? (current().attention ? 'The AI handed this chat to you. Start typing to reply; the AI pauses in this chat.' : 'The AI is replying. Start typing to take over; the AI pauses in this chat.') : !enabled ? 'The AI is replying. Take over to write yourself.' : current().attention ? 'The AI handed this chat to you. Reply here; the AI stays paused until you give it back.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
     document.querySelector('#take-over').hidden = current().resolved;
     document.querySelector('#ai-call').hidden = !current().phone;
     document.querySelector('#take-over').textContent = current().human ? 'Give back to AI' : 'Take over';
@@ -297,7 +340,7 @@
   }
   function templateMode() { const remaining = windowRemaining(current()); return current()?.channelType === 'whatsapp' && remaining !== null && remaining <= 0; }
   function instagramClosed() { const remaining = windowRemaining(current()); return current()?.channelType !== 'whatsapp' && remaining !== null && remaining <= 0; }
-  function appName(type) { return ({instagram_dm:'Instagram',messenger:'Messenger',tiktok:'TikTok'})[type] || 'The app'; }
+  function appName(type) { return ({instagram_dm:'Instagram',messenger:'Messenger',tiktok:'TikTok',website:'Website chat'})[type] || 'The app'; }
   function windowHours(type) { return type === 'tiktok' ? 48 : 24; }
   function renderWindow() {
     const box = document.querySelector('#wa-window'); const remaining = windowRemaining(current());
@@ -356,7 +399,9 @@
     document.querySelector('#stage-filters').hidden = !staged;
     document.querySelectorAll('#stage-filters [data-stage-count]').forEach(element => { element.textContent = conversations.filter(item => item.stage === element.dataset.stageCount).length; });
     document.querySelector('#open-count').textContent = conversations.filter(item => !item.resolved).length;
-    document.querySelector('#attention-count').textContent = conversations.filter(item => item.attention && !item.resolved).length;
+    const waiting = conversations.filter(item => item.attention && !item.resolved).length;
+    document.querySelector('#attention-count').textContent = waiting;
+    window.HansoraInboxBadge?.set(waiting);
   }
   function platformOf(value) { const key = String(value || '').toLowerCase(); return key.startsWith('instagram') ? 'instagram' : key; }
   function renderPlatforms() {
@@ -379,6 +424,9 @@
       if (changed) { renderList(); renderCustomer(); }
     } catch (_) {}
   }
+  // Red "Needs you": the AI handed the chat over (or asked for help) and nobody from the team has replied since.
+  // Same rule as the Inbox badge in the menu (automation-header.js).
+  function needsYou(row) { return row.status !== 'resolved' && row.status !== 'archived' && (row.status === 'needs_attention' || (row.ai_enabled === false && row.status !== 'human_handling')); }
   function current() { return conversations.find(conversation => conversation.id === selectedId) || conversations[0] || null; }
   async function loadConversations() {
     const base = 'id,contact_id,channel_type,status,ai_enabled,intent,summary,last_message_preview,last_message_at,automation_contacts(display_name,primary_phone,primary_email,language,profile)';
@@ -394,9 +442,9 @@
     for (const item of made.error ? [] : made.data || []) { if (!outcomesByConversation.has(item.conversation_id)) outcomesByConversation.set(item.conversation_id, []); outcomesByConversation.get(item.conversation_id).push(item); }
     return (result.data || []).map(row => {
       const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts || {};
-      const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer',tiktok:'TikTok customer'}[row.channel_type] || 'Instagram customer');
+      const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer',tiktok:'TikTok customer',website:'Website visitor'}[row.channel_type] || 'Instagram customer');
       const avatarUrl = /^https:\/\//.test(String(contact.profile?.profile_pic || '')) ? String(contact.profile.profile_pic) : '';
-      return {id:row.id,contactId:row.contact_id,phone:contact.primary_phone||'',channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
+      return {id:row.id,contactId:row.contact_id,phone:contact.primary_phone||'',channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,lastAt:row.last_message_at||'',attention:needsYou(row),human:row.ai_enabled===false&&row.status!=='resolved',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
     });
   }
   async function loadMessages(conversation) {
@@ -414,7 +462,7 @@
     const events = (outcomes.error ? [] : outcomes.data || []).map(row => ({role:'event',kind:row.outcome_type,id:row.id,reference:row.reference_number,text:row.title,status:row.status,time:clock(row.created_at),at:Date.parse(row.created_at)}));
     conversation.messages = [...messages, ...events].sort((a, b) => a.at - b.at);
   }
-  function channelName(value) { return ({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',phone:'Phone',telegram:'Telegram',messenger:'Messenger',tiktok:'TikTok'}[value]||value); }
+  function channelName(value) { return ({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',phone:'Phone',telegram:'Telegram',messenger:'Messenger',tiktok:'TikTok',website:'Website chat'}[value]||value); }
   function relativeTime(value) { const delta=Math.max(0,Date.now()-Date.parse(value||new Date())); const minutes=Math.floor(delta/60000); if(minutes<1)return'Now'; if(minutes<60)return`${minutes}m`; const hours=Math.floor(minutes/60); if(hours<24)return`${hours}h`; return new Date(value).toLocaleDateString(); }
   function showError(message) { errorBox.textContent=message; errorBox.hidden=false; }
   function fail(message) { loading.hidden=true; app.hidden=true; showError(message); }
@@ -425,6 +473,6 @@
     if (result.error) { showError(api.displayError(result.error)); return false; }
     return result.data.id;
   }
-  function statusText(conversation) { return conversation.human ? 'Human handling' : conversation.aiActive ? 'AI is replying' : 'AI paused'; }
+  function statusText(conversation) { return conversation.attention && conversation.human ? 'Needs your reply' : conversation.human ? 'Human handling' : conversation.aiActive ? 'AI is replying' : 'AI paused'; }
   function escapeHtml(value) { return String(value || '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character])); }
 })();

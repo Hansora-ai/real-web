@@ -12,7 +12,7 @@
   const preview = api.isLocalPreview && location.protocol !== 'file:';
   const setupHref = `automation-setup.html${preview ? '?preview=1' : ''}`;
   $('#create-link').href = setupHref; $('#empty-create').href = setupHref;
-  const CHANNEL_ICONS = { instagram_dm:['instagram','Instagram DMs'], instagram_comments:['comment','Instagram comments'], whatsapp:['whatsapp','WhatsApp'], telegram:['telegram','Telegram'], messenger:['messenger','Messenger'], tiktok:['tiktok','TikTok'], phone:['phone','Phone calls'] };
+  const CHANNEL_ICONS = { instagram_dm:['instagram','Instagram DMs'], instagram_comments:['comment','Instagram comments'], whatsapp:['whatsapp','WhatsApp'], telegram:['telegram','Telegram'], messenger:['messenger','Messenger'], tiktok:['tiktok','TikTok'], website:['globe','Website chat'], phone:['phone','Phone calls'] };
 
   let businesses;
   if (api.isLocalPreview) {
@@ -30,7 +30,7 @@
     const name = agent?.display_name || business.name;
     const status = String(agent?.status || business.status || 'draft');
     const languages = (agent?.supported_languages || []).map(api.languageName).join(' · ') || 'Languages not set';
-    const channels = (business.automation_channel_connections || []).filter(item => !['whatsapp', 'messenger'].includes(item.channel_type));
+    const channels = (business.automation_channel_connections || []).filter(item => !['messenger'].includes(item.channel_type));
     const live = channels.filter(channel => channel.status === 'connected').length;
     const icons = Object.entries(CHANNEL_ICONS).map(([type, [icon, label]]) => {
       const channel = channels.find(item => item.channel_type === type);

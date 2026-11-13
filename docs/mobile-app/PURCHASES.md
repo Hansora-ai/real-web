@@ -9,7 +9,7 @@ website. Credits work everywhere (Creative and Automation).
 - Server: `netlify/functions/revenuecat-webhook.mjs` + `lib/business/app-purchases.mjs` (separate PR).
 - Prices: same as the website until approval; raise them later in App Store Connect / Play Console (no app update needed).
 
-## The 11 products (create them with exactly these IDs)
+## The products (11 to create; Scale is no longer sold) (create them with exactly these IDs)
 
 | Product ID | Type | Grants | Price |
 |---|---|---|---|
@@ -20,10 +20,11 @@ website. Credits work everywhere (Creative and Automation).
 | `co.hansora.app.creative.premium.monthly` | Auto-renewable, 1 month, group "Hansora Creative" | Premium, 2,500⚡/month | $40.00 (or $39.99) |
 | `co.hansora.app.creative.pro.monthly` | same group | Pro, 4,500⚡/month | $64.00 (or $63.99) |
 | `co.hansora.app.creative.promax.monthly` | same group | Pro Max, 10,000⚡/month | $120.00 (or $119.99) |
+| `co.hansora.app.automation.lite.monthly` | Auto-renewable, 1 month, group "Hansora Automation" | Lite, 2,500⚡/month | $25.00 (or $24.99) |
 | `co.hansora.app.automation.starter.monthly` | Auto-renewable, 1 month, group "Hansora Automation" | Starter, 4,900⚡/month | $49.00 (or $48.99) |
 | `co.hansora.app.automation.growth.monthly` | same group | Growth, 9,900⚡/month | $99.00 (or $98.99) |
 | `co.hansora.app.automation.business.monthly` | same group | Business, 14,900⚡/month | $149.00 (or $148.99) |
-| `co.hansora.app.automation.scale.monthly` | same group | Scale, 19,900⚡/month | $199.00 (or $198.99) |
+| `co.hansora.app.automation.scale.monthly` | same group | Scale, 19,900⚡/month (no longer sold on the website: do **not** create it) | — |
 
 Two subscription groups, so a person can have a Creative plan and an Automation plan at the same time (like the website).
 On Google Play, subscriptions get one base plan each (monthly, auto-renewing); the base plan ID can be `monthly`.

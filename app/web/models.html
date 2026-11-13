@@ -179,6 +179,7 @@
     ];
     const MODEL_IMAGE_BASE = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE';
     const MODEL_IMAGE_URLS = {
+      'gpt-image-2-6': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%285%29.jpg',
       'gpt-image-2-5': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%285%29.jpg',
       'seedance25': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg',
       'wan-3': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%287%29.jpg',
@@ -206,7 +207,7 @@
       'wan-2-7-video': `${MODEL_IMAGE_BASE}/10.png`,
       'kling-motion-control': `${MODEL_IMAGE_BASE}/20.png`,
       'aleph': `${MODEL_IMAGE_BASE}/21.png`,
-      '/upscale.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/7.png',
+      '/upscale.html?mode=image': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/7.png',
       '/expand.html?mode=angles': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/4.png',
       '/expand.html?mode=expand': `${MODEL_IMAGE_BASE}/25.png`,
       '/expand.html?mode=face-swap': `${MODEL_IMAGE_BASE}/26.png`,
@@ -244,7 +245,8 @@
     const LOGO = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/';
     const IMAGE_MODELS = fromHeaderItems([
       { label: 'Nano Banana 2.1', id: 'nano-banana-2-1', logo: 13, note: 'Fast image edits' },
-      { label: 'GPT Image 2.5', id: 'gpt-image-2-5', logo: 2, note: 'Newest OpenAI image model' },
+      { label: 'GPT Image 2.6', id: 'gpt-image-2-6', logo: 2, note: 'Newest OpenAI image model' },
+      { label: 'GPT Image 2.5', id: 'gpt-image-2-5', logo: 2, note: 'OpenAI image model' },
       { label: 'GPT Image 2', id: 'gpt-image-2', logo: 2, note: 'Accurate text and layouts' },
       { label: 'Nano Banana 2', id: 'nano-banana-2', logo: 13, note: 'Fast, sharp images by Google' },
       { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', logo: 13, note: 'Low-cost 1K image edits' },
@@ -265,6 +267,7 @@
       { label: 'Seedance 2.5', id: 'seedance25', logo: 5, note: 'Cinematic video with sound' },
       { label: 'Kling 4.0', id: 'kling40', logo: 14, note: 'Create and edit videos' },
       { label: 'Henshin', id: 'henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Transform video characters' },
+      { label: 'Gemini Omni Flash 1.2', id: 'gemini-omni-flash-1-2', logo: 3, note: 'Newest Gemini video, up to 15 s' },
       { label: 'Gemini Omni Flash 1.1', id: 'gemini-omni-flash-1-1', logo: 3, note: 'Prompt, image and video inputs' },
       { label: 'Wan 3.0', id: 'wan-3', logo: 6, note: 'Long, detailed video clips' },
       { label: 'Seedance 2.0', id: 'seedance-2', logo: 5, note: 'Smooth cinematic motion' },
@@ -291,7 +294,7 @@
       { label: 'Lips sync / Avatar', href: '/lipsync.html', logo: 26, note: 'Make any face talk' },
       { label: 'Kid Cartoon', href: '/kid-cartoon.html', logo: 27, note: 'Your kid as a cartoon hero' },
       { label: 'Hook analyse', href: '/analyse.html', logo: 21, note: 'Score your video hooks and ideas' },
-      { label: 'Image Upscale', href: '/upscale.html', logo: 7, note: 'Enlarge images without blur' },
+      { label: 'Image Upscale', href: '/upscale.html?mode=image', logo: 7, note: 'Enlarge images without blur' },
       { label: 'Full angles', href: '/expand.html?mode=angles', logo: 8, note: 'See a product from every side' },
       { label: 'Expand', href: '/expand.html?mode=expand', logo: 9, note: 'Extend images beyond the frame' },
       { label: 'Character', href: '/character.html', logo: 11, note: 'Keep one character consistent' },
@@ -306,7 +309,7 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation', logo: 20, note: 'Full songs from a prompt' }
     ], 'audio', 9);
 
-    const MX_TAGS = { 'seedance25': 'TOP', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-5': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+    const MX_TAGS = { 'seedance25': 'TOP', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
 
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';

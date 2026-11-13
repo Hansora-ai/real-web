@@ -706,14 +706,44 @@
       $('usageLogin').classList.add('hidden');
     }
 
+    // Opened while logged out (often from the ChatGPT "check your generations" link): open the login popup right away
+    // and come back here after logging in (email in the popup reloads the list; Google returns through header.js).
+    const AUTH_RETURN_KEY = 'hansora:auth-return';
+    let loginAsked = false;
+    function askToLogIn(){
+      if (loginAsked) return;
+      loginAsked = true;
+      try { localStorage.setItem(AUTH_RETURN_KEY, JSON.stringify({ path: location.pathname, createdAt: Date.now() })); } catch (_) {}
+      let tries = 0;
+      const open = setInterval(function(){
+        tries += 1;
+        if (window.HansoraHeader && typeof window.HansoraHeader.openAuth === 'function') { clearInterval(open); window.HansoraHeader.openAuth('login'); }
+        else if (tries > 20) clearInterval(open);
+      }, 250);
+      const started = Date.now();
+      const watch = setInterval(async function(){
+        if (Date.now() - started > 15 * 60 * 1000) { clearInterval(watch); return; }
+        try {
+          const { data } = await supabaseClient.auth.getSession();
+          if (data && data.session && data.session.user) {
+            clearInterval(watch);
+            try { if (window.HansoraHeader && typeof window.HansoraHeader.closeAuth === 'function') window.HansoraHeader.closeAuth(); } catch (_) {}
+            loadUsage(1);
+          }
+        } catch (_) {}
+      }, 1500);
+    }
+
     async function loadUsage(page = 1){
       setLoading();
       const { data: userData } = await supabaseClient.auth.getUser();
       currentUser = userData && userData.user ? userData.user : null;
+      if (currentUser) { try { localStorage.removeItem(AUTH_RETURN_KEY); } catch (_) {} }
       if (!currentUser) {
         $('usageList').innerHTML = '';
         $('usageSummary').textContent = 'Log in to see your generations from the last 60 days.';
         $('usageLogin').classList.remove('hidden');
+        askToLogIn();
         $('pager').classList.add('hidden');
         return;
       }

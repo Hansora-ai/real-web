@@ -8,7 +8,7 @@ import vm from 'node:vm';
 const web = new URL('../web/', import.meta.url);
 const read = path => readFileSync(new URL(path, web), 'utf8');
 const SERVER_PACKS = { 'co.hansora.app.credits.900': 90, 'co.hansora.app.credits.2000': 200, 'co.hansora.app.credits.5100': 510, 'co.hansora.app.credits.10500': 1050 };
-const SERVER_PLANS = ['premium_monthly', 'pro_monthly', 'pro_max_monthly', 'automation_starter_monthly', 'automation_growth_monthly', 'automation_business_monthly', 'automation_scale_monthly'];
+const SERVER_PLANS = ['premium_monthly', 'pro_monthly', 'pro_max_monthly', 'automation_lite_monthly', 'automation_starter_monthly', 'automation_growth_monthly', 'automation_business_monthly', 'automation_scale_monthly'];
 
 function loadIap() {
   const window = { Capacitor: null };
@@ -38,7 +38,8 @@ test('every pack and plan on the Automation pricing page has a store product', (
   const packIds = [...js.matchAll(/\{ id: '(starter|growth|business|scale)'/g)].map(m => m[1]);
   const planIds = [...js.matchAll(/\{ id: '(automation_[a-z]+_monthly)'/g)].map(m => m[1]);
   assert.deepEqual(packIds, ['starter', 'growth', 'business', 'scale']);
-  assert.equal(planIds.length, 4);
+  // Lite, Starter, Growth, Business on sale + Scale (no longer sold, kept for people who already have it).
+  assert.equal(planIds.length, 5);
   for (const p of planIds) assert.ok(iap.PLANS[p], p);
   assert.match(read('automation-pricing.html'), /app\/iap\.js/);
 });
