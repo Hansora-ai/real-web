@@ -4824,6 +4824,8 @@
     const btnAppleLogin = el('btnAppleLogin');
     if (btnAppleLogin) {
       btnAppleLogin.addEventListener('click', async function () {
+        // App: Apple's native sheet (app-shim.js), never the web sign-in.
+        if (window.__hansoraNativeApple) { window.__hansoraNativeApple(btnAppleLogin); return; }
         setAuthMessage('Opening Apple login…', 'info');
         try {
           rememberSignupOfferOAuthStart();

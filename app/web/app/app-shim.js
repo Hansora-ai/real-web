@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.13-8';
+  var HANSORA_BUILD = '2026.11.13-9';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -683,6 +683,7 @@
     e.preventDefault(); e.stopImmediatePropagation();
     nativeApple(b);
   }, true);
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraApple) window.__hansoraNativeApple = nativeApple;
   onReady(addAppleButton);
   new MutationObserver(addAppleButton).observe(root, { childList: true, subtree: true });
 })();
