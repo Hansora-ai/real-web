@@ -23,7 +23,7 @@ website. Credits work everywhere (Creative and Automation).
 | `co.hansora.app.automation.lite.monthly` | Auto-renewable, 1 month, group "Hansora Automation" | Lite, 2,500⚡/month | $25.00 (or $24.99) |
 | `co.hansora.app.automation.starter.monthly` | Auto-renewable, 1 month, group "Hansora Automation" | Starter, 4,900⚡/month | $49.00 (or $48.99) |
 | `co.hansora.app.automation.growth.monthly` | same group | Growth, 9,900⚡/month | $99.00 (or $98.99) |
-| `co.hansora.app.automation.business.monthly` | same group | Business, 14,900⚡/month | $149.00 (or $148.99) |
+| `co.hansora.app.automation.business.monthly2` (the first ID was used by mistake in App Store Connect) | same group | Business, 14,900⚡/month | $149.00 (or $148.99) |
 | `co.hansora.app.automation.scale.monthly` | same group | Scale, 19,900⚡/month (no longer sold on the website: do **not** create it) | — |
 
 Two subscription groups, so a person can have a Creative plan and an Automation plan at the same time (like the website).

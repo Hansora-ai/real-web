@@ -22,7 +22,7 @@
     automation_lite_monthly: 'co.hansora.app.automation.lite.monthly',
     automation_starter_monthly: 'co.hansora.app.automation.starter.monthly',
     automation_growth_monthly: 'co.hansora.app.automation.growth.monthly',
-    automation_business_monthly: 'co.hansora.app.automation.business.monthly',
+    automation_business_monthly: 'co.hansora.app.automation.business.monthly2',
     automation_scale_monthly: 'co.hansora.app.automation.scale.monthly'
   };
   var storeName = platform === 'android' ? 'Google Play' : 'the App Store';
