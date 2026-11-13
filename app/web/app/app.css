@@ -4,7 +4,7 @@
    (app/iap.js); the pricing sections on other pages and website-only offers stay hidden. */
 html.hansora-app #hansoraSignupOffer,
 html.hansora-app body:not(:has(#appStoreBox)) section#pricing, html.hansora-app section.lx-price, html.hansora-app a[href*="affilate"],
-html.hansora-app .payment-method-box, html.hansora-app .ui-platform-switch, html.hansora-app #ru-monthly-note,
+html.hansora-app .payment-method-box, html.hansora-app .ui-platform-switch:not(:has([data-mode])), html.hansora-app #ru-monthly-note,
 html.hansora-app [data-app-hidden] { display: none !important; }
 
 /* English first: the language choice comes back when the Russian and Armenian pages are added.
