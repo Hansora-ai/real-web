@@ -85,7 +85,7 @@ html.hansora-app #siteHeader, html.hansora-app .auto-header {
 }
 html.hansora-app #siteHeader .shell.nav { min-height: 50px !important; height: 50px; padding-top: 0 !important; padding-bottom: 0 !important; position: relative; }
 html.hansora-app .auto-header { min-height: 50px !important; height: 50px; padding-top: 0 !important; padding-bottom: 0 !important; }
-html.hansora-app #siteHeader .brand span, html.hansora-app .auto-brand span, html.hansora-app .auto-brand i, html.hansora-app .auto-brand small { display: none !important; }
+html.hansora-app .auto-brand span, html.hansora-app .auto-brand i, html.hansora-app .auto-brand small { display: none !important; }
 html.hansora-app #siteHeader .brand img { width: 28px !important; height: 28px !important; }
 html.hansora-app .auto-brand::before { content: ''; display: block; width: 28px; height: 28px; background: url(/hansora-logo.png) center / contain no-repeat; }
 .app-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
@@ -285,8 +285,13 @@ html.hansora-app .auto-header-tools { gap: 8px !important; }
 /* Signed in (credits showing): never show "Log in" next to the photo. */
 html.hansora-app .auto-account:has(.auto-credits:not([style*="none"])) .auto-auth-link,
 html.hansora-app #siteHeader:has(#navCredits:not([style*="none"])) #btnLoginSignup { display: none !important; }
-/* Creative top bar: "Pricing 30% OFF" as one centred pill that fits the 50px bar (the website's two-line button
-   was squeezed: word at the top, badge hanging off the bottom). */
-html.hansora-app #siteHeader .hansora-mobile-pricing { height: 32px !important; min-width: 0 !important; padding: 0 10px !important; align-items: center !important; gap: 6px; border-radius: 16px !important; font-size: 13px !important; }
+/* Creative top bar: the website's own "Pricing / 30% OFF" button, same size; the word is centred and the badge sits
+   on the bottom edge, inside the bar. */
+html.hansora-app #siteHeader .hansora-mobile-pricing { align-items: center !important; padding: 0 12px 8px !important; margin-top: -4px; }
 html.hansora-app #siteHeader .hansora-mobile-pricing > span { transform: none !important; }
-html.hansora-app #siteHeader .hansora-mobile-pricing-badge { position: static !important; transform: none !important; min-width: 0 !important; padding: 3px 6px !important; font-size: 9px !important; box-shadow: none !important; }
+html.hansora-app #siteHeader .hansora-mobile-pricing-badge { bottom: -7px !important; }
+
+/* Creative: logo + HANSORA (like the website), it goes home. */
+html.hansora-app #siteHeader .brand > span { display: inline !important; font-size: 15px !important; letter-spacing: .06em; }
+html.hansora-app #siteHeader .brand .hansora-brand-full { display: none !important; }
+html.hansora-app #siteHeader .brand .hansora-brand-mobile { display: inline !important; }
