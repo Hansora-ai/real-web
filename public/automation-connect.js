@@ -490,8 +490,8 @@
       <small>Meta lets apps connect only to <b>WhatsApp Business</b>, not normal WhatsApp – the same for every AI tool. WhatsApp Business is free, by Meta, on iPhone and Android.</small>
       <ol style="margin:0;padding-left:20px;display:grid;gap:6px;font-size:13px;line-height:1.45;color:var(--text-2)">
         <li><b>On normal WhatsApp?</b> Install WhatsApp Business on your phone (<a class="ui-link" href="https://apps.apple.com/app/whatsapp-business/id1386412706" target="_blank" rel="noopener">iPhone</a> · <a class="ui-link" href="https://play.google.com/store/apps/details?id=com.whatsapp.w4b" target="_blank" rel="noopener">Android</a>), enter the same number and tap <b>Transfer</b>: your chats come with you. Takes about 2 minutes.</li>
-        <li>Click <b>Connect</b> below. In Meta's window, choose to connect your <b>existing WhatsApp Business app</b> – not "create a new number".</li>
-        <li>Confirm on your phone in WhatsApp Business (Meta shows a QR code or sends a message there).</li>
+        <li>Click <b>Connect</b> below. In Meta's window, type the number you use in WhatsApp Business (pick your country code first). Meta recognises it and keeps it in your app.</li>
+        <li>Meta shows a QR code: scan it with WhatsApp Business on your phone and share your chats when asked.</li>
       </ol>
       <small>You keep using WhatsApp Business on your phone and can text customers yourself any time. Your AI employee answers too, and steps back in a chat when you write from the phone.</small>
       <small><button class="ui-link" type="button" data-need-help="WhatsApp connection" style="background:none;border:0;padding:0;font:inherit;cursor:pointer">Need help connecting? We'll do it with you.</button></small>
