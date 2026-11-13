@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.13-10';
+  var HANSORA_BUILD = '2026.11.13-11';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -639,8 +639,10 @@
 
   // Sign in with Apple (Apple 4.8: required next to Google sign-in). iPhone only: Apple's own sheet (AppDelegate.swift,
   // "hansoraApple"), then Supabase signs in with Apple's identity token.
+  // Apple's sheet comes from the Sign in with Apple plugin (registered by Capacitor itself, no custom screen needed).
+  function applePlugin() { return native && Cap.getPlatform() === 'ios' && Plugins.SignInWithApple ? Plugins.SignInWithApple : null; }
   function addAppleButton() {
-    var apple = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraApple;
+    var apple = applePlugin();
     var google = document.getElementById('btnGoogle');
     if (!apple || !google || document.getElementById('btnApple')) return;
     var btn = document.createElement('button');
@@ -651,7 +653,7 @@
     btn.addEventListener('click', function () { nativeApple(btn); });
   }
   async function nativeApple(btn) {
-    var apple = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraApple;
+    var apple = applePlugin();
     var errBox = function (text) { var e = document.getElementById('err') || document.getElementById('authError'); if (e) e.textContent = text; else alert(text); };
     if (!apple) return;
       try {
@@ -659,31 +661,35 @@
         var digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
         var hashed = Array.from(new Uint8Array(digest), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
         btn.disabled = true;
-        window.__hansoraAppleDone = async function (res) {
+        var res;
+        try {
+          res = (await apple.authorize({ clientId: 'co.hansora.app', redirectURI: 'https://hansora.co', scopes: 'email name', nonce: hashed })).response;
+        } catch (e) {
           btn.disabled = false;
-          if (!res || res.error) { if (res && res.error !== 'cancelled') errBox('Apple sign-in failed. Please try again.'); return; }
-          var sb = window.__HANSORA_SB__;
-          if (!sb) { errBox('Please try again in a moment.'); return; }
-          var out = await sb.auth.signInWithIdToken({ provider: 'apple', token: res.token, nonce: raw });
-          if (out.error) { errBox(out.error.message || 'Apple sign-in failed.'); return; }
-          var name = [res.givenName, res.familyName].filter(Boolean).join(' ');
-          if (name) { try { await sb.auth.updateUser({ data: { full_name: name, name: name } }); } catch (_) {} }
-          var back = new URLSearchParams(location.search).get('returnTo') || '/index.html';
-          if (!/^\/[^/]/.test(back)) back = '/index.html';
-          location.href = back;
-        };
-        apple.postMessage({ nonce: hashed });
+          if (!/cancel|1001/i.test(String((e && (e.message || e.code)) || ''))) errBox('Apple sign-in failed. Please try again.');
+          return;
+        }
+        btn.disabled = false;
+        var sb = window.__HANSORA_SB__;
+        if (!sb) { errBox('Please try again in a moment.'); return; }
+        var out = await sb.auth.signInWithIdToken({ provider: 'apple', token: res.identityToken, nonce: raw });
+        if (out.error) { errBox(out.error.message || 'Apple sign-in failed.'); return; }
+        var name = [res.givenName, res.familyName].filter(Boolean).join(' ');
+        if (name) { try { await sb.auth.updateUser({ data: { full_name: name, name: name } }); } catch (_) {} }
+        var back = new URLSearchParams(location.search).get('returnTo') || location.pathname || '/index.html';
+        if (!/^\/[^/]/.test(back) || /login/.test(back)) back = '/index.html';
+        location.href = back;
       } catch (e) { btn.disabled = false; errBox('Apple sign-in failed. Please try again.'); }
   }
   // The website's login window has its own Apple button (web sign-in, needs a server secret): in the iPhone app it uses
   // the same native Apple sheet instead.
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('#btnAppleLogin');
-    if (!b || !(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraApple)) return;
+    if (!b || !applePlugin()) return;
     e.preventDefault(); e.stopImmediatePropagation();
     nativeApple(b);
   }, true);
-  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraApple) window.__hansoraNativeApple = nativeApple;
+  if (applePlugin()) window.__hansoraNativeApple = nativeApple;
   onReady(addAppleButton);
   new MutationObserver(addAppleButton).observe(root, { childList: true, subtree: true });
 })();
