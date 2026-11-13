@@ -285,3 +285,8 @@ html.hansora-app .auto-header-tools { gap: 8px !important; }
 /* Signed in (credits showing): never show "Log in" next to the photo. */
 html.hansora-app .auto-account:has(.auto-credits:not([style*="none"])) .auto-auth-link,
 html.hansora-app #siteHeader:has(#navCredits:not([style*="none"])) #btnLoginSignup { display: none !important; }
+/* Creative top bar: "Pricing 30% OFF" as one centred pill that fits the 50px bar (the website's two-line button
+   was squeezed: word at the top, badge hanging off the bottom). */
+html.hansora-app #siteHeader .hansora-mobile-pricing { height: 32px !important; min-width: 0 !important; padding: 0 10px !important; align-items: center !important; gap: 6px; border-radius: 16px !important; font-size: 13px !important; }
+html.hansora-app #siteHeader .hansora-mobile-pricing > span { transform: none !important; }
+html.hansora-app #siteHeader .hansora-mobile-pricing-badge { position: static !important; transform: none !important; min-width: 0 !important; padding: 3px 6px !important; font-size: 9px !important; box-shadow: none !important; }
