@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.13-12';
+  var HANSORA_BUILD = '2026.11.13-13';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -715,5 +715,15 @@
   if (applePlugin()) window.__hansoraNativeApple = nativeApple;
   onReady(addAppleButton);
   new MutationObserver(addAppleButton).observe(root, { childList: true, subtree: true });
+
+  // Features tab: open the models page at the top with the "Features" filter chosen (not halfway down at the anchor).
+  if (/^\/models(\.html)?$/.test(location.pathname) && location.hash === '#featuresSection') {
+    try { history.replaceState(history.state, '', location.pathname + location.search); } catch (_) {}
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    onReady(function () {
+      var pick = function () { var f = document.querySelector('[data-filter="features"]'); if (f) f.click(); window.scrollTo(0, 0); };
+      pick(); setTimeout(pick, 60); setTimeout(function () { window.scrollTo(0, 0); }, 300);
+    });
+  }
 })();
 

@@ -295,3 +295,6 @@ html.hansora-app #siteHeader .hansora-mobile-pricing-badge { bottom: -7px !impor
 html.hansora-app #siteHeader .brand > span { display: inline !important; font-size: 15px !important; letter-spacing: .06em; }
 html.hansora-app #siteHeader .brand .hansora-brand-full { display: none !important; }
 html.hansora-app #siteHeader .brand .hansora-brand-mobile { display: inline !important; }
+
+/* Pages with a back button: the back button + logo, no HANSORA word, so Pricing / credits / photo fit. */
+html.hansora-app #siteHeader:has(.app-back-btn) .brand > span { display: none !important; }
