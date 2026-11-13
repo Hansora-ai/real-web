@@ -82,18 +82,22 @@ class MainViewController: CAPBridgeViewController, WKScriptMessageHandler {
     // (takeSnapshot) is used; the page waits for our answer before it opens the next page, so the picture is
     // always in place first.
     private func cover(kind: String) {
-        guard let webView = webView else { return }
+        guard let webView = webView, let host = webView.superview else { return }
         if let stale = oldPage { stale.removeFromSuperview(); oldPage = nil }
+        webView.layer.removeAllAnimations()
+        webView.transform = .identity
         self.kind = kind
         let config = WKSnapshotConfiguration()
         config.afterScreenUpdates = false
         webView.takeSnapshot(with: config) { [weak self] image, _ in
             guard let self = self else { return }
             if let image = image {
+                // The picture of the old page sits above the web view (not inside it), so the live new page can
+                // slide underneath it later.
                 let shot = UIImageView(image: image)
-                shot.frame = webView.bounds
+                shot.frame = webView.frame
                 shot.isUserInteractionEnabled = false
-                webView.addSubview(shot)
+                host.insertSubview(shot, aboveSubview: webView)
                 self.oldPage = shot
                 self.fallback?.cancel()
                 let work = DispatchWorkItem { [weak self] in self?.reveal() }
@@ -104,53 +108,39 @@ class MainViewController: CAPBridgeViewController, WKScriptMessageHandler {
         }
     }
 
-    // The next page is ready: slide a picture of it in, then show the live page.
+    // The next page is ready: the live page itself slides (no second picture, so the old page never flashes again).
     private func reveal() {
         fallback?.cancel()
         fallback = nil
         guard let webView = webView, let old = oldPage else { return }
         oldPage = nil
-        let config = WKSnapshotConfiguration()
-        config.afterScreenUpdates = true
-        webView.takeSnapshot(with: config) { [weak self] image, _ in
-            guard let self = self, let image = image else {
-                UIView.animate(withDuration: 0.15, animations: { old.alpha = 0 }, completion: { _ in old.removeFromSuperview() })
-                return
-            }
-            self.slide(from: old, to: image, in: webView)
-        }
-    }
-
-    private func slide(from old: UIView, to image: UIImage, in webView: WKWebView) {
-        let fresh = UIImageView(image: image)
-        fresh.frame = webView.bounds
-        fresh.isUserInteractionEnabled = false
         let width = webView.bounds.width
         let finish: (Bool) -> Void = { _ in
             old.removeFromSuperview()
-            fresh.removeFromSuperview()
+            webView.transform = .identity
         }
         switch kind {
         case "tab":
-            webView.insertSubview(fresh, belowSubview: old)
             UIView.animate(withDuration: 0.18, delay: 0, options: [.curveEaseOut], animations: { old.alpha = 0 }, completion: finish)
         case "back":
-            webView.insertSubview(fresh, belowSubview: old)
-            fresh.transform = CGAffineTransform(translationX: -width * 0.3, y: 0)
+            webView.transform = CGAffineTransform(translationX: -width * 0.3, y: 0)
             addEdgeShadow(to: old)
             UIView.animate(withDuration: 0.34, delay: 0, options: [.curveEaseOut], animations: {
                 old.transform = CGAffineTransform(translationX: width, y: 0)
-                fresh.transform = .identity
+                webView.transform = .identity
             }, completion: finish)
         default:
-            webView.addSubview(fresh)
-            fresh.transform = CGAffineTransform(translationX: width, y: 0)
-            addEdgeShadow(to: fresh)
+            webView.superview?.bringSubviewToFront(webView)
+            webView.transform = CGAffineTransform(translationX: width, y: 0)
+            addEdgeShadow(to: webView)
             UIView.animate(withDuration: 0.34, delay: 0, options: [.curveEaseOut], animations: {
-                fresh.transform = .identity
+                webView.transform = .identity
                 old.transform = CGAffineTransform(translationX: -width * 0.3, y: 0)
                 old.alpha = 0.7
-            }, completion: finish)
+            }, completion: { done in
+                webView.layer.shadowOpacity = 0
+                finish(done)
+            })
         }
     }
 
