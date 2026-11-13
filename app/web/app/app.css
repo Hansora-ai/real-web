@@ -248,7 +248,7 @@ html.hansora-app .lx-gen-tile.t4 em { top: 10px; bottom: auto !important; }
 .app-store-actions button { min-height: 44px; padding: 0 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: #fff; font: 600 14px Inter, -apple-system, sans-serif; }
 [aria-busy="true"] { opacity: .75; }
 /* The website's "Pricing · 30% OFF" pill stays out of the app's top bar (Credits / Pricing are in the menus, and the ⚡ number opens pricing). */
-html.hansora-app #siteHeader .hansora-mobile-pricing { display: none !important; }
+/* Creative: the website's "Pricing 30% OFF" button stays in the top bar (owner request). */
 html.hansora-app #navCredits, html.hansora-app .credits-pill { cursor: pointer; }
 .app-version { margin: 14px 0 4px; text-align: center; font: 500 12px/1.4 -apple-system, Inter, sans-serif; color: #6f717c; }
 
@@ -276,3 +276,9 @@ html.hansora-app .monthly-unlimited-badge { display: none !important; }
 /* Sign in with Apple: Apple's style (black or white, same size as the Google button). */
 .app-apple-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; margin-bottom: 12px; border-radius: 12px; border: 0; background: #fff; color: #000; font: 600 16px -apple-system, Inter, system-ui, sans-serif; }
 .app-apple-btn[disabled] { opacity: .6; }
+
+/* Top bars when signed in: Pricing / credits / photo / menu need the room, so the centred page name is hidden
+   (the logo still shows where you are). Signed out, the name stays. */
+html.hansora-app .auto-header:has(.auto-credits:not([style*="none"])) .app-title,
+html.hansora-app #siteHeader:has(.hansora-mobile-pricing) .app-title { display: none !important; }
+html.hansora-app .auto-header-tools { gap: 8px !important; }

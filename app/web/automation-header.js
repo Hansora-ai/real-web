@@ -11,7 +11,10 @@
   const sun = '<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
   const themeButton = `<button class="auto-theme" type="button" data-theme-toggle aria-label="Switch to light mode">${moon}${sun}</button>`;
   const pricingLink = `<a class="auto-pricing" href="automation-pricing.html${previewQuery}"${page === 'pricing' ? ' aria-current="page"' : ''} aria-label="Pricing, 30% off">Pricing<em>30% OFF</em></a>`;
-  const mainLinks = appPage
+  // App: someone who already has AI employees gets the full app menu on the Automation home too.
+  let appMenu = appPage;
+  try { if (page === 'landing' && localStorage.getItem('hansora.header.loggedIn') === '1' && (localStorage.getItem('hansora_automation_has_employees') === '1' || /^[0-9a-f-]{36}$/i.test(localStorage.getItem('hansora_automation_business') || ''))) appMenu = true; } catch (_) {}
+  const mainLinks = appMenu
     ? `<a href="automation-dashboard.html${previewQuery}"${page === 'dashboard' ? ' aria-current="page"' : ''}>AI employees</a>${pricingLink}<a href="automation-profile.html${previewQuery}"${page === 'profile' ? ' aria-current="page"' : ''}>Profile</a><a href="automation-contact.html${previewQuery}">Contact us</a>`
     : page === 'landing' ? `<a href="#channels">Channels</a><a href="#how-it-works">How it works</a>${pricingLink}<a href="#faq">FAQ</a><a href="automation-contact.html${previewQuery}">Contact</a>` : `<a href="automation.html${previewQuery}#channels">Channels</a><a href="automation.html${previewQuery}#how-it-works">How it works</a>${pricingLink}<a href="automation.html${previewQuery}#faq">FAQ</a><a href="automation-contact.html${previewQuery}"${page === 'contact' ? ' aria-current="page"' : ''}>Contact</a>`;
   // Account area: the same login window, credits and photo as the Hansora Creative header (header.js fills these ids).
