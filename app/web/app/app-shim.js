@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.13-2';
+  var HANSORA_BUILD = '2026.11.13-3';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -636,4 +636,42 @@
     keepPayg();
     new MutationObserver(keepPayg).observe(root, { attributes: true, attributeFilter: ['data-pricing-plan-mode'] });
   }
+
+  // Sign in with Apple (Apple 4.8: required next to Google sign-in). iPhone only: Apple's own sheet (AppDelegate.swift,
+  // "hansoraApple"), then Supabase signs in with Apple's identity token.
+  function addAppleButton() {
+    var apple = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hansoraApple;
+    var google = document.getElementById('btnGoogle');
+    if (!apple || !google || document.getElementById('btnApple')) return;
+    var btn = document.createElement('button');
+    btn.id = 'btnApple'; btn.type = 'button'; btn.className = 'app-apple-btn';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M16.37 12.7c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.27-1.6 2.78-.41 6.9 1.15 9.15.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.67zM14.1 5.94c.63-.77 1.06-1.83.94-2.89-.91.04-2.01.61-2.66 1.37-.58.67-1.09 1.75-.96 2.79 1.02.08 2.05-.52 2.68-1.27z"/></svg><span>Continue with Apple</span>';
+    google.parentNode.insertBefore(btn, google);
+    var errBox = function (text) { var e = document.getElementById('err') || document.querySelector('[id*="err"]'); if (e) e.textContent = text; else alert(text); };
+    btn.addEventListener('click', async function () {
+      try {
+        var raw = Array.from(crypto.getRandomValues(new Uint8Array(32)), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        var digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+        var hashed = Array.from(new Uint8Array(digest), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        btn.disabled = true;
+        window.__hansoraAppleDone = async function (res) {
+          btn.disabled = false;
+          if (!res || res.error) { if (res && res.error !== 'cancelled') errBox('Apple sign-in failed. Please try again.'); return; }
+          var sb = window.__HANSORA_SB__;
+          if (!sb) { errBox('Please try again in a moment.'); return; }
+          var out = await sb.auth.signInWithIdToken({ provider: 'apple', token: res.token, nonce: raw });
+          if (out.error) { errBox(out.error.message || 'Apple sign-in failed.'); return; }
+          var name = [res.givenName, res.familyName].filter(Boolean).join(' ');
+          if (name) { try { await sb.auth.updateUser({ data: { full_name: name, name: name } }); } catch (_) {} }
+          var back = new URLSearchParams(location.search).get('returnTo') || '/index.html';
+          if (!/^\/[^/]/.test(back)) back = '/index.html';
+          location.href = back;
+        };
+        apple.postMessage({ nonce: hashed });
+      } catch (e) { btn.disabled = false; errBox('Apple sign-in failed. Please try again.'); }
+    });
+  }
+  onReady(addAppleButton);
+  new MutationObserver(addAppleButton).observe(root, { childList: true, subtree: true });
 })();
+

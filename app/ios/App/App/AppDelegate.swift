@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import WebKit
+import AuthenticationServices
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -60,9 +61,15 @@ class MainViewController: CAPBridgeViewController, WKScriptMessageHandler {
         super.capacitorDidLoad()
         webView?.allowsBackForwardNavigationGestures = true
         webView?.configuration.userContentController.add(HansoraWeakScriptHandler(self), name: "hansoraNav")
+        webView?.configuration.userContentController.add(HansoraWeakScriptHandler(self), name: "hansoraApple")
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "hansoraApple" {
+            let nonce = ((message.body as? [String: Any])?["nonce"] as? String) ?? ""
+            startAppleSignIn(hashedNonce: nonce)
+            return
+        }
         guard let body = message.body as? [String: Any], let phase = body["phase"] as? String else { return }
         if phase == "leave" {
             cover(kind: (body["kind"] as? String) ?? "push")
@@ -165,3 +172,47 @@ final class HansoraWeakScriptHandler: NSObject, WKScriptMessageHandler {
         target?.userContentController(userContentController, didReceive: message)
     }
 }
+
+// Sign in with Apple (native sheet). The page (app-shim.js) sends a SHA-256 hashed nonce; Apple's identity token
+// comes back to the page, which signs in to Supabase with it (signInWithIdToken, provider "apple").
+extension MainViewController: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    func startAppleSignIn(hashedNonce: String) {
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = hashedNonce
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        controller.performRequests()
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return view.window ?? ASPresentationAnchor()
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = credential.identityToken,
+              let token = String(data: tokenData, encoding: .utf8) else {
+            sendAppleResult(["error": "no_token"])
+            return
+        }
+        sendAppleResult([
+            "token": token,
+            "givenName": credential.fullName?.givenName ?? "",
+            "familyName": credential.fullName?.familyName ?? ""
+        ])
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        let cancelled = (error as? ASAuthorizationError)?.code == .canceled
+        sendAppleResult(["error": cancelled ? "cancelled" : error.localizedDescription])
+    }
+
+    private func sendAppleResult(_ result: [String: String]) {
+        guard let data = try? JSONSerialization.data(withJSONObject: result),
+              let json = String(data: data, encoding: .utf8) else { return }
+        webView?.evaluateJavaScript("window.__hansoraAppleDone && window.__hansoraAppleDone(\(json))", completionHandler: nil)
+    }
+}
+
