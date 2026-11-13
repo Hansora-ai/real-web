@@ -449,14 +449,40 @@
     document.querySelector('#connect-save-state').textContent = 'Page connected · review settings to go live';
   }
 
+  // Safari (Mac and iPhone) only opens a popup during the click itself; anything awaited first makes it block
+  // Meta's window silently. So Meta's script and settings load when the page opens, and the click opens the window
+  // straight away.
+  let waPrep=null,waSettings=null;
+  function prepareWhatsApp(){
+    if(!waPrep){
+      waPrep=(async()=>{
+        const response=await api.authenticatedFetch('/.netlify/functions/automation-whatsapp-start',{method:'POST',body:JSON.stringify({business_id:businessId})});
+        const settings=await response.json().catch(()=>({}));
+        if(settings.error==='missing_meta_whatsapp_configuration_id')return{missing:true};
+        if(!response.ok)throw new Error(settings.error||'whatsapp_connection_unavailable');
+        await loadFacebookSdk(settings.app_id,settings.graph_version);
+        waSettings=settings;return settings;
+      })();
+      waPrep.catch(()=>{waPrep=null});
+    }
+    return waPrep;
+  }
   async function beginWhatsAppSignup(){
-    const button=document.querySelector('#provider-connect');button.disabled=true;document.querySelector('#connect-save-state').textContent='Preparing WhatsApp Embedded Signup…';errorBox.hidden=true;
+    const button=document.querySelector('#provider-connect');errorBox.hidden=true;
+    if(!waSettings){
+      // Not ready yet (slow network): get ready, then ask for one more click so the browser allows the window.
+      button.disabled=true;document.querySelector('#connect-save-state').textContent='Preparing WhatsApp Embedded Signup…';
+      try{
+        const ready=await prepareWhatsApp();
+        button.disabled=false;
+        if(ready?.missing){document.querySelector('#connect-save-state').textContent='Not connected yet';document.querySelector('#whatsapp-token').hidden=false;return showError('WhatsApp sign-up through Meta is not switched on yet. For testing, use “Testing: connect with a token” below.');}
+        document.querySelector('#connect-save-state').textContent='Ready – click Connect to open Meta’s window';
+      }catch(error){button.disabled=false;document.querySelector('#connect-save-state').textContent='Not connected yet';showError(api.displayError(error));}
+      return;
+    }
+    button.disabled=true;document.querySelector('#connect-save-state').textContent='Meta’s window is open – finish the steps there';
     try{
-      const response=await api.authenticatedFetch('/.netlify/functions/automation-whatsapp-start',{method:'POST',body:JSON.stringify({business_id:businessId})});
-      const settings=await response.json().catch(()=>({}));
-      if(settings.error==='missing_meta_whatsapp_configuration_id'){button.disabled=false;document.querySelector('#connect-save-state').textContent='Not connected yet';document.querySelector('#whatsapp-token').hidden=false;return showError('WhatsApp sign-up through Meta is not switched on yet. For testing, use “Testing: connect with a token” below.');}
-      if(!response.ok)throw new Error(settings.error||'whatsapp_connection_unavailable');
-      await loadFacebookSdk(settings.app_id,settings.graph_version);
+      const settings=waSettings;
       // Embedded Signup v5 (Meta retired v2/v3 on Oct 15, 2026): connecting an existing WhatsApp Business app number
       // (coexistence: it keeps working in the app on the owner's phone) is offered by default. Whether the owner chose it
       // comes back in the finish message, so a brand-new number is still registered for Cloud API.
@@ -490,8 +516,8 @@
       <small>Meta lets apps connect only to <b>WhatsApp Business</b>, not normal WhatsApp – the same for every AI tool. WhatsApp Business is free, by Meta, on iPhone and Android.</small>
       <ol style="margin:0;padding-left:20px;display:grid;gap:6px;font-size:13px;line-height:1.45;color:var(--text-2)">
         <li><b>On normal WhatsApp?</b> Install WhatsApp Business on your phone (<a class="ui-link" href="https://apps.apple.com/app/whatsapp-business/id1386412706" target="_blank" rel="noopener">iPhone</a> · <a class="ui-link" href="https://play.google.com/store/apps/details?id=com.whatsapp.w4b" target="_blank" rel="noopener">Android</a>), enter the same number and tap <b>Transfer</b>: your chats come with you. Takes about 2 minutes.</li>
-        <li>Click <b>Connect</b> below. In Meta's window, choose to connect your <b>existing WhatsApp Business app</b> – not "create a new number".</li>
-        <li>Confirm on your phone in WhatsApp Business (Meta shows a QR code or sends a message there).</li>
+        <li>Click <b>Connect</b> below. In Meta's window, type the number you use in WhatsApp Business (pick your country code first). Meta recognises it and keeps it in your app. No website? Use your Instagram or Facebook page link when Meta asks for one.</li>
+        <li>Meta shows a QR code: scan it with WhatsApp Business on your phone and share your chats when asked.</li>
       </ol>
       <small>You keep using WhatsApp Business on your phone and can text customers yourself any time. Your AI employee answers too, and steps back in a chat when you write from the phone.</small>
       <small><button class="ui-link" type="button" data-need-help="WhatsApp connection" style="background:none;border:0;padding:0;font:inherit;cursor:pointer">Need help connecting? We'll do it with you.</button></small>
@@ -499,10 +525,7 @@
     // The token option is only for testing: it is shown while Meta's WhatsApp sign-up (Embedded Signup) is not
     // configured yet, and disappears for everyone once it is.
     if (api.isLocalPreview) document.querySelector('#whatsapp-token').hidden = false;
-    else api.authenticatedFetch('/.netlify/functions/automation-whatsapp-start', {method:'POST', body:JSON.stringify({business_id:businessId})})
-      .then(response => response.json().then(result => ({ ok: response.ok, result })).catch(() => ({ ok: response.ok, result: {} })))
-      .then(({ ok, result }) => { document.querySelector('#whatsapp-token').hidden = ok || result.error !== 'missing_meta_whatsapp_configuration_id'; })
-      .catch(() => {});
+    else prepareWhatsApp().then(ready => { document.querySelector('#whatsapp-token').hidden = !ready?.missing; }).catch(() => {});
     document.querySelector('#whatsapp-token-form').addEventListener('submit', async event => {
       event.preventDefault(); errorBox.hidden = true;
       const phoneNumberId = document.querySelector('#wa-token-phone').value.trim(), wabaId = document.querySelector('#wa-token-waba').value.trim(), accessToken = document.querySelector('#wa-token-value').value.trim();
