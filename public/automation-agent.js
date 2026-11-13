@@ -248,7 +248,7 @@
       website: ['Website chat', 'A chat bubble on your own website', 'globe', 'website']
     };
     // Channels that are not open yet are shown as "Coming soon" and cannot be opened.
-    const COMING_SOON = new Set(['whatsapp', 'messenger']);
+    const COMING_SOON = new Set(['messenger']); // WhatsApp opened Nov 13 after Meta approved it.
     const businessQuery = `business=${encodeURIComponent(business.id)}${previewLinks ? '&preview=1' : ''}`;
     const destinations = {
       instagram_dm: `automation-connect.html?channel=instagram&${businessQuery}`,
