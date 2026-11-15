@@ -21,7 +21,7 @@ import {
   listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView, setAutomaticCalls, setAutomationOn, setBusinessTools, updateProduct
 } from '../../lib/automation-mcp/business.mjs';
 import {
-  LANGUAGES, SITE, TONES, account, activity, callView, createEmployee, employeeDetails, employeeSummary, getEmployee, links,
+  ACCOUNT_LINE, ACCOUNT_URL, LANGUAGES, SITE, TONES, account, activity, callView, createEmployee, employeeDetails, employeeSummary, getEmployee, links,
   listCalls, listEmployees, listWebsiteChats, ownedCall, ownedWebsiteChat, phoneLines, resolveEmployee, setChatAnsweredBy,
   updateEmployee, chatView, websiteChatMessages
 } from '../../lib/automation-mcp/data.mjs';
@@ -34,6 +34,7 @@ const SERVER_INSTRUCTIONS = [
   'Hansora Automation gives a business an AI employee that answers customers on Instagram, WhatsApp, Telegram, TikTok, a website chat and the phone.',
   'Start with get_overview when the user asks how things are going. Most accounts have one AI employee, so ai_employee_id can be left out; pass it when the account has several.',
   'Credits are shown as they appear on hansora.co. Tools here are free; AI replies, test messages and phone minutes use credits.',
+  'Never offer, suggest or promote buying credits, a plan or an upgrade, and never link to a pricing or checkout page. When credits run out, say so as a fact and give the account link from the tool result.',
   'Privacy: customer chats from Instagram, WhatsApp, TikTok, Telegram and Messenger cannot be read or answered here because of those platforms\' rules. You get how many are waiting and a link to the Hansora inbox; give the user that link. Website chats and phone calls can be read here.',
   'Orders, bookings and leads that came from those platforms are listed without the customer\'s name and phone number; the user sees them in Hansora.',
   'Connecting a channel, buying credits and the comment flow builder happen on hansora.co; give the link from the tool result.',
@@ -86,7 +87,7 @@ const CALL_ERRORS = {
   purpose_required: 'Ask the user what the AI should say or ask on this call.',
   no_outgoing_line: 'This AI employee has no phone number that can call out yet. The user can get one on the Phone page.',
   other_country: 'The AI employee\'s phone number can only call numbers in its own country.',
-  credits_required: 'There are not enough credits to start a call. Give the user the link to add credits.',
+  credits_required: `There are not enough credits to start a call. ${ACCOUNT_LINE}`,
   too_many_calls: 'Too many calls were started in the last 10 minutes (5 at most). Try again in a few minutes.',
   phone_service_not_configured: 'Phone calls are unavailable right now. Ask the user to try again later.'
 };
@@ -102,7 +103,7 @@ const RECORD_ERRORS = {
 const NUMBER_ERRORS = {
   phone_agent_configuration_incomplete: 'Finish setting up the AI employee first (call update_ai_employee), then get a number.',
   invalid_country: 'Pass a two-letter country code, for example US.',
-  credits_required: 'A phone number needs credits on the account. Give the user the link to add credits.',
+  credits_required: `A phone number needs credits on the account. ${ACCOUNT_LINE}`,
   no_number_available: 'No number is available in this country right now. On the Phone page the user can ask for one or connect their own number.',
   phone_line_setup_failed: 'The number could not be prepared right now. Ask the user to try again later.'
 };
@@ -272,7 +273,7 @@ export function createAutomationServer(ctx) {
     }
     if (!result.ok) {
       const steps = {
-        not_enough_credits: `There are not enough credits for a test message. The user can add credits at ${SITE}/automation-pricing.html.`,
+        not_enough_credits: `There are not enough credits for a test message. ${ACCOUNT_LINE}`,
         ai_provider_agent_not_ready: 'This AI employee is not prepared yet. Call update_ai_employee (with no changes) to prepare it, then test again.'
       };
       return jsonText({ ok: false, error: result.data.error || 'test_failed', session_id: session, next_step: steps[result.data.error] || 'The test did not work this time. Try once more.' });
@@ -348,7 +349,7 @@ export function createAutomationServer(ctx) {
       return jsonText({ ok: true, calling: started.calling, from: started.from, next_step: 'Tell the user the AI employee is calling now. When they ask what happened, call list_calls (the result appears a minute or two after the call ends).' });
     } catch (error) {
       const code = String(error?.code || error?.message || '');
-      if (CALL_ERRORS[code]) return jsonText({ ok: false, error: code, next_step: CALL_ERRORS[code], links: { phone: links(row.id).phone, add_credits: `${SITE}/automation-pricing.html` } });
+      if (CALL_ERRORS[code]) return jsonText({ ok: false, error: code, next_step: CALL_ERRORS[code], links: { phone: links(row.id).phone, account: ACCOUNT_URL } });
       throw error;
     }
   });
@@ -579,7 +580,7 @@ export function createAutomationServer(ctx) {
   }, async ({ ai_employee_id, country }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const result = await withBudget(runFunction(phoneLineFunction, token, { business_id: row.id, action: 'activate', country: country.toUpperCase() }));
-    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'number_failed', next_step: NUMBER_ERRORS[result.data.error] || 'The number could not be added right now. Try once more.', links: { phone: links(row.id).phone, add_credits: `${SITE}/automation-pricing.html` } });
+    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'number_failed', next_step: NUMBER_ERRORS[result.data.error] || 'The number could not be added right now. Try once more.', links: { phone: links(row.id).phone, account: ACCOUNT_URL } });
     return jsonText({ ok: true, phone_number: result.data.number?.e164 || '', can_call_out: Boolean(result.data.number?.can_call), next_step: 'Tell the user the number. They can choose the voice and greeting on the Phone page (links.phone).', links: { phone: links(row.id).phone } });
   });
 
