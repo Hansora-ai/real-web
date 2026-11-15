@@ -1050,7 +1050,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('open_image_to_video_upload_card', {
     title: 'Open image-to-video upload card',
-    description: 'Open Hansora’s in-chat upload card only when the host cannot pass the user’s attached image directly to create_generation. The card uploads the file, shows the credit quote, and starts the selected Hansora video model after the user confirms.',
+    description: 'Opens Hansora’s in-chat upload card, for hosts that cannot pass the user’s attached image directly to create_generation. The card uploads the file, shows the credit quote, and starts the selected Hansora video model after the user confirms.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora video model that accepts an image input.'),
       prompt: z.string().min(1),
@@ -1105,7 +1105,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('start_video_generation', {
     title: 'Transform an uploaded video',
-    description: 'Open Hansora’s in-chat upload card only when the host cannot pass the user’s attached video directly to create_generation. The card accepts MP4, MOV, or WebM, shows the credit quote, and starts the selected compatible Hansora model after the user confirms.',
+    description: 'Opens Hansora’s in-chat upload card, for hosts that cannot pass the user’s attached video directly to create_generation. The card accepts MP4, MOV, or WebM, shows the credit quote, and starts the selected compatible Hansora model after the user confirms.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora video model that accepts a source or reference video.'),
       prompt: z.string().min(1),
@@ -1169,7 +1169,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('start_multimedia_generation', {
     title: 'Create with uploaded reference media',
-    description: 'Open one Hansora upload card only when the host cannot pass attached reference files directly to create_generation. Select only the input types the request needs; Hansora checks them against the chosen model and the card shows exactly those supported upload choices.',
+    description: 'Opens one Hansora upload card, for hosts that cannot pass attached reference files directly to create_generation. The card shows the requested input types that the chosen model supports; Hansora checks them against that model.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora image or video model.'),
       prompt: z.string().min(1),
@@ -1251,10 +1251,10 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('start_audio_generation', {
     title: 'Process an uploaded audio file',
-    description: 'Open Hansora’s in-chat audio upload card for Voice Isolation or Voice Changer. Use this instead of asking the user to host a local audio file. The card accepts MP3, WAV, M4A, AAC, OGG, or FLAC, reads its duration, calculates the credit quote, and starts processing after the user confirms.',
+    description: 'Opens Hansora’s in-chat audio upload card for Voice Isolation or Voice Changer, so the user can upload a local audio file. The card accepts MP3, WAV, M4A, AAC, OGG, or FLAC, reads its duration, calculates the credit quote, and starts processing after the user confirms.',
     inputSchema: z.object({
       audio_tool_id: z.enum(['isolation', 'voice-change']),
-      voice_id: z.string().optional().describe('Required for Voice Changer. Call list_audio_voices first.'),
+      voice_id: z.string().optional().describe('Required for Voice Changer. Available voices come from list_audio_voices.'),
       remove_background_noise: z.boolean().default(true)
     }),
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -1345,7 +1345,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('create_generation', {
     title: 'Create with Hansora',
-    description: 'Submit an image or video generation to any available Hansora model. When the user attaches media in chat, pass it through image_files, video_files, or audio_files and start generation directly without opening an upload card. URL fields remain available for existing public HTTPS media. Call get_model and quote_generation first.',
+    description: 'Submits an image or video generation to an available Hansora model. Media the user attaches in chat can be passed as image_files, video_files, or audio_files, with no upload card needed. URL fields accept existing public HTTPS media. get_model describes each model’s inputs and settings, and quote_generation returns the exact price before anything is submitted.',
     inputSchema: z.object({
       model_id: z.string().min(1),
       prompt: z.string().min(1),
@@ -1598,7 +1598,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('create_audio', {
     title: 'Create audio with Hansora',
-    description: 'Create speech, isolate a voice, change a voice, or generate music with Hansora. For file-based tools, audio_url must be a public HTTPS audio URL. Call quote_generation first.',
+    description: 'Creates speech, isolates a voice, changes a voice, or generates music with Hansora. File-based tools take audio_url as a public HTTPS audio URL. quote_generation returns the exact price before anything is submitted.',
     inputSchema: z.object({
       audio_tool_id: z.enum(['voice', 'isolation', 'voice-change', 'music']),
       text: z.string().max(4200).optional(),
