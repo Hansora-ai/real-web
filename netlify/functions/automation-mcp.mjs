@@ -43,8 +43,24 @@ const SERVER_INSTRUCTIONS = [
   'Orders, bookings and leads that came from those platforms are listed without the customer\'s name and phone number; the user sees them in Hansora.',
   'Connecting a channel, buying credits and the comment flow builder happen on hansora.co; give the link from the tool result.',
   'When something is missing or wrong in an AI employee and a tool here can fix it, offer to fix it yourself; send the user to hansora.co only for what the tools cannot do.',
+  'Work only through these tools. Do not open or control a browser to change things on hansora.co for the user: if a tool returns an error, tell the user what it said; if no tool can do something, say so and give the hansora.co link.',
   'Before start_ai_call and reply_to_website_chat, confirm the exact number or text with the user. Answer in the user\'s language.'
 ].join(' ');
+
+// One row per tool call in the shared chatgpt_events table (tool names start with "automation:"), so a failed or
+// odd call can be found afterwards. Only the tool, the outcome and which fields were sent are stored, never the
+// texts, numbers or customer data.
+const EVENTS_URL = `${String(process.env.SUPABASE_URL || '').replace(/\/+$/, '')}/rest/v1/chatgpt_events`;
+const EVENTS_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || '';
+export function toolCallRow(userId, name, input, ok, error, ms) {
+  const flags = Object.fromEntries(['platform', 'posts', 'followers_only', 'turn_on', 'reacts_to', 'direction', 'kind', 'status', 'on', 'answered_by'].filter(key => ['string', 'boolean'].includes(typeof input[key])).map(key => [key, input[key]]));
+  return { user_id: userId, tool: `automation:${name}`.slice(0, 60), outcome: (ok ? 'ok' : String(error || 'error')).slice(0, 60), details: { ms, fields: Object.keys(input).slice(0, 40), ...flags } };
+}
+function recordToolCall(userId, name, input, ok, error, ms, waitUntil) {
+  if (!userId || !EVENTS_KEY || !process.env.SUPABASE_URL) return;
+  const write = fetch(EVENTS_URL, { method: 'POST', headers: { apikey: EVENTS_KEY, Authorization: `Bearer ${EVENTS_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(toolCallRow(userId, name, input, ok, error, ms)), signal: AbortSignal.timeout(3000) }).catch(() => {});
+  try { waitUntil?.(write); } catch { /* best effort */ }
+}
 
 function jsonText(value) {
   return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
@@ -146,11 +162,15 @@ export function createAutomationServer(ctx) {
   const token = String(ctx.authInfo?.token || '');
   const server = new McpServer({ name: 'Hansora Automation', version: '1.0.0' }, { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS });
   // Every tool: errors become a clear answer for ChatGPT, and each call is logged (name, outcome, time).
+  const waitUntil = ctx.authInfo?.extra?.waitUntil;
   const register = (name, config, callback) => server.registerTool(name, config, async (input, extra) => {
     const startedAt = Date.now();
     let result;
     try { result = await callback(input || {}, extra); } catch (error) { result = toolError(error); }
-    console.info('automation_mcp_tool', JSON.stringify({ tool: name, user: userId.slice(0, 8), ok: !result?.isError && result?.structuredContent?.ok !== false, error: result?.structuredContent?.error || undefined, ms: Date.now() - startedAt }));
+    const ok = !result?.isError && result?.structuredContent?.ok !== false;
+    const error = result?.structuredContent?.error || (result?.isError ? String(result?.content?.[0]?.text || 'error').slice(0, 200) : undefined);
+    console.info('automation_mcp_tool', JSON.stringify({ tool: name, user: userId.slice(0, 8), ok, error, ms: Date.now() - startedAt }));
+    recordToolCall(userId, name, input || {}, ok, error, Date.now() - startedAt, waitUntil);
     return result;
   });
 
