@@ -393,3 +393,29 @@ test('get_ai_employee says that phone calls do not use knowledge items', async (
   assert.match(data.knowledge_note, /phone calls the AI employee knows only the main fields/);
   assert.equal(data.ai_employee.services_and_prices, 'Haircut $30');
 });
+
+test('a followers-only automation on the latest post is the builder\'s follow-to-get-the-link flow', async () => {
+  const database = fakeDatabase({ automation_businesses: [shop()], automation_provider_resources: [{ id: 'ig1', provider_resource_id: '1784' }], automation_provider_credentials: [{ id: 'cred' }] });
+  const { automationPayload } = await import('../../lib/automation-mcp/business.mjs');
+  const { openingMessageIndex, evaluateCondition } = await import('../../lib/automation/comment-flow.mjs');
+  const row = automationPayload(SHOP, { keywords: ['love'], reacts_to: 'contains', private_message: 'Welcome! Tap below for the link.', followers_only: true, button_label: 'Open link', button_url: 'https://hansora.co/automation.html', not_following_message: 'This is for our followers only.', following_button_label: 'I\'m following', post: { id: 'media-9', thumb: 'https://cdn.example.com/t.jpg', caption: 'New reel' } });
+  assert.deepEqual([row.post_scope, row.selected_post_ids, row.safety_config.post_previews], ['selected', ['media-9'], { 'media-9': { thumb: 'https://cdn.example.com/t.jpg', caption: 'New reel' } }]);
+  assert.deepEqual(row.dm_steps.map(step => [step.id, step.type]), [['message-opening', 'message'], ['check-follow', 'condition'], ['message-follow', 'message'], ['message-link', 'message']]);
+  const [opening, check, follow, link] = row.dm_steps;
+  assert.equal(openingMessageIndex(row.dm_steps), 0);
+  assert.deepEqual(opening.actions, [{ id: 'action-send', type: 'quick_reply', label: 'Send me the link', nextId: 'check-follow' }]);
+  assert.deepEqual([check.rules, check.yesId, check.noId], [[{ field: 'follows', op: 'is_true' }], 'message-link', 'message-follow']);
+  assert.deepEqual([follow.text, follow.actions[0].label, follow.actions[0].nextId], ['This is for our followers only.', "I'm following", 'check-follow']);
+  assert.deepEqual(link.actions, [{ id: 'action-website', type: 'website', label: 'Open link', url: 'https://hansora.co/automation.html' }]);
+  if (typeof evaluateCondition === 'function') { assert.equal(Boolean(evaluateCondition(check, { facts: { follows: true } })), true); assert.equal(Boolean(evaluateCondition(check, { facts: { follows: false } })), false); }
+  assert.ok(database);
+  const missing = await call('create_comment_automation', { keywords: ['love'], private_message: 'Hi', followers_only: true }, { automation_businesses: [shop()] });
+  assert.equal(missing.data.error, 'link_required');
+  assert.equal(missing.writes.length, 0);
+});
+
+test('posts: latest needs Instagram connected and saves nothing otherwise', async () => {
+  const { data, writes } = await call('create_comment_automation', { keywords: ['love'], private_message: 'Hi', posts: 'latest' }, { automation_businesses: [shop()], automation_provider_resources: [] });
+  assert.equal(data.error, 'instagram_not_connected');
+  assert.equal(writes.length, 0);
+});
