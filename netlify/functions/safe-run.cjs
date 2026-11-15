@@ -238,9 +238,10 @@ function hasSexualizingContext(normalized, hasImages) {
 const NEGATED_SEXUAL_WORDS = /\b(?:no|not|non|nothing|without|avoid|avoiding|never|zero|free of|free from)\s+(?:(?:explicit|graphic|adult|suggestive|sexual|sexualized|sexy|or|and|any)\s+){0,3}(?:nsfw|nudity|nude|naked|sexual|sexualized|sexualised|sex|explicit|erotic|erotica|porn|pornographic|suggestive)(?:\s+(?:content|material|elements|themes|imagery|scenes|details|acts))?\b/g;
 
 // "No clothing taken from @image2", "no outfit changes between shots": these are about not reusing or switching
-// outfits, not about nudity. Only the clothing word plus a reuse/change word right after it is dropped, so
-// "no clothes" and "no clothes from the waist down" are still checked.
-const OUTFIT_REUSE_RULES = /\b(?:no|not|never|without)\s+(?:(?:extra|other|new|any|the)\s+)?(?:clothes|clothing|garments?|outfits?|costumes?|wardrobe)\s+(?:(?:is|are|ever)\s+)?(?:taken|copied|reused|borrowed|carried over|changes?|swaps?|switch(?:es)?|from (?:@?image|the (?:face|identity|reference)|face|identity|reference))/g;
+// outfits, not about nudity. Only these two exact shapes are dropped: a reuse word plus "from @imageN", and
+// "changes/swaps between shots"; "no clothes", "no clothes from the reference" or "no clothing taken" stay checked.
+// Matched on the normalized prompt: '@' becomes 'a' and 0/1/3/4/5/7 become o/i/e/a/s/t ('@image5' → 'aimages').
+const OUTFIT_REUSE_RULES = /\b(?:no|never|without) (?:clothes|clothing|garments?|outfits?|costumes?) (?:(?:is|are) )?(?:taken|copied|reused|borrowed) from a?image ?[0-9ieasto]{1,2}(?: (?:or|and) a?image ?[0-9ieasto]{1,2})?\b|\bno (?:outfit|costume|clothing|wardrobe) (?:changes?|swaps?) between (?:shots|scenes|cuts|frames)\b/g;
 
 function evaluatePrompt(prompt, options) {
   const hasImages = Boolean(options && options.hasImages);
