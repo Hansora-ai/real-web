@@ -237,9 +237,15 @@ function hasSexualizingContext(normalized, hasImages) {
 // negations directly in front of a sexual word count: "no limits sexual video" is still checked.
 const NEGATED_SEXUAL_WORDS = /\b(?:no|not|non|nothing|without|avoid|avoiding|never|zero|free of|free from)\s+(?:(?:explicit|graphic|adult|suggestive|sexual|sexualized|sexy|or|and|any)\s+){0,3}(?:nsfw|nudity|nude|naked|sexual|sexualized|sexualised|sex|explicit|erotic|erotica|porn|pornographic|suggestive)(?:\s+(?:content|material|elements|themes|imagery|scenes|details|acts))?\b/g;
 
+// "No clothing taken from @image2", "no outfit changes between shots": these are about not reusing or switching
+// outfits, not about nudity. Only these two exact shapes are dropped: a reuse word plus "from @imageN", and
+// "changes/swaps between shots"; "no clothes", "no clothes from the reference" or "no clothing taken" stay checked.
+// Matched on the normalized prompt: '@' becomes 'a' and 0/1/3/4/5/7 become o/i/e/a/s/t ('@image5' → 'aimages').
+const OUTFIT_REUSE_RULES = /\b(?:no|never|without) (?:clothes|clothing|garments?|outfits?|costumes?) (?:(?:is|are) )?(?:taken|copied|reused|borrowed) from a?image ?[0-9ieasto]{1,2}(?: (?:or|and) a?image ?[0-9ieasto]{1,2})?\b|\bno (?:outfit|costume|clothing|wardrobe) (?:changes?|swaps?) between (?:shots|scenes|cuts|frames)\b/g;
+
 function evaluatePrompt(prompt, options) {
   const hasImages = Boolean(options && options.hasImages);
-  const normalized = normalizePrompt(prompt).replace(NEGATED_SEXUAL_WORDS, ' ').replace(/\s+/g, ' ').trim();
+  const normalized = normalizePrompt(prompt).replace(NEGATED_SEXUAL_WORDS, ' ').replace(OUTFIT_REUSE_RULES, ' ').replace(/\s+/g, ' ').trim();
   if (!normalized) return { allowed: true, category: null, policyVersion: POLICY_VERSION };
 
   const sexual = containsTerm(normalized, DIRECT_SEXUAL_TERMS)
