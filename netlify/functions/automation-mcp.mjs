@@ -54,7 +54,7 @@ const SERVER_INSTRUCTIONS = [
 const EVENTS_URL = `${String(process.env.SUPABASE_URL || '').replace(/\/+$/, '')}/rest/v1/chatgpt_events`;
 const EVENTS_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || '';
 export function toolCallRow(userId, name, input, ok, error, ms) {
-  const flags = Object.fromEntries(['platform', 'posts', 'followers_only', 'turn_on', 'reacts_to', 'direction', 'kind', 'status', 'on', 'answered_by'].filter(key => ['string', 'boolean'].includes(typeof input[key])).map(key => [key, input[key]]));
+  const flags = Object.fromEntries(['client', 'platform', 'posts', 'followers_only', 'turn_on', 'reacts_to', 'direction', 'kind', 'status', 'on', 'answered_by'].filter(key => ['string', 'boolean'].includes(typeof input[key])).map(key => [key, input[key]]));
   return { user_id: userId, tool: `automation:${name}`.slice(0, 60), outcome: (ok ? 'ok' : String(error || 'error')).slice(0, 60), details: { ms, fields: Object.keys(input).slice(0, 40), ...flags } };
 }
 function recordToolCall(userId, name, input, ok, error, ms, waitUntil) {
@@ -570,14 +570,14 @@ export function createAutomationServer(ctx) {
       ok: true,
       ai_employee_id: row.id,
       comment_automations: (await listAutomations(row.id)).map(automationView),
-      to_create_a_new_one: 'Call create_comment_automation with this ai_employee_id. It also makes followers-only flows (followers_only) and can target the newest post (posts: "latest"). Do not open the builder or a browser to create one.',
+      to_create_a_new_one: 'Call create_comment_automation with this ai_employee_id. It also makes followers-only flows (followers_only) and can target the newest post (posts: "latest").',
       edit_an_existing_one_at: `${SITE}/automation-workflows.html?business=${row.id}`
     });
   });
 
   register('create_comment_automation', {
     title: 'Create a comment automation',
-    description: 'Use this to create an automation that answers comments on the business\'s posts; do it here, never through the browser. On Instagram: when a comment matches, it can reply publicly under the comment and sends the person a private message, optionally with a link button. With followers_only it becomes the "follow to get the link" flow: the private message has a button; a follower gets the link message; someone who does not follow gets not_following_message with a button to tap after following, which checks again. It can run on all posts, the next post, or the latest post (the newest post or reel). On TikTok: it replies publicly under the comment (TikTok allows no private message). Ask the user for the trigger words (or "any comment"), the texts, and whether to turn it on now; it is created switched off unless turn_on is true. Each run uses credits. Other multi-step flows are built in the builder on hansora.co.',
+    description: 'Use this to create a new comment automation for Instagram or TikTok. Instagram: when a comment matches the keywords, reply under it (optional) and send a private message, optionally with a link button. followers_only makes it a follow-to-get-the-link flow with a follower check and a retry button. posts can be all, next, or latest (the newest post or reel). TikTok: a public reply only. It is created switched off unless turn_on is true. Each run uses credits.',
     inputSchema: z.object({
       ai_employee_id: employeeId,
       platform: z.enum(['instagram', 'tiktok']).default('instagram'),
@@ -760,6 +760,11 @@ export default async function automationMcp(request, context) {
     }));
   }
   const authInfo = { token, clientId: user.clientId, scopes: user.scopes, extra: { userId: user.id, email: user.email, waitUntil } };
+  // When ChatGPT loads the tool list (or connects), note it: a client that never reloads keeps an old list.
+  if (request.method === 'POST') {
+    const asked = await request.clone().json().catch(() => null);
+    for (const item of [].concat(asked || [])) if (['tools/list', 'initialize'].includes(item?.method)) recordToolCall(user.id, item.method, { client: String(item.params?.clientInfo?.name || '') }, true, undefined, 0, waitUntil);
+  }
   const response = withCors(await handler.fetch(request, { authInfo }));
   console.info('automation_mcp_request', JSON.stringify({ requestId, method: request.method, authenticated: true, status: response.status, durationMs: Date.now() - startedAt }));
   return response;
