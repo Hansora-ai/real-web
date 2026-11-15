@@ -74,13 +74,13 @@ test('the server lives at /automation/mcp with its own OAuth discovery', async (
 test('every tool says what it does, and write tools are not marked read-only', async () => {
   const { result } = await rpc('tools/list', {}, {});
   const names = result.tools.map(tool => tool.name).sort();
-  assert.deepEqual(names, ['add_knowledge', 'add_product', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_order_booking_lead', 'update_product']);
+  assert.deepEqual(names, ['add_knowledge', 'add_product', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_order_booking_lead', 'update_product']);
   for (const tool of result.tools) {
     assert.match(tool.description, /^Use this/);
     assert.equal(typeof tool.annotations.readOnlyHint, 'boolean');
   }
   const byName = Object.fromEntries(result.tools.map(tool => [tool.name, tool.annotations]));
-  for (const name of ['start_ai_call', 'reply_to_website_chat', 'set_comment_automation', 'create_comment_automation', 'get_phone_number', 'set_automatic_calls']) assert.deepEqual([byName[name].readOnlyHint, byName[name].openWorldHint], [false, true]);
+  for (const name of ['start_ai_call', 'reply_to_website_chat', 'set_comment_automation', 'create_comment_automation', 'request_phone_number', 'get_phone_number', 'set_automatic_calls']) assert.deepEqual([byName[name].readOnlyHint, byName[name].openWorldHint], [false, true]);
   for (const name of ['get_overview', 'get_call', 'list_website_chats']) assert.equal(byName[name].readOnlyHint, true);
 });
 
@@ -236,14 +236,78 @@ test('products: add with clean values, update only what changed, delete by owner
   assert.equal(foreign.writes.length, 0);
 });
 
-test('abilities: an existing one is switched, one never set up is sent to the settings page, products can start here', async () => {
-  const { data, writes } = await call('set_business_tools', { orders: false, bookings: true, products: true }, { automation_businesses: [shop()], automation_tool_configs: [{ tool_type: 'orders', enabled: true }], automation_provider_resources: [] });
-  assert.deepEqual(data.changed, { orders: 'off', products: 'on' });
-  assert.deepEqual(data.needs_setup_on_website, ['bookings']);
-  const toolWrites = writes.filter(write => write.table === 'automation_tool_configs');
-  assert.deepEqual(toolWrites.map(write => write.method), ['PATCH', 'POST']);
-  assert.equal(toolWrites[0].body.enabled, false);
-  assert.deepEqual(toolWrites[1].body, { business_id: SHOP, tool_type: 'catalog', enabled: true, config: {} });
+test('business tools: a switch keeps the saved settings, and a tool never saved starts from the page defaults', async () => {
+  const { data, writes } = await call('set_business_tools', { orders: false, leads: true, lead_questions: ['What is your budget?'], products: true }, { automation_businesses: [shop()], automation_tool_configs: [{ tool_type: 'orders', enabled: true, config: { required_fields: ['Product', 'Phone number'], auto_confirm: true, confirmation_message: 'Thanks {number}' } }], automation_provider_resources: [] });
+  assert.deepEqual(data.changed.sort(), ['leads', 'orders', 'products']);
+  const saved = Object.fromEntries(writes.find(write => write.table === 'automation_tool_configs').body.map(row => [row.tool_type, row]));
+  assert.deepEqual([saved.orders.enabled, saved.orders.config], [false, { required_fields: ['Product', 'Phone number'], auto_confirm: true, confirmation_message: 'Thanks {number}' }]);
+  assert.deepEqual([saved.leads.enabled, saved.leads.config], [true, { signals: '', questions: ['What is your budget?'] }]);
+  assert.deepEqual([saved.catalog.enabled, saved.catalog.config], [true, {}]);
+});
+
+test('order questions and opening hours are replaced as sent, checked like the settings page', async () => {
+  const tables = { automation_businesses: [shop()], automation_tool_configs: [], automation_provider_resources: [] };
+  const done = await call('set_business_tools', { orders: true, order_questions: ['product name', 'how many personas', 'Customer name'], bookings: true, opening_hours: { mon: [{ start: '09:00', end: '13:00' }, { start: '14:00', end: '18:00' }], sun: [] }, booking_length_minutes: 45 }, tables);
+  const saved = Object.fromEntries(done.writes.find(write => write.table === 'automation_tool_configs').body.map(row => [row.tool_type, row]));
+  assert.deepEqual(saved.orders.config.required_fields, ['product name', 'how many personas', 'Customer name']);
+  assert.deepEqual([saved.calendar.config.weekly_hours.mon, saved.calendar.config.weekly_hours.tue, saved.calendar.config.weekly_hours.sun], [[{ start: '09:00', end: '13:00' }, { start: '14:00', end: '18:00' }], [{ start: '10:00', end: '19:00' }], []]);
+  assert.deepEqual([saved.calendar.config.duration_minutes, saved.calendar.config.timezone, saved.calendar.config.step_minutes], [45, 'America/New_York', 30]);
+  for (const [input, error] of [[{ opening_hours: { mon: [{ start: '18:00', end: '09:00' }] } }, 'hours_invalid'], [{ opening_hours: { mon: [{ start: '09:00', end: '13:00' }, { start: '12:00', end: '15:00' }] } }, 'hours_overlap'], [{ order_questions: ['Name', 'name'] }, 'questions_repeat'], [{ orders: true, order_questions: [] }, 'order_questions_required']]) {
+    const bad = await call('set_business_tools', input, tables);
+    assert.equal(bad.data.error, error);
+    assert.equal(bad.writes.length, 0);
+  }
+});
+
+test('get_business_tools shows the questions and hours, not only on and off', async () => {
+  const { data } = await call('get_business_tools', {}, { automation_businesses: [shop()], automation_tool_configs: [{ tool_type: 'orders', enabled: true, config: { required_fields: ['product name', 'Phone number'], auto_confirm: false } }] });
+  assert.deepEqual(data.tools.orders, { status: 'on', questions_asked_before_every_order: ['product name', 'Phone number'], new_orders_confirmed_automatically: false, message_after_the_order: '' });
+  assert.equal(data.tools.bookings.status, 'not set up');
+  assert.deepEqual(data.tools.bookings.opening_hours.sat, [{ start: '11:00', end: '17:00' }]);
+});
+
+test('a photo attached in ChatGPT is downloaded, stored and added to the product', async () => {
+  const tables = { automation_businesses: [{ ...shop(), owner_user_id: USER }], automation_tool_configs: [], automation_products: [{ id: PRODUCT, business_id: SHOP, name: 'Croissant', photos: [{ path: 'old.jpg' }] }] };
+  const database = fakeDatabase(tables);
+  const uploads = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => {
+    const href = String(url);
+    if (href === 'https://files.example.com/croissant.png') return new Response(Buffer.from('png-bytes'), { headers: { 'content-type': 'image/png' } });
+    if (href === 'https://files.example.com/doc.pdf') return new Response(Buffer.from('pdf'), { headers: { 'content-type': 'application/pdf' } });
+    if (href.includes('/storage/v1/object/')) { uploads.push({ href, type: options.headers['Content-Type'], size: options.body.length }); return Response.json({}); }
+    return database.fetchFake(url, options);
+  };
+  let data;
+  try {
+    const response = await automationMcp(new Request('https://hansora.co/automation/mcp', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'update_product', arguments: { product_id: PRODUCT, image_files: [{ download_url: 'https://files.example.com/croissant.png', file_id: 'f1' }, { download_url: 'https://files.example.com/doc.pdf', file_id: 'f2' }] } } }) }));
+    const raw = await response.text();
+    data = JSON.parse(raw.startsWith('{') ? raw : raw.split('\n').find(line => line.startsWith('data:')).slice(5)).result.structuredContent;
+  } finally { globalThis.fetch = originalFetch; }
+  assert.deepEqual([data.photos_added, data.photos_now, data.photo_problems], [1, 2, ['Only JPG, PNG and WebP photos can be added.']]);
+  assert.equal(uploads.length, 1);
+  assert.match(uploads[0].href, new RegExp(`/${SHOP}/products/${PRODUCT}/[0-9a-f-]+\\.png$`));
+  const saved = database.writes.find(write => write.table === 'automation_products').body.photos;
+  assert.equal(saved.length, 2);
+  assert.equal(saved[0].path, 'old.jpg');
+  assert.match(saved[1].path, /\.png$/);
+});
+
+test('photo links must be public https addresses', async () => {
+  const { safePhotoUrl } = await import('../../lib/automation-mcp/business.mjs');
+  for (const bad of ['http://example.com/a.png', 'https://localhost/a.png', 'https://10.0.0.5/a.png', 'https://metadata.internal/a.png', 'file:///etc/passwd', 'https://[::1]/a.png']) assert.equal(safePhotoUrl(bad), '', bad);
+  assert.equal(safePhotoUrl('https://files.example.com/a.png'), 'https://files.example.com/a.png');
+});
+
+test('add_product and update_product accept ChatGPT file attachments', async () => {
+  const { result } = await rpc('tools/list', {}, {});
+  for (const name of ['add_product', 'update_product']) assert.deepEqual(result.tools.find(tool => tool.name === name)._meta['openai/fileParams'], ['image_files']);
+});
+
+test('a country without numbers becomes a request to the Hansora team', async () => {
+  const bad = await call('request_phone_number', { country: 'de', contact_method: 'email', contact: 'not-an-email' }, { automation_businesses: [{ ...shop(), owner_user_id: USER }] });
+  assert.equal(bad.data.error, 'invalid_contact');
+  assert.equal(bad.writes.length, 0);
 });
 
 test('a comment automation is turned on with its start time, and described in plain words', async () => {
