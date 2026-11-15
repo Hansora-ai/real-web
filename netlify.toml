@@ -94,6 +94,10 @@
 [functions."hansora-mcp"]
   timeout = 60
 
+# Hansora Automation MCP server (ChatGPT app), served at /automation/mcp
+[functions."automation-mcp"]
+  timeout = 60
+
 # Unlimited generation queue dispatcher (runs once per minute)
 [functions."dispatch-unlimited-queue"]
   schedule = "* * * * *"
