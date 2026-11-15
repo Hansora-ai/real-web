@@ -147,3 +147,14 @@ test('typos of suggestive words still block', () => {
     assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, false, prompt);
   }
 });
+
+test('rules about not reusing or switching outfits are not read as nudity; real nudity requests stay blocked', () => {
+  const allowed = [
+    'EXCLUSIONS No clothing taken from @image2 or @image5, no outfit changes between shots, no extra characters in the foreground.',
+    'Wardrobe rule: no clothes from the face photo ever appear; no costume swaps between shots.',
+    'THE OWNER wears only the costume from @image3, no garments copied from @image2.'
+  ];
+  for (const prompt of allowed) assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, true, prompt);
+  const blocked = ['woman with no clothes', 'make her wear no clothes', 'girl with no clothes from the waist down', 'no clothing', 'remove her clothes', 'a woman with no outfit'];
+  for (const prompt of blocked) assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, false, prompt);
+});

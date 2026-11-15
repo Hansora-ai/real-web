@@ -237,9 +237,14 @@ function hasSexualizingContext(normalized, hasImages) {
 // negations directly in front of a sexual word count: "no limits sexual video" is still checked.
 const NEGATED_SEXUAL_WORDS = /\b(?:no|not|non|nothing|without|avoid|avoiding|never|zero|free of|free from)\s+(?:(?:explicit|graphic|adult|suggestive|sexual|sexualized|sexy|or|and|any)\s+){0,3}(?:nsfw|nudity|nude|naked|sexual|sexualized|sexualised|sex|explicit|erotic|erotica|porn|pornographic|suggestive)(?:\s+(?:content|material|elements|themes|imagery|scenes|details|acts))?\b/g;
 
+// "No clothing taken from @image2", "no outfit changes between shots": these are about not reusing or switching
+// outfits, not about nudity. Only the clothing word plus a reuse/change word right after it is dropped, so
+// "no clothes" and "no clothes from the waist down" are still checked.
+const OUTFIT_REUSE_RULES = /\b(?:no|not|never|without)\s+(?:(?:extra|other|new|any|the)\s+)?(?:clothes|clothing|garments?|outfits?|costumes?|wardrobe)\s+(?:(?:is|are|ever)\s+)?(?:taken|copied|reused|borrowed|carried over|changes?|swaps?|switch(?:es)?|from (?:@?image|the (?:face|identity|reference)|face|identity|reference))/g;
+
 function evaluatePrompt(prompt, options) {
   const hasImages = Boolean(options && options.hasImages);
-  const normalized = normalizePrompt(prompt).replace(NEGATED_SEXUAL_WORDS, ' ').replace(/\s+/g, ' ').trim();
+  const normalized = normalizePrompt(prompt).replace(NEGATED_SEXUAL_WORDS, ' ').replace(OUTFIT_REUSE_RULES, ' ').replace(/\s+/g, ' ').trim();
   if (!normalized) return { allowed: true, category: null, policyVersion: POLICY_VERSION };
 
   const sexual = containsTerm(normalized, DIRECT_SEXUAL_TERMS)
