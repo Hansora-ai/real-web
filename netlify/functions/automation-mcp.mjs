@@ -16,9 +16,12 @@ import { handler as replyFunction } from './automation-conversation-reply.mjs';
 import { handler as recordUpdateFunction } from './automation-outcome-update.mjs';
 import { handler as phoneLineFunction } from './automation-phone-line.mjs';
 import { handler as instagramSyncFunction } from './automation-instagram-sync.mjs';
+import { handler as productPhotoFunction } from './automation-product-photo.mjs';
+import { openAIFileSchema } from '../../lib/hansora-mcp/file-inputs.mjs';
 import {
-  RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, automationView, createAutomation, businessTools, deleteProduct, getAutomaticCalls, listAutomations, listProducts,
-  listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView, setAutomaticCalls, setAutomationOn, setBusinessTools, updateProduct
+  DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, automationView, businessToolSettings, businessTools, createAutomation,
+  deleteProduct, downloadPhoto, getAutomaticCalls, listAutomations, listProducts, listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView,
+  saveProductPhotos, setAutomaticCalls, setAutomationOn, setBusinessTools, updateProduct
 } from '../../lib/automation-mcp/business.mjs';
 import {
   ACCOUNT_LINE, ACCOUNT_URL, LANGUAGES, SITE, TONES, account, activity, callView, createEmployee, employeeDetails, employeeSummary, getEmployee, links,
@@ -105,7 +108,7 @@ const NUMBER_ERRORS = {
   phone_agent_configuration_incomplete: 'Finish setting up the AI employee first (call update_ai_employee), then get a number.',
   invalid_country: 'Pass a two-letter country code, for example US.',
   credits_required: `A phone number needs credits on the account. ${ACCOUNT_LINE}`,
-  no_number_available: 'No number is available in this country right now. On the Phone page the user can ask for one or connect their own number.',
+  no_number_available: 'No number is available in this country right now. Offer to ask the Hansora team for one with request_phone_number (you need a WhatsApp number, Telegram username or email to reach the user). They can also connect their own number on the Phone page.',
   phone_line_setup_failed: 'The number could not be prepared right now. Ask the user to try again later.'
 };
 
@@ -360,7 +363,7 @@ export function createAutomationServer(ctx) {
   register('list_calls', {
     title: 'List phone calls',
     description: 'Use this to see recent phone calls of an AI employee: incoming calls it answered and calls it made, with time, length, number, purpose and summary. Use get_call for the full transcript.',
-    inputSchema: z.object({ ai_employee_id: employeeId, direction: z.enum(['all', 'incoming', 'outgoing']).default('all'), limit: z.number().int().min(1).max(30).default(10) }),
+    inputSchema: z.object({ ai_employee_id: employeeId, direction: z.enum(['all', 'incoming', 'outgoing', 'tests']).default('all').describe('all includes test calls made from the Phone page.'), limit: z.number().int().min(1).max(30).default(10) }),
     annotations: READ
   }, async ({ ai_employee_id, direction, limit }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
@@ -431,24 +434,53 @@ export function createAutomationServer(ctx) {
     payment_link: z.string().max(1000).optional().describe('An https:// link where the customer pays for this product.')
   };
 
+  // Photos the user attached in ChatGPT (or public https image links) are saved to the product, like on the products page.
+  const attachPhotos = async (product, files = [], urls = []) => {
+    const wanted = [...files, ...urls.map(url => ({ url }))];
+    if (!wanted.length) return null;
+    const room = MAX_PRODUCT_PHOTOS - (Array.isArray(product.photos) ? product.photos.length : 0);
+    const paths = [], problems = [];
+    if (wanted.length > room) problems.push(`A product can have ${MAX_PRODUCT_PHOTOS} photos; ${Math.max(0, room)} more fit.`);
+    for (const file of wanted.slice(0, Math.max(0, room))) {
+      const photo = await downloadPhoto(file);
+      if (photo.skipped) { problems.push(photo.skipped); continue; }
+      const saved = await runFunction(productPhotoFunction, token, { business_id: product.business_id, product_id: product.id, ...photo });
+      if (saved.ok && saved.data.path) paths.push(saved.data.path); else problems.push(saved.data.message || 'The photo could not be saved.');
+    }
+    const total = paths.length ? await saveProductPhotos(product, paths) : (Array.isArray(product.photos) ? product.photos.length : 0);
+    return { photos_added: paths.length, photos_now: total, ...(problems.length ? { photo_problems: [...new Set(problems)] } : {}) };
+  };
+  const photoFields = {
+    image_files: z.array(openAIFileSchema).max(MAX_PRODUCT_PHOTOS).optional().describe('Photos the user attached in this chat (JPG, PNG or WebP, up to 4 MB each).'),
+    image_urls: z.array(z.string().url()).max(MAX_PRODUCT_PHOTOS).optional().describe('Public https:// links to product photos.')
+  };
+  const PHOTO_META = { 'openai/fileParams': ['image_files'] };
+
   register('add_product', {
     title: 'Add a product',
-    description: 'Use this to add one product to the catalog so the AI employee can offer and sell it. For several products, call it once per product. Photos and variants are added on the products page.',
-    inputSchema: z.object({ ai_employee_id: employeeId, name: z.string().min(1).max(300), ...productFields }),
-    annotations: WRITE
-  }, async ({ ai_employee_id, ...input }) => {
+    description: 'Use this to add one product to the catalog so the AI employee can offer and sell it, with photos if the user attached any (pass them in image_files). For several products, call it once per product. Variants (sizes, colors) are added on the products page.',
+    inputSchema: z.object({ ai_employee_id: employeeId, name: z.string().min(1).max(300), ...productFields, ...photoFields }),
+    annotations: WRITE,
+    _meta: PHOTO_META
+  }, async ({ ai_employee_id, image_files, image_urls, ...input }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const product = await addProduct(row.id, input);
+    const photos = await attachPhotos(product, image_files, image_urls);
     const tools = await businessTools(row.id).catch(() => ({}));
-    return jsonText({ ok: true, product, ai_offers_products: tools.products === 'on', ...(tools.products === 'on' ? {} : { next_step: 'The AI employee does not offer products to customers yet. Ask the user if it should, then call set_business_tools with products: true.' }) });
+    return jsonText({ ok: true, product: { ...productView(product), ...(photos ? { photos: photos.photos_now } : {}) }, ...(photos || {}), ai_offers_products: tools.products === 'on', ...(tools.products === 'on' ? {} : { next_step: 'The AI employee does not offer products to customers yet. Ask the user if it should, then call set_business_tools with products: true.' }) });
   });
 
   register('update_product', {
     title: 'Update a product',
-    description: 'Use this to change one product (product_id from list_products): name, price, stock, description, or hide it from customers. Send only the fields that change.',
-    inputSchema: z.object({ product_id: z.string(), name: z.string().min(1).max(300).optional(), ...productFields }),
-    annotations: { ...WRITE, destructiveHint: true }
-  }, async ({ product_id, ...input }) => jsonText({ ok: true, product: await updateProduct(await ownedProduct(userId, product_id), input) }));
+    description: 'Use this to change one product (product_id from list_products): name, price, stock, description, hide it from customers, or add photos the user attached (image_files). Send only the fields that change. Removing photos is done on the products page.',
+    inputSchema: z.object({ product_id: z.string(), name: z.string().min(1).max(300).optional(), ...productFields, ...photoFields }),
+    annotations: { ...WRITE, destructiveHint: true },
+    _meta: PHOTO_META
+  }, async ({ product_id, image_files, image_urls, ...input }) => {
+    const product = await updateProduct(await ownedProduct(userId, product_id), input);
+    const photos = await attachPhotos(product, image_files, image_urls);
+    return jsonText({ ok: true, product: { ...productView(product), ...(photos ? { photos: photos.photos_now } : {}) }, ...(photos || {}) });
+  });
 
   register('delete_product', {
     title: 'Delete a product',
@@ -465,24 +497,42 @@ export function createAutomationServer(ctx) {
 
   register('get_business_tools', {
     title: 'See what the AI employee may do',
-    description: 'Use this to see which abilities of an AI employee are on: taking orders, making bookings, collecting leads, handing a chat to a person, and offering products.',
+    description: 'Use this to read the business tools of an AI employee with all their settings: orders (on or off, the questions asked before every order, automatic confirmation, the message after an order), bookings (opening hours per day, booking length, questions, automatic confirmation), leads (questions, signs of interest), handoff to a person (when), and products.',
     inputSchema: z.object({ ai_employee_id: employeeId }),
     annotations: READ
   }, async ({ ai_employee_id }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
-    return jsonText({ ok: true, tools: await businessTools(row.id), settings_page: `${SITE}/automation-tools.html?business=${row.id}` });
+    return jsonText({ ok: true, tools: await businessToolSettings(row) });
   });
 
+  const hours = z.array(z.object({ start: z.string().describe('24-hour time, for example 09:00'), end: z.string().describe('24-hour time, for example 18:00') })).max(4);
   register('set_business_tools', {
-    title: 'Turn AI employee abilities on or off',
-    description: 'Use this to turn abilities of an AI employee on or off: orders, bookings, leads, handoff_to_person, products. Send only the ones that change. An ability that was never set up (bookings need working hours, orders need the details to collect) must first be set up on the settings page; the result says which.',
-    inputSchema: z.object({ ai_employee_id: employeeId, orders: z.boolean().optional(), bookings: z.boolean().optional(), leads: z.boolean().optional(), handoff_to_person: z.boolean().optional(), products: z.boolean().optional() }),
-    annotations: WRITE
+    title: 'Change what the AI employee may do',
+    description: 'Use this to turn business tools on or off and change their settings: orders, bookings, leads, handoff to a person, products. Send only what changes. A list you send (questions, or the hours of a day) replaces the whole old list, so read the current one with get_business_tools first when adding to it. Alerts to the owner, Google Calendar, tables or staff, closed dates and delivery slots are set on the settings page.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      orders: z.boolean().optional().describe('Turn taking orders on or off.'),
+      order_questions: z.array(z.string().max(80)).max(15).optional().describe('What the AI asks before every order, for example ["Product", "Quantity", "Customer name", "Phone number", "Delivery address"].'),
+      orders_confirmed_automatically: z.boolean().optional().describe('true: new orders are marked confirmed at once. false: the team confirms price and stock first.'),
+      message_after_the_order: z.string().max(500).optional().describe('Sent after an order; {number} is replaced by the order number.'),
+      bookings: z.boolean().optional().describe('Turn bookings (appointments, reservations) on or off.'),
+      opening_hours: z.object(Object.fromEntries(DAY_KEYS.map(day => [day, hours.optional()]))).optional().describe('Hours when bookings are possible, per day (mon..sun). An empty list closes that day. Days left out stay as they are.'),
+      booking_length_minutes: z.number().int().min(5).max(1440).optional(),
+      booking_questions: z.array(z.string().max(80)).max(15).optional().describe('What the AI asks before every booking.'),
+      bookings_confirmed_automatically: z.boolean().optional(),
+      leads: z.boolean().optional().describe('Turn collecting leads on or off.'),
+      lead_questions: z.array(z.string().max(80)).max(15).optional().describe('What the AI asks an interested customer, for example ["What is your budget?"].'),
+      signs_of_an_interested_customer: z.string().max(1000).optional(),
+      handoff_to_person: z.boolean().optional(),
+      hand_over_when: z.object({ customer_asks_for_a_person: z.boolean().optional(), customer_complains: z.boolean().optional(), information_is_missing: z.boolean().optional(), ai_is_unsure: z.boolean().optional() }).optional(),
+      products: z.boolean().optional().describe('Let the AI employee offer the product catalog to customers.')
+    }),
+    annotations: { ...WRITE, destructiveHint: true }
   }, async ({ ai_employee_id, ...changes }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
-    const result = await setBusinessTools(row.id, changes);
-    const prepared = Object.keys(result.changed).length ? await prepare(row.id) : {};
-    return jsonText({ ok: true, ...result, tools: await businessTools(row.id), ...prepared });
+    const result = await setBusinessTools(row, changes);
+    const prepared = result.changed.length ? await prepare(row.id) : {};
+    return jsonText({ ok: true, ...result, tools: await businessToolSettings(row), ...prepared });
   });
 
   // ---------- Comment automations ----------
@@ -585,6 +635,23 @@ export function createAutomationServer(ctx) {
     const result = await withBudget(runFunction(phoneLineFunction, token, { business_id: row.id, action: 'activate', country: country.toUpperCase() }));
     if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'number_failed', next_step: NUMBER_ERRORS[result.data.error] || 'The number could not be added right now. Try once more.', links: { phone: links(row.id).phone, account: ACCOUNT_URL } });
     return jsonText({ ok: true, phone_number: result.data.number?.e164 || '', can_call_out: Boolean(result.data.number?.can_call), next_step: 'Tell the user the number. They can choose the voice and greeting on the Phone page (links.phone).', links: { phone: links(row.id).phone } });
+  });
+
+  register('request_phone_number', {
+    title: 'Ask Hansora for a phone number in a country',
+    description: 'Use this when get_phone_number says no number is available in the user\'s country, or the country is not in countries_with_numbers_now. It sends the Hansora team a request with the user\'s contact, and the team writes back to arrange a local number. Ask the user how to reach them: WhatsApp number, Telegram username or email.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      country: z.string().regex(/^[A-Za-z]{2}$/).describe('Two-letter country code, for example DE.'),
+      contact_method: z.enum(['whatsapp', 'telegram', 'email']),
+      contact: z.string().min(4).max(200).describe('The WhatsApp number, Telegram username or email address to reach the user at.')
+    }),
+    annotations: OUTBOUND
+  }, async ({ ai_employee_id, country, contact_method, contact }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const result = await withBudget(runFunction(phoneLineFunction, token, { business_id: row.id, action: 'contact', country: country.toUpperCase(), method: contact_method, value: contact, wants: ['local_number'] }));
+    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'request_failed', next_step: result.data.error === 'invalid_contact' ? 'The contact does not look right. Ask for a WhatsApp number with country code, a Telegram username, or an email address.' : 'The request could not be sent right now. Try once more.' });
+    return jsonText({ ok: true, requested: true, country: country.toUpperCase(), next_step: 'Tell the user the request reached the Hansora team, who will contact them there to arrange the number.' });
   });
 
   register('set_automatic_calls', {
