@@ -313,3 +313,13 @@ test('deleting a comment automation archives it', async () => {
   const { data, writes } = await call('delete_comment_automation', { automation_id: FLOW }, { automation_comment_workflows: [flow], automation_businesses: [{ id: SHOP }] });
   assert.deepEqual([writes[0].body, data.deleted], [{ status: 'archived' }, 'Price list']);
 });
+
+test('nothing the server sends links to the pricing page or tells ChatGPT to sell (OpenAI app rules)', async () => {
+  const listed = await rpc('tools/list', {}, {});
+  const money = await call('get_account', {}, { automation_businesses: [shop()], profiles: [{ credits: 1 }] });
+  const noCall = await call('start_ai_call', { phone_number: '+15550102030', purpose: 'Confirm' }, { automation_businesses: [{ ...shop(), owner_user_id: USER }], automation_phone_numbers: [{ e164: '+15550100000', country: 'US', livekit_outbound_trunk_id: 't1' }], profiles: [{ credits: 0 }] });
+  assert.equal(noCall.data.error, 'credits_required');
+  assert.match(noCall.data.next_step, /no sales wording/);
+  assert.match(money.data.links.account, /automation-usage\.html/);
+  for (const text of [JSON.stringify(listed.result), money.text, noCall.text]) assert.doesNotMatch(text, /automation-pricing|buy credits|add credits|upgrade your/i);
+});
