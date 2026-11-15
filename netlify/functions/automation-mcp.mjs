@@ -41,7 +41,8 @@ const SERVER_INSTRUCTIONS = [
   'Never offer, suggest or promote buying credits, a plan or an upgrade, and never link to a pricing or checkout page. When credits run out, say so as a fact and give the account link from the tool result.',
   'Privacy: customer chats from Instagram, WhatsApp, TikTok, Telegram and Messenger cannot be read or answered here because of those platforms\' rules. You get how many are waiting and a link to the Hansora inbox; give the user that link. Website chats and phone calls can be read here.',
   'Orders, bookings and leads that came from those platforms are listed without the customer\'s name and phone number; the user sees them in Hansora.',
-  'Connecting a channel, buying credits and the comment flow builder happen on hansora.co; give the link from the tool result.',
+  'Connecting a channel (Instagram, WhatsApp, Telegram, TikTok) happens on hansora.co; give the link from the tool result.',
+  'Comment automations are created here with create_comment_automation, including followers-only flows and ones for the latest post; only editing an existing flow or building other multi-step flows needs the builder on hansora.co.',
   'When something is missing or wrong in an AI employee and a tool here can fix it, offer to fix it yourself; send the user to hansora.co only for what the tools cannot do.',
   'Work only through these tools. Do not open or control a browser to change things on hansora.co for the user: if a tool returns an error, tell the user what it said; if no tool can do something, say so and give the hansora.co link.',
   'Before start_ai_call and reply_to_website_chat, confirm the exact number or text with the user. Answer in the user\'s language.'
@@ -560,12 +561,18 @@ export function createAutomationServer(ctx) {
 
   register('list_comment_automations', {
     title: 'List comment automations',
-    description: 'Use this to see the comment automations (Instagram and TikTok): which are on, what comments they react to, what they reply, and how many times each ran. New simple ones are made with create_comment_automation; multi-step flows are built and edited in the builder on hansora.co.',
+    description: 'Use this to see the comment automations (Instagram and TikTok): which are on, what comments they react to, what they reply, and how many times each ran. To make a new one, including a followers-only flow or one for the latest post, call create_comment_automation; you do not need to list first.',
     inputSchema: z.object({ ai_employee_id: employeeId }),
     annotations: READ
   }, async ({ ai_employee_id }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
-    return jsonText({ ok: true, comment_automations: (await listAutomations(row.id)).map(automationView), builder: `${SITE}/automation-workflows.html?business=${row.id}` });
+    return jsonText({
+      ok: true,
+      ai_employee_id: row.id,
+      comment_automations: (await listAutomations(row.id)).map(automationView),
+      to_create_a_new_one: 'Call create_comment_automation with this ai_employee_id. It also makes followers-only flows (followers_only) and can target the newest post (posts: "latest"). Do not open the builder or a browser to create one.',
+      edit_an_existing_one_at: `${SITE}/automation-workflows.html?business=${row.id}`
+    });
   });
 
   register('create_comment_automation', {
@@ -607,7 +614,7 @@ export function createAutomationServer(ctx) {
       ok: true,
       comment_automation: automationView(made.row),
       turned_on: made.turned_on,
-      builder,
+      edit_it_at: builder,
       next_step: made.not_connected
         ? `It is saved but switched off, because ${input.platform === 'tiktok' ? 'TikTok' : 'Instagram'} is not connected for this AI employee. The user connects it at ${links(row.id).connect_channels}, then you can turn it on with set_comment_automation.`
         : made.turned_on ? 'Tell the user it is live and now answers matching comments.' : 'It is saved but switched off. Ask the user if you should turn it on with set_comment_automation.'
