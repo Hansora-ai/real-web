@@ -96,6 +96,7 @@ test('the overview counts waiting chats per channel and shows no customer names 
   const employee = data.ai_employees[0];
   assert.deepEqual(employee.chats_waiting_for_a_person, { total: 3, by_channel: { WhatsApp: 2, 'Website chat': 1 } });
   assert.deepEqual(employee.last_24_hours, { new_orders: 1, new_bookings: 1, new_leads: 0, calls_answered: 0, calls_made: 1 });
+  assert.equal(employee.status, 'live');
   assert.equal(data.credits, 123);
   assert.equal(data.plan, 'Pay as you go');
   assert.match(employee.links.inbox, /automation-inbox\.html\?business=/);
