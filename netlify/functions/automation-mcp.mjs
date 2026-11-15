@@ -38,6 +38,7 @@ const SERVER_INSTRUCTIONS = [
   'Privacy: customer chats from Instagram, WhatsApp, TikTok, Telegram and Messenger cannot be read or answered here because of those platforms\' rules. You get how many are waiting and a link to the Hansora inbox; give the user that link. Website chats and phone calls can be read here.',
   'Orders, bookings and leads that came from those platforms are listed without the customer\'s name and phone number; the user sees them in Hansora.',
   'Connecting a channel, buying credits and the comment flow builder happen on hansora.co; give the link from the tool result.',
+  'When something is missing or wrong in an AI employee and a tool here can fix it, offer to fix it yourself; send the user to hansora.co only for what the tools cannot do.',
   'Before start_ai_call and reply_to_website_chat, confirm the exact number or text with the user. Answer in the user\'s language.'
 ].join(' ');
 
@@ -107,6 +108,8 @@ const NUMBER_ERRORS = {
   no_number_available: 'No number is available in this country right now. On the Phone page the user can ask for one or connect their own number.',
   phone_line_setup_failed: 'The number could not be prepared right now. Ask the user to try again later.'
 };
+
+const PHONE_KNOWLEDGE_NOTE = 'Knowledge items (texts, files, links) are used in chats only. On phone calls the AI employee knows only the main fields (services_and_prices, opening_hours, delivery_and_service_areas, faq, policies, instructions). For anything it must say on calls, such as prices, put the text itself into services_and_prices or faq with update_ai_employee.';
 
 const documentView = item => ({ knowledge_id: item.id, name: item.name || '', type: item.type, ...(item.url ? { url: item.url } : {}), added_at: item.added_at || null });
 
@@ -193,7 +196,7 @@ export function createAutomationServer(ctx) {
       runFunction(knowledgeFunction, token, { business_id: row.id, action: 'list' }).catch(() => ({ ok: false, data: {} })),
       phoneLines(row.id).catch(() => [])
     ]);
-    return jsonText({ ok: true, ai_employee: { ...employeeDetails(row), knowledge_items: (knowledge.data.documents || []).map(documentView), phone_numbers: numbers } });
+    return jsonText({ ok: true, ai_employee: { ...employeeDetails(row), knowledge_items: (knowledge.data.documents || []).map(documentView), phone_numbers: numbers }, knowledge_note: PHONE_KNOWLEDGE_NOTE });
   });
 
   register('create_ai_employee', {
@@ -229,7 +232,7 @@ export function createAutomationServer(ctx) {
 
   register('add_knowledge', {
     title: 'Add knowledge to an AI employee',
-    description: 'Use this to teach an AI employee from a longer text (a menu, price list, policy, product descriptions) or from a public website page. The AI employee searches this knowledge when a customer asks. Pass text, or url (https), not both.',
+    description: 'Use this to teach an AI employee from a longer text (a menu, price list, policy, product descriptions) or from a public website page. The AI employee uses this knowledge in chats; phone calls do not use it, so facts needed on calls (prices, hours) go into the main fields with update_ai_employee. Pass text, or url (https), not both.',
     inputSchema: z.object({
       ai_employee_id: employeeId,
       name: z.string().max(120).optional().describe('Short name for this knowledge, for example "Price list 2026".'),
@@ -242,7 +245,7 @@ export function createAutomationServer(ctx) {
     const row = await resolveEmployee(userId, ai_employee_id);
     const result = await withBudget(runFunction(knowledgeFunction, token, { business_id: row.id, action: 'add', kind: url ? 'url' : 'text', name, text, url }));
     if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'knowledge_unavailable', next_step: KNOWLEDGE_ERRORS[result.data.error] || 'The knowledge could not be added right now. Try once more; if it fails again, the user can add it on hansora.co.', ...(result.data.detail ? { detail: String(result.data.detail).slice(0, 300) } : {}) });
-    return jsonText({ ok: true, knowledge_items: (result.data.documents || []).map(documentView) });
+    return jsonText({ ok: true, knowledge_items: (result.data.documents || []).map(documentView), note: PHONE_KNOWLEDGE_NOTE });
   });
 
   register('remove_knowledge', {

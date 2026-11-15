@@ -323,3 +323,9 @@ test('nothing the server sends links to the pricing page or tells ChatGPT to sel
   assert.match(money.data.links.account, /automation-usage\.html/);
   for (const text of [JSON.stringify(listed.result), money.text, noCall.text]) assert.doesNotMatch(text, /automation-pricing|buy credits|add credits|upgrade your/i);
 });
+
+test('get_ai_employee says that phone calls do not use knowledge items', async () => {
+  const { data } = await call('get_ai_employee', {}, { automation_businesses: [shop()], automation_provider_resources: [], automation_phone_numbers: [] });
+  assert.match(data.knowledge_note, /phone calls the AI employee knows only the main fields/);
+  assert.equal(data.ai_employee.services_and_prices, 'Haircut $30');
+});
