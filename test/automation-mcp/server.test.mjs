@@ -430,3 +430,11 @@ test('each tool call is logged with its outcome and field names, never the texts
   assert.ok(event.details.fields.includes('private_message'));
   assert.doesNotMatch(JSON.stringify(event), /SECRET/);
 });
+
+test('loading the tool list is logged, so a client with an old list can be told apart', async () => {
+  const done = await rpc('tools/list', {}, {});
+  assert.deepEqual(done.events.map(event => [event.tool, event.outcome]), [['automation:tools/list', 'ok']]);
+  const create = done.result.tools.find(tool => tool.name === 'create_comment_automation');
+  assert.ok(create.description.length < 600);
+  for (const tool of done.result.tools) assert.ok(tool.description.length <= 1000, tool.name);
+});
