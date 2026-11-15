@@ -13,6 +13,13 @@ import { startOutgoingCall } from '../../lib/automation/phone-dial.mjs';
 import { handler as knowledgeFunction } from './automation-knowledge.mjs';
 import { handler as testChatFunction } from './automation-test-chat.mjs';
 import { handler as replyFunction } from './automation-conversation-reply.mjs';
+import { handler as recordUpdateFunction } from './automation-outcome-update.mjs';
+import { handler as phoneLineFunction } from './automation-phone-line.mjs';
+import { handler as instagramSyncFunction } from './automation-instagram-sync.mjs';
+import {
+  RECORD_KINDS, RECORD_STATUSES, addProduct, automationView, businessTools, deleteProduct, getAutomaticCalls, listAutomations, listProducts,
+  listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView, setAutomaticCalls, setAutomationOn, setBusinessTools, updateProduct
+} from '../../lib/automation-mcp/business.mjs';
 import {
   LANGUAGES, SITE, TONES, account, activity, callView, createEmployee, employeeDetails, employeeSummary, getEmployee, links,
   listCalls, listEmployees, listWebsiteChats, ownedCall, ownedWebsiteChat, phoneLines, resolveEmployee, setChatAnsweredBy,
@@ -28,6 +35,7 @@ const SERVER_INSTRUCTIONS = [
   'Start with get_overview when the user asks how things are going. Most accounts have one AI employee, so ai_employee_id can be left out; pass it when the account has several.',
   'Credits are shown as they appear on hansora.co. Tools here are free; AI replies, test messages and phone minutes use credits.',
   'Privacy: customer chats from Instagram, WhatsApp, TikTok, Telegram and Messenger cannot be read or answered here because of those platforms\' rules. You get how many are waiting and a link to the Hansora inbox; give the user that link. Website chats and phone calls can be read here.',
+  'Orders, bookings and leads that came from those platforms are listed without the customer\'s name and phone number; the user sees them in Hansora.',
   'Connecting a channel, buying credits and the comment flow builder happen on hansora.co; give the link from the tool result.',
   'Before start_ai_call and reply_to_website_chat, confirm the exact number or text with the user. Answer in the user\'s language.'
 ].join(' ');
@@ -57,8 +65,9 @@ function withBudget(promise, ms = TOOL_BUDGET_MS) {
 
 // Runs one of the website's own functions in this process, as the signed-in user, so a tool behaves exactly like
 // the matching button on hansora.co.
-async function runFunction(fn, token, body) {
-  const response = await fn({ httpMethod: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+async function runFunction(fn, token, body, { method = 'POST' } = {}) {
+  const event = { httpMethod: method, headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' } };
+  const response = await fn(method === 'GET' ? { ...event, queryStringParameters: body } : { ...event, body: JSON.stringify(body) });
   let data = {};
   try { data = JSON.parse(response.body || '{}'); } catch { data = {}; }
   return { ok: response.statusCode >= 200 && response.statusCode < 300, status: response.statusCode, data };
@@ -84,6 +93,18 @@ const CALL_ERRORS = {
 const REPLY_ERRORS = {
   invalid_reply: 'The reply must be 1 to 1000 characters.',
   manual_reply_unavailable: 'The reply could not be sent right now. Try once more in a few seconds.'
+};
+
+const RECORD_ERRORS = {
+  time_already_booked: 'That time is already booked, so the status could not be changed.',
+  invalid_status: 'This status is not valid.'
+};
+const NUMBER_ERRORS = {
+  phone_agent_configuration_incomplete: 'Finish setting up the AI employee first (call update_ai_employee), then get a number.',
+  invalid_country: 'Pass a two-letter country code, for example US.',
+  credits_required: 'A phone number needs credits on the account. Give the user the link to add credits.',
+  no_number_available: 'No number is available in this country right now. On the Phone page the user can ask for one or connect their own number.',
+  phone_line_setup_failed: 'The number could not be prepared right now. Ask the user to try again later.'
 };
 
 const documentView = item => ({ knowledge_id: item.id, name: item.name || '', type: item.type, ...(item.url ? { url: item.url } : {}), added_at: item.added_at || null });
@@ -349,6 +370,194 @@ export function createAutomationServer(ctx) {
     inputSchema: z.object({ call_id: z.string() }),
     annotations: READ
   }, async ({ call_id }) => jsonText({ ok: true, call: callView(await ownedCall(userId, call_id), { transcript: true }) }));
+
+  // ---------- Orders, bookings and leads ----------
+
+  register('list_orders_bookings_leads', {
+    title: 'List orders, bookings and leads',
+    description: 'Use this to see what the AI employee collected: orders, bookings (appointments, reservations) and leads, newest first. Filter by kind, status and creation date. Records that came from Instagram, WhatsApp, TikTok, Telegram or Messenger show the item, time and status but not the customer\'s name and phone (platform rules); the user opens those in Hansora with the returned link.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      kind: z.enum(['all', ...RECORD_KINDS]).default('all'),
+      status: z.enum(['any', ...RECORD_STATUSES]).default('any'),
+      created_from: z.string().optional().describe('Only records created at or after this time (ISO 8601, for example 2026-11-15T00:00:00Z).'),
+      created_to: z.string().optional().describe('Only records created at or before this time (ISO 8601).'),
+      limit: z.number().int().min(1).max(50).default(20)
+    }),
+    annotations: READ
+  }, async ({ ai_employee_id, kind, status, created_from, created_to, limit }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const date = value => (value && !Number.isNaN(Date.parse(value)) ? new Date(value).toISOString() : '');
+    return jsonText({ ok: true, records: await listRecords(row.id, { kind, status, from: date(created_from), to: date(created_to), limit }), timezone: row.timezone || 'UTC', open_in_hansora: links(row.id).orders_and_bookings });
+  });
+
+  register('update_order_booking_lead', {
+    title: 'Update an order, booking or lead',
+    description: 'Use this to change the status of one order, booking or lead (record_id from list_orders_bookings_leads), or to save a private note on it. Cancelling a booking frees its time slot and puts ordered products back in stock. Confirm with the user before cancelling.',
+    inputSchema: z.object({ record_id: z.string(), status: z.enum(RECORD_STATUSES).optional(), note: z.string().max(8000).optional().describe('Private note for the team; replaces the old note.') }),
+    annotations: { ...WRITE, destructiveHint: true }
+  }, async ({ record_id, status, note }) => {
+    if (status === undefined && note === undefined) return jsonText({ ok: false, error: 'nothing_to_change', next_step: 'Pass status, note or both.' });
+    const record = await ownedRecord(userId, record_id);
+    const result = await withBudget(runFunction(recordUpdateFunction, token, { business_id: record.business_id, outcome_id: record.id, ...(status !== undefined ? { status } : {}), ...(note !== undefined ? { private_note: note } : {}) }));
+    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'update_failed', next_step: RECORD_ERRORS[result.data.error] || 'The record could not be updated right now. Try once more.' });
+    return jsonText({ ok: true, record: recordView(await ownedRecord(userId, record.id)) });
+  });
+
+  // ---------- Products ----------
+
+  register('list_products', {
+    title: 'List products',
+    description: 'Use this to see the product catalog the AI employee can offer and sell: names, prices, stock and variants. Also says whether the AI employee offers products to customers at all (ai_offers_products).',
+    inputSchema: z.object({ ai_employee_id: employeeId, search: z.string().max(80).optional().describe('Part of a name, category or SKU.'), limit: z.number().int().min(1).max(100).default(30) }),
+    annotations: READ
+  }, async ({ ai_employee_id, search, limit }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    return jsonText({ ok: true, ...(await listProducts(row.id, { search, limit })), products_page: `${SITE}/automation-products.html?business=${row.id}` });
+  });
+
+  const productFields = {
+    description: z.string().max(5000).optional(),
+    category: z.string().max(200).optional(),
+    sku: z.string().max(120).optional(),
+    price: z.number().min(0).nullable().optional(),
+    currency: z.string().regex(/^[A-Za-z]{3}$/).optional().describe('Three-letter currency code, for example USD. Ask the user if unknown.'),
+    stock: z.number().int().min(0).nullable().optional().describe('How many are in stock; leave out or null when stock is not tracked.'),
+    shown_to_customers: z.boolean().optional().describe('false hides the product from customers without deleting it.'),
+    payment_link: z.string().max(1000).optional().describe('An https:// link where the customer pays for this product.')
+  };
+
+  register('add_product', {
+    title: 'Add a product',
+    description: 'Use this to add one product to the catalog so the AI employee can offer and sell it. For several products, call it once per product. Photos and variants are added on the products page.',
+    inputSchema: z.object({ ai_employee_id: employeeId, name: z.string().min(1).max(300), ...productFields }),
+    annotations: WRITE
+  }, async ({ ai_employee_id, ...input }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const product = await addProduct(row.id, input);
+    const tools = await businessTools(row.id).catch(() => ({}));
+    return jsonText({ ok: true, product, ai_offers_products: tools.products === 'on', ...(tools.products === 'on' ? {} : { next_step: 'The AI employee does not offer products to customers yet. Ask the user if it should, then call set_business_tools with products: true.' }) });
+  });
+
+  register('update_product', {
+    title: 'Update a product',
+    description: 'Use this to change one product (product_id from list_products): name, price, stock, description, or hide it from customers. Send only the fields that change.',
+    inputSchema: z.object({ product_id: z.string(), name: z.string().min(1).max(300).optional(), ...productFields }),
+    annotations: { ...WRITE, destructiveHint: true }
+  }, async ({ product_id, ...input }) => jsonText({ ok: true, product: await updateProduct(await ownedProduct(userId, product_id), input) }));
+
+  register('delete_product', {
+    title: 'Delete a product',
+    description: 'Use this to delete one product from the catalog for good (product_id from list_products). To only hide it, use update_product with shown_to_customers: false. Confirm with the user first.',
+    inputSchema: z.object({ product_id: z.string() }),
+    annotations: { ...WRITE, destructiveHint: true }
+  }, async ({ product_id }) => {
+    const product = await ownedProduct(userId, product_id);
+    await deleteProduct(product);
+    return jsonText({ ok: true, deleted: productView(product).name });
+  });
+
+  // ---------- What the AI employee may do ----------
+
+  register('get_business_tools', {
+    title: 'See what the AI employee may do',
+    description: 'Use this to see which abilities of an AI employee are on: taking orders, making bookings, collecting leads, handing a chat to a person, and offering products.',
+    inputSchema: z.object({ ai_employee_id: employeeId }),
+    annotations: READ
+  }, async ({ ai_employee_id }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    return jsonText({ ok: true, tools: await businessTools(row.id), settings_page: `${SITE}/automation-tools.html?business=${row.id}` });
+  });
+
+  register('set_business_tools', {
+    title: 'Turn AI employee abilities on or off',
+    description: 'Use this to turn abilities of an AI employee on or off: orders, bookings, leads, handoff_to_person, products. Send only the ones that change. An ability that was never set up (bookings need working hours, orders need the details to collect) must first be set up on the settings page; the result says which.',
+    inputSchema: z.object({ ai_employee_id: employeeId, orders: z.boolean().optional(), bookings: z.boolean().optional(), leads: z.boolean().optional(), handoff_to_person: z.boolean().optional(), products: z.boolean().optional() }),
+    annotations: WRITE
+  }, async ({ ai_employee_id, ...changes }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const result = await setBusinessTools(row.id, changes);
+    const prepared = Object.keys(result.changed).length ? await prepare(row.id) : {};
+    return jsonText({ ok: true, ...result, tools: await businessTools(row.id), ...prepared });
+  });
+
+  // ---------- Comment automations ----------
+
+  register('list_comment_automations', {
+    title: 'List comment automations',
+    description: 'Use this to see the comment automations (Instagram and TikTok): which are on, what comments they react to, and how many times each ran. Building or editing an automation happens in the builder on hansora.co.',
+    inputSchema: z.object({ ai_employee_id: employeeId }),
+    annotations: READ
+  }, async ({ ai_employee_id }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    return jsonText({ ok: true, comment_automations: (await listAutomations(row.id)).map(automationView), builder: `${SITE}/automation-workflows.html?business=${row.id}` });
+  });
+
+  register('set_comment_automation', {
+    title: 'Turn a comment automation on or off',
+    description: 'Use this to turn one comment automation on or off (automation_id from list_comment_automations). Turning it on means it starts replying to matching comments right away, and each run uses credits.',
+    inputSchema: z.object({ automation_id: z.string(), on: z.boolean() }),
+    annotations: OUTBOUND
+  }, async ({ automation_id, on }) => {
+    const automation = await ownedAutomation(userId, automation_id);
+    const saved = await setAutomationOn(automation, on);
+    // Instagram conversation starters are shown by Instagram itself, so it is told about the change (as the site does).
+    if (automation.safety_config?.trigger_type === 'ice_breaker') await runFunction(instagramSyncFunction, token, { business_id: automation.business_id, trigger_type: 'ice_breaker' }).catch(() => null);
+    return jsonText({ ok: true, comment_automation: automationView(saved) });
+  });
+
+  // ---------- Phone numbers and automatic calls ----------
+
+  register('get_phone_setup', {
+    title: 'See phone numbers and automatic calls',
+    description: 'Use this to see the phone side of an AI employee: its phone numbers (and whether each can call out), the countries where a new number is available now, and the automatic calls settings (confirming new orders, reminding before bookings, calling hours).',
+    inputSchema: z.object({ ai_employee_id: employeeId }),
+    annotations: READ
+  }, async ({ ai_employee_id }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const [lines, automatic] = await Promise.all([runFunction(phoneLineFunction, token, { business_id: row.id }, { method: 'GET' }), getAutomaticCalls(row.id)]);
+    return jsonText({
+      ok: true,
+      phone_numbers: (lines.data.numbers || []).map(item => ({ number: item.e164, country: item.country, can_call_out: Boolean(item.can_call), ...(item.pending ? { waiting_for_first_call: true } : {}) })),
+      countries_with_numbers_now: (lines.data.countries || []).map(item => item.country),
+      automatic_calls: automatic,
+      links: { phone: links(row.id).phone }
+    });
+  });
+
+  register('get_phone_number', {
+    title: 'Get a phone number for the AI employee',
+    description: 'Use this to give an AI employee a new phone number in a country (two-letter code from get_phone_setup), so it can answer calls and call out. Needs credits on the account. Voice, greeting and call forwarding are set on the Phone page. Confirm the country with the user first.',
+    inputSchema: z.object({ ai_employee_id: employeeId, country: z.string().regex(/^[A-Za-z]{2}$/).describe('Two-letter country code, for example US.') }),
+    annotations: OUTBOUND
+  }, async ({ ai_employee_id, country }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const result = await withBudget(runFunction(phoneLineFunction, token, { business_id: row.id, action: 'activate', country: country.toUpperCase() }));
+    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'number_failed', next_step: NUMBER_ERRORS[result.data.error] || 'The number could not be added right now. Try once more.', links: { phone: links(row.id).phone, add_credits: `${SITE}/automation-pricing.html` } });
+    return jsonText({ ok: true, phone_number: result.data.number?.e164 || '', can_call_out: Boolean(result.data.number?.can_call), next_step: 'Tell the user the number. They can choose the voice and greeting on the Phone page (links.phone).', links: { phone: links(row.id).phone } });
+  });
+
+  register('set_automatic_calls', {
+    title: 'Set automatic phone calls',
+    description: 'Use this to turn automatic AI calls on or off and say what they do: call a customer a few minutes after a new order to confirm it, and call before a booking to remind them. Calls are only made inside the calling hours (the business\'s local time) and use phone credits. Send only what changes.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      confirm_new_orders: z.boolean().optional(),
+      minutes_after_the_order: z.number().int().min(1).max(1440).optional(),
+      order_call_says: z.string().max(300).optional().describe('What the AI should say and ask on an order call.'),
+      remind_before_bookings: z.boolean().optional(),
+      hours_before_the_booking: z.number().int().min(1).max(72).optional(),
+      reminder_call_says: z.string().max(300).optional().describe('What the AI should say and ask on a reminder call.'),
+      calling_hours_from: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional().describe('24-hour time, for example 09:00.'),
+      calling_hours_to: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional()
+    }),
+    annotations: OUTBOUND
+  }, async ({ ai_employee_id, ...input }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const [automatic, numbers] = await Promise.all([setAutomaticCalls(row.id, input), phoneLines(row.id).catch(() => [])]);
+    const canCall = numbers.some(item => item.can_call_out);
+    return jsonText({ ok: true, automatic_calls: automatic, ...(canCall ? {} : { note: 'Saved, but this AI employee has no phone number that can call out yet, so no automatic calls are made until it has one.' }) });
+  });
 
   return server;
 }

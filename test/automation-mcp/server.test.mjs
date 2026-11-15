@@ -74,13 +74,13 @@ test('the server lives at /automation/mcp with its own OAuth discovery', async (
 test('every tool says what it does, and write tools are not marked read-only', async () => {
   const { result } = await rpc('tools/list', {}, {});
   const names = result.tools.map(tool => tool.name).sort();
-  assert.deepEqual(names, ['add_knowledge', 'create_ai_employee', 'get_account', 'get_ai_employee', 'get_call', 'get_overview', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee']);
+  assert.deepEqual(names, ['add_knowledge', 'add_product', 'create_ai_employee', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_order_booking_lead', 'update_product']);
   for (const tool of result.tools) {
     assert.match(tool.description, /^Use this/);
     assert.equal(typeof tool.annotations.readOnlyHint, 'boolean');
   }
   const byName = Object.fromEntries(result.tools.map(tool => [tool.name, tool.annotations]));
-  for (const name of ['start_ai_call', 'reply_to_website_chat']) assert.deepEqual([byName[name].readOnlyHint, byName[name].openWorldHint], [false, true]);
+  for (const name of ['start_ai_call', 'reply_to_website_chat', 'set_comment_automation', 'get_phone_number', 'set_automatic_calls']) assert.deepEqual([byName[name].readOnlyHint, byName[name].openWorldHint], [false, true]);
   for (const name of ['get_overview', 'get_call', 'list_website_chats']) assert.equal(byName[name].readOnlyHint, true);
 });
 
@@ -193,4 +193,72 @@ test('calls list the number and purpose; the transcript comes only from get_call
   assert.deepEqual(list.data.phone_numbers, [{ number: '+15550100000', country: 'US', can_call_out: true }]);
   const one = await call('get_call', { call_id: CALL }, tables);
   assert.equal(one.data.call.transcript, 'AI: Hello\nCaller: Hi');
+});
+
+const RECORD = '77777777-7777-4777-8777-777777777777';
+const PRODUCT = '88888888-8888-4888-8888-888888888888';
+const FLOW = '99999999-9999-4999-8999-999999999999';
+
+test('orders from WhatsApp hide the customer; orders from the website chat show them', async () => {
+  const base = { business_id: SHOP, outcome_type: 'order', status: 'new', reference_number: 7, estimated_value_minor: 4500, currency: 'USD', created_at: '2026-11-14T10:00:00Z', customer_name: 'Jane Customer', customer_phone: '+15550009999', collected_fields: { Address: '1 Main St', _catalog_items: [] }, summary: 'Wants it by Friday' };
+  const { data, text } = await call('list_orders_bookings_leads', {}, {
+    automation_businesses: [shop()],
+    automation_outcomes: [{ ...base, id: RECORD, title: 'Blue dress', conversation_id: 'c1', automation_conversations: { channel_type: 'whatsapp' } }, { ...base, id: PRODUCT, title: 'Red dress', customer_name: 'Web Visitor', customer_phone: '+15550001111', conversation_id: 'c2', automation_conversations: { channel_type: 'website' } }]
+  });
+  const [fromWhatsApp, fromWebsite] = data.records;
+  assert.deepEqual([fromWhatsApp.title, fromWhatsApp.status, fromWhatsApp.value, fromWhatsApp.came_from], ['Blue dress', 'new', 45, 'WhatsApp']);
+  assert.equal(fromWhatsApp.customer_name, undefined);
+  assert.match(fromWhatsApp.customer_details, /Hidden here/);
+  assert.deepEqual([fromWebsite.customer_name, fromWebsite.customer_phone, fromWebsite.details], ['Web Visitor', '+15550001111', { Address: '1 Main St' }]);
+  assert.doesNotMatch(text, /Jane Customer|\+15550009999/);
+});
+
+test('a record of another account cannot be updated', async () => {
+  const { data, writes } = await call('update_order_booking_lead', { record_id: RECORD, status: 'cancelled' }, { automation_outcomes: [{ id: RECORD, business_id: SHOP, outcome_type: 'order', status: 'new' }], automation_businesses: [] });
+  assert.equal(data.error, 'record_not_found');
+  assert.equal(writes.length, 0);
+});
+
+test('products: add with clean values, update only what changed, delete by owner', async () => {
+  const tables = { automation_businesses: [shop()], automation_tool_configs: [], automation_products: [{ id: PRODUCT, business_id: SHOP, name: 'Mug', price: 12, currency: 'USD', stock: 3, active: true, source: 'manual' }] };
+  const added = await call('add_product', { name: ' Mug ', price: 12, currency: 'usd', payment_link: 'http://not-https.example' }, tables);
+  assert.deepEqual(added.writes[0].body, { business_id: SHOP, name: 'Mug', price: 12, currency: 'USD' });
+  assert.equal(added.data.ai_offers_products, false);
+  assert.match(added.data.next_step, /set_business_tools/);
+  const updated = await call('update_product', { product_id: PRODUCT, stock: 0, shown_to_customers: false }, tables);
+  const { updated_at, ...patch } = updated.writes[0].body;
+  assert.deepEqual(patch, { stock: 0, active: false });
+  const removed = await call('delete_product', { product_id: PRODUCT }, tables);
+  assert.deepEqual([removed.writes[0].method, removed.data.deleted], ['DELETE', 'Mug']);
+  const foreign = await call('delete_product', { product_id: PRODUCT }, { ...tables, automation_businesses: [] });
+  assert.equal(foreign.data.error, 'product_not_found');
+  assert.equal(foreign.writes.length, 0);
+});
+
+test('abilities: an existing one is switched, one never set up is sent to the settings page, products can start here', async () => {
+  const { data, writes } = await call('set_business_tools', { orders: false, bookings: true, products: true }, { automation_businesses: [shop()], automation_tool_configs: [{ tool_type: 'orders', enabled: true }], automation_provider_resources: [] });
+  assert.deepEqual(data.changed, { orders: 'off', products: 'on' });
+  assert.deepEqual(data.needs_setup_on_website, ['bookings']);
+  const toolWrites = writes.filter(write => write.table === 'automation_tool_configs');
+  assert.deepEqual(toolWrites.map(write => write.method), ['PATCH', 'POST']);
+  assert.equal(toolWrites[0].body.enabled, false);
+  assert.deepEqual(toolWrites[1].body, { business_id: SHOP, tool_type: 'catalog', enabled: true, config: {} });
+});
+
+test('a comment automation is turned on with its start time, and described in plain words', async () => {
+  const flow = { id: FLOW, business_id: SHOP, name: 'Price list', status: 'paused', post_scope: 'all', selected_post_ids: [], match_type: 'contains', keywords: ['price', 'cost'], safety_config: {}, triggered_count: 12 };
+  const { data, writes } = await call('set_comment_automation', { automation_id: FLOW, on: true }, { automation_comment_workflows: [flow], automation_businesses: [{ id: SHOP }] });
+  assert.equal(writes[0].body.status, 'active');
+  assert.ok(writes[0].body.activated_at);
+  assert.deepEqual([data.comment_automation.status, data.comment_automation.platform, data.comment_automation.reacts_to, data.comment_automation.times_run], ['on', 'Instagram', 'comments that contain: price, cost', 12]);
+});
+
+test('automatic calls change only what was sent and keep the other phone settings', async () => {
+  const settings = { voice: 'Laomedeia', greeting: 'Hello', auto_calls: { from: '10:00', to: '19:00', order: { on: false, delay_minutes: 15, purpose: 'Confirm the order.' }, reminder: { on: true, hours_before: 24, purpose: 'Remind.' } } };
+  const { data, writes } = await call('set_automatic_calls', { confirm_new_orders: true, calling_hours_to: '21:00' }, { automation_businesses: [shop()], automation_channel_connections: [{ id: 'ch1', status: 'connected', settings }], automation_phone_numbers: [] });
+  const saved = writes[0].body.settings;
+  assert.deepEqual([saved.voice, saved.greeting], ['Laomedeia', 'Hello']);
+  assert.deepEqual(saved.auto_calls, { from: '10:00', to: '21:00', order: { on: true, delay_minutes: 15, purpose: 'Confirm the order.' }, reminder: { on: true, hours_before: 24, purpose: 'Remind.' } });
+  assert.equal(data.automatic_calls.confirm_new_orders.on, true);
+  assert.match(data.note, /no phone number that can call out/);
 });
