@@ -238,10 +238,12 @@ function hasSexualizingContext(normalized, hasImages) {
 const NEGATED_SEXUAL_WORDS = /\b(?:no|not|non|nothing|without|avoid|avoiding|never|zero|free of|free from)\s+(?:(?:explicit|graphic|adult|suggestive|sexual|sexualized|sexy|or|and|any)\s+){0,3}(?:nsfw|nudity|nude|naked|sexual|sexualized|sexualised|sex|explicit|erotic|erotica|porn|pornographic|suggestive)(?:\s+(?:content|material|elements|themes|imagery|scenes|details|acts))?\b/g;
 
 // "No clothing taken from @image2", "no outfit changes between shots": these are about not reusing or switching
-// outfits, not about nudity. Only these two exact shapes are dropped: a reuse word plus "from @imageN", and
-// "changes/swaps between shots"; "no clothes", "no clothes from the reference" or "no clothing taken" stay checked.
+// outfits, not about nudity. Only these exact shapes are dropped: a reuse word plus "from @imageN", "changes/swaps
+// between shots", and "no outfit/costume/wardrobe changes" as an item of a list of exclusions (followed by another
+// "no ..." item, or at the end), never right after with/wearing/has. "No clothes", "no clothes from the reference",
+// "no clothing taken" or "girl with no outfit changes pose" stay checked.
 // Matched on the normalized prompt: '@' becomes 'a' and 0/1/3/4/5/7 become o/i/e/a/s/t ('@image5' → 'aimages').
-const OUTFIT_REUSE_RULES = /\b(?:no|never|without) (?:clothes|clothing|garments?|outfits?|costumes?) (?:(?:is|are) )?(?:taken|copied|reused|borrowed) from a?image ?[0-9ieasto]{1,2}(?: (?:or|and) a?image ?[0-9ieasto]{1,2})?\b|\bno (?:outfit|costume|clothing|wardrobe) (?:changes?|swaps?) between (?:shots|scenes|cuts|frames)\b/g;
+const OUTFIT_REUSE_RULES = /\b(?:no|never|without) (?:clothes|clothing|garments?|outfits?|costumes?) (?:(?:is|are) )?(?:taken|copied|reused|borrowed) from a?image ?[0-9ieasto]{1,2}(?: (?:or|and) a?image ?[0-9ieasto]{1,2})?\b|\bno (?:outfit|costume|clothing|wardrobe) (?:changes?|swaps?) between (?:shots|scenes|cuts|frames)\b|(?<=\b(?:exclusions|avoid) )no (?:outfit|costume|wardrobe) (?:changes?|swaps?)\b|(?<!\b(?:with|wearing|wears|wear|wore|has|have|having|is|are|in) )\bno (?:outfit|costume|wardrobe) (?:changes?|swaps?)(?=(?: no\b|$))/g;
 
 function evaluatePrompt(prompt, options) {
   const hasImages = Boolean(options && options.hasImages);

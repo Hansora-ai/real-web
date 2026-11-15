@@ -163,3 +163,15 @@ test('only exact outfit-reuse rules pass ("no clothing taken from @image2", "no 
   ];
   for (const prompt of blocked) assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, false, prompt);
 });
+
+test('"no outfit changes" passes only as an item of an exclusions list, never next to a person or with/wearing/has', () => {
+  for (const prompt of [
+    'EXCLUSIONS No outfit changes, no extra characters in the foreground, no people in the storefront doorway, no police.',
+    'Avoid: no costume swaps, no text, no logos.',
+    'no outfit changes'
+  ]) assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, true, prompt);
+  for (const prompt of [
+    'girl with no outfit changes pose', 'girl with no outfit, changes pose', 'woman wearing no outfit changes', 'she has no outfit changes',
+    'a girl, no outfit changes her pose', 'girl with no outfit changes no hat', 'make her nude, no outfit changes, no text', 'a woman with no outfit'
+  ]) assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, false, prompt);
+});
