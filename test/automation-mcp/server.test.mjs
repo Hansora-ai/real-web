@@ -74,13 +74,13 @@ test('the server lives at /automation/mcp with its own OAuth discovery', async (
 test('every tool says what it does, and write tools are not marked read-only', async () => {
   const { result } = await rpc('tools/list', {}, {});
   const names = result.tools.map(tool => tool.name).sort();
-  assert.deepEqual(names, ['add_knowledge', 'add_product', 'create_ai_employee', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_order_booking_lead', 'update_product']);
+  assert.deepEqual(names, ['add_knowledge', 'add_product', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_order_booking_lead', 'update_product']);
   for (const tool of result.tools) {
     assert.match(tool.description, /^Use this/);
     assert.equal(typeof tool.annotations.readOnlyHint, 'boolean');
   }
   const byName = Object.fromEntries(result.tools.map(tool => [tool.name, tool.annotations]));
-  for (const name of ['start_ai_call', 'reply_to_website_chat', 'set_comment_automation', 'get_phone_number', 'set_automatic_calls']) assert.deepEqual([byName[name].readOnlyHint, byName[name].openWorldHint], [false, true]);
+  for (const name of ['start_ai_call', 'reply_to_website_chat', 'set_comment_automation', 'create_comment_automation', 'get_phone_number', 'set_automatic_calls']) assert.deepEqual([byName[name].readOnlyHint, byName[name].openWorldHint], [false, true]);
   for (const name of ['get_overview', 'get_call', 'list_website_chats']) assert.equal(byName[name].readOnlyHint, true);
 });
 
@@ -261,4 +261,54 @@ test('automatic calls change only what was sent and keep the other phone setting
   assert.deepEqual(saved.auto_calls, { from: '10:00', to: '21:00', order: { on: true, delay_minutes: 15, purpose: 'Confirm the order.' }, reminder: { on: true, hours_before: 24, purpose: 'Remind.' } });
   assert.equal(data.automatic_calls.confirm_new_orders.on, true);
   assert.match(data.note, /no phone number that can call out/);
+});
+
+test('an Instagram comment automation is saved in the builder\'s shape, off by default', async () => {
+  const { data, writes } = await call('create_comment_automation', { keywords: ['price', ' price ', 'how much'], public_replies: ['Sent you a message!'], private_message: 'Here is our price list.', button_label: 'Open price list', button_url: 'https://example.com/prices' }, { automation_businesses: [shop()] });
+  const saved = writes[0].body;
+  assert.deepEqual([saved.status, saved.post_scope, saved.match_type, saved.keywords, saved.public_reply_variations], ['draft', 'all', 'contains', ['price', 'how much'], ['Sent you a message!']]);
+  assert.deepEqual(saved.dm_steps, [{ id: 'message-opening', type: 'message', title: 'Opening DM', text: 'Here is our price list.', commentReply: true, entry: true, nextId: null, replyNextId: null, actions: [{ id: 'action-website', type: 'website', label: 'Open price list', url: 'https://example.com/prices' }] }]);
+  assert.deepEqual([saved.safety_config.trigger_type, saved.safety_config.flow_version, saved.safety_config.public_reply_enabled, saved.safety_config.first_comment_only], ['comment', 3, true, true]);
+  assert.equal(saved.activated_at, undefined);
+  assert.equal(data.turned_on, false);
+  assert.match(data.next_step, /switched off/);
+});
+
+test('the builder\'s own code finds the opening message of an automation made here', async () => {
+  const { automationPayload } = await import('../../lib/automation-mcp/business.mjs');
+  const { openingMessageIndex, preparePrivateReply, matchesCommentText } = await import('../../lib/automation/comment-flow.mjs');
+  const row = automationPayload(SHOP, { keywords: ['price'], private_message: 'Hello', button_label: 'Open', button_url: 'https://example.com' });
+  assert.equal(openingMessageIndex(row.dm_steps), 0);
+  const reply = preparePrivateReply(row.dm_steps[0]);
+  assert.deepEqual([reply.text, reply.buttons[0].type, reply.buttons[0].url], ['Hello', 'web_url', 'https://example.com']);
+  assert.equal(matchesCommentText(row, 'What is the PRICE?'), true);
+  assert.equal(matchesCommentText(row, 'Nice photo'), false);
+});
+
+test('turn_on makes it live only when the channel is connected', async () => {
+  const input = { keywords: ['price'], private_message: 'Hello', turn_on: true };
+  const live = await call('create_comment_automation', input, { automation_businesses: [shop()], automation_channel_connections: [{ channel_type: 'instagram_comments', status: 'connected' }] });
+  assert.equal(live.writes[0].body.status, 'active');
+  assert.ok(live.writes[0].body.activated_at);
+  assert.equal(live.data.turned_on, true);
+  const waiting = await call('create_comment_automation', input, { automation_businesses: [shop()], automation_channel_connections: [{ channel_type: 'instagram_comments', status: 'not_connected' }] });
+  assert.equal(waiting.writes[0].body.status, 'draft');
+  assert.match(waiting.data.next_step, /Instagram is not connected/);
+});
+
+test('TikTok automations reply publicly only; missing texts are asked for, nothing is saved', async () => {
+  const tiktok = await call('create_comment_automation', { platform: 'tiktok', reacts_to: 'any', public_replies: ['Thanks!'], private_message: 'ignored' }, { automation_businesses: [shop()] });
+  const saved = tiktok.writes[0].body;
+  assert.deepEqual([saved.match_type, saved.dm_steps, saved.safety_config.trigger_type, saved.safety_config.reply_mode], ['any', [], 'tiktok_comment', 'fixed']);
+  for (const [input, error] of [[{ platform: 'tiktok', reacts_to: 'any' }, 'reply_required'], [{ keywords: ['price'] }, 'private_message_required'], [{ private_message: 'Hi' }, 'keywords_required'], [{ keywords: ['a'], private_message: 'Hi', button_label: 'Go', button_url: 'http://x.example' }, 'button_needs_https_link']]) {
+    const done = await call('create_comment_automation', input, { automation_businesses: [shop()] });
+    assert.equal(done.data.error, error);
+    assert.equal(done.writes.length, 0);
+  }
+});
+
+test('deleting a comment automation archives it', async () => {
+  const flow = { id: FLOW, business_id: SHOP, name: 'Price list', status: 'active', safety_config: {} };
+  const { data, writes } = await call('delete_comment_automation', { automation_id: FLOW }, { automation_comment_workflows: [flow], automation_businesses: [{ id: SHOP }] });
+  assert.deepEqual([writes[0].body, data.deleted], [{ status: 'archived' }, 'Price list']);
 });

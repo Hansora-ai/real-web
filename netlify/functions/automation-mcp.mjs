@@ -17,7 +17,7 @@ import { handler as recordUpdateFunction } from './automation-outcome-update.mjs
 import { handler as phoneLineFunction } from './automation-phone-line.mjs';
 import { handler as instagramSyncFunction } from './automation-instagram-sync.mjs';
 import {
-  RECORD_KINDS, RECORD_STATUSES, addProduct, automationView, businessTools, deleteProduct, getAutomaticCalls, listAutomations, listProducts,
+  RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, automationView, createAutomation, businessTools, deleteProduct, getAutomaticCalls, listAutomations, listProducts,
   listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView, setAutomaticCalls, setAutomationOn, setBusinessTools, updateProduct
 } from '../../lib/automation-mcp/business.mjs';
 import {
@@ -485,12 +485,58 @@ export function createAutomationServer(ctx) {
 
   register('list_comment_automations', {
     title: 'List comment automations',
-    description: 'Use this to see the comment automations (Instagram and TikTok): which are on, what comments they react to, and how many times each ran. Building or editing an automation happens in the builder on hansora.co.',
+    description: 'Use this to see the comment automations (Instagram and TikTok): which are on, what comments they react to, what they reply, and how many times each ran. New simple ones are made with create_comment_automation; multi-step flows are built and edited in the builder on hansora.co.',
     inputSchema: z.object({ ai_employee_id: employeeId }),
     annotations: READ
   }, async ({ ai_employee_id }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     return jsonText({ ok: true, comment_automations: (await listAutomations(row.id)).map(automationView), builder: `${SITE}/automation-workflows.html?business=${row.id}` });
+  });
+
+  register('create_comment_automation', {
+    title: 'Create a comment automation',
+    description: 'Use this to create an automation that answers comments on the business\'s posts. On Instagram: when a comment matches, it can reply publicly under the comment and sends the person one private message, optionally with a link button. On TikTok: it replies publicly under the comment (TikTok allows no private message). Ask the user for the trigger words (or "any comment"), the texts, and whether to turn it on now; it is created switched off unless turn_on is true. Each run uses credits. Multi-step flows with several messages and buttons are built in the builder on hansora.co.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      platform: z.enum(['instagram', 'tiktok']).default('instagram'),
+      name: z.string().max(200).optional(),
+      reacts_to: z.enum(['contains', 'exact', 'any']).default('contains').describe('contains: the comment includes one of the keywords. exact: the comment is exactly a keyword (Instagram only). any: every comment.'),
+      keywords: z.array(z.string().max(80)).max(20).optional().describe('Words or phrases that start it, for example ["price", "how much"]. Not needed for "any".'),
+      posts: z.enum(['all', 'next']).default('all').describe('all: every post. next: only the next post published after this is turned on.'),
+      public_replies: z.array(z.string().max(300)).max(3).optional().describe('Up to 3 short replies posted under the comment; one is picked each time. Optional on Instagram, required on TikTok unless ai_writes_reply.'),
+      private_message: z.string().max(640).optional().describe('Instagram only, required there: the private message sent to the person who commented.'),
+      button_label: z.string().max(20).optional().describe('Instagram only: label of a link button under the private message, for example "Open price list".'),
+      button_url: z.string().max(1000).optional().describe('Instagram only: the https:// link the button opens.'),
+      ai_writes_reply: z.boolean().optional().describe('TikTok only: the AI employee writes each public reply itself.'),
+      ai_instruction: z.string().max(500).optional().describe('TikTok only, with ai_writes_reply: how the AI should reply.'),
+      turn_on: z.boolean().default(false).describe('true starts it right away. Confirm with the user first.')
+    }),
+    annotations: OUTBOUND
+  }, async ({ ai_employee_id, ...input }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const made = await createAutomation(row.id, input);
+    const builder = `${SITE}/automation-workflows.html?business=${row.id}`;
+    return jsonText({
+      ok: true,
+      comment_automation: automationView(made.row),
+      turned_on: made.turned_on,
+      builder,
+      next_step: made.not_connected
+        ? `It is saved but switched off, because ${input.platform === 'tiktok' ? 'TikTok' : 'Instagram'} is not connected for this AI employee. The user connects it at ${links(row.id).connect_channels}, then you can turn it on with set_comment_automation.`
+        : made.turned_on ? 'Tell the user it is live and now answers matching comments.' : 'It is saved but switched off. Ask the user if you should turn it on with set_comment_automation.'
+    });
+  });
+
+  register('delete_comment_automation', {
+    title: 'Delete a comment automation',
+    description: 'Use this to remove one comment automation (automation_id from list_comment_automations). It stops running and disappears from the list. Confirm with the user first.',
+    inputSchema: z.object({ automation_id: z.string() }),
+    annotations: { ...WRITE, destructiveHint: true }
+  }, async ({ automation_id }) => {
+    const automation = await ownedAutomation(userId, automation_id);
+    await archiveAutomation(automation);
+    if (automation.safety_config?.trigger_type === 'ice_breaker') await runFunction(instagramSyncFunction, token, { business_id: automation.business_id, trigger_type: 'ice_breaker' }).catch(() => null);
+    return jsonText({ ok: true, deleted: automation.name });
   });
 
   register('set_comment_automation', {
