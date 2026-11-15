@@ -17,6 +17,7 @@ import { handler as recordUpdateFunction } from './automation-outcome-update.mjs
 import { handler as phoneLineFunction } from './automation-phone-line.mjs';
 import { handler as instagramSyncFunction } from './automation-instagram-sync.mjs';
 import { handler as productPhotoFunction } from './automation-product-photo.mjs';
+import { handler as instagramMediaFunction } from './automation-instagram-media.mjs';
 import { openAIFileSchema } from '../../lib/hansora-mcp/file-inputs.mjs';
 import {
   DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, automationView, businessToolSettings, businessTools, createAutomation,
@@ -549,18 +550,23 @@ export function createAutomationServer(ctx) {
 
   register('create_comment_automation', {
     title: 'Create a comment automation',
-    description: 'Use this to create an automation that answers comments on the business\'s posts. On Instagram: when a comment matches, it can reply publicly under the comment and sends the person one private message, optionally with a link button. On TikTok: it replies publicly under the comment (TikTok allows no private message). Ask the user for the trigger words (or "any comment"), the texts, and whether to turn it on now; it is created switched off unless turn_on is true. Each run uses credits. Multi-step flows with several messages and buttons are built in the builder on hansora.co.',
+    description: 'Use this to create an automation that answers comments on the business\'s posts; do it here, never through the browser. On Instagram: when a comment matches, it can reply publicly under the comment and sends the person a private message, optionally with a link button. With followers_only it becomes the "follow to get the link" flow: the private message has a button; a follower gets the link message; someone who does not follow gets not_following_message with a button to tap after following, which checks again. It can run on all posts, the next post, or the latest post (the newest post or reel). On TikTok: it replies publicly under the comment (TikTok allows no private message). Ask the user for the trigger words (or "any comment"), the texts, and whether to turn it on now; it is created switched off unless turn_on is true. Each run uses credits. Other multi-step flows are built in the builder on hansora.co.',
     inputSchema: z.object({
       ai_employee_id: employeeId,
       platform: z.enum(['instagram', 'tiktok']).default('instagram'),
       name: z.string().max(200).optional(),
       reacts_to: z.enum(['contains', 'exact', 'any']).default('contains').describe('contains: the comment includes one of the keywords. exact: the comment is exactly a keyword (Instagram only). any: every comment.'),
       keywords: z.array(z.string().max(80)).max(20).optional().describe('Words or phrases that start it, for example ["price", "how much"]. Not needed for "any".'),
-      posts: z.enum(['all', 'next']).default('all').describe('all: every post. next: only the next post published after this is turned on.'),
+      posts: z.enum(['all', 'next', 'latest']).default('all').describe('all: every post. next: only the next post published after this is turned on. latest: only the newest post or reel that is already published (Instagram only).'),
       public_replies: z.array(z.string().max(300)).max(3).optional().describe('Up to 3 short replies posted under the comment; one is picked each time. Optional on Instagram, required on TikTok unless ai_writes_reply.'),
       private_message: z.string().max(640).optional().describe('Instagram only, required there: the private message sent to the person who commented.'),
       button_label: z.string().max(20).optional().describe('Instagram only: label of a link button under the private message, for example "Open price list".'),
       button_url: z.string().max(1000).optional().describe('Instagram only: the https:// link the button opens.'),
+      followers_only: z.boolean().optional().describe('Instagram only: send the link only to people who follow the account. Needs button_label and button_url.'),
+      opening_button_label: z.string().max(20).optional().describe('followers_only: the button under the private message, for example "Send me the link".'),
+      link_message: z.string().max(640).optional().describe('followers_only: the message a follower gets together with the link button.'),
+      not_following_message: z.string().max(640).optional().describe('followers_only: the message for someone who does not follow yet.'),
+      following_button_label: z.string().max(20).optional().describe('followers_only: the button to tap after following, for example "I\'m following".'),
       ai_writes_reply: z.boolean().optional().describe('TikTok only: the AI employee writes each public reply itself.'),
       ai_instruction: z.string().max(500).optional().describe('TikTok only, with ai_writes_reply: how the AI should reply.'),
       turn_on: z.boolean().default(false).describe('true starts it right away. Confirm with the user first.')
@@ -568,6 +574,13 @@ export function createAutomationServer(ctx) {
     annotations: OUTBOUND
   }, async ({ ai_employee_id, ...input }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
+    if (input.posts === 'latest') {
+      if (input.platform === 'tiktok') return jsonText({ ok: false, error: 'latest_post_instagram_only', next_step: 'On TikTok choose all videos or the next video; a specific video is picked in the builder.' });
+      const media = await withBudget(runFunction(instagramMediaFunction, token, { business_id: row.id }), 15000);
+      const newest = media.ok ? (media.data.media || []).slice().sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)))[0] : null;
+      if (!newest) return jsonText({ ok: false, error: media.data.error || 'no_posts_found', next_step: media.data.error === 'instagram_not_connected' ? `Instagram is not connected for this AI employee, so its posts cannot be read. The user connects it at ${links(row.id).connect_channels}.` : 'The latest Instagram post could not be read right now. Try once more, or create it for all posts or the next post.' });
+      input.post = { id: newest.id, thumb: newest.thumbnail_url || newest.media_url, caption: newest.caption };
+    }
     const made = await createAutomation(row.id, input);
     const builder = `${SITE}/automation-workflows.html?business=${row.id}`;
     return jsonText({
