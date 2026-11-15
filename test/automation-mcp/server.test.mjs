@@ -24,12 +24,14 @@ const shop = () => ({
 // A fake Supabase: answers by table, and records every write.
 function fakeDatabase(tables = {}) {
   const writes = [];
+  const events = [];
   const fetchFake = async (url, options = {}) => {
     const href = decodeURIComponent(String(url));
     const method = options.method || 'GET';
     if (href.endsWith('/auth/v1/user')) return Response.json({ id: USER, email: 'owner@example.com' });
     const table = (href.match(/\/rest\/v1\/([a-z_]+)/) || [])[1];
     if (!table) throw new Error(`unexpected fetch ${href}`);
+    if (table === 'chatgpt_events') { events.push(JSON.parse(options.body)); return new Response(null, { status: 201 }); }
     if (method !== 'GET') {
       const body = options.body ? JSON.parse(options.body) : null;
       writes.push({ method, table, href, body });
@@ -39,7 +41,7 @@ function fakeDatabase(tables = {}) {
     const value = tables[table];
     return Response.json(typeof value === 'function' ? value(href) : value || []);
   };
-  return { fetchFake, writes };
+  return { fetchFake, writes, events };
 }
 
 async function rpc(method, params, tables) {
@@ -54,7 +56,7 @@ async function rpc(method, params, tables) {
     }));
     const raw = await response.text();
     const json = JSON.parse(raw.startsWith('{') ? raw : raw.split('\n').find(line => line.startsWith('data:')).slice(5));
-    return { status: response.status, result: json.result, error: json.error, writes: database.writes };
+    return { status: response.status, result: json.result, error: json.error, writes: database.writes, events: database.events };
   } finally { globalThis.fetch = originalFetch; }
 }
 const call = async (name, args, tables) => { const done = await rpc('tools/call', { name, arguments: args || {} }, tables); return { ...done, data: done.result?.structuredContent, text: JSON.stringify(done.result || {}) }; };
@@ -418,4 +420,13 @@ test('posts: latest needs Instagram connected and saves nothing otherwise', asyn
   const { data, writes } = await call('create_comment_automation', { keywords: ['love'], private_message: 'Hi', posts: 'latest' }, { automation_businesses: [shop()], automation_provider_resources: [] });
   assert.equal(data.error, 'instagram_not_connected');
   assert.equal(writes.length, 0);
+});
+
+test('each tool call is logged with its outcome and field names, never the texts', async () => {
+  const done = await call('create_comment_automation', { keywords: ['love'], private_message: 'SECRET TEXT', posts: 'latest' }, { automation_businesses: [shop()], automation_provider_resources: [] });
+  assert.equal(done.events.length, 1);
+  const event = done.events[0];
+  assert.deepEqual([event.user_id, event.tool, event.outcome, event.details.posts], [USER, 'automation:create_comment_automation', 'instagram_not_connected', 'latest']);
+  assert.ok(event.details.fields.includes('private_message'));
+  assert.doesNotMatch(JSON.stringify(event), /SECRET/);
 });
