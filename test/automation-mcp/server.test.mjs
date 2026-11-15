@@ -49,7 +49,7 @@ async function rpc(method, params, tables) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = database.fetchFake;
   try {
-    const response = await automationMcp(new Request('https://hansora.co/automation/mcp', {
+    const response = await automationMcp(new Request(`https://hansora.co${method === 'tools/list' ? '/automation/v2/mcp' : '/automation/mcp'}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
@@ -61,16 +61,19 @@ async function rpc(method, params, tables) {
 }
 const call = async (name, args, tables) => { const done = await rpc('tools/call', { name, arguments: args || {} }, tables); return { ...done, data: done.result?.structuredContent, text: JSON.stringify(done.result || {}) }; };
 
-test('the server lives at /automation/mcp with its own OAuth discovery', async () => {
-  assert.equal(config.path, '/automation/mcp');
-  assert.equal(metadataConfig.path, '/.well-known/oauth-protected-resource/automation/mcp');
-  const metadata = await (await oauthMetadata(new Request(`https://hansora.co${metadataConfig.path}`))).json();
-  assert.equal(metadata.resource, 'https://hansora.co/automation/mcp');
-  assert.deepEqual(metadata.authorization_servers, ['https://qmaealblegvcwodlmeht.supabase.co/auth/v1']);
-  const response = await automationMcp(new Request('https://hansora.co/automation/mcp', { method: 'POST' }));
-  assert.equal(response.status, 401);
-  assert.match(response.headers.get('www-authenticate'), /resource_metadata="https:\/\/hansora.co\/\.well-known\/oauth-protected-resource\/automation\/mcp"/);
-  assert.match(response.headers.get('access-control-expose-headers'), /WWW-Authenticate/);
+test('the server answers at both addresses, each with its own matching OAuth discovery', async () => {
+  assert.deepEqual(config.path, ['/automation/mcp', '/automation/v2/mcp']);
+  assert.deepEqual(metadataConfig.path, ['/.well-known/oauth-protected-resource/automation/mcp', '/.well-known/oauth-protected-resource/automation/v2/mcp']);
+  for (const path of config.path) {
+    const response = await automationMcp(new Request(`https://hansora.co${path}`, { method: 'POST' }));
+    assert.equal(response.status, 401);
+    const discovery = (response.headers.get('www-authenticate').match(/resource_metadata="([^"]+)"/) || [])[1];
+    assert.equal(discovery, `https://hansora.co/.well-known/oauth-protected-resource${path}`);
+    assert.match(response.headers.get('access-control-expose-headers'), /WWW-Authenticate/);
+    const metadata = await (await oauthMetadata(new Request(discovery))).json();
+    assert.equal(metadata.resource, `https://hansora.co${path}`);
+    assert.deepEqual(metadata.authorization_servers, ['https://qmaealblegvcwodlmeht.supabase.co/auth/v1']);
+  }
 });
 
 test('every tool says what it does, and write tools are not marked read-only', async () => {
