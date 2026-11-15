@@ -209,10 +209,13 @@ export default defineAgent({
       await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: call.status, started_at: now, connected_at: now, conversation_id: conversation.id, outcome: call.outcome });
     }
 
-    // Pay as you go: the call only runs as long as the owner's credits cover it.
-    const perMinute = isTest ? 0 : (await automationPricesFor(business.id)).voiceMinute;
+    // Pay as you go: the call only runs as long as the owner's credits cover it. Browser tests cost less
+    // (testVoiceMinute) and also stop at the test time limit.
+    const prices = await automationPricesFor(business.id);
+    const perMinute = isTest ? prices.testVoiceMinute : prices.voiceMinute;
     const funds = await canAfford(business.id, perMinute);
-    const maxSeconds = isTest ? phoneTestMaxSeconds() : (funds.balance === null ? Infinity : affordableVoiceSeconds(funds.balance, perMinute));
+    const affordable = funds.balance === null ? Infinity : affordableVoiceSeconds(funds.balance, perMinute);
+    const maxSeconds = isTest ? Math.min(phoneTestMaxSeconds(), affordable) : affordable;
     const outOfCredits = !funds.ok;
     if (outOfCredits && !isTest) await handleOutOfCredits({ businessId: business.id, conversationId: conversation.id, businessName: business.name, channel: 'Phone', customer: descriptor.callerNumber || 'Caller', notifyOwner });
 
@@ -398,7 +401,7 @@ export default defineAgent({
       await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { status: callStatus === 'transferred' ? 'human_handling' : 'resolved', resolved_at: callStatus === 'transferred' ? null : endedAt, summary: transcript.slice(0, 8000) });
       if (seconds > 0) {
         // Charge once, at the end; if the balance ran short take what is left (never below zero).
-        const charge = isTest ? { ok: true, charged: 0 } : await chargeCredits({ businessId: business.id, idempotencyKey: `usage:phone:${descriptor.providerCallId}`, kind: 'voice', credits: voiceCredits(seconds, perMinute), conversationId: conversation.id, reference: { call_id: call.id, seconds }, allowPartial: true }).catch(error => { console.error('phone credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; });
+        const charge = await chargeCredits({ businessId: business.id, idempotencyKey: `usage:phone:${descriptor.providerCallId}`, kind: isTest ? 'test_voice' : 'voice', credits: voiceCredits(seconds, perMinute), conversationId: conversation.id, reference: { call_id: call.id, seconds }, allowPartial: true }).catch(error => { console.error('phone credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; });
         const rate = Math.max(0, Number(process.env.AUTOMATION_PHONE_COST_MINOR_PER_MINUTE || 0));
         await serviceInsert('automation_usage_events', {
           business_id: business.id,
