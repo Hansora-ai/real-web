@@ -102,7 +102,7 @@
             },
             {
               "description": "Mass messaging customers",
-              "prompt": "Send a WhatsApp message to all my customers saying we have a sale today."
+              "prompt": "Send an Instagram message to all my followers saying we have a sale today."
             },
             {
               "description": "Out of scope request",
