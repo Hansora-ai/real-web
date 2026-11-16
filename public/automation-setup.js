@@ -57,6 +57,7 @@
     if (!result.data) return fail('AI employee not found, or you do not have access to it.');
     fillExisting(result.data);
     document.querySelector('#setup-title').textContent = 'Edit your AI employee';
+    setupDelete(result.data);
   }
   // A comments-only account that now gets its business details becomes a full AI employee on save.
   let setupMode = 'full';
@@ -467,6 +468,34 @@
       for (const row of rows.data || []) await api.db.from('automation_channel_connections').update({ settings: { ...(row.settings || {}), automatic_replies: true } }).eq('id', row.id);
     }
     await api.db.from('automation_businesses').update({ setup_mode: 'full' }).eq('id', id);
+  }
+  // Delete AI employee (edit mode only): the owner types its name, the server turns off its numbers and deletes it.
+  function setupDelete(business) {
+    const section = document.querySelector('#delete-employee'), dialog = document.querySelector('#delete-dialog');
+    const input = document.querySelector('#delete-confirm'), submit = document.querySelector('#delete-submit'), error = document.querySelector('#delete-error');
+    const name = String(business.name || '').trim() || 'DELETE';
+    const matches = () => input.value.trim().toLowerCase() === name.toLowerCase();
+    document.querySelector('#delete-name').textContent = name;
+    section.hidden = false;
+    document.querySelector('#delete-open').addEventListener('click', () => { input.value = ''; submit.disabled = true; error.hidden = true; dialog.showModal(); input.focus(); });
+    document.querySelector('#delete-cancel').addEventListener('click', () => dialog.close());
+    input.addEventListener('input', () => { submit.disabled = !matches(); });
+    document.querySelector('#delete-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!matches() || submit.disabled) return;
+      submit.disabled = true; submit.classList.add('is-busy'); submit.innerHTML = '<span class="ui-spinner" aria-hidden="true"></span>Deleting…'; error.hidden = true;
+      try {
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-business-delete', { method: 'POST', body: JSON.stringify({ business_id: business.id, confirm_name: input.value.trim() }) });
+        if (!response.ok) throw new Error('delete_failed');
+      } catch (_) {
+        submit.disabled = false; submit.classList.remove('is-busy'); submit.textContent = 'Delete for good';
+        error.textContent = 'It could not be deleted. Please try again.'; error.hidden = false; return;
+      }
+      try { if (localStorage.getItem('hansora_automation_business') === business.id) localStorage.removeItem('hansora_automation_business'); sessionStorage.removeItem('hansora_automation_employees'); } catch (_) {}
+      dialog.close();
+      window.HansoraUI?.toast?.(`${name} deleted`);
+      setTimeout(() => { window.location.href = 'automation-dashboard.html'; }, 700);
+    });
   }
   function inlineError(message) { errorBox.textContent = message; errorBox.hidden = false; errorBox.scrollIntoView({behavior:'smooth',block:'center'}); return false; }
   function fail(message) { loading.hidden = true; form.hidden = true; inlineError(message); }
