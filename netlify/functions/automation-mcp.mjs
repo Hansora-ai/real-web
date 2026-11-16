@@ -178,7 +178,7 @@ export function overviewCard(employees, counts, stats, credits) {
 }
 
 function toolsCard(row, tools, alerts, changed = []) {
-  return { type: 'tools', employee: row.name, changed, tools, alerts, alert_labels: ALERT_EVENTS, settings_url: tools.settings_page };
+  return { type: 'tools', ai_employee_id: row.id, employee: row.name, changed, tools, alerts, alert_labels: ALERT_EVENTS, settings_url: tools.settings_page };
 }
 
 function employeeCard(row, created) {
@@ -576,7 +576,7 @@ export function createAutomationServer(ctx) {
     description: 'Use this to read every business tool setting of an AI employee: orders, bookings (hours, rules, services, days off, team members), leads, handoff to a person, products, and the alerts the owner gets.',
     inputSchema: z.object({ ai_employee_id: employeeId }),
     annotations: READ,
-    _meta: CARD_TOOL_META('Reading your business tools…', 'Your business tools')
+    _meta: CARD_TOOL_META('Reading your business tools…', 'Your business tools', { fromCard: true })
   }, async ({ ai_employee_id }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const [tools, alerts] = await Promise.all([businessToolSettings(row), getAlerts(row.id)]);
@@ -624,7 +624,7 @@ export function createAutomationServer(ctx) {
       message_for_a_reel_from_another_account: z.string().max(1000).optional().describe('Sent when a customer shares a reel Instagram does not let apps see; empty sends nothing.')
     }),
     annotations: { ...WRITE, destructiveHint: true },
-    _meta: CARD_TOOL_META('Saving your business tools…', 'Business tools saved')
+    _meta: CARD_TOOL_META('Saving your business tools…', 'Business tools saved', { fromCard: true })
   }, async ({ ai_employee_id, ...changes }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const result = await setBusinessTools(row, changes);
@@ -808,7 +808,8 @@ export function createAutomationServer(ctx) {
       alert_me_about: z.array(z.enum(Object.keys(ALERT_EVENTS))).max(5).optional().describe('Which events send an alert; replaces the list.'),
       language: z.enum(['en', 'ru', 'hy']).optional()
     }),
-    annotations: WRITE
+    annotations: WRITE,
+    _meta: { 'openai/widgetAccessible': true }
   }, async ({ ai_employee_id, email_on, email, whatsapp_on, alert_me_about, language }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const now = await getAlerts(row.id);

@@ -456,9 +456,9 @@ test('the overview carries an animated card with counts only, and the card page 
   assert.doesNotMatch(text, /SECRET/);
   const listed = await rpc('tools/list', {}, {});
   const meta = name => listed.result.tools.find(tool => tool.name === name)._meta;
-  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v3.html', name);
+  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v4.html', name);
   assert.deepEqual(meta('add_product')['openai/fileParams'], ['image_files']);
-  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v3.html' }, {});
+  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v4.html' }, {});
   assert.equal(resources.result.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.match(resources.result.contents[0].text, /Handled by AI/);
 });
@@ -550,4 +550,11 @@ test('product variants are saved with their stock summed, and photos can be remo
   assert.deepEqual([patches[0].variants.length, patches[0].stock, patches[0].variants[1].color], [2, 7, '#112233']);
   assert.deepEqual(patches[1].photos, [{ path: `${SHOP}/products/${PRODUCT}/b.jpg` }]);
   assert.deepEqual(removed, [{ prefixes: [`${SHOP}/products/${PRODUCT}/a.jpg`] }]);
+});
+
+test('the card page script loads without errors', async () => {
+  const { CARD_HTML } = await import('../../lib/automation-mcp/card-app.mjs');
+  const scripts = [...CARD_HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]);
+  assert.ok(scripts.length);
+  for (const code of scripts) assert.doesNotThrow(() => new Function(code));
 });
