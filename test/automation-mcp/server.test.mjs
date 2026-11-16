@@ -62,8 +62,8 @@ async function rpc(method, params, tables) {
 const call = async (name, args, tables) => { const done = await rpc('tools/call', { name, arguments: args || {} }, tables); return { ...done, data: done.result?.structuredContent, text: JSON.stringify(done.result || {}) }; };
 
 test('the server answers at both addresses, each with its own matching OAuth discovery', async () => {
-  assert.deepEqual(config.path, ['/automation/mcp', '/automation/v2/mcp']);
-  assert.deepEqual(metadataConfig.path, ['/.well-known/oauth-protected-resource/automation/mcp', '/.well-known/oauth-protected-resource/automation/v2/mcp']);
+  assert.deepEqual(config.path, ['/automation/mcp', '/automation/v2/mcp', '/automation/app/mcp']);
+  assert.deepEqual(metadataConfig.path, ['/.well-known/oauth-protected-resource/automation/mcp', '/.well-known/oauth-protected-resource/automation/v2/mcp', '/.well-known/oauth-protected-resource/automation/app/mcp']);
   for (const path of config.path) {
     const response = await automationMcp(new Request(`https://hansora.co${path}`, { method: 'POST' }));
     assert.equal(response.status, 401);

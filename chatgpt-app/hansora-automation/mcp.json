@@ -3,7 +3,7 @@
   "mcpServers": {
     "hansora-automation": {
       "type": "streamable-http",
-      "url": "https://hansora.co/automation/v2/mcp"
+      "url": "https://hansora.co/automation/app/mcp"
     }
   }
 }
