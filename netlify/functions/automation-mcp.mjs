@@ -763,7 +763,7 @@ export function createAutomationServer(ctx) {
         buttons: z.array(z.object({ button_id: z.string().max(120), label: z.string().max(20).optional(), url: z.string().max(1000).optional() })).max(3).optional()
       })).max(12).optional()
     }),
-    annotations: { ...WRITE, openWorldHint: true },
+    annotations: { ...OUTBOUND, destructiveHint: true },
     _meta: CARD_TOOL_META('Saving your changes…', 'Automation updated', { fromCard: true })
   }, async ({ automation_id, ...changes }) => {
     const automation = await ownedAutomation(userId, automation_id);
@@ -806,7 +806,7 @@ export function createAutomationServer(ctx) {
     title: 'Pause or resume the AI on a channel',
     description: 'Use this to stop or restart the AI employee answering on one channel (Instagram messages, Instagram comments, WhatsApp, Telegram, TikTok, Messenger, website chat), for example "stop answering on WhatsApp today". Messages still arrive in the inbox while it is paused. Leave on out to only see each channel\'s state.',
     inputSchema: z.object({ ai_employee_id: employeeId, channel: z.enum(REPLY_CHANNELS).optional(), on: z.boolean().optional().describe('true: the AI answers. false: paused.') }),
-    annotations: WRITE
+    annotations: OUTBOUND
   }, async ({ ai_employee_id, channel, on }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     if (channel && typeof on === 'boolean') return jsonText({ ok: true, changed: { channel, ai_answers: on }, channels: await setChannelReplies(row.id, channel, on) });
@@ -880,7 +880,7 @@ export function createAutomationServer(ctx) {
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(), position: z.enum(['right', 'left']).optional(),
       live: z.boolean().optional().describe('true shows the bubble on the allowed websites; false pauses it.')
     }),
-    annotations: WRITE,
+    annotations: { ...OUTBOUND, destructiveHint: true },
     _meta: CARD_TOOL_META('Opening the website chat…', 'Website chat')
   }, async ({ ai_employee_id, live, ...changes }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
@@ -966,7 +966,7 @@ export function createAutomationServer(ctx) {
       alert_me_about: z.array(z.enum(Object.keys(ALERT_EVENTS))).max(5).optional().describe('Which events send an alert; replaces the list.'),
       language: z.enum(['en', 'ru', 'hy']).optional()
     }),
-    annotations: WRITE,
+    annotations: OUTBOUND,
     _meta: { 'openai/widgetAccessible': true }
   }, async ({ ai_employee_id, email_on, email, whatsapp_on, alert_me_about, language }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
@@ -981,7 +981,7 @@ export function createAutomationServer(ctx) {
     title: 'Confirm a WhatsApp number for alerts',
     description: 'Use this to send alerts to the owner on WhatsApp. First call it with phone: Hansora sends a 6-digit code to that WhatsApp. Then ask the user for the code and call it again with phone and code. With remove: true it stops WhatsApp alerts and forgets the number.',
     inputSchema: z.object({ ai_employee_id: employeeId, phone: z.string().max(30).optional().describe('International format, for example +15550102030.'), code: z.string().regex(/^\d{6}$/).optional(), remove: z.boolean().optional() }),
-    annotations: OUTBOUND
+    annotations: { ...OUTBOUND, destructiveHint: true }
   }, async ({ ai_employee_id, phone, code, remove }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const action = remove ? 'remove_whatsapp' : code ? 'verify' : 'send_code';
@@ -1007,7 +1007,7 @@ export function createAutomationServer(ctx) {
       call_languages: z.array(z.string().regex(/^[a-z]{2}$/)).max(8).optional().describe('Two-letter codes, for example ["en","es"]. Empty: answer in the caller\'s language.'),
       own_number_forwarding: z.object({ on: z.boolean(), number: z.string().max(30).optional().describe('The business\'s own number that forwards to the AI.'), answer: z.enum(['always', 'no_answer']).optional().describe('always: the AI answers every forwarded call. no_answer: only when nobody answers or it is busy.') }).optional()
     }),
-    annotations: WRITE
+    annotations: OUTBOUND
   }, async ({ ai_employee_id, ...input }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     return jsonText({ ok: true, phone_settings: await setPhoneSettings(row.id, input) });
