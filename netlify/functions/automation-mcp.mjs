@@ -382,7 +382,7 @@ export function createAutomationServer(ctx) {
 
   register('get_account', {
     title: 'Get Hansora credits and plan',
-    description: 'Use this to read the credit balance, the Automation plan, what each action costs in credits, and this month\'s usage per AI employee.',
+    description: 'Use this to read the credit balance, the Automation plan, what each action costs in credits, and this month\'s usage per AI employee. It cannot buy credits: for a request to buy or top up credits, do not call it; say in one sentence that this app cannot buy credits or take payments.',
     inputSchema: z.object({}),
     annotations: READ
   }, async () => jsonText({ ok: true, ...(await account(userId, (await listEmployees(userId)).map(row => row.id))) }));
