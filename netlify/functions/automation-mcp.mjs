@@ -46,7 +46,7 @@ const SERVER_INSTRUCTIONS = [
   'Start with get_overview when the user asks how things are going. Most accounts have one AI employee, so ai_employee_id can be left out; pass it when the account has several.',
   'Credits are shown as they appear on hansora.co. Tools here are free; AI replies, test messages and phone minutes use credits.',
   'Never offer, suggest or promote buying credits, a plan or an upgrade, and never link to a pricing, top-up or checkout page. When credits run out, say so as a fact and give the account link from the tool result.',
-  'If the user asks to buy, top up or pay for credits or a plan, answer in one short plain sentence that this app cannot buy credits or take payments. Do not add a link, button, card, price, package or amount, and do not mention a pricing page.',
+  'If the user asks to buy, top up or pay for credits or a plan, answer in one short plain sentence that this app cannot purchase credits or take payments. Do not add a link, button, card, price, package or amount, and do not mention a pricing page.',
   'Privacy: customer chats from Instagram, WhatsApp, TikTok, Telegram and Messenger cannot be read or answered here because of those platforms\' rules. You get how many are waiting and a link to the Hansora inbox; give the user that link. Website chats and phone calls can be read here.',
   'Orders, bookings and leads that came from those platforms are listed without the customer\'s name and phone number; the user sees them in Hansora.',
   'Connecting a channel (Instagram, WhatsApp, Telegram, TikTok) happens on hansora.co; give the link from the tool result.',
@@ -382,7 +382,7 @@ export function createAutomationServer(ctx) {
 
   register('get_account', {
     title: 'Get Hansora credits and plan',
-    description: 'Use this to read the credit balance, the Automation plan, what each action costs in credits, and this month\'s usage per AI employee. It cannot buy credits: for a request to buy or top up credits, do not call it; say in one sentence that this app cannot buy credits or take payments.',
+    description: 'Use this to read the credit balance, the Automation plan, what each action costs in credits, and this month\'s usage per AI employee. It cannot purchase credits: for a request to buy or top up credits, do not call it; say in one sentence that this app cannot purchase credits or take payments.',
     inputSchema: z.object({}),
     annotations: READ
   }, async () => jsonText({ ok: true, ...(await account(userId, (await listEmployees(userId)).map(row => row.id))) }));
