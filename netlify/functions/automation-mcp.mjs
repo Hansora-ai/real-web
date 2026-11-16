@@ -36,6 +36,7 @@ import {
 } from '../../lib/automation-mcp/data.mjs';
 
 export const MCP_URL = new URL('/automation/mcp', SITE);
+const SERVER_PATHS = ['/automation/mcp', '/automation/v2/mcp', '/automation/app/mcp'];
 // ChatGPT gives up on a tool call after roughly a minute; answer well before that.
 const TOOL_BUDGET_MS = 25000;
 
@@ -1073,7 +1074,7 @@ export default async function automationMcp(request, context) {
     console.warn('automation_mcp_request', JSON.stringify({ requestId, method: request.method, tokenProvided: Boolean(token), authenticated: false, status: 401, durationMs: Date.now() - startedAt }));
     return withCors(new Response(JSON.stringify({ error: 'invalid_token', error_description: 'Connect your Hansora account to continue.' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json', 'WWW-Authenticate': `Bearer resource_metadata="${getOAuthProtectedResourceMetadataUrl(new URL(new URL(request.url).pathname.replace(/\/+$/, '') === '/automation/v2/mcp' ? '/automation/v2/mcp' : '/automation/mcp', SITE))}"` }
+      headers: { 'Content-Type': 'application/json', 'WWW-Authenticate': `Bearer resource_metadata="${getOAuthProtectedResourceMetadataUrl(new URL(SERVER_PATHS.includes(new URL(request.url).pathname.replace(/\/+$/, '')) ? new URL(request.url).pathname.replace(/\/+$/, '') : '/automation/mcp', SITE))}"` }
     }));
   }
   const authInfo = { token, clientId: user.clientId, scopes: user.scopes, extra: { userId: user.id, email: user.email, waitUntil } };
@@ -1087,6 +1088,7 @@ export default async function automationMcp(request, context) {
   return response;
 }
 
-// The second address serves the same server. ChatGPT keeps the tool list it loaded when a connector was added, so a
-// connector added at a new address always starts with the current tools.
-export const config = { path: ['/automation/mcp', '/automation/v2/mcp'] };
+// Every address serves the same server. ChatGPT keeps the tool list it loaded when a connector was added, and OpenAI
+// lets each address belong to one app only, so the developer-mode connector and the directory submission each get
+// their own address. /automation/app/mcp is the one in the submitted package.
+export const config = { path: ['/automation/mcp', '/automation/v2/mcp', '/automation/app/mcp'] };
