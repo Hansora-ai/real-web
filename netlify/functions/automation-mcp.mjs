@@ -6,6 +6,7 @@
 // those platforms restrict passing their chat data to third parties (see lib/automation-mcp/data.mjs).
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
+import { serviceUpdate } from '../../lib/automation/db.mjs';
 import { z } from 'zod';
 import { AuthUnavailableError, authenticateToken } from '../../lib/hansora-mcp/data.mjs';
 import { syncBusinessAgent } from '../../lib/automation/agent-sync.mjs';
@@ -18,12 +19,13 @@ import { handler as phoneLineFunction } from './automation-phone-line.mjs';
 import { handler as instagramSyncFunction } from './automation-instagram-sync.mjs';
 import { handler as productPhotoFunction } from './automation-product-photo.mjs';
 import { handler as instagramMediaFunction } from './automation-instagram-media.mjs';
+import { handler as notificationsFunction } from './automation-notifications.mjs';
 import { openAIFileSchema } from '../../lib/hansora-mcp/file-inputs.mjs';
 import { CARD_TOOL_META, CARD_URI, automationCard, cardResource } from '../../lib/automation-mcp/card-app.mjs';
 import {
   DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, updateAutomation, automationView, businessToolSettings, businessTools, createAutomation,
   deleteProduct, downloadPhoto, getAutomaticCalls, listAutomations, listProducts, listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView,
-  saveProductPhotos, setAutomaticCalls, setAutomationOn, setBusinessTools, updateProduct
+  saveProductPhotos, setAutomaticCalls, ALERT_EVENTS, VOICE_NAMES, alertsView, getAlerts, getPhoneSettings, setPhoneSettings, voiceList, setAutomationOn, setBusinessTools, updateProduct
 } from '../../lib/automation-mcp/business.mjs';
 import {
   ACCOUNT_LINE, ACCOUNT_URL, LANGUAGES, SITE, TONES, account, activity, callView, chatStats, recentChats, createEmployee, employeeDetails, employeeSummary, getEmployee, links,
@@ -173,6 +175,10 @@ export function overviewCard(employees, counts, stats, credits) {
     credits,
     inbox_url: employees.length === 1 ? links(employees[0].id).inbox : `${SITE}/automation-dashboard.html`
   };
+}
+
+function toolsCard(row, tools, alerts, changed = []) {
+  return { type: 'tools', employee: row.name, changed, tools, alerts, alert_labels: ALERT_EVENTS, settings_url: tools.settings_page };
 }
 
 function employeeCard(row, created) {
@@ -487,7 +493,8 @@ export function createAutomationServer(ctx) {
     currency: z.string().regex(/^[A-Za-z]{3}$/).optional().describe('Three-letter currency code, for example USD. Ask the user if unknown.'),
     stock: z.number().int().min(0).nullable().optional().describe('How many are in stock; leave out or null when stock is not tracked.'),
     shown_to_customers: z.boolean().optional().describe('false hides the product from customers without deleting it.'),
-    payment_link: z.string().max(1000).optional().describe('An https:// link where the customer pays for this product.')
+    payment_link: z.string().max(1000).optional().describe('An https:// link where the customer pays for this product.'),
+    variants: z.array(z.object({ name: z.string().max(200), price: z.number().min(0).nullable().optional(), stock: z.number().int().min(0).nullable().optional(), color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional() })).max(50).optional().describe('Sizes, colours or other options, each with its own price and stock; replaces the whole list.')
   };
 
   // Photos the user attached in ChatGPT (or public https image links) are saved to the product, like on the products page.
@@ -530,11 +537,23 @@ export function createAutomationServer(ctx) {
   register('update_product', {
     title: 'Update a product',
     description: 'Use this to change one product (product_id from list_products): name, price, stock, description, hide it from customers, or add photos the user attached (image_files). Send only the fields that change. Removing photos is done on the products page.',
-    inputSchema: z.object({ product_id: z.string(), name: z.string().min(1).max(300).optional(), ...productFields, ...photoFields }),
+    inputSchema: z.object({ product_id: z.string(), name: z.string().min(1).max(300).optional(), ...productFields, ...photoFields, remove_photos: z.array(z.number().int().min(1).max(8)).max(8).optional().describe('Photo numbers to delete, counting from 1 in the order list_products shows them.') }),
     annotations: { ...WRITE, destructiveHint: true },
     _meta: { ...PHOTO_META, ...CARD_TOOL_META('Updating the product…', 'Product updated') }
-  }, async ({ product_id, image_files, image_urls, ...input }) => {
-    const product = await updateProduct(await ownedProduct(userId, product_id), input);
+  }, async ({ product_id, image_files, image_urls, remove_photos, ...input }) => {
+    let product = await updateProduct(await ownedProduct(userId, product_id), input);
+    if (remove_photos?.length) {
+      const photos = Array.isArray(product.photos) ? product.photos : [];
+      const drop = new Set(remove_photos.map(number => number - 1));
+      const gone = photos.filter((_, index) => drop.has(index));
+      const kept = photos.filter((_, index) => !drop.has(index));
+      if (gone.length) {
+        await serviceUpdate('automation_products', `id=eq.${encodeURIComponent(product.id)}&business_id=eq.${encodeURIComponent(product.business_id)}`, { photos: kept, updated_at: new Date().toISOString() });
+        const paths = gone.map(photo => photo?.path).filter(Boolean);
+        if (paths.length) await runFunction(productPhotoFunction, token, { business_id: product.business_id, action: 'delete', paths }).catch(() => null);
+        product = { ...product, photos: kept };
+      }
+    }
     const photos = await attachPhotos(product, image_files, image_urls);
     return jsonText({ ok: true, product: { ...productView(product), ...(photos ? { photos: photos.photos_now } : {}) }, ...(photos || {}), card: productCard(product, false, photos ? { photos: photos.photos_now } : {}) });
   });
@@ -554,18 +573,20 @@ export function createAutomationServer(ctx) {
 
   register('get_business_tools', {
     title: 'See what the AI employee may do',
-    description: 'Use this to read the business tools of an AI employee with all their settings: orders (on or off, the questions asked before every order, automatic confirmation, the message after an order), bookings (opening hours per day, booking length, questions, automatic confirmation), leads (questions, signs of interest), handoff to a person (when), and products.',
+    description: 'Use this to read every business tool setting of an AI employee: orders, bookings (hours, rules, services, days off, team members), leads, handoff to a person, products, and the alerts the owner gets.',
     inputSchema: z.object({ ai_employee_id: employeeId }),
-    annotations: READ
+    annotations: READ,
+    _meta: CARD_TOOL_META('Reading your business tools…', 'Your business tools')
   }, async ({ ai_employee_id }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
-    return jsonText({ ok: true, tools: await businessToolSettings(row) });
+    const [tools, alerts] = await Promise.all([businessToolSettings(row), getAlerts(row.id)]);
+    return jsonText({ ok: true, tools, alerts, card: toolsCard(row, tools, alerts) });
   });
 
   const hours = z.array(z.object({ start: z.string().describe('24-hour time, for example 09:00'), end: z.string().describe('24-hour time, for example 18:00') })).max(4);
   register('set_business_tools', {
     title: 'Change what the AI employee may do',
-    description: 'Use this to turn business tools on or off and change their settings: orders, bookings, leads, handoff to a person, products. Send only what changes. A list you send (questions, or the hours of a day) replaces the whole old list, so read the current one with get_business_tools first when adding to it. Alerts to the owner, Google Calendar, tables or staff, closed dates and delivery slots are set on the settings page.',
+    description: 'Use this to turn business tools on or off and change any of their settings: orders (questions, confirmation, message after the order, extra rules, delivery time slots), bookings (opening hours, time zone, length, start times, break, notice, last booking, services, days off, team members and how many at the same time, questions, extra rules), leads, handoff to a person, products. Send only what changes. A list you send replaces the whole old list, so read it with get_business_tools first when adding to it. Alerts to the owner are changed with set_alerts.',
     inputSchema: z.object({
       ai_employee_id: employeeId,
       orders: z.boolean().optional().describe('Turn taking orders on or off.'),
@@ -582,14 +603,34 @@ export function createAutomationServer(ctx) {
       signs_of_an_interested_customer: z.string().max(1000).optional(),
       handoff_to_person: z.boolean().optional(),
       hand_over_when: z.object({ customer_asks_for_a_person: z.boolean().optional(), customer_complains: z.boolean().optional(), information_is_missing: z.boolean().optional(), ai_is_unsure: z.boolean().optional() }).optional(),
-      products: z.boolean().optional().describe('Let the AI employee offer the product catalog to customers.')
+      products: z.boolean().optional().describe('Let the AI employee offer the product catalog to customers.'),
+      order_extra_rules: z.string().max(3000).optional().describe('Extra rules for orders, for example "Minimum order is $50. Delivery only inside the city."'),
+      delivery_time_slots: z.object({ on: z.boolean().optional(), deliveries_at_the_same_time: z.number().int().min(1).max(500).optional(), per_minutes: z.number().int().min(5).max(240).optional(), earliest_minutes_after_ordering: z.number().int().min(0).max(1440).optional() }).optional().describe('Delivery times for orders: how many deliveries per time window, and how soon after ordering.'),
+      booking_extra_rules: z.string().max(3000).optional().describe('Extra rules for bookings, for example "Groups over 8 people call us first."'),
+      booking_timezone: z.string().max(80).optional().describe('IANA time zone of the bookings, for example Europe/London.'),
+      start_every_minutes: z.number().int().min(5).max(1440).optional().describe('Bookings can start every N minutes.'),
+      break_between_minutes: z.number().int().min(0).max(240).optional(),
+      minimum_notice_minutes: z.number().int().min(0).max(43200).optional().describe('How long before the start a booking must be made.'),
+      book_up_to_days_ahead: z.number().int().min(1).max(365).optional(),
+      last_booking_minutes_before_closing: z.number().int().min(0).max(240).nullable().optional().describe('The last booking may start N minutes before closing; null means a booking must end by closing time.'),
+      services: z.array(z.object({ name: z.string().max(80), length_minutes: z.number().int().min(5).max(1440).optional() })).max(50).optional().describe('Services with their own length; replaces the whole list.'),
+      days_off: z.array(z.string()).max(366).optional().describe('All days off (YYYY-MM-DD); replaces the list. Use add_days_off or remove_days_off to change a few.'),
+      add_days_off: z.array(z.string()).max(60).optional().describe('Days off to add, YYYY-MM-DD.'),
+      remove_days_off: z.array(z.string()).max(60).optional(),
+      counted_by: z.enum(['bookings', 'people']).optional().describe('bookings: each booking takes one place or team member. people: count seats or people, each booking has a group size.'),
+      at_the_same_time: z.number().int().min(1).max(5000).optional().describe('How many bookings (or people) at the same time.'),
+      team_member_names: z.array(z.string().max(60)).max(100).optional().describe('Names customers can choose (staff, tables, rooms); replaces the list. Their count becomes at_the_same_time.'),
+      largest_group: z.number().int().min(0).max(5000).optional().describe('When counted by people: the largest group for one booking (0 = no limit).'),
+      message_for_a_reel_from_another_account: z.string().max(1000).optional().describe('Sent when a customer shares a reel Instagram does not let apps see; empty sends nothing.')
     }),
-    annotations: { ...WRITE, destructiveHint: true }
+    annotations: { ...WRITE, destructiveHint: true },
+    _meta: CARD_TOOL_META('Saving your business tools…', 'Business tools saved')
   }, async ({ ai_employee_id, ...changes }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const result = await setBusinessTools(row, changes);
     const prepared = result.changed.length ? await prepare(row.id) : {};
-    return jsonText({ ok: true, ...result, tools: await businessToolSettings(row), ...prepared });
+    const [tools, alerts] = await Promise.all([businessToolSettings(row), getAlerts(row.id)]);
+    return jsonText({ ok: true, ...result, tools, alerts, card: toolsCard(row, tools, alerts, result.changed), ...prepared });
   });
 
   // ---------- Comment automations ----------
@@ -711,7 +752,7 @@ export function createAutomationServer(ctx) {
 
   register('get_phone_setup', {
     title: 'See phone numbers and automatic calls',
-    description: 'Use this to see the phone side of an AI employee: its phone numbers (and whether each can call out), the countries where a new number is available now, and the automatic calls settings (confirming new orders, reminding before bookings, calling hours).',
+    description: 'Use this to see the phone side of an AI employee: its phone numbers (and whether each can call out), the countries where a new number is available now, its voice, greeting and transfer to a person, and the automatic calls settings (confirming new orders, reminding before bookings, calling hours).',
     inputSchema: z.object({ ai_employee_id: employeeId }),
     annotations: READ
   }, async ({ ai_employee_id }) => {
@@ -722,6 +763,7 @@ export function createAutomationServer(ctx) {
       phone_numbers: (lines.data.numbers || []).map(item => ({ number: item.e164, country: item.country, can_call_out: Boolean(item.can_call), ...(item.pending ? { waiting_for_first_call: true } : {}) })),
       countries_with_numbers_now: (lines.data.countries || []).map(item => item.country),
       automatic_calls: automatic,
+      phone_settings: await getPhoneSettings(row.id).catch(() => null),
       links: { phone: links(row.id).phone }
     });
   });
@@ -753,6 +795,61 @@ export function createAutomationServer(ctx) {
     const result = await withBudget(runFunction(phoneLineFunction, token, { business_id: row.id, action: 'contact', country: country.toUpperCase(), method: contact_method, value: contact, wants: ['local_number'] }));
     if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'request_failed', next_step: result.data.error === 'invalid_contact' ? 'The contact does not look right. Ask for a WhatsApp number with country code, a Telegram username, or an email address.' : 'The request could not be sent right now. Try once more.' });
     return jsonText({ ok: true, requested: true, country: country.toUpperCase(), next_step: 'Tell the user the request reached the Hansora team, who will contact them there to arrange the number.' });
+  });
+
+  register('set_alerts', {
+    title: 'Set alerts to the owner',
+    description: 'Use this to change how the owner hears about new orders, bookings, cancelled bookings, leads and customers who need a person: email on or off and its address, WhatsApp on or off (the number must be confirmed first with confirm_alert_whatsapp), which events, and the language of the alerts. Send only what changes.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      email_on: z.boolean().optional(),
+      email: z.string().max(320).optional(),
+      whatsapp_on: z.boolean().optional(),
+      alert_me_about: z.array(z.enum(Object.keys(ALERT_EVENTS))).max(5).optional().describe('Which events send an alert; replaces the list.'),
+      language: z.enum(['en', 'ru', 'hy']).optional()
+    }),
+    annotations: WRITE
+  }, async ({ ai_employee_id, email_on, email, whatsapp_on, alert_me_about, language }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const now = await getAlerts(row.id);
+    if (whatsapp_on && !now.whatsapp.verified) return jsonText({ ok: false, error: 'whatsapp_not_verified', next_step: 'Ask the user for their WhatsApp number, then call confirm_alert_whatsapp to send them a code.' });
+    const result = await runFunction(notificationsFunction, token, { business_id: row.id, action: 'save', email_enabled: email_on ?? now.email.on, email: email ?? now.email.address, whatsapp_enabled: whatsapp_on ?? now.whatsapp.on, events: alert_me_about ?? now.alert_me_about, language: language ?? now.language });
+    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'save_failed', next_step: result.data.error === 'invalid_email' ? 'That email address does not look right.' : 'The alerts could not be saved right now. Try once more.' });
+    return jsonText({ ok: true, alerts: await getAlerts(row.id) });
+  });
+
+  register('confirm_alert_whatsapp', {
+    title: 'Confirm a WhatsApp number for alerts',
+    description: 'Use this to send alerts to the owner on WhatsApp. First call it with phone: Hansora sends a 6-digit code to that WhatsApp. Then ask the user for the code and call it again with phone and code. With remove: true it stops WhatsApp alerts and forgets the number.',
+    inputSchema: z.object({ ai_employee_id: employeeId, phone: z.string().max(30).optional().describe('International format, for example +15550102030.'), code: z.string().regex(/^\d{6}$/).optional(), remove: z.boolean().optional() }),
+    annotations: OUTBOUND
+  }, async ({ ai_employee_id, phone, code, remove }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const action = remove ? 'remove_whatsapp' : code ? 'verify' : 'send_code';
+    if (!remove && !phone) return jsonText({ ok: false, error: 'phone_required', next_step: 'Ask the user for their WhatsApp number.' });
+    const result = await withBudget(runFunction(notificationsFunction, token, { business_id: row.id, action, phone, code }));
+    const steps = { invalid_phone: 'That number does not look right. Ask for it with the country code.', wrong_code: 'The code is wrong. Ask the user to check it.', code_expired: 'The code expired. Send a new one.', too_many_attempts: 'Too many wrong codes. Send a new code later.', invalid_code: 'The code has 6 digits.' };
+    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'failed', next_step: steps[result.data.error] || 'That did not work right now. Try again in a minute.' });
+    if (action === 'send_code') return jsonText({ ok: true, code_sent: true, next_step: 'Tell the user a 6-digit code was sent to their WhatsApp and ask them for it.' });
+    return jsonText({ ok: true, alerts: alertsView({ ...result.data.settings, whatsapp_verified_at: result.data.settings?.whatsapp_verified ? 'yes' : null }) });
+  });
+
+  register('set_phone_settings', {
+    title: 'Set the phone voice, greeting and transfer',
+    description: 'Use this to change how the AI employee sounds and behaves on calls: its voice, the first sentence it says (greeting), transferring callers to a person (number, on or off, warm: the AI introduces the caller first, or direct), and whether call transcripts are saved. Send only what changes.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      voice: z.enum(VOICE_NAMES).optional().describe(`Voices: ${voiceList()}.`),
+      greeting: z.string().max(300).optional().describe('The first sentence on every call; empty lets the AI greet on its own.'),
+      transfer_number: z.string().max(30).optional().describe('Where to transfer callers who ask for a person, international format.'),
+      transfer_on: z.boolean().optional(),
+      transfer_mode: z.enum(['warm', 'direct']).optional(),
+      save_transcripts: z.boolean().optional()
+    }),
+    annotations: WRITE
+  }, async ({ ai_employee_id, ...input }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    return jsonText({ ok: true, phone_settings: await setPhoneSettings(row.id, input) });
   });
 
   register('set_automatic_calls', {

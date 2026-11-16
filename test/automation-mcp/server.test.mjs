@@ -79,7 +79,7 @@ test('the server answers at both addresses, each with its own matching OAuth dis
 test('every tool says what it does, and write tools are not marked read-only', async () => {
   const { result } = await rpc('tools/list', {}, {});
   const names = result.tools.map(tool => tool.name).sort();
-  assert.deepEqual(names, ['add_knowledge', 'add_product', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_comment_automation', 'update_order_booking_lead', 'update_product']);
+  assert.deepEqual(names, ['add_knowledge', 'add_product', 'confirm_alert_whatsapp', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_alerts', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_phone_settings', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_comment_automation', 'update_order_booking_lead', 'update_product']);
   for (const tool of result.tools) {
     assert.match(tool.description, /^Use this/);
     assert.equal(typeof tool.annotations.readOnlyHint, 'boolean');
@@ -266,7 +266,8 @@ test('order questions and opening hours are replaced as sent, checked like the s
 
 test('get_business_tools shows the questions and hours, not only on and off', async () => {
   const { data } = await call('get_business_tools', {}, { automation_businesses: [shop()], automation_tool_configs: [{ tool_type: 'orders', enabled: true, config: { required_fields: ['product name', 'Phone number'], auto_confirm: false } }] });
-  assert.deepEqual(data.tools.orders, { status: 'on', questions_asked_before_every_order: ['product name', 'Phone number'], new_orders_confirmed_automatically: false, message_after_the_order: '' });
+  assert.deepEqual(data.tools.orders, { status: 'on', questions_asked_before_every_order: ['product name', 'Phone number'], new_orders_confirmed_automatically: false, message_after_the_order: '', extra_rules_for_the_ai: '', delivery_time_slots: { on: false } });
+  assert.equal(data.card.type, 'tools');
   assert.equal(data.tools.bookings.status, 'not set up');
   assert.deepEqual(data.tools.bookings.opening_hours.sat, [{ start: '11:00', end: '17:00' }]);
 });
@@ -455,9 +456,9 @@ test('the overview carries an animated card with counts only, and the card page 
   assert.doesNotMatch(text, /SECRET/);
   const listed = await rpc('tools/list', {}, {});
   const meta = name => listed.result.tools.find(tool => tool.name === name)._meta;
-  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v2.html', name);
+  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v3.html', name);
   assert.deepEqual(meta('add_product')['openai/fileParams'], ['image_files']);
-  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v2.html' }, {});
+  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v3.html' }, {});
   assert.equal(resources.result.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.match(resources.result.contents[0].text, /Handled by AI/);
 });
@@ -497,4 +498,56 @@ test('the card may call the edit and on/off tools; other tools stay model-only f
   assert.equal(meta('update_comment_automation')['openai/widgetAccessible'], true);
   assert.equal(meta('set_comment_automation')['openai/widgetAccessible'], true);
   assert.equal(meta('create_comment_automation')['openai/widgetAccessible'], undefined);
+});
+
+test('booking rules, services, days off and team members are saved like the settings page', async () => {
+  const calendar = { tool_type: 'calendar', enabled: true, config: { timezone: 'Europe/London', weekly_hours: { mon: [{ start: '10:00', end: '19:00' }] }, closed_dates: ['2026-12-25'], places: [{ index: 0, name: 'Anna' }, { index: 1, name: 'Bob' }], count_by: 'bookings', capacity: 2, instructions: 'old' } };
+  const tables = { automation_businesses: [shop()], automation_tool_configs: [calendar], automation_provider_resources: [] };
+  const { data, writes } = await call('set_business_tools', { booking_timezone: 'America/New_York', start_every_minutes: 15, break_between_minutes: 10, last_booking_minutes_before_closing: 30, services: [{ name: 'Consultation', length_minutes: 30 }], add_days_off: ['2027-01-01'], remove_days_off: ['2026-12-25'], team_member_names: ['Carol', 'Anna'], booking_extra_rules: 'Groups over 8 call us.', order_extra_rules: 'Minimum $50.', delivery_time_slots: { on: true, deliveries_at_the_same_time: 2, per_minutes: 30 }, message_for_a_reel_from_another_account: 'We will look at it.' }, tables);
+  const saved = Object.fromEntries(writes.find(write => write.table === 'automation_tool_configs').body.map(row => [row.tool_type, row.config]));
+  const c = saved.calendar;
+  assert.deepEqual([c.timezone, c.step_minutes, c.step_set, c.buffer_minutes, c.last_start_minutes, c.instructions], ['America/New_York', 15, true, 10, 30, 'Groups over 8 call us.']);
+  assert.deepEqual(c.services, [{ name: 'Consultation', duration_minutes: 30 }]);
+  assert.deepEqual(c.closed_dates, ['2027-01-01']);
+  assert.deepEqual([c.places, c.capacity], [[{ index: 2, name: 'Carol' }, { index: 0, name: 'Anna' }], 2]);
+  assert.deepEqual([saved.orders.instructions, saved.orders.delivery_slots], ['Minimum $50.', { enabled: true, per_window: 2, window_minutes: 30, lead_minutes: 30 }]);
+  assert.equal(saved.handoff.unreadable_reel_message, 'We will look at it.');
+  assert.deepEqual(data.card.changed.sort(), ['bookings', 'handoff_to_person', 'orders']);
+  const bad = await call('set_business_tools', { booking_timezone: 'Mars/Base' }, tables);
+  assert.equal(bad.data.error, 'timezone_invalid');
+});
+
+test('phone voice, greeting and transfer keep the other phone settings', async () => {
+  const settings = { voice: 'Leda', greeting: 'Hi', auto_calls: { from: '09:00' }, number_mode: 'hansora' };
+  const tables = { automation_businesses: [shop()], automation_channel_connections: [{ id: 'ch1', status: 'connected', settings }] };
+  const { data, writes } = await call('set_phone_settings', { voice: 'Charon', greeting: 'Hello, this is Luma Studio.', transfer_number: '+1 555 010 2030', transfer_on: true, transfer_mode: 'direct' }, tables);
+  const saved = writes[0].body.settings;
+  assert.deepEqual([saved.voice, saved.greeting, saved.transfer_number, saved.transfer_on, saved.transfer_mode, saved.auto_calls, saved.number_mode], ['Charon', 'Hello, this is Luma Studio.', '+15550102030', true, 'direct', { from: '09:00' }, 'hansora']);
+  assert.deepEqual(data.phone_settings.transfer_to_a_person, { on: true, number: '+15550102030', mode: 'direct' });
+  const bad = await call('set_phone_settings', { transfer_on: true }, { ...tables, automation_channel_connections: [{ id: 'ch1', settings: {} }] });
+  assert.equal(bad.data.error, 'transfer_number_required');
+});
+
+test('alerts: unchanged choices are sent again, so turning one thing on does not turn others off', async () => {
+  const tables = { automation_businesses: [{ ...shop(), owner_user_id: USER }], automation_notification_settings: [{ business_id: SHOP, email_enabled: true, email: 'owner@example.com', whatsapp_enabled: true, whatsapp_verified_at: '2026-11-01', whatsapp_phone: '+15550102030', events: ['order_created'], language: 'en' }] };
+  const { writes } = await call('set_alerts', { alert_me_about: ['order_created', 'lead_created'] }, tables);
+  const saved = writes.find(write => write.table === 'automation_notification_settings').body;
+  assert.deepEqual([saved.email_enabled, saved.whatsapp_enabled, saved.email, saved.events], [true, true, 'owner@example.com', ['order_created', 'lead_created']]);
+  const unverified = await call('set_alerts', { whatsapp_on: true }, { ...tables, automation_notification_settings: [] });
+  assert.equal(unverified.data.error, 'whatsapp_not_verified');
+});
+
+test('product variants are saved with their stock summed, and photos can be removed by number', async () => {
+  const tables = { automation_businesses: [{ ...shop(), owner_user_id: USER }], automation_products: [{ id: PRODUCT, business_id: SHOP, name: 'Shirt', photos: [{ path: `${SHOP}/products/${PRODUCT}/a.jpg` }, { path: `${SHOP}/products/${PRODUCT}/b.jpg` }] }] };
+  const database = fakeDatabase(tables);
+  const removed = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => { if (String(url).includes('/storage/v1/object/') && options.method === 'DELETE') { removed.push(JSON.parse(options.body)); return Response.json({}); } return database.fetchFake(url, options); };
+  try {
+    await automationMcp(new Request('https://hansora.co/automation/mcp', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'update_product', arguments: { product_id: PRODUCT, variants: [{ name: 'S', price: 10, stock: 3 }, { name: 'M', price: 10, stock: 4, color: '#112233' }], remove_photos: [1] } } }) })).then(r => r.text());
+  } finally { globalThis.fetch = originalFetch; }
+  const patches = database.writes.filter(write => write.table === 'automation_products').map(write => write.body);
+  assert.deepEqual([patches[0].variants.length, patches[0].stock, patches[0].variants[1].color], [2, 7, '#112233']);
+  assert.deepEqual(patches[1].photos, [{ path: `${SHOP}/products/${PRODUCT}/b.jpg` }]);
+  assert.deepEqual(removed, [{ prefixes: [`${SHOP}/products/${PRODUCT}/a.jpg`] }]);
 });
