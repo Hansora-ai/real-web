@@ -2,35 +2,55 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "hansora-automation",
   "version": "1.0.0",
-  "description": "Manage your Hansora AI employee from ChatGPT: chats at a glance, orders and bookings, comment automations, phone calls and business settings.",
+  "description": "AI employee and AI customer service for businesses: answers customers on Instagram, WhatsApp, Telegram, TikTok, website chat and phone, takes orders and bookings, and automates comment-to-DM.",
   "author": {
     "name": "Hansora",
     "email": "hansora.ai.bot@gmail.com",
     "url": "https://hansora.co/automation"
   },
-  "keywords": ["ai employee", "customer service", "instagram", "whatsapp", "bookings", "orders", "automation"],
+  "keywords": [
+    "ai employee",
+    "ai customer service",
+    "ai chatbot",
+    "instagram dm",
+    "instagram automation",
+    "comment to dm",
+    "whatsapp",
+    "telegram",
+    "tiktok",
+    "website chat",
+    "ai phone calls",
+    "appointment booking",
+    "orders",
+    "leads",
+    "small business"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "Hansora Automation",
-        "shortDescription": "Your AI employee, in ChatGPT",
-        "longDescription": "Hansora Automation gives your business an AI employee that answers customers on Instagram, WhatsApp, Telegram, TikTok, your website and the phone, takes orders and bookings, and collects leads.\n\nWith this app you run it from ChatGPT:\n• See how your business is doing: chats handled by the AI, chats that need you, new orders, bookings and calls.\n• Create and teach your AI employee, then test it as a customer.\n• Set up comment automations for Instagram and TikTok, including follow-to-get-the-link flows.\n• Change opening hours, booking rules, services, days off, order questions and alerts.\n• Add products with photos, see today's schedule and add bookings.\n• Start AI phone calls and read call summaries; change the voice and greeting.\n• See credits used per day and your sales funnel.\n\nPrivacy: customer chats from Instagram, WhatsApp, Telegram, TikTok and Messenger stay in your Hansora inbox. The app only shows how many are waiting.",
+        "shortDescription": "AI employee for your business",
+        "longDescription": "AI employee and AI customer service for your business. It answers your customers 24/7 on Instagram DMs and comments, WhatsApp, Telegram, TikTok, your website chat and phone calls, takes orders, books appointments and collects leads.\n\nManage it right here in ChatGPT:\n• Business overview: chats handled by the AI, chats that need you, new orders, bookings, leads and calls.\n• Create, train and test your AI chatbot: services and prices, opening hours, FAQ, knowledge from documents and links.\n• Comment-to-DM automation for Instagram and TikTok: auto-reply to comments and send a DM with a link, including follow-to-get-the-link flows.\n• Appointment booking and orders: today's schedule, opening hours, services, days off, booking rules and order questions.\n• AI phone calls: answer calls, call customers to confirm orders or remind them of bookings, read call summaries, change the voice and greeting.\n• Products and catalog with photos, alerts by email or WhatsApp, credit usage and your sales funnel.\n\nFor small businesses, shops, salons, clinics, restaurants and online stores. Works with the Hansora account you use on hansora.co.\n\nPrivacy: customer messages from Instagram, WhatsApp, Telegram, TikTok and Messenger stay in your Hansora inbox. The app only shows how many are waiting.",
         "developerName": "Hansora",
         "category": "Productivity",
         "capabilities": [
-          "See chats that need you and the day's orders, bookings and calls",
-          "Create, teach and test an AI employee",
-          "Create and edit Instagram and TikTok comment automations",
-          "Change opening hours, booking rules, order questions and alerts",
-          "Add products with photos and manage bookings",
-          "Start AI phone calls and read call summaries",
-          "Show credit usage and the sales funnel"
+          "AI customer service on Instagram, WhatsApp, Telegram, TikTok and website chat",
+          "Comment-to-DM automation for Instagram and TikTok",
+          "Appointment booking, orders and lead collection",
+          "AI phone calls with summaries and automatic reminders",
+          "Train and test your AI chatbot with your prices, hours and documents",
+          "Business overview, schedule, usage and sales funnel",
+          "Products with photos, opening hours, booking rules and alerts"
         ],
         "websiteURL": "https://hansora.co/automation",
         "supportURL": "https://hansora.co/automation-contact.html",
         "privacyPolicyURL": "https://hansora.co/automation-privacy.html#chatgpt",
         "termsOfServiceURL": "https://hansora.co/automation-terms.html",
-        "defaultPrompt": ["What can you do?", "How is my business doing?", "Show today's schedule"],
+        "defaultPrompt": [
+          "What can you do?",
+          "How is my business doing?",
+          "Show today's schedule"
+        ],
         "brandColor": "#7C7CFF",
         "composerIcon": "./assets/composer-icon.png",
         "logo": "./assets/logo.png"
