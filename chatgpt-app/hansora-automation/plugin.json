@@ -1,0 +1,120 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "hansora-automation",
+  "version": "1.0.0",
+  "description": "AI employee for businesses: answers customers on Instagram, WhatsApp, Telegram, TikTok and website chat, answers phone calls as an AI receptionist, takes orders and bookings, and automates comment-to-DM.",
+  "author": {
+    "name": "Hansora",
+    "email": "hansora.ai.bot@gmail.com",
+    "url": "https://hansora.co/automation"
+  },
+  "keywords": [
+    "ai employee",
+    "ai customer service",
+    "ai chatbot",
+    "instagram dm",
+    "instagram automation",
+    "comment to dm",
+    "whatsapp",
+    "telegram",
+    "tiktok",
+    "website chat",
+    "ai phone calls",
+    "appointment booking",
+    "orders",
+    "leads",
+    "small business",
+    "ai receptionist",
+    "ai phone answering",
+    "call forwarding",
+    "virtual receptionist"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Hansora Automation",
+        "shortDescription": "AI employee for your business",
+        "longDescription": "AI employee and AI customer service for your business. It answers your customers 24/7 on Instagram DMs and comments, WhatsApp, Telegram, TikTok and your website chat, and answers your phone calls as an AI receptionist. It answers questions, takes orders, books appointments and collects leads.\n\nAI phone receptionist: get a new AI phone number, or forward your existing business number to it. The AI answers every call, or only the ones you miss, using your prices, hours and services; it takes orders and bookings on the call, transfers callers to a person when needed, and saves a summary and transcript. It can also call customers to confirm orders or remind them of bookings.\n\nManage it right here in ChatGPT:\n• Business overview: chats and calls handled by the AI, chats that need you, new orders, bookings and leads.\n• Create, train and test your AI chatbot: services and prices, opening hours, FAQ, knowledge from documents and links.\n• Phone: get a number, set up call forwarding, choose the voice, greeting and languages, read call summaries, start AI calls.\n• Comment-to-DM automation for Instagram and TikTok: auto-reply to comments and send a DM with a link, including follow-to-get-the-link flows.\n• Appointment booking and orders: today's schedule, opening hours, services, days off, booking rules and order questions.\n• Products and catalog with photos, alerts by email or WhatsApp, credit usage and your sales funnel.\n\nFor small businesses, shops, salons, clinics, restaurants and online stores. Works with the Hansora account you use on hansora.co.\n\nPrivacy: customer messages from Instagram, WhatsApp, Telegram, TikTok and Messenger stay in your Hansora inbox. The app only shows how many are waiting.",
+        "developerName": "Hansora",
+        "category": "Productivity",
+        "capabilities": [
+          "AI customer service on Instagram, WhatsApp, Telegram, TikTok and website chat",
+          "AI phone receptionist: answers calls on a new number or your forwarded number",
+          "Takes orders and books appointments in chats and on calls",
+          "Comment-to-DM automation for Instagram and TikTok",
+          "AI outgoing calls, reminders and call summaries",
+          "Train and test your AI chatbot with your prices, hours and documents",
+          "Business overview, schedule, usage and sales funnel",
+          "Products with photos, opening hours, booking rules and alerts"
+        ],
+        "websiteURL": "https://hansora.co/automation",
+        "supportURL": "https://hansora.co/automation-contact.html",
+        "privacyPolicyURL": "https://hansora.co/automation-privacy.html#chatgpt",
+        "termsOfServiceURL": "https://hansora.co/automation-terms.html",
+        "defaultPrompt": [
+          "What can you do?",
+          "How is my business doing?",
+          "Show today's schedule"
+        ],
+        "brandColor": "#7C7CFF",
+        "composerIcon": "./assets/composer-icon.png",
+        "logo": "./assets/logo.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Overview of the business",
+              "prompt": "How is my business doing?",
+              "tools_triggered": "get_overview",
+              "expected_behavior": "Shows a card with the last 7 days of conversations (handled by AI, answered by the team, need you), conversations per channel, and orders, bookings, leads and calls of the last 24 hours, plus the credit balance."
+            },
+            {
+              "description": "Today's schedule",
+              "prompt": "Show today's schedule for Demo Bakery.",
+              "tools_triggered": "get_schedule",
+              "expected_behavior": "Shows a card with today's bookings of the demo account on a timeline with the opening hours."
+            },
+            {
+              "description": "Create a comment automation",
+              "prompt": "When someone comments \"price\" on my Instagram, reply \"Sent you a message!\" and send them a private message \"Here are our prices\" with a button \"Open prices\" linking to https://hansora.co/automation-pricing.html. Don't turn it on.",
+              "tools_triggered": "create_comment_automation",
+              "expected_behavior": "Creates the automation switched off and shows a card with the word \"price\" and each step: comment, public reply, private message with its button."
+            },
+            {
+              "description": "Add a product",
+              "prompt": "Add a product to Demo Bakery: Croissant, $5, 20 in stock.",
+              "tools_triggered": "add_product",
+              "expected_behavior": "Adds the product and shows a card with its name, price and stock."
+            },
+            {
+              "description": "Change opening hours",
+              "prompt": "Open Demo Bakery on Saturdays from 10:00 to 16:00 for bookings.",
+              "tools_triggered": "get_business_tools, set_business_tools",
+              "expected_behavior": "Saves Saturday 10:00 to 16:00 and shows the business tools card with the week drawn as a timeline and the bookings section highlighted."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Reading customer messages from a social platform",
+              "prompt": "Show me the WhatsApp messages my customers sent today."
+            },
+            {
+              "description": "Buying credits inside ChatGPT",
+              "prompt": "Buy 1000 credits for my Hansora account."
+            },
+            {
+              "description": "Out of scope request",
+              "prompt": "Book me a flight to Paris."
+            }
+          ]
+        },
+        "demo_recording_url": "REPLACE_WITH_DEMO_VIDEO_LINK"
+      },
+      "publication": {
+        "countries": [],
+        "release_notes": "First release: overview, AI employees, comment automations, business tools, products, schedule, phone calls, usage and sales funnel."
+      }
+    }
+  }
+}
