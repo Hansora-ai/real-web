@@ -78,7 +78,7 @@
             },
             {
               "description": "Create a comment automation",
-              "prompt": "When someone comments \"price\" on my Instagram, reply \"Sent you a message!\" and send them a private message \"Here are our prices\" with a button \"Open prices\" linking to https://hansora.co/automation-pricing.html. Don't turn it on.",
+              "prompt": "When someone comments \"price\" on my Instagram, reply \"Sent you a message!\" and send them a private message \"Here is our menu\" with a button \"Open menu\" linking to https://example.com/menu. Don't turn it on.",
               "tools_triggered": "create_comment_automation",
               "expected_behavior": "Creates the automation switched off and shows a card with the word \"price\" and each step: comment, public reply, private message with its button."
             },
