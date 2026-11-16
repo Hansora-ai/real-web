@@ -19,13 +19,14 @@ import { handler as instagramSyncFunction } from './automation-instagram-sync.mj
 import { handler as productPhotoFunction } from './automation-product-photo.mjs';
 import { handler as instagramMediaFunction } from './automation-instagram-media.mjs';
 import { openAIFileSchema } from '../../lib/hansora-mcp/file-inputs.mjs';
+import { CARD_TOOL_META, CARD_URI, automationCard, cardResource } from '../../lib/automation-mcp/card-app.mjs';
 import {
   DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, automationView, businessToolSettings, businessTools, createAutomation,
   deleteProduct, downloadPhoto, getAutomaticCalls, listAutomations, listProducts, listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView,
   saveProductPhotos, setAutomaticCalls, setAutomationOn, setBusinessTools, updateProduct
 } from '../../lib/automation-mcp/business.mjs';
 import {
-  ACCOUNT_LINE, ACCOUNT_URL, LANGUAGES, SITE, TONES, account, activity, callView, createEmployee, employeeDetails, employeeSummary, getEmployee, links,
+  ACCOUNT_LINE, ACCOUNT_URL, LANGUAGES, SITE, TONES, account, activity, callView, chatStats, recentChats, createEmployee, employeeDetails, employeeSummary, getEmployee, links,
   listCalls, listEmployees, listWebsiteChats, ownedCall, ownedWebsiteChat, phoneLines, resolveEmployee, setChatAnsweredBy,
   updateEmployee, chatView, websiteChatMessages
 } from '../../lib/automation-mcp/data.mjs';
@@ -158,6 +159,27 @@ const employeeFields = {
   prohibited_instructions: z.string().max(8000).optional().describe('What the AI employee must never say or do.')
 };
 
+export function overviewCard(employees, counts, stats, credits) {
+  const sum = key => employees.reduce((total, row) => total + Number(counts[row.id]?.last_24_hours?.[key] || 0), 0);
+  const waitingNow = employees.reduce((total, row) => total + Number(counts[row.id]?.chats_waiting_for_a_person?.total || 0), 0);
+  const live = employees.filter(row => employeeSummary(row).status === 'live').length;
+  return {
+    type: 'overview',
+    period: 'Last 7 days',
+    subtitle: `${employees.length} AI employee${employees.length === 1 ? '' : 's'}${live ? `, ${live} live` : ''}`,
+    chats: stats,
+    need_you_now: waitingNow,
+    today: { orders: sum('new_orders'), bookings: sum('new_bookings'), leads: sum('new_leads'), calls: sum('calls_answered') + sum('calls_made') },
+    credits,
+    inbox_url: employees.length === 1 ? links(employees[0].id).inbox : `${SITE}/automation-dashboard.html`
+  };
+}
+
+function employeeCard(row, created) {
+  const view = employeeSummary(row);
+  return { type: 'employee', created, name: view.assistant_name || view.business_name, business: view.business_name, category: view.category, live: view.status === 'live', channels: [...view.connected_channels.map(item => ({ name: item.channel, on: true })), ...view.not_connected_channels.map(name => ({ name, on: false }))], connect_url: view.links.connect_channels };
+}
+
 export function createAutomationServer(ctx) {
   const userId = String(ctx.authInfo?.extra?.userId || '');
   const token = String(ctx.authInfo?.token || '');
@@ -184,21 +206,30 @@ export function createAutomationServer(ctx) {
     }
   };
 
+  server.registerResource('hansora-automation-card', CARD_URI, {
+    title: 'Hansora Automation card',
+    description: 'Animated card for overview numbers, comment automations, products, AI employees and calls.',
+    mimeType: 'text/html;profile=mcp-app'
+  }, async () => cardResource());
+
   register('get_overview', {
     title: 'Hansora Automation overview',
     description: 'Use this when the user asks how their business or AI employee is doing, what needs their attention, or for a daily summary. Returns each AI employee with its connected channels, how many chats wait for a person (per channel), new orders, bookings, leads and calls in the last 24 hours, and the credit balance.',
     inputSchema: z.object({}),
-    annotations: READ
+    annotations: READ,
+    _meta: CARD_TOOL_META('Checking your business…', 'Your business at a glance')
   }, async () => {
     const employees = await listEmployees(userId);
     const ids = employees.map(row => row.id);
-    const [counts, money] = await Promise.all([activity(ids), account(userId, ids)]);
+    const [counts, money, chats] = await Promise.all([activity(ids), account(userId, ids), recentChats(ids).catch(() => [])]);
     if (!employees.length) return jsonText({ ok: true, ai_employees: [], credits: money.credits, plan: money.plan, next_step: 'This account has no AI employee yet. Offer to create one now with create_ai_employee: ask for the business name, what it sells and its opening hours.' });
     return jsonText({
       ok: true,
       ai_employees: employees.map(row => ({ ...employeeSummary(row), ...counts[row.id] })),
+      last_7_days: chatStats(chats),
       credits: money.credits,
       plan: money.plan,
+      card: overviewCard(employees, counts, chatStats(chats), money.credits),
       note: 'Chats from Instagram, WhatsApp, TikTok, Telegram and Messenger are answered in the Hansora inbox (links.inbox). Website chats can be opened here with list_website_chats.'
     });
   });
@@ -228,7 +259,8 @@ export function createAutomationServer(ctx) {
     title: 'Create an AI employee',
     description: 'Use this to create a new AI employee for a business. Only business_name is required, but the more the user tells (what they sell with prices, opening hours, FAQ, how to behave), the better it answers; ask for the missing basics first, or draft them from what the user already said and confirm. After creating, tell the user to connect a channel with the returned link, and offer to try it with test_ai_employee.',
     inputSchema: z.object({ business_name: z.string().min(1).max(120), ...employeeFields }),
-    annotations: WRITE
+    annotations: WRITE,
+    _meta: CARD_TOOL_META('Creating your AI employee…', 'AI employee created')
   }, async (input) => {
     const id = await createEmployee(userId, input);
     const prepared = await prepare(id);
@@ -238,6 +270,7 @@ export function createAutomationServer(ctx) {
       created: true,
       ai_employee: row ? employeeDetails(row) : { ai_employee_id: id, links: links(id) },
       ...prepared,
+      ...(row ? { card: employeeCard(row, true) } : {}),
       next_step: 'Tell the user the AI employee is created. It starts answering customers after they connect a channel (Instagram, WhatsApp, Telegram, TikTok, website chat or phone) at links.connect_channels. Offer to test it right here with test_ai_employee.'
     });
   });
@@ -369,12 +402,13 @@ export function createAutomationServer(ctx) {
       purpose: z.string().min(3).max(500).describe('What the AI should say, ask and find out on this call.'),
       person_name: z.string().max(120).optional().describe('Name of the person being called, if known.')
     }),
-    annotations: OUTBOUND
+    annotations: OUTBOUND,
+    _meta: CARD_TOOL_META('Starting the call…', 'Calling')
   }, async ({ ai_employee_id, phone_number, purpose, person_name }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     try {
       const started = await withBudget(startOutgoingCall({ businessId: row.id, to: phone_number, purpose, contactName: person_name || '' }));
-      return jsonText({ ok: true, calling: started.calling, from: started.from, next_step: 'Tell the user the AI employee is calling now. When they ask what happened, call list_calls (the result appears a minute or two after the call ends).' });
+      return jsonText({ ok: true, calling: started.calling, from: started.from, card: { type: 'call', calling: started.calling, from: started.from, purpose, person: person_name || '', phone_url: links(row.id).phone }, next_step: 'Tell the user the AI employee is calling now. When they ask what happened, call list_calls (the result appears a minute or two after the call ends).' });
     } catch (error) {
       const code = String(error?.code || error?.message || '');
       if (CALL_ERRORS[code]) return jsonText({ ok: false, error: code, next_step: CALL_ERRORS[code], links: { phone: links(row.id).phone, account: ACCOUNT_URL } });
@@ -477,19 +511,20 @@ export function createAutomationServer(ctx) {
     image_urls: z.array(z.string().url()).max(MAX_PRODUCT_PHOTOS).optional().describe('Public https:// links to product photos.')
   };
   const PHOTO_META = { 'openai/fileParams': ['image_files'] };
+  const productCard = (product, added, extra = {}) => ({ type: 'product', added, ...productView(product), shown: product.active !== false, ...extra, products_url: `${SITE}/automation-products.html?business=${product.business_id}` });
 
   register('add_product', {
     title: 'Add a product',
     description: 'Use this to add one product to the catalog so the AI employee can offer and sell it, with photos if the user attached any (pass them in image_files). For several products, call it once per product. Variants (sizes, colors) are added on the products page.',
     inputSchema: z.object({ ai_employee_id: employeeId, name: z.string().min(1).max(300), ...productFields, ...photoFields }),
     annotations: WRITE,
-    _meta: PHOTO_META
+    _meta: { ...PHOTO_META, ...CARD_TOOL_META('Adding the product…', 'Product added') }
   }, async ({ ai_employee_id, image_files, image_urls, ...input }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const product = await addProduct(row.id, input);
     const photos = await attachPhotos(product, image_files, image_urls);
     const tools = await businessTools(row.id).catch(() => ({}));
-    return jsonText({ ok: true, product: { ...productView(product), ...(photos ? { photos: photos.photos_now } : {}) }, ...(photos || {}), ai_offers_products: tools.products === 'on', ...(tools.products === 'on' ? {} : { next_step: 'The AI employee does not offer products to customers yet. Ask the user if it should, then call set_business_tools with products: true.' }) });
+    return jsonText({ ok: true, product: { ...productView(product), ...(photos ? { photos: photos.photos_now } : {}) }, ...(photos || {}), card: productCard(product, true, { employee: row.name, ai_offers_products: tools.products === 'on', ...(photos ? { photos: photos.photos_now } : {}) }), ai_offers_products: tools.products === 'on', ...(tools.products === 'on' ? {} : { next_step: 'The AI employee does not offer products to customers yet. Ask the user if it should, then call set_business_tools with products: true.' }) });
   });
 
   register('update_product', {
@@ -497,11 +532,11 @@ export function createAutomationServer(ctx) {
     description: 'Use this to change one product (product_id from list_products): name, price, stock, description, hide it from customers, or add photos the user attached (image_files). Send only the fields that change. Removing photos is done on the products page.',
     inputSchema: z.object({ product_id: z.string(), name: z.string().min(1).max(300).optional(), ...productFields, ...photoFields }),
     annotations: { ...WRITE, destructiveHint: true },
-    _meta: PHOTO_META
+    _meta: { ...PHOTO_META, ...CARD_TOOL_META('Updating the product…', 'Product updated') }
   }, async ({ product_id, image_files, image_urls, ...input }) => {
     const product = await updateProduct(await ownedProduct(userId, product_id), input);
     const photos = await attachPhotos(product, image_files, image_urls);
-    return jsonText({ ok: true, product: { ...productView(product), ...(photos ? { photos: photos.photos_now } : {}) }, ...(photos || {}) });
+    return jsonText({ ok: true, product: { ...productView(product), ...(photos ? { photos: photos.photos_now } : {}) }, ...(photos || {}), card: productCard(product, false, photos ? { photos: photos.photos_now } : {}) });
   });
 
   register('delete_product', {
@@ -598,7 +633,8 @@ export function createAutomationServer(ctx) {
       ai_instruction: z.string().max(500).optional().describe('TikTok only, with ai_writes_reply: how the AI should reply.'),
       turn_on: z.boolean().default(false).describe('true starts it right away. Confirm with the user first.')
     }),
-    annotations: OUTBOUND
+    annotations: OUTBOUND,
+    _meta: CARD_TOOL_META('Building the automation…', 'Automation ready')
   }, async ({ ai_employee_id, ...input }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     if (input.posts === 'latest') {
@@ -613,6 +649,7 @@ export function createAutomationServer(ctx) {
     return jsonText({
       ok: true,
       comment_automation: automationView(made.row),
+      card: automationCard(made.row, automationView(made.row), builder),
       turned_on: made.turned_on,
       edit_it_at: builder,
       next_step: made.not_connected
@@ -637,13 +674,14 @@ export function createAutomationServer(ctx) {
     title: 'Turn a comment automation on or off',
     description: 'Use this to turn one comment automation on or off (automation_id from list_comment_automations). Turning it on means it starts replying to matching comments right away, and each run uses credits.',
     inputSchema: z.object({ automation_id: z.string(), on: z.boolean() }),
-    annotations: OUTBOUND
+    annotations: OUTBOUND,
+    _meta: CARD_TOOL_META('Updating the automation…', 'Automation updated')
   }, async ({ automation_id, on }) => {
     const automation = await ownedAutomation(userId, automation_id);
     const saved = await setAutomationOn(automation, on);
     // Instagram conversation starters are shown by Instagram itself, so it is told about the change (as the site does).
     if (automation.safety_config?.trigger_type === 'ice_breaker') await runFunction(instagramSyncFunction, token, { business_id: automation.business_id, trigger_type: 'ice_breaker' }).catch(() => null);
-    return jsonText({ ok: true, comment_automation: automationView(saved) });
+    return jsonText({ ok: true, comment_automation: automationView(saved), card: automationCard(saved, automationView(saved), `${SITE}/automation-workflows.html?business=${saved.business_id}`) });
   });
 
   // ---------- Phone numbers and automatic calls ----------

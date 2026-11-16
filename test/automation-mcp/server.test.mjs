@@ -441,3 +441,31 @@ test('loading the tool list is logged, so a client with an old list can be told 
   assert.ok(create.description.length < 600);
   for (const tool of done.result.tools) assert.ok(tool.description.length <= 1000, tool.name);
 });
+
+test('the overview carries an animated card with counts only, and the card page is offered to ChatGPT', async () => {
+  const { data, text } = await call('get_overview', {}, {
+    automation_businesses: [shop()],
+    automation_conversations: (href) => href.includes('last_message_at=gte')
+      ? [{ business_id: SHOP, channel_type: 'whatsapp', status: 'resolved', ai_enabled: true, last_message_preview: 'SECRET' }, { business_id: SHOP, channel_type: 'whatsapp', status: 'needs_attention', ai_enabled: true }, { business_id: SHOP, channel_type: 'website', status: 'human_handling', ai_enabled: false }]
+      : [{ business_id: SHOP, channel_type: 'whatsapp' }],
+    profiles: [{ credits: 10 }]
+  });
+  assert.deepEqual(data.card.chats, { total: 3, handled_by_ai: 1, answered_by_a_person: 1, need_you: 1, by_channel: [{ channel: 'WhatsApp', chats: 2 }, { channel: 'Website chat', chats: 1 }] });
+  assert.deepEqual([data.card.type, data.card.need_you_now, data.card.credits], ['overview', 1, 100]);
+  assert.doesNotMatch(text, /SECRET/);
+  const listed = await rpc('tools/list', {}, {});
+  const meta = name => listed.result.tools.find(tool => tool.name === name)._meta;
+  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v1.html', name);
+  assert.deepEqual(meta('add_product')['openai/fileParams'], ['image_files']);
+  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v1.html' }, {});
+  assert.equal(resources.result.contents[0].mimeType, 'text/html;profile=mcp-app');
+  assert.match(resources.result.contents[0].text, /Handled by AI/);
+});
+
+test('a created automation carries a card with its words and each step of the flow', async () => {
+  const { data } = await call('create_comment_automation', { keywords: ['love'], private_message: 'Welcome!', opening_button_label: 'Send me the link', followers_only: true, button_label: 'Open link', button_url: 'https://hansora.co/automation.html', public_replies: ['Sent you a message!'] }, { automation_businesses: [shop()] });
+  const card = data.card;
+  assert.deepEqual([card.type, card.keywords, card.on], ['automation', ['love'], false]);
+  assert.deepEqual(card.steps.slice(0, 4).map(step => step.kind), ['comment', 'reply', 'dm', 'check']);
+  assert.deepEqual([card.steps[2].buttons, card.steps[4].yes.buttons, card.steps[4].no.buttons], [['Send me the link'], ['Open link'], ["I'm following"]]);
+});
