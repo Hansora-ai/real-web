@@ -79,7 +79,7 @@ test('the server answers at both addresses, each with its own matching OAuth dis
 test('every tool says what it does, and write tools are not marked read-only', async () => {
   const { result } = await rpc('tools/list', {}, {});
   const names = result.tools.map(tool => tool.name).sort();
-  assert.deepEqual(names, ['add_booking', 'add_knowledge', 'add_product', 'confirm_alert_whatsapp', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_sales_funnel', 'get_schedule', 'get_usage', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'pause_or_resume_ai', 'release_phone_number', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_alerts', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_phone_settings', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_comment_automation', 'update_order_booking_lead', 'update_product', 'website_chat_setup', 'what_can_you_do']);
+  assert.deepEqual(names, ['add_booking', 'add_knowledge', 'add_product', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_sales_funnel', 'get_schedule', 'get_usage', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'pause_or_resume_ai', 'release_phone_number', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_alerts', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_phone_settings', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_comment_automation', 'update_order_booking_lead', 'update_product', 'website_chat_setup', 'what_can_you_do']);
   for (const tool of result.tools) {
     assert.match(tool.description, /^Use this/);
     assert.equal(typeof tool.annotations.readOnlyHint, 'boolean');
@@ -533,8 +533,8 @@ test('alerts: unchanged choices are sent again, so turning one thing on does not
   const { writes } = await call('set_alerts', { alert_me_about: ['order_created', 'lead_created'] }, tables);
   const saved = writes.find(write => write.table === 'automation_notification_settings').body;
   assert.deepEqual([saved.email_enabled, saved.whatsapp_enabled, saved.email, saved.events], [true, true, 'owner@example.com', ['order_created', 'lead_created']]);
-  const unverified = await call('set_alerts', { whatsapp_on: true }, { ...tables, automation_notification_settings: [] });
-  assert.equal(unverified.data.error, 'whatsapp_not_verified');
+  const listed = await call('get_business_tools', {}, tables);
+  assert.equal(JSON.stringify(listed.data.alerts || {}).includes('whatsapp'), false);
 });
 
 test('product variants are saved with their stock summed, and photos can be removed by number', async () => {

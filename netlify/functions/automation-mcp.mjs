@@ -27,7 +27,7 @@ import { CARD_TOOL_META, CARD_URI, automationCard, cardResource } from '../../li
 import {
   DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, safePhotoUrl, addProduct, archiveAutomation, updateAutomation, automationView, businessToolSettings, businessTools, createAutomation,
   deleteProduct, downloadPhoto, getAutomaticCalls, listAutomations, listProducts, listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView,
-  saveProductPhotos, setAutomaticCalls, ALERT_EVENTS, VOICE_NAMES, alertsView, getAlerts, getPhoneSettings, setPhoneSettings, voiceList, setAutomationOn, setBusinessTools, updateProduct
+  saveProductPhotos, setAutomaticCalls, ALERT_EVENTS, VOICE_NAMES, getAlerts, whatsappAlertsOn, getPhoneSettings, setPhoneSettings, voiceList, setAutomationOn, setBusinessTools, updateProduct
 } from '../../lib/automation-mcp/business.mjs';
 import {
   ACCOUNT_LINE, ACCOUNT_URL, LANGUAGES, SITE, TONES, account, activity, callView, chatStats, recentChats, createEmployee, employeeDetails, employeeSummary, getEmployee, links,
@@ -957,40 +957,22 @@ export function createAutomationServer(ctx) {
 
   register('set_alerts', {
     title: 'Set alerts to the owner',
-    description: 'Use this to change how the owner hears about new orders, bookings, cancelled bookings, leads and customers who need a person: email on or off and its address, WhatsApp on or off (the number must be confirmed first with confirm_alert_whatsapp), which events, and the language of the alerts. Send only what changes.',
+    description: 'Use this to change how the owner hears about new orders, bookings, cancelled bookings, leads and customers who need a person: email on or off and its address, which events, and the language of the alerts. Send only what changes.',
     inputSchema: z.object({
       ai_employee_id: employeeId,
       email_on: z.boolean().optional(),
       email: z.string().max(320).optional(),
-      whatsapp_on: z.boolean().optional(),
       alert_me_about: z.array(z.enum(Object.keys(ALERT_EVENTS))).max(5).optional().describe('Which events send an alert; replaces the list.'),
       language: z.enum(['en', 'ru', 'hy']).optional()
     }),
     annotations: { ...OUTBOUND, destructiveHint: true },
     _meta: { 'openai/widgetAccessible': true }
-  }, async ({ ai_employee_id, email_on, email, whatsapp_on, alert_me_about, language }) => {
+  }, async ({ ai_employee_id, email_on, email, alert_me_about, language }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const now = await getAlerts(row.id);
-    if (whatsapp_on && !now.whatsapp.verified) return jsonText({ ok: false, error: 'whatsapp_not_verified', next_step: 'Ask the user for their WhatsApp number, then call confirm_alert_whatsapp to send them a code.' });
-    const result = await runFunction(notificationsFunction, token, { business_id: row.id, action: 'save', email_enabled: email_on ?? now.email.on, email: email ?? now.email.address, whatsapp_enabled: whatsapp_on ?? now.whatsapp.on, events: alert_me_about ?? now.alert_me_about, language: language ?? now.language });
+    const result = await runFunction(notificationsFunction, token, { business_id: row.id, action: 'save', email_enabled: email_on ?? now.email.on, email: email ?? now.email.address, whatsapp_enabled: await whatsappAlertsOn(row.id), events: alert_me_about ?? now.alert_me_about, language: language ?? now.language });
     if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'save_failed', next_step: result.data.error === 'invalid_email' ? 'That email address does not look right.' : 'The alerts could not be saved right now. Try once more.' });
     return jsonText({ ok: true, alerts: await getAlerts(row.id) });
-  });
-
-  register('confirm_alert_whatsapp', {
-    title: 'Confirm a WhatsApp number for alerts',
-    description: 'Use this to send alerts to the owner on WhatsApp. First call it with phone: Hansora sends a 6-digit code to that WhatsApp. Then ask the user for the code and call it again with phone and code. With remove: true it stops WhatsApp alerts and forgets the number.',
-    inputSchema: z.object({ ai_employee_id: employeeId, phone: z.string().max(30).optional().describe('International format, for example +15550102030.'), code: z.string().regex(/^\d{6}$/).optional(), remove: z.boolean().optional() }),
-    annotations: { ...OUTBOUND, destructiveHint: true }
-  }, async ({ ai_employee_id, phone, code, remove }) => {
-    const row = await resolveEmployee(userId, ai_employee_id);
-    const action = remove ? 'remove_whatsapp' : code ? 'verify' : 'send_code';
-    if (!remove && !phone) return jsonText({ ok: false, error: 'phone_required', next_step: 'Ask the user for their WhatsApp number.' });
-    const result = await withBudget(runFunction(notificationsFunction, token, { business_id: row.id, action, phone, code }));
-    const steps = { invalid_phone: 'That number does not look right. Ask for it with the country code.', wrong_code: 'The code is wrong. Ask the user to check it.', code_expired: 'The code expired. Send a new one.', too_many_attempts: 'Too many wrong codes. Send a new code later.', invalid_code: 'The code has 6 digits.' };
-    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'failed', next_step: steps[result.data.error] || 'That did not work right now. Try again in a minute.' });
-    if (action === 'send_code') return jsonText({ ok: true, code_sent: true, next_step: 'Tell the user a 6-digit code was sent to their WhatsApp and ask them for it.' });
-    return jsonText({ ok: true, alerts: alertsView({ ...result.data.settings, whatsapp_verified_at: result.data.settings?.whatsapp_verified ? 'yes' : null }) });
   });
 
   register('set_phone_settings', {
