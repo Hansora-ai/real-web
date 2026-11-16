@@ -282,7 +282,7 @@
       ['calendar', 'Bookings', 'Check free times and book appointments', 'calendar', 'calendar'],
       ['orders', 'Orders', 'Collect every detail and create orders', 'bag', 'orders'],
       ['leads', 'Leads', 'Save interested customers for sales', 'spark', 'leads'],
-      ['notifications', 'Notifications', 'WhatsApp and email alerts to you', 'bell', 'notifications']
+      ['notifications', 'Notifications', 'Email alerts to you', 'bell', 'notifications']
     ];
     $('#actions-list').innerHTML = rows.map(([key, title, description, iconName, tab]) => {
       const value = state ? state[key] : undefined;
