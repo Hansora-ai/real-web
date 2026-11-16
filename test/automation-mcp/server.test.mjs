@@ -79,7 +79,7 @@ test('the server answers at both addresses, each with its own matching OAuth dis
 test('every tool says what it does, and write tools are not marked read-only', async () => {
   const { result } = await rpc('tools/list', {}, {});
   const names = result.tools.map(tool => tool.name).sort();
-  assert.deepEqual(names, ['add_knowledge', 'add_product', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_order_booking_lead', 'update_product']);
+  assert.deepEqual(names, ['add_knowledge', 'add_product', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_comment_automation', 'update_order_booking_lead', 'update_product']);
   for (const tool of result.tools) {
     assert.match(tool.description, /^Use this/);
     assert.equal(typeof tool.annotations.readOnlyHint, 'boolean');
@@ -455,9 +455,9 @@ test('the overview carries an animated card with counts only, and the card page 
   assert.doesNotMatch(text, /SECRET/);
   const listed = await rpc('tools/list', {}, {});
   const meta = name => listed.result.tools.find(tool => tool.name === name)._meta;
-  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v1.html', name);
+  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v2.html', name);
   assert.deepEqual(meta('add_product')['openai/fileParams'], ['image_files']);
-  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v1.html' }, {});
+  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v2.html' }, {});
   assert.equal(resources.result.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.match(resources.result.contents[0].text, /Handled by AI/);
 });
@@ -467,5 +467,34 @@ test('a created automation carries a card with its words and each step of the fl
   const card = data.card;
   assert.deepEqual([card.type, card.keywords, card.on], ['automation', ['love'], false]);
   assert.deepEqual(card.steps.slice(0, 4).map(step => step.kind), ['comment', 'reply', 'dm', 'check']);
-  assert.deepEqual([card.steps[2].buttons, card.steps[4].yes.buttons, card.steps[4].no.buttons], [['Send me the link'], ['Open link'], ["I'm following"]]);
+  assert.deepEqual([card.steps[2].buttons.map(b => b.label), card.steps[4].yes.buttons, card.steps[4].no.buttons.map(b => b.label)], [['Send me the link'], [{ id: 'action-website', label: 'Open link', url: 'https://hansora.co/automation.html' }], ["I'm following"]]);
+  assert.deepEqual([card.steps[2].id, card.steps[4].yes.id, card.steps[4].no.id, card.match], ['message-opening', 'message-link', 'message-follow', 'contains']);
+});
+
+test('editing an automation changes only the texts, labels, link and words, and keeps every step', async () => {
+  const { automationPayload } = await import('../../lib/automation-mcp/business.mjs');
+  const row = { id: FLOW, business_id: SHOP, status: 'paused', ...automationPayload(SHOP, { keywords: ['love'], private_message: 'Welcome!', opening_button_label: 'Send me the link', followers_only: true, button_label: 'Open link', button_url: 'https://hansora.co/automation.html', public_replies: ['Sent you a message!'] }) };
+  row.dm_steps[0].pos = { x: 10, y: 20 };
+  const tables = { automation_comment_workflows: [row], automation_businesses: [{ id: SHOP }] };
+  const { data, writes } = await call('update_comment_automation', { automation_id: FLOW, keywords: ['price', 'cost'], public_replies: [], steps: [{ step_id: 'message-opening', text: 'Hi again!', buttons: [{ button_id: 'action-send', label: 'Get prices' }] }, { step_id: 'message-link', buttons: [{ button_id: 'action-website', url: 'https://hansora.co/automation-pricing.html' }] }] }, tables);
+  const saved = writes[0].body;
+  assert.deepEqual([saved.match_type, saved.keywords, saved.public_reply_variations, saved.safety_config.public_reply_enabled], ['contains', ['price', 'cost'], [], false]);
+  assert.deepEqual(saved.dm_steps.map(step => step.id), ['message-opening', 'check-follow', 'message-follow', 'message-link']);
+  assert.deepEqual([saved.dm_steps[0].text, saved.dm_steps[0].actions[0].label, saved.dm_steps[0].actions[0].nextId, saved.dm_steps[0].pos], ['Hi again!', 'Get prices', 'check-follow', { x: 10, y: 20 }]);
+  assert.equal(saved.dm_steps[3].actions[0].url, 'https://hansora.co/automation-pricing.html');
+  assert.deepEqual(row.dm_steps[0].text, 'Welcome!');
+  assert.equal(data.card.type, 'automation');
+  for (const [input, error] of [[{ steps: [{ step_id: 'check-follow', text: 'x' }] }, 'step_not_found'], [{ steps: [{ step_id: 'message-link', buttons: [{ button_id: 'action-website', url: 'http://x.example' }] }] }, 'button_needs_https_link'], [{ steps: [{ step_id: 'message-opening', text: '   ' }] }, 'text_required'], [{ reacts_to: 'contains', keywords: [] }, 'keywords_required']]) {
+    const bad = await call('update_comment_automation', { automation_id: FLOW, ...input }, tables);
+    assert.equal(bad.data.error, error);
+    assert.equal(bad.writes.length, 0);
+  }
+});
+
+test('the card may call the edit and on/off tools; other tools stay model-only for the card', async () => {
+  const { result } = await rpc('tools/list', {}, {});
+  const meta = name => result.tools.find(tool => tool.name === name)._meta || {};
+  assert.equal(meta('update_comment_automation')['openai/widgetAccessible'], true);
+  assert.equal(meta('set_comment_automation')['openai/widgetAccessible'], true);
+  assert.equal(meta('create_comment_automation')['openai/widgetAccessible'], undefined);
 });

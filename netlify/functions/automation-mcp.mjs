@@ -21,7 +21,7 @@ import { handler as instagramMediaFunction } from './automation-instagram-media.
 import { openAIFileSchema } from '../../lib/hansora-mcp/file-inputs.mjs';
 import { CARD_TOOL_META, CARD_URI, automationCard, cardResource } from '../../lib/automation-mcp/card-app.mjs';
 import {
-  DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, automationView, businessToolSettings, businessTools, createAutomation,
+  DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, updateAutomation, automationView, businessToolSettings, businessTools, createAutomation,
   deleteProduct, downloadPhoto, getAutomaticCalls, listAutomations, listProducts, listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView,
   saveProductPhotos, setAutomaticCalls, setAutomationOn, setBusinessTools, updateProduct
 } from '../../lib/automation-mcp/business.mjs';
@@ -670,12 +670,35 @@ export function createAutomationServer(ctx) {
     return jsonText({ ok: true, deleted: automation.name });
   });
 
+  register('update_comment_automation', {
+    title: 'Edit a comment automation',
+    description: 'Use this to change an existing comment automation (automation_id from list_comment_automations or a card): its name, trigger words, whether it reacts to comments that contain a word, are exactly a word or any comment, its public replies, and the texts, button labels and link addresses of its message steps (step_id and button_id from the card or list). Send only what changes; a list you send (words, replies) replaces the old one. Steps cannot be added, removed or reordered here.',
+    inputSchema: z.object({
+      automation_id: z.string(),
+      name: z.string().max(200).optional(),
+      reacts_to: z.enum(['contains', 'exact', 'any']).optional(),
+      keywords: z.array(z.string().max(80)).max(20).optional(),
+      public_replies: z.array(z.string().max(300)).max(3).optional(),
+      steps: z.array(z.object({
+        step_id: z.string().max(120),
+        text: z.string().max(640).optional(),
+        buttons: z.array(z.object({ button_id: z.string().max(120), label: z.string().max(20).optional(), url: z.string().max(1000).optional() })).max(3).optional()
+      })).max(12).optional()
+    }),
+    annotations: { ...WRITE, openWorldHint: true },
+    _meta: CARD_TOOL_META('Saving your changes…', 'Automation updated', { fromCard: true })
+  }, async ({ automation_id, ...changes }) => {
+    const automation = await ownedAutomation(userId, automation_id);
+    const saved = await updateAutomation(automation, changes);
+    return jsonText({ ok: true, comment_automation: automationView(saved), card: automationCard(saved, automationView(saved), `${SITE}/automation-workflows.html?business=${saved.business_id}`) });
+  });
+
   register('set_comment_automation', {
     title: 'Turn a comment automation on or off',
     description: 'Use this to turn one comment automation on or off (automation_id from list_comment_automations). Turning it on means it starts replying to matching comments right away, and each run uses credits.',
     inputSchema: z.object({ automation_id: z.string(), on: z.boolean() }),
     annotations: OUTBOUND,
-    _meta: CARD_TOOL_META('Updating the automation…', 'Automation updated')
+    _meta: CARD_TOOL_META('Updating the automation…', 'Automation updated', { fromCard: true })
   }, async ({ automation_id, on }) => {
     const automation = await ownedAutomation(userId, automation_id);
     const saved = await setAutomationOn(automation, on);
