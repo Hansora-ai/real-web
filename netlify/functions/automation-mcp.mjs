@@ -424,7 +424,7 @@ export function createAutomationServer(ctx) {
     title: 'Hand a website chat to the AI or a person',
     description: 'Use this to choose who answers one website chat: "ai" hands it back to the AI employee, "person" takes it over so the AI stops answering.',
     inputSchema: z.object({ chat_id: z.string(), answered_by: z.enum(['ai', 'person']) }),
-    annotations: WRITE
+    annotations: { ...WRITE, destructiveHint: true }
   }, async ({ chat_id, answered_by }) => {
     const chat = await ownedWebsiteChat(userId, chat_id);
     await setChatAnsweredBy(chat, answered_by);
@@ -775,7 +775,7 @@ export function createAutomationServer(ctx) {
     title: 'Turn a comment automation on or off',
     description: 'Use this to turn one comment automation on or off (automation_id from list_comment_automations). Turning it on means it starts replying to matching comments right away, and each run uses credits.',
     inputSchema: z.object({ automation_id: z.string(), on: z.boolean() }),
-    annotations: OUTBOUND,
+    annotations: { ...OUTBOUND, destructiveHint: true },
     _meta: CARD_TOOL_META('Updating the automation…', 'Automation updated', { fromCard: true })
   }, async ({ automation_id, on }) => {
     const automation = await ownedAutomation(userId, automation_id);
@@ -806,7 +806,7 @@ export function createAutomationServer(ctx) {
     title: 'Pause or resume the AI on a channel',
     description: 'Use this to stop or restart the AI employee answering on one channel (Instagram messages, Instagram comments, WhatsApp, Telegram, TikTok, Messenger, website chat), for example "stop answering on WhatsApp today". Messages still arrive in the inbox while it is paused. Leave on out to only see each channel\'s state.',
     inputSchema: z.object({ ai_employee_id: employeeId, channel: z.enum(REPLY_CHANNELS).optional(), on: z.boolean().optional().describe('true: the AI answers. false: paused.') }),
-    annotations: OUTBOUND
+    annotations: { ...OUTBOUND, destructiveHint: true }
   }, async ({ ai_employee_id, channel, on }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     if (channel && typeof on === 'boolean') return jsonText({ ok: true, changed: { channel, ai_answers: on }, channels: await setChannelReplies(row.id, channel, on) });
@@ -966,7 +966,7 @@ export function createAutomationServer(ctx) {
       alert_me_about: z.array(z.enum(Object.keys(ALERT_EVENTS))).max(5).optional().describe('Which events send an alert; replaces the list.'),
       language: z.enum(['en', 'ru', 'hy']).optional()
     }),
-    annotations: OUTBOUND,
+    annotations: { ...OUTBOUND, destructiveHint: true },
     _meta: { 'openai/widgetAccessible': true }
   }, async ({ ai_employee_id, email_on, email, whatsapp_on, alert_me_about, language }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
@@ -1007,7 +1007,7 @@ export function createAutomationServer(ctx) {
       call_languages: z.array(z.string().regex(/^[a-z]{2}$/)).max(8).optional().describe('Two-letter codes, for example ["en","es"]. Empty: answer in the caller\'s language.'),
       own_number_forwarding: z.object({ on: z.boolean(), number: z.string().max(30).optional().describe('The business\'s own number that forwards to the AI.'), answer: z.enum(['always', 'no_answer']).optional().describe('always: the AI answers every forwarded call. no_answer: only when nobody answers or it is busy.') }).optional()
     }),
-    annotations: OUTBOUND
+    annotations: { ...OUTBOUND, destructiveHint: true }
   }, async ({ ai_employee_id, ...input }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     return jsonText({ ok: true, phone_settings: await setPhoneSettings(row.id, input) });
@@ -1027,7 +1027,7 @@ export function createAutomationServer(ctx) {
       calling_hours_from: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional().describe('24-hour time, for example 09:00.'),
       calling_hours_to: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional()
     }),
-    annotations: OUTBOUND
+    annotations: { ...OUTBOUND, destructiveHint: true }
   }, async ({ ai_employee_id, ...input }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const [automatic, numbers] = await Promise.all([setAutomaticCalls(row.id, input), phoneLines(row.id).catch(() => [])]);
