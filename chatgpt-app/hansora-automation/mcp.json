@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "hansora-automation": {
+      "type": "streamable-http",
+      "url": "https://hansora.co/automation/v2/mcp"
+    }
+  }
+}
