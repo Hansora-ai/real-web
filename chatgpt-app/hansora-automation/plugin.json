@@ -84,15 +84,15 @@
             },
             {
               "description": "Add a product",
-              "prompt": "Add a product to Demo Bakery: Croissant, $5, 20 in stock.",
-              "tools_triggered": "add_product",
-              "expected_behavior": "Adds the product and shows a card with its name, price and stock."
+              "prompt": "Add a product to Demo Bakery: Croissant, $5, 20 in stock, and let the AI employee offer products to customers.",
+              "tools_triggered": "add_product, set_business_tools",
+              "expected_behavior": "Adds the product and shows a card with its name, price and stock. Turns on products for the AI employee, so it can tell customers the price."
             },
             {
-              "description": "Change opening hours",
-              "prompt": "Open Demo Bakery on Saturdays from 10:00 to 16:00 for bookings.",
+              "description": "Turn on bookings with opening hours",
+              "prompt": "Turn on bookings for Demo Bakery from Monday to Saturday, 8:00 to 18:00.",
               "tools_triggered": "get_business_tools, set_business_tools",
-              "expected_behavior": "Saves Saturday 10:00 to 16:00 and shows the business tools card with the week drawn as a timeline and the bookings section highlighted."
+              "expected_behavior": "Turns bookings on with Monday to Saturday 8:00 to 18:00 and shows the business tools card with the week drawn as a timeline and the bookings section highlighted."
             }
           ],
           "negative": [
@@ -101,8 +101,8 @@
               "prompt": "Show me the WhatsApp messages my customers sent today."
             },
             {
-              "description": "Buying credits inside ChatGPT",
-              "prompt": "Buy 1000 credits for my Hansora account."
+              "description": "Mass messaging customers",
+              "prompt": "Send an Instagram message to all my followers saying we have a sale today."
             },
             {
               "description": "Out of scope request",
@@ -110,7 +110,7 @@
             }
           ]
         },
-        "demo_recording_url": "REPLACE_WITH_DEMO_VIDEO_LINK"
+        "demo_recording_url": "https://drive.google.com/file/d/1B5t9aGa-mQwyN1HeplP8HbhXVOVKo9FE/view?usp=sharing"
       },
       "publication": {
         "countries": [],
