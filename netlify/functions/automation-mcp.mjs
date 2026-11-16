@@ -20,10 +20,12 @@ import { handler as instagramSyncFunction } from './automation-instagram-sync.mj
 import { handler as productPhotoFunction } from './automation-product-photo.mjs';
 import { handler as instagramMediaFunction } from './automation-instagram-media.mjs';
 import { handler as notificationsFunction } from './automation-notifications.mjs';
+import { handler as websiteSetupFunction } from './automation-website-setup.mjs';
+import { REPLY_CHANNELS, SALES_STAGES, addTeamBooking, channelReplies, salesFunnel, schedule, setChannelReplies, usageByDay } from '../../lib/automation-mcp/extras.mjs';
 import { openAIFileSchema } from '../../lib/hansora-mcp/file-inputs.mjs';
 import { CARD_TOOL_META, CARD_URI, automationCard, cardResource } from '../../lib/automation-mcp/card-app.mjs';
 import {
-  DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, addProduct, archiveAutomation, updateAutomation, automationView, businessToolSettings, businessTools, createAutomation,
+  DAY_KEYS, MAX_PRODUCT_PHOTOS, RECORD_KINDS, RECORD_STATUSES, safePhotoUrl, addProduct, archiveAutomation, updateAutomation, automationView, businessToolSettings, businessTools, createAutomation,
   deleteProduct, downloadPhoto, getAutomaticCalls, listAutomations, listProducts, listRecords, ownedAutomation, ownedProduct, ownedRecord, productView, recordView,
   saveProductPhotos, setAutomaticCalls, ALERT_EVENTS, VOICE_NAMES, alertsView, getAlerts, getPhoneSettings, setPhoneSettings, voiceList, setAutomationOn, setBusinessTools, updateProduct
 } from '../../lib/automation-mcp/business.mjs';
@@ -39,6 +41,7 @@ const TOOL_BUDGET_MS = 25000;
 
 const SERVER_INSTRUCTIONS = [
   'Hansora Automation gives a business an AI employee that answers customers on Instagram, WhatsApp, Telegram, TikTok, a website chat and the phone.',
+  'When the user asks what this app can do, for help, or how to start, call what_can_you_do.',
   'Start with get_overview when the user asks how things are going. Most accounts have one AI employee, so ai_employee_id can be left out; pass it when the account has several.',
   'Credits are shown as they appear on hansora.co. Tools here are free; AI replies, test messages and phone minutes use credits.',
   'Never offer, suggest or promote buying credits, a plan or an upgrade, and never link to a pricing or checkout page. When credits run out, say so as a fact and give the account link from the tool result.',
@@ -97,6 +100,24 @@ async function runFunction(fn, token, body, { method = 'POST' } = {}) {
   let data = {};
   try { data = JSON.parse(response.body || '{}'); } catch { data = {}; }
   return { ok: response.statusCode >= 200 && response.statusCode < 300, status: response.statusCode, data };
+}
+
+// A document attached in ChatGPT, downloaded for the knowledge base (the same file types and size as the website).
+const DOCUMENT_TYPES = { 'application/pdf': 'pdf', 'text/plain': 'txt', 'text/markdown': 'md', 'text/html': 'html', 'application/epub+zip': 'epub', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx' };
+async function downloadDocument(file) {
+  const url = safePhotoUrl(file?.download_url);
+  if (!url) return { skipped: 'The file link could not be used.' };
+  let response;
+  try { response = await fetch(url, { signal: AbortSignal.timeout(15000) }); } catch { return { skipped: 'The file could not be downloaded.' }; }
+  if (!response.ok) return { skipped: 'The file could not be downloaded.' };
+  const fromName = (String(file.file_name || '').toLowerCase().match(/\.([a-z0-9]+)$/) || [])[1];
+  const type = [String(file.mime_type || ''), String(response.headers.get('content-type') || '').split(';')[0]].map(value => DOCUMENT_TYPES[value.trim().toLowerCase()]).find(Boolean) || (Object.values(DOCUMENT_TYPES).includes(fromName) ? fromName : '');
+  if (!type) return { skipped: 'Only PDF, TXT, MD, HTML, EPUB and DOCX files can be added as knowledge.' };
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length) return { skipped: 'The file was empty.' };
+  if (bytes.length > 4 * 1024 * 1024) return { skipped: 'The file is larger than 4 MB. Split it, or add it on the website.' };
+  const base = String(file.file_name || 'Knowledge').replace(/\.[a-z0-9]+$/i, '').replace(/[^\p{L}\p{N} ._-]/gu, ' ').trim().slice(0, 100) || 'Knowledge';
+  return { filename: `${base}.${type}`, content_base64: bytes.toString('base64') };
 }
 
 const KNOWLEDGE_ERRORS = {
@@ -296,18 +317,27 @@ export function createAutomationServer(ctx) {
 
   register('add_knowledge', {
     title: 'Add knowledge to an AI employee',
-    description: 'Use this to teach an AI employee from a longer text (a menu, price list, policy, product descriptions) or from a public website page. The AI employee uses this knowledge in chats; phone calls do not use it, so facts needed on calls (prices, hours) go into the main fields with update_ai_employee. Pass text, or url (https), not both.',
+    description: 'Use this to teach an AI employee from a longer text (a menu, price list, policy, product descriptions), a public website page, or a document the user attached (PDF, DOCX, TXT). The AI employee uses this knowledge in chats; phone calls do not use it, so facts needed on calls (prices, hours) go into the main fields with update_ai_employee. Pass text, or url (https), not both.',
     inputSchema: z.object({
       ai_employee_id: employeeId,
       name: z.string().max(120).optional().describe('Short name for this knowledge, for example "Price list 2026".'),
       text: z.string().max(300000).optional(),
-      url: z.string().max(2000).optional().describe('A public https:// page to read.')
+      url: z.string().max(2000).optional().describe('A public https:// page to read.'),
+      files: z.array(openAIFileSchema).max(1).optional().describe('A document the user attached in this chat: PDF, TXT, MD, HTML, EPUB or DOCX, up to 4 MB.')
     }),
-    annotations: { ...WRITE, openWorldHint: true }
-  }, async ({ ai_employee_id, name, text, url }) => {
-    if (Boolean(text) === Boolean(url)) return jsonText({ ok: false, error: 'text_or_url', next_step: 'Pass either text or url.' });
+    annotations: { ...WRITE, openWorldHint: true },
+    _meta: { 'openai/fileParams': ['files'] }
+  }, async ({ ai_employee_id, name, text, url, files }) => {
+    const file = files?.[0];
+    if ([text, url, file].filter(Boolean).length !== 1) return jsonText({ ok: false, error: 'one_source', next_step: 'Pass one of: text, url, or an attached file.' });
     const row = await resolveEmployee(userId, ai_employee_id);
-    const result = await withBudget(runFunction(knowledgeFunction, token, { business_id: row.id, action: 'add', kind: url ? 'url' : 'text', name, text, url }));
+    let body = { business_id: row.id, action: 'add', kind: url ? 'url' : 'text', name, text, url };
+    if (file) {
+      const document = await downloadDocument(file);
+      if (document.skipped) return jsonText({ ok: false, error: 'file_not_used', next_step: document.skipped });
+      body = { business_id: row.id, action: 'add', kind: 'file', filename: document.filename, content_base64: document.content_base64 };
+    }
+    const result = await withBudget(runFunction(knowledgeFunction, token, body));
     if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'knowledge_unavailable', next_step: KNOWLEDGE_ERRORS[result.data.error] || 'The knowledge could not be added right now. Try once more; if it fails again, the user can add it on hansora.co.', ...(result.data.detail ? { detail: String(result.data.detail).slice(0, 300) } : {}) });
     return jsonText({ ok: true, knowledge_items: (result.data.documents || []).map(documentView), note: PHONE_KNOWLEDGE_NOTE });
   });
@@ -426,11 +456,12 @@ export function createAutomationServer(ctx) {
     title: 'List phone calls',
     description: 'Use this to see recent phone calls of an AI employee: incoming calls it answered and calls it made, with time, length, number, purpose and summary. Use get_call for the full transcript.',
     inputSchema: z.object({ ai_employee_id: employeeId, direction: z.enum(['all', 'incoming', 'outgoing', 'tests']).default('all').describe('all includes test calls made from the Phone page.'), limit: z.number().int().min(1).max(30).default(10) }),
-    annotations: READ
+    annotations: READ,
+    _meta: CARD_TOOL_META('Loading calls…', 'Your calls')
   }, async ({ ai_employee_id, direction, limit }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const [calls, numbers] = await Promise.all([listCalls(row.id, { limit, direction }), phoneLines(row.id).catch(() => [])]);
-    return jsonText({ ok: true, calls, phone_numbers: numbers, links: { phone: links(row.id).phone } });
+    return jsonText({ ok: true, calls, phone_numbers: numbers, links: { phone: links(row.id).phone }, card: { type: 'calls', employee: row.name, calls, phone_url: links(row.id).phone } });
   });
 
   register('get_call', {
@@ -453,11 +484,13 @@ export function createAutomationServer(ctx) {
       created_to: z.string().optional().describe('Only records created at or before this time (ISO 8601).'),
       limit: z.number().int().min(1).max(50).default(20)
     }),
-    annotations: READ
+    annotations: READ,
+    _meta: CARD_TOOL_META('Loading orders and bookings…', 'Orders, bookings and leads')
   }, async ({ ai_employee_id, kind, status, created_from, created_to, limit }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
     const date = value => (value && !Number.isNaN(Date.parse(value)) ? new Date(value).toISOString() : '');
-    return jsonText({ ok: true, records: await listRecords(row.id, { kind, status, from: date(created_from), to: date(created_to), limit }), timezone: row.timezone || 'UTC', open_in_hansora: links(row.id).orders_and_bookings });
+    const records = await listRecords(row.id, { kind, status, from: date(created_from), to: date(created_to), limit });
+    return jsonText({ ok: true, records, timezone: row.timezone || 'UTC', open_in_hansora: links(row.id).orders_and_bookings, card: { type: 'records', employee: row.name, records, timezone: row.timezone || 'UTC', open_url: links(row.id).orders_and_bookings } });
   });
 
   register('update_order_booking_lead', {
@@ -479,10 +512,12 @@ export function createAutomationServer(ctx) {
     title: 'List products',
     description: 'Use this to see the product catalog the AI employee can offer and sell: names, prices, stock and variants. Also says whether the AI employee offers products to customers at all (ai_offers_products).',
     inputSchema: z.object({ ai_employee_id: employeeId, search: z.string().max(80).optional().describe('Part of a name, category or SKU.'), limit: z.number().int().min(1).max(100).default(30) }),
-    annotations: READ
+    annotations: READ,
+    _meta: CARD_TOOL_META('Loading products…', 'Your products')
   }, async ({ ai_employee_id, search, limit }) => {
     const row = await resolveEmployee(userId, ai_employee_id);
-    return jsonText({ ok: true, ...(await listProducts(row.id, { search, limit })), products_page: `${SITE}/automation-products.html?business=${row.id}` });
+    const catalog = await listProducts(row.id, { search, limit });
+    return jsonText({ ok: true, ...catalog, products_page: `${SITE}/automation-products.html?business=${row.id}`, card: { type: 'products', employee: row.name, products: catalog.products, ai_offers_products: catalog.ai_offers_products, products_url: `${SITE}/automation-products.html?business=${row.id}` } });
   });
 
   const productFields = {
@@ -748,6 +783,127 @@ export function createAutomationServer(ctx) {
     return jsonText({ ok: true, comment_automation: automationView(saved), card: automationCard(saved, automationView(saved), `${SITE}/automation-workflows.html?business=${saved.business_id}`) });
   });
 
+  // ---------- Welcome, channels, schedule, usage, funnel, website chat ----------
+
+  register('what_can_you_do', {
+    title: 'What Hansora Automation can do',
+    description: 'Use this when the user asks what this app can do, how to start, or for help or examples. Shows a card with everything Hansora Automation can do in ChatGPT, with example requests they can tap, and the account at a glance.',
+    inputSchema: z.object({}),
+    annotations: READ,
+    _meta: CARD_TOOL_META('Opening Hansora Automation…', 'Hansora Automation', { fromCard: true })
+  }, async () => {
+    const employees = await listEmployees(userId);
+    const counts = await activity(employees.map(row => row.id)).catch(() => ({}));
+    const waiting = employees.reduce((sum, row) => sum + Number(counts[row.id]?.chats_waiting_for_a_person?.total || 0), 0);
+    const live = employees.filter(row => employeeSummary(row).status === 'live').length;
+    const name = employees[0]?.name || 'my business';
+    return jsonText({ ok: true, ai_employees: employees.length, card: { type: 'welcome', employees: employees.length, live, waiting, example_employee: name } });
+  });
+
+  register('pause_or_resume_ai', {
+    title: 'Pause or resume the AI on a channel',
+    description: 'Use this to stop or restart the AI employee answering on one channel (Instagram messages, Instagram comments, WhatsApp, Telegram, TikTok, Messenger, website chat), for example "stop answering on WhatsApp today". Messages still arrive in the inbox while it is paused. Leave on out to only see each channel\'s state.',
+    inputSchema: z.object({ ai_employee_id: employeeId, channel: z.enum(REPLY_CHANNELS).optional(), on: z.boolean().optional().describe('true: the AI answers. false: paused.') }),
+    annotations: WRITE
+  }, async ({ ai_employee_id, channel, on }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    if (channel && typeof on === 'boolean') return jsonText({ ok: true, changed: { channel, ai_answers: on }, channels: await setChannelReplies(row.id, channel, on) });
+    return jsonText({ ok: true, channels: await channelReplies(row.id) });
+  });
+
+  register('get_schedule', {
+    title: 'See the day\'s bookings',
+    description: 'Use this to see one day\'s bookings drawn on a timeline, with the opening hours (today when no date is given). Bookings that came from Instagram, WhatsApp, TikTok, Telegram or Messenger do not show the customer\'s name.',
+    inputSchema: z.object({ ai_employee_id: employeeId, date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('YYYY-MM-DD in the business\'s time zone.') }),
+    annotations: READ,
+    _meta: CARD_TOOL_META('Loading the schedule…', 'Your schedule')
+  }, async ({ ai_employee_id, date }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const day = await schedule(row, date);
+    return jsonText({ ok: true, ...day, card: { type: 'schedule', employee: row.name, ...day, open_url: `${SITE}/automation-operations.html?business=${row.id}&view=day` } });
+  });
+
+  register('add_booking', {
+    title: 'Add a booking or block a time',
+    description: 'Use this to put a booking in the calendar by hand (a customer who phoned or walked in), or to block a time so the AI cannot book it (block: true). It takes the first free place or team member, or the one named in with. Confirm the date and time with the user first.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).describe('24-hour, business time zone.'),
+      length_minutes: z.number().int().min(5).max(1440).optional(),
+      block: z.boolean().optional(),
+      customer_name: z.string().max(200).optional(), customer_phone: z.string().max(60).optional(),
+      service: z.string().max(200).optional(), with: z.string().max(60).optional().describe('A team member, table or room name.'),
+      note: z.string().max(2000).optional()
+    }),
+    annotations: WRITE,
+    _meta: CARD_TOOL_META('Adding to the calendar…', 'Added to the calendar')
+  }, async ({ ai_employee_id, ...input }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const saved = await addTeamBooking(row, input);
+    const day = await schedule(row, input.date);
+    return jsonText({ ok: true, added: recordView(saved), card: { type: 'schedule', employee: row.name, ...day, highlight: saved.id, open_url: `${SITE}/automation-operations.html?business=${row.id}&view=day` } });
+  });
+
+  register('get_usage', {
+    title: 'Credits used per day',
+    description: 'Use this to show how many credits were used each day (last 30 days by default), with AI replies and phone minutes, as a chart.',
+    inputSchema: z.object({ ai_employee_id: z.string().optional().describe('Leave out for the whole account.'), days: z.number().int().min(7).max(90).default(30) }),
+    annotations: READ,
+    _meta: CARD_TOOL_META('Loading usage…', 'Your usage')
+  }, async ({ ai_employee_id, days }) => {
+    const employees = ai_employee_id ? [await resolveEmployee(userId, ai_employee_id)] : await listEmployees(userId);
+    const [usage, money] = await Promise.all([usageByDay(employees.map(row => row.id), days), account(userId, employees.map(row => row.id))]);
+    return jsonText({ ok: true, ...usage, credits_left: money.credits, card: { type: 'usage', ...usage, credits_left: money.credits, scope: ai_employee_id ? employees[0].name : 'All AI employees' } });
+  });
+
+  register('get_sales_funnel', {
+    title: 'Sales funnel',
+    description: 'Use this to show where the last 30 days\' conversations are in the sales funnel: new, interested, ready to buy, done, lost, with the expected value. Counts only.',
+    inputSchema: z.object({ ai_employee_id: z.string().optional().describe('Leave out for the whole account.'), days: z.number().int().min(7).max(90).default(30) }),
+    annotations: READ,
+    _meta: CARD_TOOL_META('Loading the funnel…', 'Your sales funnel')
+  }, async ({ ai_employee_id, days }) => {
+    const employees = ai_employee_id ? [await resolveEmployee(userId, ai_employee_id)] : await listEmployees(userId);
+    const funnel = await salesFunnel(employees.map(row => row.id), days);
+    return jsonText({ ok: true, ...funnel, card: { type: 'funnel', ...funnel, scope: ai_employee_id ? employees[0].name : 'All AI employees' } });
+  });
+
+  register('website_chat_setup', {
+    title: 'Set up the website chat bubble',
+    description: 'Use this to see or change the chat bubble for the business\'s own website: the websites allowed to show it, its title, greeting, colour and side, and turning it live or pausing it. Returns the code to paste into the website. Send only what changes; allowed_websites replaces the list.',
+    inputSchema: z.object({
+      ai_employee_id: employeeId,
+      allowed_websites: z.array(z.string().max(200)).max(10).optional().describe('Domains such as example.com.'),
+      title: z.string().max(60).optional(), greeting: z.string().max(300).optional(),
+      color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(), position: z.enum(['right', 'left']).optional(),
+      live: z.boolean().optional().describe('true shows the bubble on the allowed websites; false pauses it.')
+    }),
+    annotations: WRITE,
+    _meta: CARD_TOOL_META('Opening the website chat…', 'Website chat')
+  }, async ({ ai_employee_id, live, ...changes }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    let result = await runFunction(websiteSetupFunction, token, { business_id: row.id, action: 'get' });
+    const map = { allowed_websites: 'allowed_domains', title: 'title', greeting: 'greeting', color: 'color', position: 'position' };
+    const patch = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined).map(([key, value]) => [map[key], value]));
+    if (result.ok && Object.keys(patch).length) result = await runFunction(websiteSetupFunction, token, { business_id: row.id, action: 'save', settings: { ...(result.data.settings || {}), ...patch } });
+    if (result.ok && typeof live === 'boolean') result = await runFunction(websiteSetupFunction, token, { business_id: row.id, action: live ? 'live' : 'pause' });
+    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'failed', next_step: result.data.message || 'The website chat could not be changed right now.' });
+    const view = { live: result.data.status === 'connected', allowed_websites: result.data.settings?.allowed_domains || [], title: result.data.settings?.title || '', greeting: result.data.settings?.greeting || '', color: result.data.settings?.color || '#7c3aed', position: result.data.settings?.position || 'right', code_to_paste: result.data.snippet || '' };
+    return jsonText({ ok: true, website_chat: view, next_step: view.allowed_websites.length ? 'Give the user the code to paste before </body> on their website.' : 'Ask the user which website the bubble goes on, then save it in allowed_websites.', card: { type: 'website', employee: row.name, ...view } });
+  });
+
+  register('release_phone_number', {
+    title: 'Remove a phone number',
+    description: 'Use this to stop using one phone number of the AI employee (from get_phone_setup). Calls to it will no longer be answered and the number goes back to Hansora. This cannot be undone: confirm with the user first.',
+    inputSchema: z.object({ ai_employee_id: employeeId, phone_number: z.string().regex(/^\+[1-9]\d{7,14}$/) }),
+    annotations: { ...WRITE, destructiveHint: true }
+  }, async ({ ai_employee_id, phone_number }) => {
+    const row = await resolveEmployee(userId, ai_employee_id);
+    const result = await runFunction(phoneLineFunction, token, { business_id: row.id, action: 'release', e164: phone_number });
+    if (!result.ok) return jsonText({ ok: false, error: result.data.error || 'failed', next_step: 'The number could not be removed right now.' });
+    return jsonText({ ok: true, removed: phone_number, phone_numbers: (result.data.numbers || []).map(item => item.e164) });
+  });
+
   // ---------- Phone numbers and automatic calls ----------
 
   register('get_phone_setup', {
@@ -837,7 +993,7 @@ export function createAutomationServer(ctx) {
 
   register('set_phone_settings', {
     title: 'Set the phone voice, greeting and transfer',
-    description: 'Use this to change how the AI employee sounds and behaves on calls: its voice, the first sentence it says (greeting), transferring callers to a person (number, on or off, warm: the AI introduces the caller first, or direct), and whether call transcripts are saved. Send only what changes.',
+    description: 'Use this to change how the AI employee sounds and behaves on calls: its voice, the first sentence it says (greeting), the languages it speaks on calls, transferring callers to a person (number, on or off, warm or direct), using the business\'s own number with call forwarding, and whether transcripts are saved. Send only what changes.',
     inputSchema: z.object({
       ai_employee_id: employeeId,
       voice: z.enum(VOICE_NAMES).optional().describe(`Voices: ${voiceList()}.`),
@@ -845,7 +1001,9 @@ export function createAutomationServer(ctx) {
       transfer_number: z.string().max(30).optional().describe('Where to transfer callers who ask for a person, international format.'),
       transfer_on: z.boolean().optional(),
       transfer_mode: z.enum(['warm', 'direct']).optional(),
-      save_transcripts: z.boolean().optional()
+      save_transcripts: z.boolean().optional(),
+      call_languages: z.array(z.string().regex(/^[a-z]{2}$/)).max(8).optional().describe('Two-letter codes, for example ["en","es"]. Empty: answer in the caller\'s language.'),
+      own_number_forwarding: z.object({ on: z.boolean(), number: z.string().max(30).optional().describe('The business\'s own number that forwards to the AI.'), answer: z.enum(['always', 'no_answer']).optional().describe('always: the AI answers every forwarded call. no_answer: only when nobody answers or it is busy.') }).optional()
     }),
     annotations: WRITE
   }, async ({ ai_employee_id, ...input }) => {

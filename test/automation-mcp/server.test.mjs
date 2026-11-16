@@ -79,7 +79,7 @@ test('the server answers at both addresses, each with its own matching OAuth dis
 test('every tool says what it does, and write tools are not marked read-only', async () => {
   const { result } = await rpc('tools/list', {}, {});
   const names = result.tools.map(tool => tool.name).sort();
-  assert.deepEqual(names, ['add_knowledge', 'add_product', 'confirm_alert_whatsapp', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_alerts', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_phone_settings', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_comment_automation', 'update_order_booking_lead', 'update_product']);
+  assert.deepEqual(names, ['add_booking', 'add_knowledge', 'add_product', 'confirm_alert_whatsapp', 'create_ai_employee', 'create_comment_automation', 'delete_comment_automation', 'delete_product', 'get_account', 'get_ai_employee', 'get_business_tools', 'get_call', 'get_overview', 'get_phone_number', 'get_phone_setup', 'get_sales_funnel', 'get_schedule', 'get_usage', 'get_website_chat', 'list_ai_employees', 'list_calls', 'list_comment_automations', 'list_orders_bookings_leads', 'list_products', 'list_website_chats', 'pause_or_resume_ai', 'release_phone_number', 'remove_knowledge', 'reply_to_website_chat', 'request_phone_number', 'set_alerts', 'set_automatic_calls', 'set_business_tools', 'set_comment_automation', 'set_phone_settings', 'set_website_chat_answered_by', 'start_ai_call', 'test_ai_employee', 'update_ai_employee', 'update_comment_automation', 'update_order_booking_lead', 'update_product', 'website_chat_setup', 'what_can_you_do']);
   for (const tool of result.tools) {
     assert.match(tool.description, /^Use this/);
     assert.equal(typeof tool.annotations.readOnlyHint, 'boolean');
@@ -456,9 +456,9 @@ test('the overview carries an animated card with counts only, and the card page 
   assert.doesNotMatch(text, /SECRET/);
   const listed = await rpc('tools/list', {}, {});
   const meta = name => listed.result.tools.find(tool => tool.name === name)._meta;
-  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v4.html', name);
+  for (const name of ['get_overview', 'create_comment_automation', 'set_comment_automation', 'add_product', 'update_product', 'create_ai_employee', 'start_ai_call']) assert.equal(meta(name)['openai/outputTemplate'], 'ui://hansora/automation-card-v5.html', name);
   assert.deepEqual(meta('add_product')['openai/fileParams'], ['image_files']);
-  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v4.html' }, {});
+  const resources = await rpc('resources/read', { uri: 'ui://hansora/automation-card-v5.html' }, {});
   assert.equal(resources.result.contents[0].mimeType, 'text/html;profile=mcp-app');
   assert.match(resources.result.contents[0].text, /Handled by AI/);
 });
@@ -557,4 +557,72 @@ test('the card page script loads without errors', async () => {
   const scripts = [...CARD_HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]);
   assert.ok(scripts.length);
   for (const code of scripts) assert.doesNotThrow(() => new Function(code));
+});
+
+test('pausing the AI on one channel keeps the other channel settings', async () => {
+  const { data, writes } = await call('pause_or_resume_ai', { channel: 'whatsapp', on: false }, { automation_businesses: [shop()], automation_channel_connections: [{ id: 'ch-wa', channel_type: 'whatsapp', status: 'connected', settings: { template: 'x' } }] });
+  assert.deepEqual(writes[0].body, { settings: { template: 'x', automatic_replies: false } });
+  assert.deepEqual(data.changed, { channel: 'whatsapp', ai_answers: false });
+});
+
+test('a booking added by the team takes the next free place when one is taken', async () => {
+  const tables = { automation_businesses: [shop()], automation_tool_configs: [{ tool_type: 'calendar', enabled: true, config: { timezone: 'America/New_York', capacity: 2, duration_minutes: 30 } }], automation_outcomes: [] };
+  const database = fakeDatabase(tables);
+  let tries = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url).includes('automation_outcomes') && options.method === 'POST' && tries++ === 0) return new Response(JSON.stringify({ code: '23P01' }), { status: 409 });
+    return database.fetchFake(url, options);
+  };
+  let data;
+  try {
+    const response = await automationMcp(new Request('https://hansora.co/automation/mcp', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'add_booking', arguments: { date: '2026-07-01', time: '09:30', customer_name: 'Alex', service: 'Consultation' } } }) }));
+    const raw = await response.text();
+    data = JSON.parse(raw.startsWith('{') ? raw : raw.split('\n').find(line => line.startsWith('data:')).slice(5)).result.structuredContent;
+  } finally { globalThis.fetch = originalFetch; }
+  const saved = database.writes.find(write => write.table === 'automation_outcomes').body;
+  assert.deepEqual([saved.slot_index, saved.scheduled_start, saved.scheduled_end, saved.created_by, saved.status], [1, '2026-07-01T13:30:00.000Z', '2026-07-01T14:00:00.000Z', 'human', 'confirmed']);
+  assert.equal(data.card.type, 'schedule');
+});
+
+test('usage is summed per day and the funnel counts chats per stage', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const usage = await call('get_usage', { days: 7 }, { automation_businesses: [shop()], automation_usage_events: [{ occurred_at: `${today}T10:00:00Z`, unit_type: 'ai_message', credits: 0.1, billable_quantity: 1 }, { occurred_at: `${today}T11:00:00Z`, unit_type: 'voice_second', credits: 0.9, billable_quantity: 60 }], profiles: [{ credits: 5 }] });
+  const day = usage.data.days.at(-1);
+  assert.deepEqual([usage.data.days.length, day.credits, day.ai_replies, day.phone_minutes, usage.data.card.type], [7, 10, 1, 1, 'usage']);
+  const funnel = await call('get_sales_funnel', {}, { automation_businesses: [shop()], automation_conversations: [{ sales_stage: 'ready', sales_value: 100, sales_currency: 'USD' }, { sales_stage: 'ready', sales_value: 50, sales_currency: 'USD' }, { sales_stage: null }] });
+  assert.deepEqual(funnel.data.stages.find(stage => stage.stage === 'ready'), { stage: 'ready', chats: 2, value: [{ currency: 'USD', amount: 150 }] });
+  assert.equal(funnel.data.stages.find(stage => stage.stage === 'new').chats, 1);
+});
+
+test('website chat changes keep the saved settings and return the code to paste', async () => {
+  const settings = { widget_key: 'wk_abcdefghijklmnopqrstuv', allowed_domains: ['old.example'], title: 'Hi', greeting: 'Hello', color: '#112233', position: 'right', daily_limit: 500, reply_delay: 2 };
+  const { data, writes } = await call('website_chat_setup', { greeting: 'Welcome!' }, { automation_businesses: [{ ...shop(), owner_user_id: USER }], automation_channel_connections: [{ id: 'web1', channel_type: 'website', status: 'connected', settings }] });
+  const saved = writes.find(write => write.method === 'PATCH').body.settings;
+  assert.deepEqual([saved.greeting, saved.title, saved.color, saved.allowed_domains, saved.reply_delay], ['Welcome!', 'Hi', '#112233', ['old.example'], 2]);
+  assert.equal(data.card.type, 'website');
+});
+
+test('call languages and own-number forwarding are saved like the Phone page', async () => {
+  const tables = { automation_businesses: [shop()], automation_channel_connections: [{ id: 'ch1', settings: { voice: 'Leda' } }] };
+  const { data, writes } = await call('set_phone_settings', { call_languages: ['en', 'es'], own_number_forwarding: { on: true, number: '+1 555 010 2030', answer: 'no_answer' } }, tables);
+  const saved = writes[0].body.settings;
+  assert.deepEqual([saved.language_mode, saved.languages, saved.number_mode, saved.forward_number, saved.answer_mode, saved.voice], ['only', ['en', 'es'], 'forward', '+15550102030', 'no_answer', 'Leda']);
+  assert.deepEqual(data.phone_settings.own_number_forwarding, { on: true, number: '+15550102030', answer: 'no_answer' });
+});
+
+test('add_knowledge takes an attached document and refuses other file types', async () => {
+  const { result } = await rpc('tools/list', {}, {});
+  assert.deepEqual(result.tools.find(tool => tool.name === 'add_knowledge')._meta['openai/fileParams'], ['files']);
+  const database = fakeDatabase({ automation_businesses: [shop()] });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => String(url) === 'https://files.example.com/a.png' ? new Response('x', { headers: { 'content-type': 'image/png' } }) : database.fetchFake(url, options);
+  let data;
+  try {
+    const response = await automationMcp(new Request('https://hansora.co/automation/mcp', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'add_knowledge', arguments: { files: [{ download_url: 'https://files.example.com/a.png', file_id: 'f1', file_name: 'a.png' }] } } }) }));
+    const raw = await response.text();
+    data = JSON.parse(raw.startsWith('{') ? raw : raw.split('\n').find(line => line.startsWith('data:')).slice(5)).result.structuredContent;
+  } finally { globalThis.fetch = originalFetch; }
+  assert.equal(data.error, 'file_not_used');
+  assert.match(data.next_step, /PDF/);
 });
