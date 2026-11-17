@@ -2,7 +2,7 @@
 
 ## Google Play: store listing
 
-**App name** (30): `Hansora AI: Video, Image, Music`
+**App name** (30): `Hansora AI: Video & Image`
 
 **Short description** (80):
 ```
@@ -88,7 +88,7 @@ One app for the best AI models: videos, images, music and voices from a prompt o
 • Added "Share Hansora" and "Rate Hansora" in the menu
 • Replaced the audio player for music and voice results (it stayed at 0:00 and could not be paused or moved)
 • Made the monthly plans reachable on the Automation pricing page
-• Added purchases through Google Play Billing (credit packs and monthly plans)
+• Added purchases through Google Play Billing (credit packs and monthly plans) [only once the Android payments build is uploaded]
 • Made the content safety filter stricter (prompts, uploaded photos and results) and added Report content
 • Rewrote the store description and made new screenshots with captions
 
