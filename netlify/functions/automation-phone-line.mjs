@@ -11,6 +11,10 @@ const HEADERS = {'Content-Type':'application/json; charset=utf-8','Cache-Control
 const json = (statusCode, body) => ({ statusCode, headers: HEADERS, body: JSON.stringify(body) });
 const publicNumber = row => row?.e164 ? { e164: row.e164, country: row.country, assigned_at: row.assigned_at, imported: row.provider === 'sip', pending: row.provider === 'sip' && !row.verified_at, can_call: Boolean(row.livekit_outbound_trunk_id) } : null;
 const MAX_IMPORTED_NUMBERS = 10;
+// Hansora numbers cost Hansora money every month, so they are for owners who have bought credits and keep
+// enough for calls; a business can have several, also in the same country.
+const MAX_NUMBERS = 5;
+const NUMBER_MIN_CREDITS = 20; // stored credits = 200⚡
 const CONTACT_METHODS = new Set(['whatsapp', 'telegram', 'email']);
 const CONTACT_WANTS = { local_number: 'wants_local_number', whatsapp_calls: 'wants_whatsapp_calls', forwarding_help: 'wants_forwarding_help' };
 // Providers that can buy a number on demand, in order of preference, each with
@@ -57,6 +61,17 @@ export async function handler(event) {
       await deleteImportTrunk({ trunkId: trunk.livekit_trunk_id, ruleId: trunk.livekit_dispatch_rule_id });
       await supabaseRequest(`/rest/v1/automation_phone_sip_trunks?business_id=eq.${encodeURIComponent(businessId)}`, { method: 'DELETE' });
     };
+    // May this owner get another Hansora number? { ok, reason }
+    const numberAccess = async () => {
+      if ((await assignedNumbers()).filter(item => !item.imported).length >= MAX_NUMBERS) return { ok: false, reason: 'too_many_numbers', max: MAX_NUMBERS };
+      const [paid, profile] = await Promise.all([
+        first(`/rest/v1/payments?uid=eq.${encodeURIComponent(user.id)}&status=eq.succeeded&select=id&limit=1`).catch(() => null),
+        first(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(user.id)}&select=credits&limit=1`).catch(() => null)
+      ]);
+      if (!paid) return { ok: false, reason: 'purchase_required', min_credits: NUMBER_MIN_CREDITS * 10 };
+      if (!(Number(profile?.credits) >= NUMBER_MIN_CREDITS)) return { ok: false, reason: 'credits_required', min_credits: NUMBER_MIN_CREDITS * 10 };
+      return { ok: true, min_credits: NUMBER_MIN_CREDITS * 10 };
+    };
     if (event.httpMethod === 'GET') {
       const free = rows(await supabaseRequest('/rest/v1/automation_phone_numbers?status=eq.available&select=country&limit=1000'));
       const counts = free.reduce((all, row) => ({ ...all, [row.country]: (all[row.country] || 0) + 1 }), {});
@@ -65,7 +80,7 @@ export async function handler(event) {
       const requests = rows(await supabaseRequest(`/rest/v1/automation_phone_country_requests?user_id=eq.${encodeURIComponent(user.id)}&select=country,contact_method,contact_value,wants_local_number,wants_whatsapp_calls,wants_forwarding_help&limit=300`).catch(() => []));
       const numbers = await assignedNumbers();
       const sip = numbers.some(item => item.imported) ? importDetails(await importTrunk()) : null;
-      return json(200, { numbers, number: numbers[0] || null, countries, requests, sip });
+      return json(200, { numbers, number: numbers[0] || null, countries, requests, sip, access: await numberAccess() });
     }
 
     // "pick" records that the owner looked at a country, so Hansora sees demand even if they leave.
@@ -113,14 +128,14 @@ export async function handler(event) {
       if (!hasRecord(business.automation_agents) || !hasRecord(business.automation_business_knowledge)) return json(409, { error: 'phone_agent_configuration_incomplete' });
       const country = String(body.country || '').toUpperCase();
       if (!/^[A-Z]{2}$/.test(country)) return json(400, { error: 'invalid_country' });
-      const assign = async () => { const result = await supabaseRequest('/rest/v1/rpc/automation_assign_phone_number', { method: 'POST', body: { p_business: businessId, p_country: country } }); return Array.isArray(result) ? result[0] : result; };
+      const access = await numberAccess();
+      if (!access.ok) return json(access.reason === 'too_many_numbers' ? 409 : 402, { error: access.reason, access });
+      // Always a new number, also when the business already has one in this country.
+      const assign = async () => { const result = await supabaseRequest('/rest/v1/rpc/automation_assign_new_phone_number', { method: 'POST', body: { p_business: businessId, p_country: country } }); return Array.isArray(result) ? result[0] : result; };
       let number = await assign();
       const providers = numberProviders().filter(provider => provider.countries.includes(country));
       const failures = [];
       if (!number?.e164 && providers.length) {
-        // Buying costs Hansora money every month, so only for an owner with credits.
-        const profile = await first(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(user.id)}&select=credits&limit=1`);
-        if (!(Number(profile?.credits) > 0)) return json(402, { error: 'credits_required' });
         for (const provider of providers) {
           const bought = await provider.buy(country).catch(error => { console.error('phone number purchase failed', { provider: provider.name, message: error?.message, code: error?.code }); failures.push(`${provider.name}: ${error?.message || 'failed'}`); return null; });
           if (!bought) continue;
