@@ -618,15 +618,36 @@
         .catch(function () { send.disabled = false; msg.textContent = 'Could not send. Check your connection and try again.'; });
     });
   }
+  // Share Hansora (the phone's share sheet with the store link) and Rate Hansora (the store's review page).
+  var APP_STORE_ID = '6834437163', PLAY_ID = 'co.hansora.app';
+  var platform = native ? Cap.getPlatform() : 'web';
+  function storeLink() {
+    return platform === 'android' ? 'https://play.google.com/store/apps/details?id=' + PLAY_ID
+      : platform === 'ios' ? 'https://apps.apple.com/app/id' + APP_STORE_ID : 'https://hansora.co';
+  }
+  function shareApp() {
+    var data = { title: 'Hansora AI', text: 'Create AI videos, images and music, and get an AI employee for your business, with Hansora AI:', url: storeLink() };
+    if (native && Plugins.Share) return Plugins.Share.share(data).catch(function () {});
+    if (navigator.share) return navigator.share(data).catch(function () {});
+    try { navigator.clipboard.writeText(data.url); } catch (_) {}
+  }
+  function rateApp() {
+    var url = platform === 'android' ? 'market://details?id=' + PLAY_ID
+      : platform === 'ios' ? 'itms-apps://apps.apple.com/app/id' + APP_STORE_ID + '?action=write-review' : storeLink();
+    var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
+  }
   function addReportLink() {
     var hosts = [document.querySelector('#hs-overlay .links'), document.getElementById('automation-nav'), document.getElementById('navMenu')];
     hosts.forEach(function (host) {
       if (!host || host.querySelector('.app-report-link')) return;
-      var a = document.createElement('a');
-      a.href = '#'; a.className = 'app-report-link'; a.textContent = 'Report content';
-      a.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openReport(); });
       var before = host.querySelector('.app-version') || (host.id === 'navMenu' ? document.getElementById('btnLogout') : null);
-      host.insertBefore(a, before && before.parentNode === host ? before : null);
+      if (before && before.parentNode !== host) before = null;
+      [['Share Hansora', shareApp], ['Rate Hansora', rateApp], ['Report content', openReport]].forEach(function (item) {
+        var a = document.createElement('a');
+        a.href = '#'; a.className = 'app-report-link'; a.textContent = item[0];
+        a.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); item[1](); });
+        host.insertBefore(a, before);
+      });
     });
   }
   onReady(addReportLink);
@@ -715,6 +736,38 @@
   if (applePlugin()) window.__hansoraNativeApple = nativeApple;
   onReady(addAppleButton);
   new MutationObserver(addAppleButton).observe(root, { childList: true, subtree: true });
+
+  // First launch: a short intro (3 screens, Skip on every screen). Shown once, on the home screen.
+  function showIntro() {
+    var KEY = 'hansora.intro.v1';
+    try { if (localStorage.getItem(KEY)) return; } catch (_) { return; }
+    if (!/^\/(index\.html)?$/.test(location.pathname) || document.getElementById('appIntro')) return;
+    var ico = {
+      create: '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/>',
+      employee: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/>',
+      credits: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'
+    };
+    var slides = [
+      ['create', 'Create anything with AI', 'Turn a prompt or a photo into videos, images, music and voices with the best AI models, in one app.'],
+      ['employee', 'Your AI employee', 'It answers your customers on Instagram, WhatsApp, Telegram, TikTok and phone calls, takes orders and books appointments, day and night.'],
+      ['credits', 'One balance for everything', 'Your credits work for creating and for your AI employee. Credit packs never expire.']
+    ];
+    var box = document.createElement('div'); box.id = 'appIntro'; box.className = 'app-intro';
+    box.innerHTML = '<button type="button" class="app-intro-skip">Skip</button><div class="app-intro-track">' + slides.map(function (s) {
+      return '<section class="app-intro-slide"><div class="app-intro-icon"><svg viewBox="0 0 24 24" aria-hidden="true">' + ico[s[0]] + '</svg></div><h2>' + s[1] + '</h2><p>' + s[2] + '</p></section>';
+    }).join('') + '</div><div class="app-intro-dots">' + slides.map(function () { return '<i></i>'; }).join('') + '</div><button type="button" class="app-intro-next">Next</button>';
+    document.body.appendChild(box);
+    var track = box.querySelector('.app-intro-track'), dots = box.querySelectorAll('.app-intro-dots i'), next = box.querySelector('.app-intro-next'), i = 0;
+    function go(n) { i = n; track.style.transform = 'translateX(' + (-100 * i) + '%)'; dots.forEach(function (d, k) { d.classList.toggle('on', k === i); }); next.textContent = i === slides.length - 1 ? 'Get started' : 'Next'; }
+    function done() { try { localStorage.setItem(KEY, '1'); } catch (_) {} box.classList.add('closing'); setTimeout(function () { box.remove(); }, 250); }
+    next.addEventListener('click', function () { if (i < slides.length - 1) go(i + 1); else done(); });
+    box.querySelector('.app-intro-skip').addEventListener('click', done);
+    var x0 = null;
+    box.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    box.addEventListener('touchend', function (e) { if (x0 === null) return; var dx = e.changedTouches[0].clientX - x0; x0 = null; if (dx < -40 && i < slides.length - 1) go(i + 1); else if (dx > 40 && i > 0) go(i - 1); });
+    go(0);
+  }
+  onReady(showIntro);
 
   // Audio results (music, voices): the phone's built-in audio controls inside the app can stay at 0:00 and stop answering
   // Pause or seeking while the sound plays. In the app every <audio controls> gets Hansora's own player instead:
