@@ -207,6 +207,8 @@
       if (url.origin !== location.origin) return href;
       let pathname = url.pathname || '/';
       if (pathname === '/') pathname = '/index.html';
+      // Hansora Automation pages exist only in English, so their links never get _arm/_ru.
+      if (/^\/automation(?:[-_.]|$)/i.test(pathname)) return location.protocol === 'file:' ? url.href : `${pathname.replace(/_(?:arm|ru)(?=\.html$)/i, '')}${url.search}${url.hash}`;
       if (/^\/henshin(?:-template)?(?:_(?:arm|ru))?\/?$/i.test(pathname)) pathname = pathname.replace(/\/$/,'')+'.html';
       if (/\/(?:course_arm|course_ru)\/?$/i.test(pathname) || !/\.html$/i.test(pathname)) {
         return location.protocol === 'file:' ? url.href : `${pathname}${url.search}${url.hash}`;
