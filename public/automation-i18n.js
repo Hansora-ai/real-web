@@ -61,7 +61,7 @@
     // "Instagram DMs · live", "English · Spanish": translate the parts that are known.
     if (key.indexOf(' · ') > 0) {
       var changed = false;
-      var parts = key.split(' · ').map(function (part) { var t = dict[part]; if (t != null) { changed = true; return t; } return part; });
+      var parts = key.split(' · ').map(function (part) { var t = translateText(part); if (t != null) { changed = true; return t; } return part; });
       if (changed) return parts.join(' · ');
     }
     return null;
@@ -123,7 +123,7 @@
   }
 
   var script = document.createElement('script');
-  script.src = 'automation-i18n-' + lang + '.js?v=20261118e';
+  script.src = 'automation-i18n-' + lang + '.js?v=20261118f';
   script.onload = function () { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); };
   script.onerror = function () { clearTimeout(safety); reveal(); readyResolve(); };
   document.head.appendChild(script);
