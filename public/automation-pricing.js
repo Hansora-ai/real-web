@@ -53,7 +53,7 @@
       <li>${icon('eye')}<b>${count(rates.mediaReply)}</b><span>photo / video replies</span></li>
       <li>${icon('play')}<b>${count(rates.voiceReply)}</b><span>voice replies</span></li>
     </ul><small>Mix them as you like – one balance.</small></div>
-    <p class="ui-pack-perk">✨ <b>Also works in Hansora Creative</b>: the same credits make images, videos and audio.</p>`;
+    <p class="ui-pack-perk" data-i18n-html>✨ <b>Also works in Hansora Creative</b>: the same credits make images, videos and audio.</p>`;
   }
 
   function renderPacks() {

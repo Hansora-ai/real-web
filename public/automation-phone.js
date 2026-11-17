@@ -386,7 +386,8 @@
     renderLine(); setState(); render();
     if (!line.numbers.length && !line.error) recordCountry();
   }
-  function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
+  // Country names in the page's language (English, Armenian or Russian).
+  function countryName(code) { try { return new Intl.DisplayNames([window.HansoraI18n?.lang || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
   function readyCountries() { return new Set(line.countries.map(item => item.country)); }
   function numberIn(country) { return line.numbers.find(item => item.country === country && !item.imported); }
   // Numbers that really answer calls (an imported SIP number counts once its first call has arrived).
@@ -446,7 +447,9 @@
     if (finishing) $('#line-numbers').innerHTML += finishing;
     $('#line-title').textContent = numbers.length ? 'Add another number' : finishing ? 'Or connect another way' : 'How customers reach you';
     $('#line-subtitle').textContent = numbers.length ? 'Only choose one of these to add something new. To change the voice, greeting or languages, press Edit settings above.' : 'Pick one. You can change it later.';
-    $('#line-contact').innerHTML = where && !local ? contactCard() : where && !numbers.length ? `<div class="contact-box" style="margin:0 0 18px;padding:14px 18px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span><strong style="display:block;font-size:14px">Need help setting it up?</strong><small class="ui-hint">Leave your WhatsApp or Telegram and we’ll set it up with you.</small></span><button class="ui-btn secondary sm" type="button" data-need-help="Phone setup · ${name}">Get help</button></div>` : '';
+    $('#line-contact').innerHTML = where && !local ? contactCard() : '';
+    // Help is always offered under the options (US, Canada, Armenia...): some owners want us to set it up with them.
+    $('#line-help').innerHTML = where && local ? `<div class="contact-box" style="margin:0;padding:14px 18px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span><strong style="display:block;font-size:14px">Need help setting it up?</strong><small class="ui-hint">Leave your WhatsApp or Telegram and we’ll set it up with you.</small></span><button class="ui-btn secondary sm" type="button" data-need-help="Phone setup · ${name}">Get help</button></div>` : '';
     $('#sip-import').innerHTML = sipImportHtml();
     renderOutgoing();
     // Each option's details sit right under the options.
