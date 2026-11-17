@@ -173,3 +173,11 @@ body.auto-sidebar-collapsed .auto-side-link .auto-badge{position:absolute;left:2
 /* Longer words in Armenian and Russian: menu links never wrap onto two lines */
 .auto-header nav > a,.auto-side-link span{white-space:nowrap}
 .auto-tab span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* Language in the account menu */
+.auto-user-menu .auto-lang-item{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.auto-lang-value{color:var(--text-2,#a3a6ad);font-size:12.5px;white-space:nowrap}
+.auto-lang-list{display:grid;gap:2px;margin:0 0 4px;padding:4px;border-radius:9px;background:var(--surface-2,rgba(255,255,255,.05))}
+.auto-lang-list[hidden]{display:none}
+.auto-lang-list button{display:flex;justify-content:space-between}
+.auto-lang-list button.current{font-weight:600}
+.auto-lang-list i{font-style:normal;color:#34c759}
