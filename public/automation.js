@@ -134,9 +134,9 @@
       result: ['📅', 'Booking #2087', 'Sat 16:30 · Manicure · Anna'], alert: 'Booking added to your calendar'
     },
     {
-      business: 'Bella Pasta', logo: 'B', tone: 'bella', channel: 'TikTok', icon: 'tiktok',
+      business: 'Bella Pasta', logo: 'B', tone: 'bella', channel: 'Instagram', icon: 'instagram',
       steps: [
-        ['note', 'Commented “menu?? 😍” under your video'],
+        ['note', 'Commented “menu?? 😍” under your reel'],
         ['a', 'Hi! Here is our menu 🍝 Our truffle tagliatelle is today’s favourite.'],
         ['card', { title: 'Tonight’s menu', price: '12 dishes', tone: 'bella' }],
         ['c', 'Table for 4 tonight at 8pm?'],

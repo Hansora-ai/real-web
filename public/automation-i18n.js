@@ -1,16 +1,43 @@
-// Hansora Automation in Armenian and Russian. The pages are written in English; this swaps the visible
-// text (also text the scripts add later) for the chosen language. The language is the one chosen on
-// Hansora Creative (localStorage "hansora.language.v1"), or ?lang=hy|ru|en. Loaded first in <head>.
+// Hansora Automation in Armenian and Russian, the same way as Hansora Creative: the address decides the
+// language (automation-dashboard_arm.html = Armenian, _ru.html = Russian; Netlify serves the English file
+// there), and the choice is saved in the profile (profiles.language) and in localStorage
+// "hansora.language.v1". Creative's header.js keeps both in step on every page. The English text is then
+// swapped for the chosen language, also text the scripts add later. Loaded first in <head>.
 (function () {
   'use strict';
   var KEY = 'hansora.language.v1';
   var SUPPORTED = { en: 1, hy: 1, ru: 1 };
-  var lang = 'en';
+  var SUFFIX = { en: '', hy: '_arm', ru: '_ru' };
+  var PAGE = /^\/automation(?:-[a-z0-9-]+)?(?:_(?:arm|ru))?(?:\.html)?$/i;
+  function urlLanguage(path) { return /_arm(?:\.html)?$/i.test(path) ? 'hy' : /_ru(?:\.html)?$/i.test(path) ? 'ru' : 'en'; }
+  // The same Automation page in another language, or null for any other link.
+  function localized(href, language) {
+    try {
+      var url = new URL(href, location.href);
+      if (url.origin !== location.origin || !PAGE.test(url.pathname)) return null;
+      url.pathname = url.pathname.replace(/\.html$/i, '').replace(/_(?:arm|ru)$/i, '') + SUFFIX[language] + '.html';
+      url.searchParams.delete('lang');
+      return url.pathname + url.search + url.hash;
+    } catch (_) { return null; }
+  }
+  var lang = urlLanguage(location.pathname);
+  var here = location.pathname + location.search + location.hash;
   try {
+    // ?lang=hy|ru|en opens that language's address.
     var asked = new URLSearchParams(location.search).get('lang');
-    if (asked && SUPPORTED[asked]) localStorage.setItem(KEY, asked);
-    var saved = localStorage.getItem(KEY);
-    if (saved && SUPPORTED[saved]) lang = saved;
+    if (asked && SUPPORTED[asked]) {
+      localStorage.setItem(KEY, asked);
+      var target = localized(location.href, asked);
+      if (target && target !== here) { location.replace(target); return; }
+    } else if (lang === 'en') {
+      // An English address while the saved choice is Armenian or Russian (for example after a link the
+      // scripts build in English): go to the same page in that language.
+      var saved = localStorage.getItem(KEY);
+      if (saved === 'hy' || saved === 'ru') {
+        var to = localized(location.href, saved);
+        if (to && to !== here) { location.replace(to); return; }
+      }
+    }
   } catch (_) {}
   document.documentElement.lang = lang;
 
@@ -20,6 +47,7 @@
   var api = window.HansoraI18n = {
     lang: lang,
     ready: new Promise(function (resolve) { readyResolve = resolve; }),
+    localized: localized,
     // Translate one English string (for alerts, confirms and similar).
     t: function (text) { return translateText(String(text == null ? '' : text)) || String(text == null ? '' : text); },
     add: function (language, entries, extraPatterns) {
@@ -27,12 +55,22 @@
       for (var key in entries) dict[normalize(key)] = entries[key];
       if (extraPatterns) patterns = patterns.concat(extraPatterns);
     },
-    // Change the language for every Hansora page (Creative uses the same setting).
+    // Change the language like Creative does: save it in the profile and the browser, then open the same
+    // page at that language's address.
     set: function (language) {
-      if (!SUPPORTED[language]) return;
+      if (!SUPPORTED[language]) return Promise.resolve();
       try { localStorage.setItem(KEY, language); } catch (_) {}
-      var url = new URL(location.href); url.searchParams.delete('lang');
-      location.replace(url.href);
+      var auto = window.HansoraAutomation;
+      var saveProfile = auto && auto.client && !auto.isLocalPreview && typeof auto.getUser === 'function'
+        ? auto.getUser().then(function (user) {
+          if (!user || !user.id) return null;
+          return auto.client.from('profiles').update({ language: language === 'hy' ? 'arm' : language }).eq('user_id', user.id);
+        }).catch(function () { return null; })
+        : Promise.resolve();
+      return saveProfile.then(function () {
+        var to = localized(location.href, language);
+        if (to && to !== location.pathname + location.search + location.hash) location.assign(to); else location.reload();
+      });
     }
   };
 
@@ -94,7 +132,16 @@
     var children = node.childNodes;
     for (var i = 0; i < children.length; i++) translateNode(children[i]);
   }
+  // Links to other Automation pages keep the language (automation-inbox.html -> automation-inbox_arm.html).
+  function localizeLink(element) {
+    if (element.nodeName !== 'A') return;
+    var href = element.getAttribute('href');
+    if (!href || href.charAt(0) === '#' || /^(?:mailto:|tel:|javascript:)/i.test(href)) return;
+    var to = localized(href, lang);
+    if (to && to !== href) element.setAttribute('href', to);
+  }
   function translateAttributes(element) {
+    localizeLink(element);
     for (var i = 0; i < ATTRS.length; i++) {
       var value = element.getAttribute(ATTRS[i]);
       if (!value) continue;
@@ -118,12 +165,12 @@
         else if (record.type === 'attributes') { if (record.target.nodeType === 1 && !skipped(record.target)) translateAttributes(record.target); }
         else for (var j = 0; j < record.addedNodes.length; j++) translateNode(record.addedNodes[j]);
       }
-    }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+    }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS.concat(['href']) });
     clearTimeout(safety); reveal(); readyResolve();
   }
 
   var script = document.createElement('script');
-  script.src = 'automation-i18n-' + lang + '.js?v=20261118g';
+  script.src = 'automation-i18n-' + lang + '.js?v=20261118h';
   script.onload = function () { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); };
   script.onerror = function () { clearTimeout(safety); reveal(); readyResolve(); };
   document.head.appendChild(script);
