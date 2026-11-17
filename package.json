@@ -30,8 +30,10 @@
     "@netlify/aws-lambda-compat": "2.0.2",
     "acorn": "8.15.0",
     "busboy": "^1.6.0",
+    "heic-convert": "^2.1.0",
     "livekit-client": "^2.22.3",
     "livekit-server-sdk": "^2.19.1",
+    "sharp": "^0.35.5",
     "ws": "^8.22.0",
     "zod": "^4.6.5"
   },
