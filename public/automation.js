@@ -12,7 +12,8 @@
 
   // Title: words rise in one after another.
   const title = $('[data-words]');
-  if (title) {
+  // After the translation (Armenian/Russian) is in place, so the words that rise are the translated ones.
+  if (title) (window.HansoraI18n?.ready || Promise.resolve()).then(() => {
     let index = 0;
     const wrap = node => {
       if (node.nodeType === Node.TEXT_NODE) {
@@ -28,7 +29,7 @@
     };
     [...title.childNodes].forEach(wrap);
     requestAnimationFrame(() => title.classList.add('in'));
-  }
+  });
 
   // Scroll reveal without relying on IntersectionObserver alone: scroll/resize checks plus a timer fallback.
   const pending = new Set(document.querySelectorAll('[data-reveal]'));

@@ -462,7 +462,7 @@
 
   // The owner of a comments-only account created the AI employee: ask once whether it may answer messages now.
   async function finishCommentsOnly(id) {
-    const answer = window.confirm('Your AI employee is ready.\n\nLet it answer new messages on your connected channels now? You can change this for each channel later.');
+    const answer = window.confirm((window.HansoraI18n?.t || String)('Your AI employee is ready.\n\nLet it answer new messages on your connected channels now? You can change this for each channel later.'));
     if (answer) {
       const rows = await api.db.from('automation_channel_connections').select('id,settings').eq('business_id', id);
       for (const row of rows.data || []) await api.db.from('automation_channel_connections').update({ settings: { ...(row.settings || {}), automatic_replies: true } }).eq('id', row.id);
