@@ -306,7 +306,21 @@
     document.querySelectorAll('#notify-events input').forEach(input => { input.checked = n.events.includes(input.value); });
   }
 
+  // Each action's main switch gets a visible "On / Off" label, so owners see they can turn it off.
+  function syncPaneSwitches() {
+    document.querySelectorAll('.ui-pane-head > input.ui-switch, .ui-pane-head > .pane-switch > input.ui-switch').forEach(input => {
+      let wrap = input.closest('.pane-switch');
+      if (!wrap) {
+        wrap = document.createElement('label'); wrap.className = 'pane-switch';
+        input.replaceWith(wrap); const text = document.createElement('span'); wrap.append(text, input);
+        input.addEventListener('change', syncPaneSwitches);
+      }
+      wrap.querySelector('span').textContent = input.checked ? 'On' : 'Off';
+      wrap.classList.toggle('off', !input.checked);
+    });
+  }
   function renderStatuses() {
+    syncPaneSwitches();
     ['calendar','orders','leads'].forEach(tool => { const on = $(`#${tool}-enabled`).checked; const badge = $(`#${tool}-status`); badge.textContent = on ? 'On' : 'Off'; badge.classList.toggle('on', on); });
     const whatsapp = state.notifications.whatsapp_verified && $('#wa-notify-enabled').checked; const email = $('#email-notify-enabled').checked;
     $('#notify-status').textContent = whatsapp && email ? 'WA + Email' : whatsapp ? 'WhatsApp' : email ? 'Email' : 'Off';

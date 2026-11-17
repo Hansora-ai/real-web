@@ -166,7 +166,6 @@
     if (needsEmployee) { location.href = `automation-setup.html?id=${encodeURIComponent(businessId)}`; return; }
     if (step === 1 && !line.where) { showError('Choose where your business is first.'); $('#line-where').focus(); return; }
     if (step === 1 && mode() === 'none') { showError('Choose how customers reach you.'); return; }
-    if (step === 1 && mode() === 'new' && line.where && numberIn(line.where)) { showError(`You already have a ${countryName(line.where)} number. Choose another country, or press Edit settings on your number.`); return; }
     if (step === 1 && mode() === 'forward' && !/^\+?[\d\s()-]{8,20}$/.test($('#phone-number').value.trim())) { showError('Enter the business number to forward.'); return; }
     if (step === 3 && languageMode() === 'only' && !chosenLanguages().length) { showError('Choose at least one language, or pick "The caller\'s language".'); return; }
     $('#phone-error').hidden = true;
@@ -354,7 +353,7 @@
       : canGetNumber() ? `<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> Click <strong>${escapeHtml(getNumberLabel())}</strong> below and your number is ready in seconds. The test above already works.</div>`
         : line.where ? `<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> The test above already works.<div style="margin-top:12px">${notLiveOffer()}</div></div>`
           : '<div class="ui-note" style="border-color:rgba(255,184,0,.45)"><strong style="color:var(--text)">Not live yet.</strong> Choose where your business is in step 1. <button class="ui-btn ghost" type="button" id="phone-go-number" style="border:1px solid var(--border);margin-top:10px">Choose your country</button></div>';
-    $('#phone-live').innerHTML = live + next;
+    $('#phone-live').innerHTML = live + (numberBlocked() ? accessCard() : next);
     $('#phone-go-number')?.addEventListener('click', () => { step = 1; render(); });
   }
   async function save({ quiet = false } = {}) {
@@ -381,7 +380,7 @@
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'phone_line_unavailable');
       const numbers = Array.isArray(payload.numbers) ? payload.numbers : payload.number ? [payload.number] : [];
-      line = { ...line, numbers, countries:payload.countries || [], requests:payload.requests || [], sip:payload.sip || null, loaded:true, error:false };
+      line = { ...line, numbers, countries:payload.countries || [], requests:payload.requests || [], sip:payload.sip || null, access:payload.access || { ok:true }, loaded:true, error:false };
     } catch (_) { line = { ...line, numbers:[], countries:[], loaded:true, error:true }; }
     keepSipMode();
     renderLine(); setState(); render();
@@ -412,7 +411,22 @@
     if (readyCountries().has(line.where)) return line.where;
     return mode() === 'forward' ? fallbackCountry() || '' : '';
   }
-  function canGetNumber() { const country = targetCountry(); return line.loaded && !line.error && Boolean(country) && !numberIn(country); }
+  // A new number every time in "Get a new phone number" (also a second one in the same country); forwarding reuses
+  // the number the business already has there. Only for owners the server allows (bought credits, enough balance).
+  function canGetNumber() { const country = targetCountry(); return line.loaded && !line.error && Boolean(country) && (mode() === 'new' || !numberIn(country)) && line.access?.ok !== false; }
+  function numberBlocked() { return line.loaded && !line.error && line.access?.ok === false && (mode() === 'new' || (mode() === 'forward' && Boolean(targetCountry()) && !numberIn(targetCountry()))); }
+  // Shown instead of the button when the owner cannot get a number yet, and why.
+  function accessCard() {
+    const access = line.access || {};
+    if (access.ok !== false) return '';
+    const min = Number(access.min_credits) || 200;
+    const [title, body, button] = access.reason === 'too_many_numbers'
+      ? [`You have ${access.max || 5} phone numbers`, 'That is the most one AI employee can have. Turn off a number you no longer use to add another, or contact us if you need more.', '<a class="ui-btn secondary sm" href="automation-contact.html">Contact us</a>']
+      : access.reason === 'credits_required'
+        ? ['Top up to get a phone number', `A new number needs at least ${min}⚡ on your balance, so your AI can take calls from the first day. Calls are billed per minute from your credits.`, '<a class="ui-btn primary sm" href="automation-pricing.html">Buy credits</a>']
+        : ['Phone numbers come with a credit purchase', `Your own number is available once you have bought credits and have at least ${min}⚡ on your balance. Calls are billed per minute from your credits. Until then, test your AI with Test a call.`, '<a class="ui-btn primary sm" href="automation-pricing.html">Buy credits</a>'];
+    return `<div class="ui-note" style="border-color:rgba(76,141,255,.5);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap"><span style="flex:1;min-width:220px"><strong style="display:block;color:var(--text);font-size:15px;margin-bottom:4px">${title}</strong>${body}</span>${button}</div>`;
+  }
   function getNumberLabel() { const country = targetCountry(); return country === line.where ? `Save and get my ${countryName(country)} number` : `Save and get a ${countryName(country)} number to forward to`; }
   function renderLine() {
     if (!line.loaded) return;
@@ -442,7 +456,8 @@
         : fallback ? `On the last step you get a ${escapeHtml(countryName(fallback))} number, and your business phone forwards calls to it. <strong style="color:var(--text)">Each forwarded call goes abroad, so your operator charges international rates.</strong> Check the price with your operator first.` : '';
     const detail = mode() === 'whatsapp' ? whatsappDetail()
       : mode() === 'new' ? (!where ? '<p class="ui-hint" style="margin:0">Choose where your business is first.</p>'
-        : numberIn(where) ? `<p class="ui-hint" style="margin:0">You already have a ${name} number (above). Choose another country to add one more.</p>`
+        : numberBlocked() ? accessCard()
+        : numberIn(where) ? `<p class="ui-hint" style="margin:0">You already have a ${name} number (above). On the last step you get another one, a second line for the same AI employee.</p>`
           : `<p class="ui-hint" style="margin:0">Your ${name} number is ready on the last step, with one click. Customers call it and your AI answers right away.</p>`)
       : '';
     $('#option-detail').innerHTML = detail;
@@ -550,9 +565,9 @@
         await save({ quiet:true });
         ui.toast('Added. Enter these settings in your SIP provider, then make a test call.'); renderLine(); setState(); if (step === 4) render(); return;
       }
-      if (!response.ok) throw new Error(({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Add credits to your account to get a phone number.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.') + (payload.detail ? ` (${payload.detail})` : ''));
+      if (!response.ok) throw new Error(({ no_number_available:'No number could be set up in that country right now. Please choose another or contact us.', phone_agent_configuration_incomplete:'Finish setting up your AI employee first.', credits_required:'Top up to at least 200⚡ to get a phone number.', purchase_required:'Phone numbers are available after your first credit purchase.', too_many_numbers:'This AI employee already has the most numbers allowed. Turn one off to add another.', phone_line_setup_failed:'Your number is being set up. Please try again in a few minutes or contact us.' }[payload.error] || 'The phone line could not be changed. Please try again.') + (payload.detail ? ` (${payload.detail})` : ''));
       line.numbers = Array.isArray(payload.numbers) ? payload.numbers : payload.number ? [payload.number] : [];
-      if (action === 'activate') { await save({ quiet:true }); line.modeTouched = false; keepSipMode(); if (payload.number) showCelebration(payload.number); }
+      if (action === 'activate') { await save({ quiet:true }); line.modeTouched = false; keepSipMode(); if (payload.number) showCelebration(payload.number); loadLine(); }
       else { if (!line.numbers.some(item => item.imported)) line.sip = null; line.modeTouched = false; keepSipMode(); ui.toast(imported ? 'Number removed.' : 'Number turned off.'); }
       renderLine(); setState(); render();
     } catch (error) { showError(error.message); }
