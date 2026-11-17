@@ -386,7 +386,8 @@
     renderLine(); setState(); render();
     if (!line.numbers.length && !line.error) recordCountry();
   }
-  function countryName(code) { try { return new Intl.DisplayNames([navigator.language || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
+  // Country names in the page's language (English, Armenian or Russian).
+  function countryName(code) { try { return new Intl.DisplayNames([window.HansoraI18n?.lang || 'en'], { type:'region' }).of(code) || code; } catch (_) { return code; } }
   function readyCountries() { return new Set(line.countries.map(item => item.country)); }
   function numberIn(country) { return line.numbers.find(item => item.country === country && !item.imported); }
   // Numbers that really answer calls (an imported SIP number counts once its first call has arrived).
