@@ -144,3 +144,56 @@ test('a failed copy falls back to the original ChatGPT link', async () => {
   }, { fetchImpl: async () => new Response('no', { status: 403 }), supabaseUrl: 'https://sb.test', serviceKey: 'key', bucket: 'video' });
   assert.deepEqual(stored.image_urls, [original]);
 });
+
+// A photo ChatGPT labels "image/png" that is really WebP (seen on 2026-11-16: KIE refused it, "Images must be JPG
+// or PNG"). The real type wins, and the photo is converted to JPG before it is stored.
+test('a WebP photo labelled as PNG is converted to a real JPG before it is stored', async () => {
+  const { storeGenerationFiles, sniffMime } = await import('../../lib/hansora-mcp/file-inputs.mjs');
+  const { default: sharp } = await import('sharp');
+  const webp = await sharp({ create: { width: 64, height: 48, channels: 3, background: '#c0392b' } }).webp().toBuffer();
+  const uploads = [];
+  const fetchImpl = async (url, options = {}) => {
+    if ((options.method || 'GET') === 'POST') { uploads.push({ url: String(url), headers: options.headers, body: Buffer.from(options.body) }); return new Response('{}', { status: 200 }); }
+    return new Response(webp, { status: 200, headers: { 'Content-Type': 'image/png' } });
+  };
+  const stored = await storeGenerationFiles({
+    prompt: 'x', image_files: [{ download_url: 'https://files.example/abc', file_id: 'file-abc', mime_type: 'image/png', file_name: 'photo.png' }]
+  }, { fetchImpl, supabaseUrl: 'https://sb.test', serviceKey: 'key', bucket: 'video', now: () => new Date('2026-11-17T10:00:00Z') });
+  assert.match(stored.image_urls[0], /-chatgpt\.jpg$/);
+  assert.equal(uploads[0].headers['Content-Type'], 'image/jpeg');
+  assert.equal(sniffMime(uploads[0].body, 'image'), 'image/jpeg');
+  const meta = await sharp(uploads[0].body).metadata();
+  assert.deepEqual([meta.width, meta.height], [64, 48]);
+});
+
+test('photos with transparency become PNG; AVIF and GIF are converted; JPG and PNG are kept as they are', async () => {
+  const { convertImageForProviders, sniffMime } = await import('../../lib/hansora-mcp/file-inputs.mjs');
+  const { default: sharp } = await import('sharp');
+  const clear = await sharp({ create: { width: 20, height: 20, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0.5 } } }).webp().toBuffer();
+  assert.equal((await convertImageForProviders(clear, 'image/webp')).mime, 'image/png');
+  const solid = sharp({ create: { width: 20, height: 20, channels: 3, background: '#2980b9' } });
+  const avif = await solid.clone().avif().toBuffer();
+  assert.equal(sniffMime(avif, 'image'), 'image/avif');
+  const fromAvif = await convertImageForProviders(avif, 'image/avif');
+  assert.equal(sniffMime(fromAvif.body, 'image'), fromAvif.mime);
+  const gif = await solid.clone().gif().toBuffer();
+  assert.ok(['image/jpeg', 'image/png'].includes((await convertImageForProviders(gif, 'image/gif')).mime));
+});
+
+test('the real file type is read from the bytes: HEIC and AVIF photos, but videos keep their label', async () => {
+  const { sniffMime, storeGenerationFiles } = await import('../../lib/hansora-mcp/file-inputs.mjs');
+  const box = (brand) => Buffer.concat([Buffer.from('00000018', 'hex'), Buffer.from(`ftyp${brand}`, 'latin1'), Buffer.alloc(12)]);
+  assert.equal(sniffMime(box('heic'), 'image'), 'image/heic');
+  assert.equal(sniffMime(box('mif1'), 'image'), 'image/heic');
+  assert.equal(sniffMime(box('avif'), 'image'), 'image/avif');
+  assert.equal(sniffMime(box('isom'), 'video'), 'video/mp4');
+  // A QuickTime video labelled video/quicktime keeps its .mov name.
+  const uploads = [];
+  const fetchImpl = async (url, options = {}) => {
+    if ((options.method || 'GET') === 'POST') { uploads.push(String(url)); return new Response('{}', { status: 200 }); }
+    return new Response(box('qt  '), { status: 200, headers: { 'Content-Type': 'video/quicktime' } });
+  };
+  const stored = await storeGenerationFiles({ prompt: 'x', video_files: [{ download_url: 'https://files.example/v', file_id: 'file-v', mime_type: 'video/quicktime' }] },
+    { fetchImpl, supabaseUrl: 'https://sb.test', serviceKey: 'key', bucket: 'video', now: () => new Date('2026-11-17T10:00:00Z') });
+  assert.match(stored.video_urls[0], /-chatgpt\.mov$/);
+});

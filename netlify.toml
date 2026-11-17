@@ -93,6 +93,9 @@
 
 [functions."hansora-mcp"]
   timeout = 60
+  # Image conversion for photos from ChatGPT (lib/hansora-mcp/file-inputs.mjs): sharp has native files and
+  # heic-convert loads its decoder at run time, so both are shipped as packages instead of being bundled.
+  external_node_modules = ["sharp", "heic-convert"]
 
 # Hansora Automation MCP server (ChatGPT app), served at /automation/mcp
 [functions."automation-mcp"]
