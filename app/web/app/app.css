@@ -300,3 +300,17 @@ html.hansora-app #siteHeader .brand .hansora-brand-mobile { display: inline !imp
 html.hansora-app #siteHeader:has(.app-back-btn) .brand > span { display: none !important; }
 /* Automation top bar: no centred page name (it overlapped the buttons when signed out too). */
 html.hansora-app .auto-header .app-title { display: none !important; }
+
+/* Audio results: Hansora's own player (app-shim.js "Audio results"). */
+.hs-audio { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 520px; padding: 8px 14px 8px 8px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); box-sizing: border-box; }
+.hs-audio-btn { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #a855f7, #6366f1 55%, #2fd3fb); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.hs-audio-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.hs-audio .i-pause, .hs-audio.playing .i-play { display: none; }
+.hs-audio.playing .i-pause { display: inline; }
+.hs-audio-bar { flex: 1; min-width: 0; height: 28px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; --p: 0%; }
+.hs-audio-bar::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(90deg, #a78bfa var(--p), rgba(255,255,255,.2) var(--p)); }
+.hs-audio-bar::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: #fff; border: 0; }
+.hs-audio-bar:disabled::-webkit-slider-thumb { opacity: .4; }
+.hs-audio-time { flex: 0 0 auto; font: 600 12px/1 Inter, -apple-system, sans-serif; color: rgba(255,255,255,.75); font-variant-numeric: tabular-nums; }
+html.light .hs-audio, [data-theme="light"] .hs-audio { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.1); }
+html.light .hs-audio-time, [data-theme="light"] .hs-audio-time { color: rgba(0,0,0,.7); }

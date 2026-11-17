@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.14-1';
+  var HANSORA_BUILD = '2026.11.17-1';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -715,6 +715,44 @@
   if (applePlugin()) window.__hansoraNativeApple = nativeApple;
   onReady(addAppleButton);
   new MutationObserver(addAppleButton).observe(root, { childList: true, subtree: true });
+
+  // Audio results (music, voices): the phone's built-in audio controls inside the app can stay at 0:00 and stop answering
+  // Pause or seeking while the sound plays. In the app every <audio controls> gets Hansora's own player instead:
+  // play/pause, a progress bar you can drag, and the time. The <audio> element itself stays (hidden) and plays the sound.
+  function fmtTime(s) { if (!isFinite(s) || s < 0) s = 0; s = Math.floor(s); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function addPlayer(a) {
+    if (a.dataset.hsPlayer) return;
+    a.dataset.hsPlayer = '1';
+    var box = document.createElement('div'); box.className = 'hs-audio';
+    box.innerHTML = '<button type="button" class="hs-audio-btn" aria-label="Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5v14l11-7z"/><path class="i-pause" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>' +
+      '<input type="range" class="hs-audio-bar" min="0" max="1000" step="1" value="0" aria-label="Position">' +
+      '<span class="hs-audio-time">0:00</span>';
+    a.controls = false; a.removeAttribute('controls'); a.style.display = 'none';
+    a.parentNode.insertBefore(box, a.nextSibling);
+    var btn = box.querySelector('button'), bar = box.querySelector('input'), time = box.querySelector('span'), dragging = false;
+    function paint() {
+      var d = a.duration, t = a.currentTime || 0, known = isFinite(d) && d > 0;
+      box.classList.toggle('playing', !a.paused && !a.ended);
+      btn.setAttribute('aria-label', a.paused ? 'Play' : 'Pause');
+      bar.disabled = !known;
+      if (!dragging) bar.value = known ? Math.round(t / d * 1000) : 0;
+      bar.style.setProperty('--p', (known ? t / d * 100 : 0) + '%');
+      time.textContent = known ? fmtTime(t) + ' / ' + fmtTime(d) : fmtTime(t);
+    }
+    btn.addEventListener('click', function () {
+      if (a.paused || a.ended) {
+        document.querySelectorAll('audio').forEach(function (o) { if (o !== a && !o.paused) o.pause(); });
+        var p = a.play(); if (p && p.catch) p.catch(function () {});
+      } else a.pause();
+    });
+    bar.addEventListener('input', function () { dragging = true; var d = a.duration; if (isFinite(d)) time.textContent = fmtTime(bar.value / 1000 * d) + ' / ' + fmtTime(d); bar.style.setProperty('--p', bar.value / 10 + '%'); });
+    bar.addEventListener('change', function () { var d = a.duration; if (isFinite(d) && d > 0) { try { a.currentTime = bar.value / 1000 * d; } catch (_) {} } dragging = false; paint(); });
+    ['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata', 'durationchange', 'seeked', 'emptied'].forEach(function (e) { a.addEventListener(e, paint); });
+    paint();
+  }
+  function addPlayers() { document.querySelectorAll('audio[controls]').forEach(addPlayer); }
+  addPlayers();
+  new MutationObserver(addPlayers).observe(root, { childList: true, subtree: true });
 
   // Features tab: open the models page at the top with the "Features" filter chosen (not halfway down at the anchor).
   if (/^\/models(\.html)?$/.test(location.pathname) && location.hash === '#featuresSection') {
