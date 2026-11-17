@@ -986,3 +986,10 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 /* Knowledge files: a long file name is cut with "…" instead of pushing the row out of the card. */
 .ui-kfiles,.ui-kfiles-list,.ui-kfile{min-width:0}
 .ui-kfiles-list{grid-template-columns:minmax(0,1fr)}
+/* Card header links (Edit →, Manage →, View log →) stay on one line in every language */
+.ui-card-head a,.ui-card-head .ui-link{white-space:nowrap}
+
+/* Armenian and Russian: row descriptions wrap instead of being cut off with … */
+html[lang="hy"] .ui-row-sub,html[lang="ru"] .ui-row-sub{white-space:normal}
+/* Long Armenian/Russian row titles wrap instead of running under the badge */
+html[lang="hy"] .ui-row-title,html[lang="ru"] .ui-row-title{overflow-wrap:anywhere;min-width:0}
