@@ -14,7 +14,7 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.17-1';
+  var HANSORA_BUILD = '2026.11.18-1';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -590,19 +590,21 @@
 
   // Report content (Google Play's AI-generated content policy; Apple 1.2): a "Report content" entry in both menus opens a
   // short form inside the app. It is sent to Hansora support through the website's contact form.
-  function openReport() {
+  function openReport(about) {
     if (document.getElementById('appReport')) return;
+    about = typeof about === 'string' ? about : '';
     var box = document.createElement('div');
     box.id = 'appReport'; box.className = 'app-report';
     box.innerHTML = '<form class="app-report-card" novalidate><h2>Report content</h2>' +
       '<p>Tell us about an AI result or anything in the app that is offensive, harmful or breaks the rules. We review every report.</p>' +
       '<label>Reason<select name="reason"><option>Offensive or hateful</option><option>Sexual content</option><option>Violence or harm</option><option>Copyright or someone else’s likeness</option><option>Other</option></select></label>' +
-      '<label>What happened<textarea name="details" rows="4" placeholder="Which result (prompt, model, time) and what is wrong with it"></textarea></label>' +
+      '<label>What happened<textarea name="details" rows="4" placeholder="What is wrong with this result"></textarea></label>' +
       '<label>Your email<input name="email" type="email" autocomplete="email" placeholder="you@example.com"></label>' +
       '<p class="app-report-msg" role="status"></p>' +
       '<div class="app-report-actions"><button type="button" class="app-report-cancel">Cancel</button><button type="submit" class="app-report-send">Send report</button></div></form>';
     document.body.appendChild(box);
     var form = box.querySelector('form'), msg = box.querySelector('.app-report-msg');
+    if (about) form.dataset.about = about;
     function close() { box.remove(); }
     box.addEventListener('click', function (e) { if (e.target === box) close(); });
     box.querySelector('.app-report-cancel').addEventListener('click', close);
@@ -612,12 +614,38 @@
       if (!/^\S+@\S+\.\S+$/.test(email)) { msg.textContent = 'Enter your email so we can reply.'; return; }
       if (details.length < 5) { msg.textContent = 'Describe what you are reporting.'; return; }
       var send = box.querySelector('.app-report-send'); send.disabled = true; msg.textContent = 'Sending…';
-      var text = '[APP REPORT] ' + form.reason.value + '\n\n' + details + '\n\nPage: ' + location.pathname + location.search + '\nApp version: ' + HANSORA_BUILD;
+      var text = '[APP REPORT] ' + form.reason.value + '\n\n' + details + (form.dataset.about ? '\n\nReported result: ' + form.dataset.about : '') + '\n\nPage: ' + location.pathname + location.search + '\nApp version: ' + HANSORA_BUILD;
       fetch('/.netlify/functions/contact-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, message: text }) })
         .then(function (r) { if (!r.ok) throw new Error('status ' + r.status); form.innerHTML = '<h2>Thank you</h2><p>Your report was sent. We review it and remove content that breaks the rules.</p><div class="app-report-actions"><button type="button" class="app-report-send">Close</button></div>'; form.querySelector('button').addEventListener('click', close); })
         .catch(function () { send.disabled = false; msg.textContent = 'Could not send. Check your connection and try again.'; });
     });
   }
+  // Report on every AI result (Google Play AI-Generated Content policy): a "Report" button next to each result's
+  // Download / Get button (result page, full-screen viewer, History, audio). It opens the report form for that result.
+  var DL = /^\s*[⬇↓⤓]?\s*(download|get|save)(\s+(mp4|image|video|audio|file))?\s*$/i;
+  function mediaNear(el) {
+    for (var n = el.parentElement, k = 0; n && k < 7; n = n.parentElement, k++) {
+      var m = n.querySelector('video[src], video source[src], audio[src], img[src]:not([width="16"]):not([width="20"])');
+      if (m && !(m.tagName === 'IMG' && (m.naturalWidth || 100) < 48)) return m.src || m.getAttribute('src') || '';
+    }
+    return '';
+  }
+  function addResultFlags() {
+    document.querySelectorAll('a, button').forEach(function (el) {
+      if (el.dataset.hsFlagged || el.closest('#appReport, #hs-overlay, #navMenu, #automation-nav, header, nav')) return;
+      if (!DL.test(el.textContent || '')) return;
+      var media = mediaNear(el); if (!media && !el.getAttribute('href')) return;
+      el.dataset.hsFlagged = '1';
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'hs-flag'; b.setAttribute('aria-label', 'Report this result');
+      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-1.5 4L16 12H5"/></svg>Report';
+      b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openReport(mediaNear(b) || el.getAttribute('href') || location.href); });
+      el.insertAdjacentElement('afterend', b);
+    });
+  }
+  onReady(addResultFlags);
+  new MutationObserver(function () { if (addResultFlags.q) return; addResultFlags.q = 1; requestAnimationFrame(function () { addResultFlags.q = 0; addResultFlags(); }); }).observe(root, { childList: true, subtree: true });
+
   // Share Hansora (the phone's share sheet with the store link) and Rate Hansora (the store's review page).
   var APP_STORE_ID = '6834437163', PLAY_ID = 'co.hansora.app';
   var platform = native ? Cap.getPlatform() : 'web';

@@ -333,3 +333,8 @@ html.light .hs-audio-time, [data-theme="light"] .hs-audio-time { color: rgba(0,0
 .app-intro-dots i.on { width: 24px; background: #fff; }
 .app-intro-next { position: absolute; left: 24px; right: 24px; bottom: calc(env(safe-area-inset-bottom) + 28px); height: 56px; border: 0; border-radius: 18px; color: #fff; font-family: inherit; font-size: 17px; font-weight: 700;
   background: linear-gradient(90deg, #a855f7, #6366f1 55%, #2fd3fb); box-shadow: 0 16px 40px -14px rgba(99,102,241,.9); }
+
+/* "Report" on every AI result (app-shim.js). */
+.hs-flag { display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 0 8px; padding: 0 14px; min-height: 36px; border-radius: 999px;
+  border: 1px solid rgba(248,113,113,.45); background: rgba(248,113,113,.1); color: #fca5a5; font: 600 13px/1 Inter, -apple-system, sans-serif; cursor: pointer; vertical-align: middle; flex: 0 0 auto; }
+.hs-flag svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
