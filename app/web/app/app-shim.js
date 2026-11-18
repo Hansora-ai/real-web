@@ -622,7 +622,7 @@
   }
   // Report on every AI result (Google Play AI-Generated Content policy): a "Report" button next to each result's
   // Download / Get button (result page, full-screen viewer, History, audio). It opens the report form for that result.
-  var DL = /^\s*[⬇↓⤓]?\s*(download|get|save)(\s+(mp4|image|video|audio|file))?\s*$/i;
+  var DL = /^\s*[⬇↓⤓]?\s*(download|get)(\s+(mp4|image|video|audio|file))?\s*$/i;
   function mediaNear(el) {
     for (var n = el.parentElement, k = 0; n && k < 7; n = n.parentElement, k++) {
       var m = n.querySelector('video[src], video source[src], audio[src], img[src]:not([width="16"]):not([width="20"])');
@@ -630,15 +630,29 @@
     }
     return '';
   }
+  var FLAG_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-1.5 4L16 12H5"/></svg>';
   function addResultFlags() {
+    if (document.body && document.body.dataset.automationPage) return;
     document.querySelectorAll('a, button').forEach(function (el) {
-      if (el.dataset.hsFlagged || el.closest('#appReport, #hs-overlay, #navMenu, #automation-nav, header, nav')) return;
-      if (!DL.test(el.textContent || '')) return;
+      if (el.dataset.hsFlagged || el.classList.contains('hs-flag') || el.closest('#appReport, #hs-overlay, #navMenu, header, nav')) return;
+      var text = (el.textContent || '').trim();
+      var label = text || el.getAttribute('aria-label') || el.getAttribute('title') || el.dataset.tooltip || '';
+      if (!DL.test(label) && !(el.dataset.previewAction === 'download') && !/(^|\s)result-shortcut-download(\s|$)/.test(el.className)) return;
       var media = mediaNear(el); if (!media && !el.getAttribute('href')) return;
       el.dataset.hsFlagged = '1';
       var b = document.createElement('button');
-      b.type = 'button'; b.className = 'hs-flag'; b.setAttribute('aria-label', 'Report this result');
-      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4h11l-1.5 4L16 12H5"/></svg>Report';
+      b.type = 'button'; b.setAttribute('aria-label', 'Report this result'); b.title = 'Report';
+      if (!text) {
+        // Icon-only row (result cards): a matching small icon button that shows and hides with the download button.
+        b.className = el.className.replace('result-shortcut-download', 'result-shortcut-report') + ' hs-flag-icon';
+        b.dataset.tooltip = 'Report';
+        b.innerHTML = FLAG_SVG;
+        var sync = function () { b.classList.toggle('hidden', el.classList.contains('hidden')); b.style.display = el.style.display; };
+        sync(); new MutationObserver(sync).observe(el, { attributes: true, attributeFilter: ['class', 'style'] });
+      } else {
+        b.className = 'hs-flag';
+        b.innerHTML = FLAG_SVG + 'Report';
+      }
       b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openReport(mediaNear(b) || el.getAttribute('href') || location.href); });
       el.insertAdjacentElement('afterend', b);
     });
