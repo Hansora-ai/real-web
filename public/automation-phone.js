@@ -346,7 +346,13 @@
     // Each card opens its settings right here, under the test call, so the owner can change and test again.
     $('#phone-review').innerHTML = [['Number', numbers, 1], ['Voice', data.voice, 2], ['Answers', answer, 3], ['Languages', languages, 3], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message', 'calls']].map(([label, value, target]) => `<button type="button" data-edit-step="${target}" title="Change ${label.toLowerCase()}"><span>${label}<em>Edit</em></span><strong>${escapeHtml(value)}</strong></button>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
-    const live = liveNumbers().length
+    // Once a number is live it is the first thing on this step, big and in the middle.
+    const hero = $('#phone-number-hero');
+    hero.hidden = !liveNumbers().length;
+    hero.innerHTML = liveNumbers().length
+      ? `<div style="text-align:center;padding:22px 16px;margin-bottom:16px;border:1px solid rgba(52,199,89,.4);border-radius:16px;background:rgba(52,199,89,.06)"><span class="ui-badge green">Live.</span><div class="ui-hint" style="margin:10px 0 6px">Your AI employee answers calls to</div>${liveNumbers().map(item => `<div style="font-size:clamp(24px,6vw,34px);font-weight:700;letter-spacing:.02em;color:var(--text);line-height:1.25" data-no-i18n>${escapeHtml(item.e164)}</div>`).join('')}${data.number_mode === 'forward' ? '' : '<div class="ui-hint" style="margin:8px 0 0">Call it from any phone to check.</div>'}</div>`
+      : '';
+    const live = liveNumbers().length && canGetNumber()
       ? `<div class="ui-note" style="border-color:rgba(52,199,89,.4)"><strong style="color:var(--text)">Live.</strong> Your AI employee answers calls to <strong style="color:var(--text)">${liveNumbers().map(item => escapeHtml(item.e164)).join(', ')}</strong>.${data.number_mode === 'forward' ? '' : ' Call it from any phone to check.'}${canGetNumber() ? ` To add your ${escapeHtml(countryName(targetCountry()))} number, click <strong>${escapeHtml(getNumberLabel())}</strong> below.` : ''}</div>`
       : '';
     const next = liveNumbers().length ? ''
