@@ -305,8 +305,8 @@ test('get_generation returns every generation ChatGPT started in the same burst'
   const { result } = await callTool('get_generation', { run_id: 'u-mcp-2' }, { credits: 3, generations: [target, sibling, older] });
   const value = result.structuredContent;
   assert.equal(value.model_name, 'Nano Banana 2');
-  assert.deepEqual(value.batch.map((item) => [item.run_id, item.status]), [['u-mcp-1', 'ready'], ['u-mcp-2', 'processing']]);
-  assert.equal(value.batch[0].result_url, 'https://cdn.test/a.png');
+  assert.equal(value.batch, undefined, 'each card shows only its own result, never the whole burst');
+  assert.equal(value.result_url, null);
   assert.match(value.batch_summary, /^2 generations .* 1 ready, 1 still generating, 0 failed/);
   assert.match(value.batch_summary, /Ready results: #1 https:\/\/cdn\.test\/a\.png\./);
   assert.match(value.batch_summary, /give the user a link to every ready result/);
