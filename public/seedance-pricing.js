@@ -19,7 +19,28 @@
   const henshinRates = { '480p': 1.75, '720p': 3.8, '1080p': 9 };
   // Round up to whole displayed credits: profiles.credits stores 0.1 steps.
   const round = amount => Math.ceil(amount * 10 - 1e-8) / 10;
+  // Seedance 2.5 Flash (reAPI seedance-2-5-flash, rate card checked 2026-11-18): 480p/720p only. The agreed prices
+  // are per second, in displayed credits: 13 / 25 without video input (130 / 250 for ten seconds) and 8 / 16 per
+  // billed second with a video input (160 / 320 for a ten-second edit).
+  const flash = {
+    rates: { text: { '480p': .096, '720p': .192 }, video: { '480p': .06, '720p': .12 } },
+    displayed: { text: { '480p': 13, '720p': 25 }, video: { '480p': 8, '720p': 16 } }
+  };
+  function quoteFlash({ resolution, duration, inputSeconds, edit }) {
+    const quality = String(resolution).toLowerCase();
+    const source = Number(inputSeconds);
+    const seconds = edit ? Math.ceil(source - 1e-6) : Number(duration);
+    if (!Number.isFinite(source) || source < 0 || source > 30.0001 || !Number.isInteger(seconds) || seconds < 4 || seconds > 30) throw Error('Invalid Seedance duration.');
+    if (!flash.rates.text[quality]) throw Error('Seedance 2.5 Flash makes 480p or 720p videos.');
+    const input = Math.ceil(source - 1e-6);
+    const kind = source > 0 ? 'video' : 'text';
+    // reAPI: an edit bills twice the source; a reference video bills output + max(output, input).
+    const billedSeconds = source > 0 ? (edit ? 2 * input : seconds + Math.max(seconds, input)) : seconds;
+    const displayedCredits = flash.displayed[kind][quality] * billedSeconds;
+    return { internalCredits: displayedCredits / 10, displayedCredits, duration: seconds, inputSeconds: source, billedSeconds, resolution: quality, variant: 'flash', providerCostUSD: Math.ceil(flash.rates[kind][quality] * billedSeconds * 1000 - 1e-8) / 1000 };
+  }
   function quote({ model = 'seedance25', variant = 'standard', resolution = '720p', duration = 5, inputSeconds = 0, edit = false } = {}) {
+    if (model === 'seedance25' && variant === 'flash') return quoteFlash({ resolution, duration, inputSeconds, edit });
     const quality = String(resolution).toLowerCase();
     const key = model === 'seedance20' && ['fast', 'lite'].includes(variant) ? 'fast' : model;
     const source = Number(inputSeconds);
@@ -46,5 +67,5 @@
     const internalCredits = round(providerCostUSD * 10 / .95);
     return { duration: seconds, inputSeconds: source, billedSeconds, resolution: '1080p', providerCostUSD, internalCredits, displayedCredits: Math.round(internalCredits * 10) };
   }
-  return { quote, quoteFinal, henshinRates };
+  return { quote, quoteFinal, henshinRates, flash };
 });

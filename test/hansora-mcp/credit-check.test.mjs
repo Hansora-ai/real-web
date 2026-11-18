@@ -1631,3 +1631,31 @@ test('ChatGPT lists Gemini Omni 1.2 Flash instead of 1.1, priced per second at a
   assert.equal(text.duration, 15);
   assert.equal(text.resolution, '4k');
 });
+
+test('Seedance 2.5 Flash is offered at its own price and runs on the Seedance 2.5 runner as the Flash variant', async () => {
+  const listed = await callTool('get_model', { model_id: 'seedance-2.5-flash' }, { credits: 100, rest: returningUser });
+  assert.equal(listed.result.structuredContent.id, 'seedance25-flash');
+  assert.equal(listed.result.structuredContent.availability, 'available');
+  assert.deepEqual(listed.result.structuredContent.input.resolutions, ['480p', '720p']);
+  const priced = await callTool('quote_generation', { model_id: 'seedance25-flash', duration: 10, resolution: '720p' }, { credits: 100, rest: returningUser });
+  assert.equal(priced.result.structuredContent.credits_required ?? priced.result.structuredContent.displayed_credits ?? priced.result.structuredContent.credits, 250);
+  const { result, submitted } = await callTool('create_generation', { model_id: 'seedance25-flash', prompt: 'A lighthouse keeper climbs the stairs in a storm, cinematic.', duration: 10, resolution: '480p' }, { credits: 100, rest: returningUser });
+  assert.equal(result.structuredContent.ok, true, JSON.stringify(result.structuredContent));
+  assert.equal(submitted.length, 1);
+  assert.match(JSON.stringify(submitted[0]), /run-seedance-25/);
+  assert.equal(submitted[0].payload.variant, 'flash');
+  assert.equal(submitted[0].payload.resolution, '480p');
+  assert.equal(submitted[0].payload.draft, undefined);
+});
+
+test('a picture edit that mentions the user\'s photo with no photo attached points to the upload card, nothing charged', async () => {
+  const missing = await callTool('create_generation', { model_id: 'nano-banana-2', prompt: 'Put the person from the uploaded photo on a beach at sunset.' }, { credits: 100, rest: returningUser });
+  assert.equal(missing.submitted.length, 0);
+  assert.equal(missing.result.structuredContent.error, 'photo_missing');
+  assert.match(missing.result.structuredContent.next_step, /start_multimedia_generation with required_inputs \["image"\]/);
+  assert.match(missing.result.structuredContent.next_step, /open_image_to_video_upload_card/);
+  const withPhoto = await callTool('create_generation', { model_id: 'nano-banana-2', prompt: 'Put the person from the uploaded photo on a beach at sunset.', image_urls: ['https://cdn.test/me.png'] }, {
+    credits: 100, rest: returningUser, files: { 'https://cdn.test/me.png': Buffer.alloc(8) }
+  });
+  assert.notEqual(withPhoto.result.structuredContent.error, 'photo_missing');
+});
