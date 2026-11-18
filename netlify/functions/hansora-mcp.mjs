@@ -840,12 +840,13 @@ async function batchFields(userId, runId) {
   const batch = rows.map(batchItem);
   const count = (status) => batch.filter((item) => item.status === status).length;
   const ready = batch.map((item, index) => ({ ...item, number: index + 1 })).filter((item) => item.status === 'ready');
+  // Each ChatGPT card shows only its own result: ChatGPT already makes one card per generation, so a gallery of the
+  // whole burst in every card repeated the same images. ChatGPT still gets the full list as text.
   return {
-    batch,
     batch_summary: [
       `${batch.length} generations were started together in this request: ${count('ready')} ready, ${count('processing')} still generating, ${count('failed')} failed.`,
       ready.length ? `Ready results: ${ready.map((item) => `#${item.number} ${item.result_url}`).join(' ; ')}.` : '',
-      'The card shows all of them as a gallery; in your reply also give the user a link to every ready result above, numbered in this order, so none is missed.',
+      'Each card shows only its own result; in your reply also give the user a link to every ready result above, numbered in this order, so none is missed.',
       count('processing') ? 'Results that are still generating are not missing: call get_generation again with any of these run_ids in a little while to refresh all of them.' : ''
     ].filter(Boolean).join(' ')
   };
