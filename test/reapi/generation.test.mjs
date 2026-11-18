@@ -391,3 +391,49 @@ test('client-writable legacy metadata cannot impersonate an existing paid finali
  const quote=JSON.parse((await finalize(finalEvent(parent,{quote_only:true}))).body);
  assert.equal(quote.quote_only,true);assert.equal(quote.displayedCredits,677);assert.equal(quote.submitted,undefined);assert.equal(await balance(),983);
 });
+
+test('Seedance 2.5 Flash: agreed prices, reAPI billing rules and the documented request body',()=>{
+ for(const [resolution,text,video]of [['480p',130,160],['720p',250,320]]){
+  assert.equal(pricing.quote({variant:'flash',resolution,duration:10}).displayedCredits,text);
+  assert.equal(pricing.quote({variant:'flash',resolution,inputSeconds:10,edit:true}).displayedCredits,video);
+  assert.equal(pricing.quote({variant:'flash',resolution,duration:10,inputSeconds:10}).displayedCredits,video);
+ }
+ assert.equal(pricing.quote({variant:'flash',resolution:'480p',duration:4}).displayedCredits,52);
+ assert.equal(pricing.quote({variant:'flash',resolution:'720p',duration:10,inputSeconds:4}).billedSeconds,20);
+ assert.equal(pricing.quote({variant:'flash',resolution:'720p',duration:6,inputSeconds:12}).billedSeconds,18);
+ assert.equal(pricing.quote({variant:'flash',resolution:'480p',duration:10}).providerCostUSD,.96);
+ assert.throws(()=>pricing.quote({variant:'flash',resolution:'1080p',duration:10}),/480p or 720p/);
+ const refs=build({variant:'flash',prompt:' Cat @image1 ',duration:8,resolution:'720p',aspect_ratio:'9:16',generate_audio:false,enable_web_search:true,draft:false,
+  reference_image_urls:[source+'.png'],reference_video_urls:[source],reference_audio_urls:[source+'.mp3']},'2.5',{inputSeconds:5});
+ assert.deepEqual(refs.payload,{model:'seedance-2-5-flash',content:[{type:'text',text:'Cat @image1'},
+  {type:'image_url',image_url:{url:source+'.png'},role:'reference_image'},{type:'video_url',video_url:{url:source},role:'reference_video'},{type:'audio_url',audio_url:{url:source+'.mp3'},role:'reference_audio'}],
+  resolution:'720p',duration:8,ratio:'9:16',generate_audio:false,omni_reference_task_type:'generate',content_filter:true});
+ assert.deepEqual(refs.media,{video_urls:[source],image_urls:[source+'.png'],audio_urls:[source+'.mp3']});
+ const frames=build({variant:'flash',prompt:'Walk',first_frame_url:source+'.png',last_frame_url:source+'.jpg',duration:5,resolution:'480p'},'2.5').payload;
+ assert.equal(frames.ratio,'adaptive');assert.deepEqual(frames.content.slice(1).map(x=>x.role),['first_frame','last_frame']);
+ const edit=build({variant:'flash',prompt:'Make it snow',reference_video_urls:[source],duration:-1,resolution:'480p'},'2.5',{inputSeconds:10});
+ assert.equal(edit.edit,true);assert.equal(edit.payload.omni_reference_task_type,'edit');assert.equal(edit.payload.duration,-1);assert.equal(edit.payload.ratio,'adaptive');assert.equal(edit.quote.displayedCredits,160);
+ assert.equal(build({variant:'flash',prompt:'Text only',aspect_ratio:'adaptive'},'2.5').payload.ratio,'16:9');
+ assert.throws(()=>build({variant:'flash',prompt:'Test',resolution:'1080p'},'2.5'),/480p or 720p/);
+ assert.throws(()=>build({variant:'flash',prompt:'Test',draft:true,resolution:'480p'},'2.5'),/no draft/);
+ assert.throws(()=>build({variant:'flash',prompt:'Test',first_frame_url:source,reference_audio_urls:[source+'.mp3']},'2.5'),/cannot be combined/);
+ assert.throws(()=>build({variant:'flash',prompt:'Test',reference_image_urls:Array(11).fill(source+'.png')},'2.5'),/up to 10 images/);
+ assert.throws(()=>build({variant:'flash',prompt:'Test',reference_video_urls:Array(6).fill(source)},'2.5',{inputSeconds:12}),/5 videos/);
+});
+
+test('Seedance 2.5 Flash runs on the Seedance 2.5 launcher at its own price and completes through reapi-check',async()=>{
+ await launch25(event({variant:'flash',resolution:'480p',duration:10,draft:true}));
+ assert.equal(posts.length,0,'Flash refuses the draft option instead of paying for it');
+ assert.equal(await balance(),1000);
+ const res=await launch25(event({variant:'flash',resolution:'720p',duration:10}));
+ assert.equal(res.statusCode,201);assert.equal(posts.length,1);
+ assert.equal(posts[0].model,'seedance-2-5-flash');assert.equal(posts[0].content[0].text,'A cinematic kitten in warm light.');
+ for(const key of ['prompt','watermark','bitrate_mode','output_format','draft','size','tools'])assert.equal(key in posts[0],false,key);
+ assert.equal(await balance(),975);
+ const row=(await saved())[0];
+ assert.equal(row.provider,'Seedance 2.5 Flash');assert.equal(row.prompt,'A cinematic kitten in warm light.');
+ assert.equal(row.meta.model_id,'seedance25-flash');assert.equal(row.meta.variant,'flash');assert.equal(row.meta.refund_amount,25);assert.equal(row.meta.draft,undefined);
+ const task=tasks.get(row.meta.task_id);task.status='completed';task.output={video_urls:['https://cdn.reapi.ai/flash.mp4']};
+ const out=JSON.parse((await checker(polling(row))).body);assert.equal(out.status,'done');assert.match(out.result_url,/generation-history/);
+ assert.equal(await balance(),975);
+});

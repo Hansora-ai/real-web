@@ -7628,6 +7628,16 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 5.9
       },
       {
+        id: 'seedance25-flash',
+        name: 'Seedance 2.5 Flash',
+        emoji: '🌱',
+        subtitle: 'Cheaper Seedance 2.5 · 480p / 720p',
+        category: 'video',
+        description: 'Seedance 2.5 quality at a lower price: 480p or 720p, 4–30 seconds, first/last frame or image, video and audio references.',
+        __flashOf: 'seedance25',
+        isNew: true
+      },
+      {
         id: 'kling40', name: 'Kling 4.0', emoji: 'K4', subtitle: 'Text / Image / Video / Voice → Video', category: 'video',
         description: 'Kling 4.0 with image, video and voice references, native audio, and 3–30 second videos.',
         endpoint: '/.netlify/functions/run-kling-40', needsImage: false, maxFiles: 0,
@@ -7962,7 +7972,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
 	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
 	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance25', 'kling40', 'henshin', 'gemini-omni-flash-1-2', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance25-flash', 'kling40', 'henshin', 'gemini-omni-flash-1-2', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
       return String(value || '').trim().toLowerCase();
@@ -8126,7 +8136,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('happyhorse')) return 'HH';
       if (id.includes('qwen')) return 'Q';
       if (id.includes('z-image')) return 'Z';
-      if (id === 'seedance25') return 'S25';
+      if (id === 'seedance25' || id === 'seedance25-flash') return 'S25';
       if (id === 'seedance20-mini') return 'SM';
       if (id.includes('seedance20')) return 'S2';
       if (id.includes('gemini-omni')) return 'GO';
@@ -8149,7 +8159,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('happyhorse')) return 'seedance';
       if (id.includes('qwen')) return 'qwen';
       if (id.includes('z-image')) return 'z';
-      if (id.includes('seedance20') || id === 'seedance25') return 'seedance';
+      if (id.includes('seedance20') || id.startsWith('seedance25')) return 'seedance';
       if (id.includes('gemini-omni')) return 'seedance';
       if (id.includes('kling')) return 'kling';
       if (id.includes('veo')) return 'veo';
@@ -8167,7 +8177,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('seedream')) return MODEL_LOGO_BASE_URL + '5.png';
       if (id.includes('grok')) return MODEL_LOGO_BASE_URL + '4.png';
       if (id.includes('wan') || id.includes('qwen') || id.includes('z-image')) return MODEL_LOGO_BASE_URL + '6.png';
-      if (id.includes('seedance20') || id === 'seedance25') return MODEL_LOGO_BASE_URL + '5.png';
+      if (id.includes('seedance20') || id.startsWith('seedance25')) return MODEL_LOGO_BASE_URL + '5.png';
       if (id.includes('gemini-omni') || id.includes('veo')) return MODEL_LOGO_BASE_URL + '3.png';
       if (id.includes('happyhorse')) return MODEL_LOGO_BASE_URL + '15.png';
       if (id === 'henshin') return '/icons/henshin.svg';
@@ -9201,8 +9211,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function selectWorkspaceModel(id, options = {}) {
-      const next = MODELS.find((m) => m.id === id);
+      let next = MODELS.find((m) => m.id === id);
       if (!next) return;
+      if (next.__flashOf) {
+        currentSeedanceVariant = 'flash';
+        next = MODELS.find((m) => m.id === next.__flashOf);
+        if (!next) return;
+      } else if (next.id === 'seedance25') {
+        currentSeedanceVariant = 'standard';
+      }
       if (next.__navTo) { window.location.href = next.__navTo; return; }
       const shouldPreserveUploads = options.preserveUploads !== false;
       const reusableImages = shouldPreserveUploads ? collectReusableImageFiles() : [];
@@ -9249,6 +9266,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'seedance20': 'seedance20',
         'seedance-2.5': 'seedance25',
         'seedance25': 'seedance25',
+        'seedance25-flash': 'seedance25-flash',
+        'seedance-2.5-flash': 'seedance25-flash',
+        'seedance-2-5-flash': 'seedance25-flash',
+        'seedance25flash': 'seedance25-flash',
         'seedance-2-mini': 'seedance20-mini',
         'seedance-2.0-mini': 'seedance20-mini',
         'seedance20-mini': 'seedance20-mini',
@@ -9359,7 +9380,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       items.forEach((model) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-lite' && ['veo31-lite','veo31-fast','veo31'].includes(currentModel.id)));
+        const active = currentModel && (model.id === 'seedance25-flash' ? seedance25FlashSelected() : model.id === 'seedance25' ? (currentModel.id === 'seedance25' && !seedance25FlashSelected()) : currentModel.id === model.id || (model.id === 'veo31-lite' && ['veo31-lite','veo31-fast','veo31'].includes(currentModel.id)));
         btn.className = 'model-tab' + (active ? ' active' : '');
         const newMark = model.isTop ? '<span class="model-top-badge">Top</span>' : model.isNew ? '<span class="text-[9px] font-bold uppercase tracking-wide text-emerald-300">NEW</span>' : '';
         btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>' + newMark;
@@ -9445,7 +9466,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
 
     function updateModelButtonLabels() {
-      const labelText = currentModel ? currentModel.name : 'Choose model';
+      const labelText = currentModel ? (seedance25FlashSelected() ? 'Seedance 2.5 Flash' : currentModel.name) : 'Choose model';
       const btnLabel = document.getElementById('modelButtonLabel');
       if (btnLabel) btnLabel.textContent = labelText;
 
@@ -9694,6 +9715,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function isResolutionAllowedForCurrentModel(val) {
       if (!currentModel) return true;
       if (currentModel.id === 'seedance20' && currentSeedanceVariant === 'fast') return val === '720p';
+      if (seedance25FlashSelected()) return val === '480p' || val === '720p';
       if (currentModel.id !== 'gpt-image-2') return true;
       if (currentAspect === 'auto') return val === '1K';
       if (currentAspect === '1:1') return val === '1K' || val === '2K';
@@ -10136,6 +10158,37 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           };
           veoQualityPills.appendChild(makeBtn('Seedance 2.0', 'standard'));
           veoQualityPills.appendChild(makeBtn('Fast', 'fast'));
+        }
+      } else if (currentModel.id === 'seedance25') {
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
+        currentWanTier = 'normal';
+        currentVeoFamily = null;
+        currentVeoVariant = 'fast';
+        currentSeedanceVariant = currentSeedanceVariant === 'flash' ? 'flash' : 'standard';
+        if (currentSeedanceVariant === 'flash' && currentResolution === '1080p') currentResolution = '720p';
+        if (veoQualityBlock) veoQualityBlock.classList.remove('hidden');
+        if (veoQualityPills) {
+          veoQualityPills.innerHTML = '';
+          const makeBtn = (label, val) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (val === currentSeedanceVariant) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              currentSeedanceVariant = val;
+              if (val === 'flash' && currentResolution === '1080p') currentResolution = '720p';
+              Array.from(veoQualityPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+              renderResolutionControls();
+              updateModelButtonLabels();
+              updateCostDisplay();
+              updateRunButtonLabel();
+            });
+            return b;
+          };
+          veoQualityPills.appendChild(makeBtn('Seedance 2.5', 'standard'));
+          veoQualityPills.appendChild(makeBtn('Flash', 'flash'));
         }
       } else if (isMotionControl) {
         if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
@@ -11239,6 +11292,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (card) card.classList.toggle('control-disabled', !!disabled);
     }
 
+    // Seedance 2.5 Flash: the cheaper Seedance 2.5 option (480p/720p, no 1080p draft finish), sent as variant 'flash'.
+    function seedance25FlashSelected() {
+      return !!(currentModel && currentModel.id === 'seedance25' && currentSeedanceVariant === 'flash');
+    }
     function seedance25UsesSourceVideoSettings() {
       return !!(currentModel && currentModel.id === 'seedance25' && seedanceVideoRefFiles.length === 1);
     }
@@ -11514,6 +11571,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
     function getSeedanceReferenceLimit(kind) {
       const defaults = { image: 9, video: 3, audio: 3 };
+      if (seedance25FlashSelected()) return { image: 10, video: 5, audio: 5 }[kind] || 1;
       const configured = currentModel && currentModel.referenceLimits;
       return Math.max(1, Number(configured && configured[kind] || defaults[kind] || 1));
     }
@@ -12977,13 +13035,13 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             uid,
             user_id: uid,
             prompt,
-            variant: model.id === 'seedance20-mini' ? 'mini' : (currentSeedanceVariant === 'fast' ? 'fast' : 'standard'),
+            variant: model.id === 'seedance20-mini' ? 'mini' : (model.id === 'seedance25' && currentSeedanceVariant === 'flash' ? 'flash' : (currentSeedanceVariant === 'fast' ? 'fast' : 'standard')),
             model: model.id === 'seedance20-mini' ? 'bytedance/seedance-2-mini' : undefined,
             aspect_ratio: model.id === 'seedance25' && ((firstFrameUrl || lastFrameUrl) || seedance25UsesSourceVideoSettings()) ? 'adaptive' : (aspect || '16:9'),
             duration: model.id === 'seedance25' && seedance25UsesSourceVideoSettings() ? -1 : (duration ? Number(duration) : 5),
             source_video_duration: model.id === 'seedance25' && seedance25UsesSourceVideoSettings() ? seedanceSingleVideoDuration : undefined,
             resolution: model.id === 'seedance20-mini' ? (currentResolution || '720p') : (currentSeedanceVariant === 'fast' ? '720p' : (currentResolution || '720p')),
-            draft: model.id === 'seedance25' && currentResolution === '480p',
+            draft: model.id === 'seedance25' && currentSeedanceVariant !== 'flash' && currentResolution === '480p',
             generate_audio: !!seedanceGenerateAudio,
             enable_web_search: !!seedanceWebSearch,
             web_search: !!seedanceWebSearch,
@@ -13368,6 +13426,13 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           removeClientRequestPlaceholder(initialRequestContext);
           showStatus('Kling 4.0: use 1–10,000 prompt characters, up to 10 images, 5 videos (2–30 seconds each, 30 seconds combined), 3 voices, and 15 reference items total.','error');return;
         }
+      }
+
+      if (seedance25FlashSelected() && (seedanceImageRefFiles.length > 10 || seedanceVideoRefFiles.length > 5 || seedanceAudioRefFiles.length > 5
+          || ((seedanceFirstFrameFile || seedanceLastFrameFile) && (seedanceImageRefFiles.length || seedanceVideoRefFiles.length || seedanceAudioRefFiles.length)))) {
+        removeClientRequestPlaceholder(initialRequestContext);
+        showStatus('Seedance 2.5 Flash takes up to 10 images, 5 videos and 5 audio clips, and first/last frames cannot be combined with references.', 'error');
+        return;
       }
 
       if (['seedance20','seedance25'].includes(currentModel.id)) {
@@ -14394,7 +14459,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     async function restorePreviewGeneration(data, setStatus) {
       const model = findPreviewModel(data);
       if (model) {
-        selectWorkspaceModel(model.id, { preserveUploads: false });
+        const flashRun = model.id === 'seedance25' && (data?.meta?.variant === 'flash' || /flash/i.test(String(data?.provider || '')));
+        selectWorkspaceModel(flashRun ? 'seedance25-flash' : model.id, { preserveUploads: false });
       }
       setPromptForPreviewRun(data && data.prompt ? data.prompt : '');
       applyPreviewOptions(data || {});

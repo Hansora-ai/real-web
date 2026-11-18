@@ -21,10 +21,10 @@ import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoPlan, im
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
 // Models that add a reference video's length to the price (on every platform that offers them).
-const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'kling40', 'gemini-omni-flash-1-2']);
+const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance25-flash', 'seedance20', 'wan-3', 'kling40', 'gemini-omni-flash-1-2']);
 // Launchers that report the real charge, measured from the uploaded files.
 const EDIT_MODELS = new Set(['henshin', 'henshin-lite']);
-const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'henshin', 'henshin-lite', 'kling40', 'gemini-omni-flash-1-2']);
+const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance25-flash', 'seedance20', 'wan-3', 'henshin', 'henshin-lite', 'kling40', 'gemini-omni-flash-1-2']);
 // Launchers that refuse any request without the quoted price, even without video input.
 const PRICE_CHECKED_MODELS = new Set(['henshin-lite', 'kling40']);
 // ChatGPT gives up on a tool call after roughly a minute; answer well before that.
@@ -210,7 +210,7 @@ function temporaryIssueResult(model, price, unavailable, reason = '') {
 
 // reAPI runs a limited number of tasks at once for the whole account (150, shared by images and videos). Each
 // user may have up to 50 running per engine, so no single user or runaway series can take them all.
-const RUNNING_ENGINES = Object.freeze({ 'wan-3': 'wan-3', seedance25: 'seedance-2.5', seedance20: 'seedance-2.0' });
+const RUNNING_ENGINES = Object.freeze({ 'wan-3': 'wan-3', seedance25: 'seedance-2.5', 'seedance25-flash': 'seedance-2.5', seedance20: 'seedance-2.0' });
 const MAX_RUNNING_PER_USER = 50;
 function busyResult(model, { running = null, provider = false } = {}) {
   const value = {
@@ -355,9 +355,17 @@ function autoVideoAlreadyStarted(model, automatic) {
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
-// A video prompt that talks about the user's photo, but no photo came with the request: ChatGPT forgot to attach
-// it. Asked once (nothing starts or is charged); sent again the same way, it starts.
+// A prompt that talks about the user's photo, but no photo came with the request: the assistant forgot to attach it,
+// or its app cannot pass chat attachments to tools at all (Claude), and would otherwise quietly make a text-only
+// result. Asked once (nothing starts or is charged); sent again the same way, it starts.
 const PHOTO_REFERENCE = /\b(supplied|attached|uploaded|provided|user'?s|this exact|the exact) (photo|image|picture|portrait|selfie|first frame)\b|\bimage-to-video\b|\banimate (this|the|my) (photo|image|picture)\b/i;
+const PHOTO_MISSING_STEP = [
+  'Nothing was started or charged. Your prompt talks about the user\'s photo, but no photo was attached to this request.',
+  'If the user sent a photo and you can attach it, call create_generation again with that photo attached (image_files), and do not describe the photo in words instead.',
+  'If the user sent a photo but you cannot pass chat attachments to tools (for example in Claude), open Hansora\'s upload card with the same model_id and prompt instead, so the user uploads the photo there:',
+  'open_image_to_video_upload_card for a video from one photo, or start_multimedia_generation with required_inputs ["image"] for a picture edit or several photos. Tell the user in one short line to upload the photo in the card.',
+  'If there is no photo from the user, call create_generation again with a prompt that does not mention one. Do not tell the user about this check.'
+].join(' ');
 async function missingPhotoResultFor(userId, model, input) {
   if (!PHOTO_REFERENCE.test(String(input.prompt || ''))) return null;
   const files = normalizeGenerationFiles(input);
@@ -368,7 +376,7 @@ async function missingPhotoResultFor(userId, model, input) {
   if (await hadRecentOutcome(userId, ['photo_missing'], new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
   const value = {
     ok: false, error: 'photo_missing', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
-    next_step: 'Nothing was started or charged. Your prompt talks about the user\'s photo, but no photo was attached to this request. If the user sent a photo for this video, call create_generation again with that photo attached (image_files), and do not describe the photo in words instead. If there is no photo from the user, call create_generation again with a prompt that does not mention one. Do not tell the user about this.'
+    next_step: PHOTO_MISSING_STEP
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
@@ -840,12 +848,13 @@ async function batchFields(userId, runId) {
   const batch = rows.map(batchItem);
   const count = (status) => batch.filter((item) => item.status === status).length;
   const ready = batch.map((item, index) => ({ ...item, number: index + 1 })).filter((item) => item.status === 'ready');
+  // Each ChatGPT card shows only its own result: ChatGPT already makes one card per generation, so a gallery of the
+  // whole burst in every card repeated the same images. ChatGPT still gets the full list as text.
   return {
-    batch,
     batch_summary: [
       `${batch.length} generations were started together in this request: ${count('ready')} ready, ${count('processing')} still generating, ${count('failed')} failed.`,
       ready.length ? `Ready results: ${ready.map((item) => `#${item.number} ${item.result_url}`).join(' ; ')}.` : '',
-      'The card shows all of them as a gallery; in your reply also give the user a link to every ready result above, numbered in this order, so none is missed.',
+      'Each card shows only its own result; in your reply also give the user a link to every ready result above, numbered in this order, so none is missed.',
       count('processing') ? 'Results that are still generating are not missing: call get_generation again with any of these run_ids in a little while to refresh all of them.' : ''
     ].filter(Boolean).join(' ')
   };
@@ -1213,7 +1222,7 @@ export function createHansoraServer(ctx) {
       const uploadLimits = {
         image: { max_files: Number(limits.max_images) || defaultCounts.image, max_mb: 30 },
         video: { max_files: Number(limits.max_videos) || defaultCounts.video, max_mb: 200 },
-        audio: { max_files: Number(limits.max_audio) || defaultCounts.audio, max_mb: model.id === 'seedance25' ? 15 : 200 }
+        audio: { max_files: Number(limits.max_audio) || defaultCounts.audio, max_mb: model.id === 'seedance25' || model.id === 'seedance25-flash' ? 15 : 200 }
       };
       const price = quote(model.id, {
         duration: input.duration,
@@ -1411,6 +1420,10 @@ export function createHansoraServer(ctx) {
         }
         const automatic = await getRecentAutoVideo(userId);
         if (automatic) return autoVideoAlreadyStarted(model, automatic);
+        const missing = await missingPhotoResultFor(userId, model, input);
+        if (missing) return missing;
+      }
+      if (model.category === 'image') {
         const missing = await missingPhotoResultFor(userId, model, input);
         if (missing) return missing;
       }
