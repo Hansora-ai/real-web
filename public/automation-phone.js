@@ -22,6 +22,8 @@
   let saved = {};
   // numbers: the business's Hansora numbers (one per country). requests: the owner's contact requests per country.
   let line = { numbers:[], countries:[], requests:[], loaded:false, where:'' };
+  // WhatsApp calls state (see whatsappDetail); declared here because render() runs before the helpers below.
+  let waCalls = { loading: true };
   // Every country an owner can pick. Countries where local numbers are being
   // prepared (paperwork or a local operator) are marked as coming soon.
   const ALL_COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
@@ -60,6 +62,7 @@
   $('#phone-loading').hidden = true; $('#phone-app').hidden = false;
   render();
   loadLine();
+  loadWhatsAppCalls();
   loadCalls();
   preloadVoices();
 
@@ -67,6 +70,7 @@
   document.querySelectorAll('input[name="answer-mode"]').forEach(input => input.addEventListener('change', renderLine));
   document.querySelectorAll('input[name="language-mode"]').forEach(input => input.addEventListener('change', renderLanguages));
   for (const box of ['#line-contact', '#option-detail', '#phone-live', '#line-numbers', '#sip-import']) $(box).addEventListener('click', event => { const button = event.target.closest('[data-line-action]'); if (button) lineAction(button.dataset.lineAction, button); });
+  $('#option-detail').addEventListener('click', event => { const button = event.target.closest('[data-wa-calls]'); if (button && !button.disabled) whatsappCallsAction(button.dataset.waCalls, button); });
   // The contact field's hint follows the chosen method.
   document.addEventListener('change', event => { if (event.target.matches('[data-contact-method]')) event.target.closest('.contact-box').querySelector('[data-contact-value]').placeholder = CONTACT_METHODS[event.target.value][1]; });
   $('#celebrate-done').addEventListener('click', () => { $('#phone-celebrate').hidden = true; });
@@ -341,7 +345,7 @@
   function renderReview() {
     const data = collect();
     const answer = { no_answer:'If you don’t answer or are busy' }[data.answer_mode] || 'Every call';
-    const numbers = liveNumbers().map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? 'WhatsApp · calls coming soon' : 'Not set up yet');
+    const numbers = liveNumbers().map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? (waCalls.calling?.enabled ? `WhatsApp · ${waCalls.number?.display || 'calls on'}` : 'WhatsApp · calls not on yet') : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
     // Each card opens its settings right here, under the test call, so the owner can change and test again.
     $('#phone-review').innerHTML = [['Number', numbers, 1], ['Voice', data.voice, 2], ['Answers', answer, 3], ['Languages', languages, 3], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message', 'calls']].map(([label, value, target]) => `<button type="button" data-edit-step="${target}" title="Change ${label.toLowerCase()}"><span>${label}<em>Edit</em></span><strong>${escapeHtml(value)}</strong></button>`).join('');
@@ -522,9 +526,44 @@
     const method = CONTACT_METHODS[known?.contact_method] ? known.contact_method : 'whatsapp';
     return `<div class="contact-box" data-wants="local_number" style="margin:0 0 18px;padding:18px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)"><strong style="display:block;font-size:15px">Want a local ${name} number?</strong><p class="ui-hint" style="margin:4px 0 12px">Leave your WhatsApp or Telegram and we’ll set it up with you, usually within a day.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><select class="ui-input" data-contact-method style="width:auto;min-width:130px">${Object.entries(CONTACT_METHODS).map(([value, [label]]) => `<option value="${value}"${value === method ? ' selected' : ''}>${label}</option>`).join('')}</select><input class="ui-input" data-contact-value value="${escapeHtml(known?.contact_value || '')}" placeholder="${escapeHtml(CONTACT_METHODS[method][1])}" style="flex:1;min-width:180px"><button class="ui-btn primary" type="button" data-line-action="contact">Contact me</button></div></div>`;
   }
-  // WhatsApp: the business connects its WhatsApp; calls on it are answered once WhatsApp calling opens.
+  // WhatsApp calls (beta): the business's connected WhatsApp number answers calls with the AI employee.
+  // Turned on here (automation-whatsapp-calls); when Meta refuses, its own reason is shown.
+  async function loadWhatsAppCalls() {
+    // Local preview: a sample connected number, so the card can be seen without a real WhatsApp.
+    if (api.isLocalPreview) { waCalls = { connected: true, number: { display: '+1 555 010 0000', coexistence: false }, calling: { enabled: false, last_error: null } }; redrawWhatsApp(); return; }
+    try {
+      const response = await api.authenticatedFetch(`/.netlify/functions/automation-whatsapp-calls?business_id=${encodeURIComponent(businessId)}`);
+      waCalls = await response.json().catch(() => ({ error: true }));
+      if (!response.ok) waCalls = { error: true };
+    } catch (_) { waCalls = { error: true }; }
+    redrawWhatsApp();
+  }
+  async function whatsappCallsAction(action, button) {
+    if (button) { button.disabled = true; button.textContent = action === 'enable' ? 'Turning on…' : 'Turning off…'; }
+    if (api.isLocalPreview) { waCalls = { ...waCalls, calling: { enabled: action === 'enable', last_error: null } }; redrawWhatsApp(); return; }
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-whatsapp-calls', { method: 'POST', body: JSON.stringify({ business_id: businessId, action }) });
+      const data = await response.json().catch(() => ({}));
+      if (data && 'calling' in data) waCalls = data;
+      if (response.ok) ui.toast(action === 'enable' ? 'WhatsApp calls are on. Call your WhatsApp number to test it.' : 'WhatsApp calls are off.');
+      else if (!data?.calling) ui.toast('Could not change WhatsApp calls. Please try again.');
+    } catch (_) { ui.toast('Could not change WhatsApp calls. Please try again.'); }
+    redrawWhatsApp();
+  }
+  // The card lives in the phone-line box: redraw that box (and the summary) after a change.
+  function redrawWhatsApp() { renderLine(); render(); }
   function whatsappDetail() {
-    return `<div style="display:flex;gap:14px;align-items:flex-start;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:50%;background:#25d366;color:#fff;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5.1 5.24-1.37A9.9 9.9 0 1 0 12.04 2Zm4.5 11.95c-.25-.12-1.46-.72-1.69-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.79.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.32-2.9c-.25-.43.25-.4.71-1.33.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.41-.56-.42h-.48a.92.92 0 0 0-.66.31 2.78 2.78 0 0 0-.87 2.07 4.83 4.83 0 0 0 1.01 2.56 11.05 11.05 0 0 0 4.23 3.74c.59.26 1.05.41 1.41.52a3.4 3.4 0 0 0 1.56.1c.48-.07 1.46-.6 1.67-1.18.2-.58.2-1.07.14-1.18-.06-.1-.22-.16-.47-.29Z"/></svg></span><div style="flex:1"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong>WhatsApp messages and calls</strong><span class="ui-badge amber">Coming soon</span></div><p class="ui-hint" style="margin:4px 0 12px">Soon your AI employee answers your WhatsApp messages and calls, in any country, with no phone number to buy.</p><span class="ui-btn secondary" aria-disabled="true" style="opacity:.6;cursor:default">Coming soon</span></div></div>`;
+    const icon = `<span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:50%;background:#25d366;color:#fff;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5.1 5.24-1.37A9.9 9.9 0 1 0 12.04 2Zm4.5 11.95c-.25-.12-1.46-.72-1.69-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.79.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.32-2.9c-.25-.43.25-.4.71-1.33.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.41-.56-.42h-.48a.92.92 0 0 0-.66.31 2.78 2.78 0 0 0-.87 2.07 4.83 4.83 0 0 0 1.01 2.56 11.05 11.05 0 0 0 4.23 3.74c.59.26 1.05.41 1.41.52a3.4 3.4 0 0 0 1.56.1c.48-.07 1.46-.6 1.67-1.18.2-.58.2-1.07.14-1.18-.06-.1-.22-.16-.47-.29Z"/></svg></span>`;
+    const box = (title, badge, text, actions = '') => `<div style="display:flex;gap:14px;align-items:flex-start;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm)">${icon}<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong>${title}</strong>${badge}</div>${text}${actions}</div></div>`;
+    if (waCalls.loading) return box('WhatsApp calls', '', '<p class="ui-hint" style="margin:4px 0 0">Checking your WhatsApp…</p>');
+    if (waCalls.error) return box('WhatsApp calls', '', '<p class="ui-hint" style="margin:4px 0 0">Your WhatsApp could not be checked. Refresh the page to try again.</p>');
+    if (!waCalls.connected) return box('WhatsApp calls', '<span class="ui-badge sm">Beta</span>', '<p class="ui-hint" style="margin:4px 0 12px">Connect your WhatsApp number first. Then your AI employee can answer the calls customers make to it.</p>', `<a class="ui-btn secondary" href="automation-connect.html?channel=whatsapp&business=${encodeURIComponent(businessId)}">Connect WhatsApp</a>`);
+    const number = escapeHtml(waCalls.number?.display || 'your WhatsApp number');
+    if (waCalls.calling?.enabled) return box(`WhatsApp calls on ${number}`, '<span class="ui-badge green sm">On</span>', '<p class="ui-hint" style="margin:4px 0 12px">Customers who call this WhatsApp number talk to your AI employee, with the same voice, rules and per-minute credits as phone calls. Call it from another phone to test.</p>', '<button class="ui-btn secondary" type="button" data-wa-calls="disable">Turn off WhatsApp calls</button>');
+    const failed = waCalls.calling?.last_error;
+    const why = failed ? `<div class="ui-note" style="margin:0 0 12px;border-color:rgba(255,69,58,.45)"><strong style="color:var(--text)">Meta did not turn calls on.</strong>${failed.hint ? `<br>${escapeHtml(failed.hint)}` : ''}${failed.meta_message ? `<br><span class="ui-hint">Meta: “${escapeHtml(failed.meta_message)}”${failed.meta_details ? ` (${escapeHtml(failed.meta_details)})` : ''}${failed.meta_code != null ? ` · code ${escapeHtml(String(failed.meta_code))}` : ''}</span>` : ''}</div>` : '';
+    const shared = waCalls.number?.coexistence ? '<p class="ui-hint" style="margin:0 0 12px">This number is also used in the WhatsApp Business app. Meta may not allow calls through Hansora on it; turning calls on will tell you.</p>' : '';
+    return box(`WhatsApp calls on ${number}`, '<span class="ui-badge sm">Beta</span>', `<p class="ui-hint" style="margin:4px 0 12px">Turn on calls for this number, and your AI employee answers customers who call it on WhatsApp.</p>${shared}${why}`, `<button class="ui-btn" type="button" data-wa-calls="enable">${failed ? 'Try again' : 'Turn on WhatsApp calls'}</button>`);
   }
   function notLiveOffer() { return mode() === 'whatsapp' ? whatsappDetail() : line.where && !readyCountries().has(line.where) ? contactCard() : ''; }
   function showCelebration(number) {
