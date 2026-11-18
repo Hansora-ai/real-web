@@ -72,6 +72,8 @@ const BUSY_STEPS = {
 
 // Each get_generation call draws another card, so after a start the assistant should leave updates to the
 // card unless the user asks.
+const CHECK_CARD_WINDOW_MS = 6 * 60 * 60 * 1000;
+const STILL_GENERATING_STEP = 'Still generating. The card that started it shows the progress and the result by itself, so do not call get_generation again on your own: each call adds another card. Call it again only when the user asks about the status or the result.';
 const CARD_FOLLOWS_RUN = 'Tell the user briefly that it has started. The card shows progress and the result by itself, so do not call get_generation on your own; call it only when the user asks about the status or the result, or says they cannot see it.';
 
 function toolError(error, kind = 'read') {
@@ -92,7 +94,7 @@ function toolError(error, kind = 'read') {
 function startingRun(runId) {
   const startedAt = Number((String(runId).match(/-mcp-(?:audio-)?(\d{13})-/) || [])[1]);
   if (!Number.isFinite(startedAt) || Date.now() - startedAt > 5 * 60 * 1000) return null;
-  return { run_id: runId, status: 'processing', message: 'Starting. This card updates automatically.', next_step: 'The generation is starting. Check again with get_generation in a little while.' };
+  return { run_id: runId, status: 'processing', message: 'Starting. This card updates automatically.', next_step: 'The generation is starting. The card shows the progress and the result by itself; do not call get_generation again on your own, only when the user asks.' };
 }
 
 function generationToolMeta(invoking, invoked) {
@@ -855,7 +857,7 @@ async function batchFields(userId, runId) {
       `${batch.length} generations were started together in this request: ${count('ready')} ready, ${count('processing')} still generating, ${count('failed')} failed.`,
       ready.length ? `Ready results: ${ready.map((item) => `#${item.number} ${item.result_url}`).join(' ; ')}.` : '',
       'Each card shows only its own result; in your reply also give the user a link to every ready result above, numbered in this order, so none is missed.',
-      count('processing') ? 'Results that are still generating are not missing: call get_generation again with any of these run_ids in a little while to refresh all of them.' : ''
+      count('processing') ? 'Results that are still generating are not missing: their cards show them by themselves when they are ready. Call get_generation again only when the user asks.' : ''
     ].filter(Boolean).join(' ')
   };
 }
@@ -1689,6 +1691,10 @@ export function createHansoraServer(ctx) {
         const starting = startingRun(run_id);
         return starting ? jsonText(starting) : toolError(new Error('generation_not_found'));
       }
+      // The assistant checking a run it started recently: the card that started it already shows it, so this
+      // call's card is drawn as one slim line, and the assistant is told again that it need not check.
+      const startedHere = /-mcp-/.test(run_id) && Date.now() - Date.parse(generation.created_at || '') < CHECK_CARD_WINDOW_MS;
+      const slim = (value) => (startedHere && value && typeof value === 'object' ? { ...value, card_view: 'compact' } : value);
       // The card refreshes through this tool every few seconds; never query model health here.
       const unavailable = new Set();
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
@@ -1699,11 +1705,11 @@ export function createHansoraServer(ctx) {
       const presented = presentGeneration(generation, run_id, unavailable);
       if (presented.status === 'ready' && generation.kind === 'image') {
         const automatic = await autoVideoFromPicture({ userId, token, origin, pictureRun: run_id, picture: generation, waitUntil }).catch(() => null);
-        if (automatic) return jsonText(automatic);
+        if (automatic) return jsonText(slim(automatic));
       }
       const retried = await providerRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null)
         || await imageProviderRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
-      if (retried) return jsonText(retried);
+      if (retried) return jsonText(slim(retried));
       // A refused first video (temporary issues already switch model on their own).
       if (presented.status === 'failed' && presented.failure_kind && presented.failure_kind !== 'temporary') {
         const meta = generation.meta && typeof generation.meta === 'object' ? generation.meta : {};
@@ -1719,7 +1725,8 @@ export function createHansoraServer(ctx) {
           presented.next_step = step.replace(' could not make this video and nothing was charged.', ' could not make this video; its credits were refunded.');
         }
       }
-      return jsonText({ ...presented, ...(await batchFields(userId, run_id)) });
+      if (startedHere && presented.status === 'processing' && !presented.next_step) presented.next_step = STILL_GENERATING_STEP;
+      return jsonText(slim({ ...presented, ...(await batchFields(userId, run_id)) }));
     } catch (error) { return toolError(error); }
   });
 
