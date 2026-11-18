@@ -1659,3 +1659,20 @@ test('a picture edit that mentions the user\'s photo with no photo attached poin
   });
   assert.notEqual(withPhoto.result.structuredContent.error, 'photo_missing');
 });
+
+test('the assistant checking a run it just started gets the slim card and is told the card follows it', async () => {
+  const at = new Date(Date.now() - 60 * 1000).toISOString();
+  const ready = { id: 'r', provider: 'Nano Banana 2.1', kind: 'image', prompt: 'cabin', result_url: 'https://cdn.test/cabin.png', created_at: at, meta: { run_id: 'u-mcp-ready', status: 'done', model: 'nano-banana-2-1' } };
+  const done = await callTool('get_generation', { run_id: 'u-mcp-ready' }, { credits: 3, generations: [ready] });
+  assert.equal(done.result.structuredContent.card_view, 'compact');
+  assert.equal(done.result.structuredContent.result_url, 'https://cdn.test/cabin.png', 'the assistant still gets the link for its reply');
+  const working = { ...ready, result_url: null, meta: { ...ready.meta, run_id: 'u-mcp-busy', status: 'processing' } };
+  const busy = await callTool('get_generation', { run_id: 'u-mcp-busy' }, { credits: 3, generations: [working] });
+  assert.equal(busy.result.structuredContent.card_view, 'compact');
+  assert.match(busy.result.structuredContent.next_step, /do not call get_generation again on your own/);
+  // An older result the user asks about, or one made on the website, keeps the full card.
+  const old = { ...ready, created_at: new Date(Date.now() - 2 * 86400000).toISOString() };
+  assert.equal((await callTool('get_generation', { run_id: 'u-mcp-ready' }, { credits: 3, generations: [old] })).result.structuredContent.card_view, undefined);
+  const site = { ...ready, meta: { ...ready.meta, run_id: 'website-run-1' } };
+  assert.equal((await callTool('get_generation', { run_id: 'website-run-1' }, { credits: 3, generations: [site] })).result.structuredContent.card_view, undefined);
+});
