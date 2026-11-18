@@ -29,7 +29,7 @@ export async function handler(event){
   if(event.httpMethod!=='POST')return json(405,{error:'method_not_allowed'});
   if(!internalAuthorized(event))return json(401,{error:'unauthorized'});
   const startedAt=Date.now();
-  let eventId='';let stopTyping=()=>{};let pendingReply=null;
+  let eventId='';let stopTyping=()=>{};let pendingReply=null;let watchdog=null;
   try{
     const body=JSON.parse(event.body||'{}');eventId=String(body.event_id||'');
     if(!/^[0-9a-f-]{36}$/i.test(eventId))return json(400,{error:'invalid_event_id'});
@@ -146,6 +146,16 @@ export async function handler(event){
     if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await sendWaitingNote({businessId:account.business_id,conversation,settings,provider:'instagram',send:text=>sendInstagramText({instagramUserId:account.provider_resource_id,recipientId:message.senderId,text,accessToken:decryptSecret(credential)})});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
 
     pendingReply={businessId:account.business_id,conversationId:conversation.id,customer:contact.display_name,channel:'Instagram DM'};
+    // Safety net: whatever step is slow, the customer never sees "typing…" for minutes with no answer. After 3 minutes
+    // without a sent reply the typing stops, the chat is marked "Needs you" and the owner is alerted.
+    watchdog=setTimeout(()=>{
+      if(!pendingReply||replySent)return;
+      const late=pendingReply;pendingReply=null;
+      console.error('automation-instagram reply took too long; handed to the owner',{eventId,conversationId:late.conversationId});
+      stopTyping();
+      flagFailedReply({...late,eventId}).catch(()=>null);
+      serviceUpdate('automation_webhook_events',`id=eq.${encodeURIComponent(eventId)}`,{status:'failed',last_error:'reply_took_too_long'}).catch(()=>null);
+    },180000);
     const session=take(await sessionP);
     let flowInstruction='';
     if(session){
@@ -216,7 +226,7 @@ export async function handler(event){
     console.error('automation-instagram-process error',{eventId,message:error?.message,status:error?.status,providerStatus:error?.providerStatus});
     if(eventId)await serviceUpdate('automation_webhook_events',`id=eq.${encodeURIComponent(eventId)}`,{status:'failed',last_error:String(error?.message||'processing_failed').slice(0,2000)}).catch(()=>null);
     return json(Number(error?.status)||500,{error:'instagram_message_processing_failed'});
-  }finally{stopTyping();}
+  }finally{clearTimeout(watchdog);stopTyping();}
 }
 
 function internalAuthorized(event){const expected=String(process.env.HANSORA_AUTOMATION_INTERNAL_SECRET||'');const actual=String(event.headers?.['x-hansora-internal-secret']||event.headers?.['X-Hansora-Internal-Secret']||'');return expected.length>=32&&actual===expected;}
