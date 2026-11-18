@@ -22,6 +22,7 @@ import { mediaFallback, mediaMessage, understandMedia } from '../../lib/automati
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
 import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
+import { ownerRepliedOnInstagram } from '../../lib/automation/owner-reply.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -209,6 +210,15 @@ export async function handler(event){
     const currentConversation=await first(`/rest/v1/automation_conversations?id=eq.${conversation.id}&select=ai_enabled,status&limit=1`);
     if(!handedOff&&(!currentConversation?.ai_enabled||['human_handling','resolved','archived'].includes(currentConversation.status))){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
     if(await hasNewerCustomerMessage(turn)){pendingReply=null;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}
+    // The owner answered this customer from the Instagram app while the AI was preparing: the AI stays quiet and pauses
+    // here at once (the echo handler would pause it a few seconds later, too late for this reply).
+    const ownerAnswered=!handedOff&&await ownerRepliedOnInstagram({businessId:account.business_id,conversationId:conversation.id,instagramAccountId:account.provider_resource_id,customerId:message.senderId,since:turn.occurredAt}).catch(error=>{console.warn('owner reply check failed',{message:error?.message});return false;});
+    if(ownerAnswered){
+      pendingReply=null;
+      await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{ai_enabled:false,status:'human_handling',summary:'You replied from the Instagram app, so the AI is paused in this chat. Turn it back on in the inbox when you want it to answer again.'}).catch(()=>null);
+      console.log('owner replied from Instagram while the AI was preparing; AI reply not sent',{conversationId:conversation.id});
+      await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:'owner_replied'});
+    }
     stopRefresh();replySent=true;
     const sent=await sendInstagramText({instagramUserId:account.provider_resource_id,recipientId:message.senderId,text:generated.text,accessToken:decryptSecret(credential)});
     pendingReply=null; // the customer has the answer: a later error (billing, logging) is not a missed reply
