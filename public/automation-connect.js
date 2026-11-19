@@ -4,6 +4,19 @@
   const loading = document.querySelector('#connect-loading');
   const errorBox = document.querySelector('#connect-error');
   const workflow = document.querySelector('#connect-workflow');
+  // On phones Meta's WhatsApp window opens in this same tab and comes back here with ?code=&state= (a popup tab
+  // could not send the result back). The business and channel are restored from what was saved before leaving.
+  const WA_REDIRECT_KEY = 'hansora.whatsapp.redirect';
+  const WA_REDIRECT_URI = `${location.origin}/automation-connect.html`;
+  const waReturn = (() => {
+    const query = new URLSearchParams(location.search);
+    if (!query.has('state') || !(query.has('code') || query.has('error'))) return null;
+    let saved = null; try { saved = JSON.parse(sessionStorage.getItem(WA_REDIRECT_KEY) || 'null'); sessionStorage.removeItem(WA_REDIRECT_KEY); } catch (_) {}
+    if (!saved || saved.state !== query.get('state') || !saved.business) return null;
+    const result = { business:saved.business, code:query.get('code') || '' };
+    history.replaceState(null, '', `${location.pathname}?business=${encodeURIComponent(saved.business)}&channel=whatsapp`);
+    return result;
+  })();
   const channel = new URLSearchParams(location.search).get('channel');
   const params = new URLSearchParams(location.search);
   const businessId = params.get('business') || (api.isLocalPreview ? 'preview' : '');
@@ -501,6 +514,15 @@
         let data=event.data;try{if(typeof data==='string')data=JSON.parse(data)}catch(_){return}
         if(data?.type!=='WA_EMBEDDED_SIGNUP')return;if(['FINISH','FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING','FINISH_ONLY_WABA'].includes(data.event)){session.finished=true;const info=data.data||{};session.coexistence=data.event==='FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'||info.is_on_biz_app===true;session.wabaId=String(info.waba_id||(Array.isArray(info.messaging_account_ids)?info.messaging_account_ids[0]:'')||(Array.isArray(info.waba_ids)?info.waba_ids[0]:'')||'');session.phoneNumberId=String(data.data?.phone_number_id||'');complete().catch(handleSignupError);}if(['CANCEL','ERROR'].includes(data.event)){window.removeEventListener('message',listener);button.disabled=false;showError(data.event==='CANCEL'?'WhatsApp authorization was cancelled.':'WhatsApp authorization could not be completed.');}
       };
+      // Phones: open Meta's window in this tab and come back here (see waReturn at the top).
+      if(phoneBrowser()){
+        const state=Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('');
+        try{sessionStorage.setItem(WA_REDIRECT_KEY,JSON.stringify({state,business:businessId}));}catch(_){}
+        const url=new URL(`https://www.facebook.com/${settings.graph_version}/dialog/oauth`);
+        url.search=new URLSearchParams({client_id:settings.app_id,redirect_uri:WA_REDIRECT_URI,state,config_id:settings.configuration_id,response_type:'code',override_default_response_type:'true',extras:JSON.stringify({setup:{},version:'v5'})}).toString();
+        location.assign(url.toString());
+        return;
+      }
       window.addEventListener('message',listener);
       window.FB.login(login=>{if(login?.authResponse?.code){session.code=String(login.authResponse.code);complete().catch(handleSignupError)}else{window.removeEventListener('message',listener);button.disabled=false;showError('WhatsApp authorization was not completed.')}},{config_id:settings.configuration_id,response_type:'code',override_default_response_type:true,extras:{setup:{},version:'v5'}});
       function handleSignupError(error){window.removeEventListener('message',listener);button.disabled=false;session.submitted=false;showError(api.displayError(error));}
@@ -526,6 +548,7 @@
     // configured yet, and disappears for everyone once it is.
     if (api.isLocalPreview) document.querySelector('#whatsapp-token').hidden = false;
     else prepareWhatsApp().then(ready => { document.querySelector('#whatsapp-token').hidden = !ready?.missing; }).catch(() => {});
+    if (waReturn && waReturn.business === businessId) finishWhatsAppReturn();
     document.querySelector('#whatsapp-token-form').addEventListener('submit', async event => {
       event.preventDefault(); errorBox.hidden = true;
       const phoneNumberId = document.querySelector('#wa-token-phone').value.trim(), wabaId = document.querySelector('#wa-token-waba').value.trim(), accessToken = document.querySelector('#wa-token-value').value.trim();
@@ -540,6 +563,21 @@
       } catch (error) { showError(api.displayError(error)); }
       finally { submit.disabled = false; }
     });
+  }
+
+  function phoneBrowser(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));}
+  // Back from Meta's window on a phone: finish the connection with the code it sent.
+  async function finishWhatsAppReturn(){
+    const button=document.querySelector('#provider-connect');errorBox.hidden=true;
+    if(!waReturn.code){document.querySelector('#connect-save-state').textContent='Not connected yet';return showError('WhatsApp authorization was not completed.');}
+    if(button)button.disabled=true;document.querySelector('#connect-save-state').textContent='Securing the selected WhatsApp number…';
+    try{
+      const response=await api.authenticatedFetch('/.netlify/functions/automation-whatsapp-connect',{method:'POST',body:JSON.stringify({business_id:businessId,code:waReturn.code,redirect_uri:WA_REDIRECT_URI})});
+      const result=await response.json().catch(()=>({}));
+      if(response.status===409&&result.error==='whatsapp_pin_required'&&result.phone_number_id){if(button)button.disabled=false;return askForPin(result.phone_number_id);}
+      if(!response.ok)throw new Error(result.error||'whatsapp_connection_failed');
+      whatsAppConnected(result,result.account?.phone_number_id||'');
+    }catch(error){if(button)button.disabled=false;document.querySelector('#connect-save-state').textContent='Not connected yet';showError(api.displayError(error));}
   }
 
   function whatsAppConnected(result,phoneNumberId){
