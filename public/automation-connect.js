@@ -11,8 +11,9 @@
   const waReturn = (() => {
     const query = new URLSearchParams(location.search);
     if (!query.has('state') || !(query.has('code') || query.has('error'))) return null;
-    let saved = null; try { saved = JSON.parse(sessionStorage.getItem(WA_REDIRECT_KEY) || 'null'); sessionStorage.removeItem(WA_REDIRECT_KEY); } catch (_) {}
-    if (!saved || saved.state !== query.get('state') || !saved.business) return null;
+    // localStorage, not sessionStorage: if Meta ends in another tab, that tab finishes the connection.
+    let saved = null; try { saved = JSON.parse(localStorage.getItem(WA_REDIRECT_KEY) || 'null'); localStorage.removeItem(WA_REDIRECT_KEY); } catch (_) {}
+    if (!saved || saved.state !== query.get('state') || !saved.business || !(Date.now() - Number(saved.at) < 3600000)) return null;
     const result = { business:saved.business, code:query.get('code') || '' };
     history.replaceState(null, '', `${location.pathname}?business=${encodeURIComponent(saved.business)}&channel=whatsapp`);
     return result;
@@ -517,7 +518,7 @@
       // Phones: open Meta's window in this tab and come back here (see waReturn at the top).
       if(phoneBrowser()){
         const state=Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('');
-        try{sessionStorage.setItem(WA_REDIRECT_KEY,JSON.stringify({state,business:businessId}));}catch(_){}
+        try{localStorage.setItem(WA_REDIRECT_KEY,JSON.stringify({state,business:businessId,at:Date.now()}));}catch(_){}
         const url=new URL(`https://www.facebook.com/${settings.graph_version}/dialog/oauth`);
         url.search=new URLSearchParams({client_id:settings.app_id,redirect_uri:WA_REDIRECT_URI,state,config_id:settings.configuration_id,response_type:'code',override_default_response_type:'true',extras:JSON.stringify({setup:{},version:'v5'})}).toString();
         location.assign(url.toString());
