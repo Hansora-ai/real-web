@@ -123,7 +123,7 @@ test('Every mode keeps its detailed built-in instructions; the user text is only
   assert.equal(templateInput({video_url:url,image_urls:body.image_urls,mode,prompt}).transformation_prompt,'');
  }
  const custom='Make the jacket red.',text=common.promptFor({...body,mode:'swap',prompt:custom});
- assert.match(text,/Replace the main object or objects in @Video 1/);assert.match(text,/the user's prompt wins\.\nUser's prompt: Make the jacket red\.$/);
+ assert.match(text,/Replace the main object or objects in @Video 1/);assert.match(text,/^Most important: follow @Video 1 frame by frame\./);assert.match(text,/Extra request from the user: Make the jacket red\.\nApply it to the look/);assert.match(text,/It never changes the movements, lip movements, positions, camera or timing of @Video 1\./);assert.match(text,/Only the look of what is replaced changes\.$/);
 });
 test('Source preparation uploads a silent video and saves the original soundtrack on the server',async()=>{
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
