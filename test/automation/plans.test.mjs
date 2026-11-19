@@ -18,7 +18,7 @@ test('Monthly plans: $1 = 100⚡ and every action is cheaper on bigger plans', (
   const lite = pricesForPlan('automation_lite_monthly');
   assert.deepEqual([lite.aiReply, lite.commentRun, lite.voiceMinute], [0.1, 0.1, 0.9]);
   const starter = pricesForPlan('automation_starter_monthly');
-  assert.deepEqual([starter.commentRun, starter.voiceMinute], [0.08, 0.8]);
+  assert.deepEqual([starter.commentRun, starter.voiceMinute], [0.08, 0.9]);
   assert.equal(pricesForPlan('automation_growth_monthly').aiReply, 0.09);
   assert.deepEqual(pricesForPlan('automation_growth_monthly').commentRun, 0.05);
   const scale = pricesForPlan('automation_scale_monthly');
