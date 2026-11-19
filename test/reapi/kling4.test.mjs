@@ -14,6 +14,8 @@ const pricing=require('../../public/kling4-pricing.js');
 const {build}=require('../../lib/kling4/request.cjs');
 const launch25=require('../../netlify/functions/run-kling-40.js').handler;
 const launchUpscale=require('../../netlify/functions/run-upscale.js').handler;
+// These tests cover Henshin Lite on Kling 4.0 (videos over 15 s, or with the Wan route off): see test/henshin/henshin-lite-wan.test.cjs for Wan 3.0.
+process.env.HENSHIN_LITE_WAN='off';
 const lite=require('../../netlify/functions/run-henshin.js').handler;
 const checker=require('../../netlify/functions/kling4-check.js').handler;
 const {transition}=require('../../lib/reapi/billing.cjs');
