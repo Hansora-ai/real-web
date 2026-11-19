@@ -81,7 +81,10 @@
     const card = event.target.closest('[data-choice]'); if (!card) return;
     if (card.dataset.choice === 'full') { showForm(); return; }
     document.querySelector('#comments-start').hidden = false;
-    document.querySelector('#comments-name').focus();
+    // On phones the keyboard is not opened by itself: the field is shown and the owner taps it.
+    const nameField = document.querySelector('#comments-name');
+    if (matchMedia('(pointer: coarse)').matches) nameField.scrollIntoView({ behavior:'smooth', block:'center' });
+    else nameField.focus();
   });
   document.querySelector('#comments-start').addEventListener('submit', async event => {
     event.preventDefault();

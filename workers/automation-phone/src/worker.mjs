@@ -57,9 +57,11 @@ function guardToolTurns(model, counts) {
 // Saved caller lines come from Gemini's separate transcription, which guessed
 // Armenian on phone audio as German or Spanish. Hint the employee's languages.
 // This changes only the written transcript, not what the model hears.
+// Gemini's transcription takes BCP-47 codes with a region (hy-AM, ru-RU); a bare "hy" is not on its list.
+const TRANSCRIPTION_LOCALES = { en: 'en-US', es: 'es-ES', fr: 'fr-FR', de: 'de-DE', it: 'it-IT', pt: 'pt-BR', ru: 'ru-RU', uk: 'uk-UA', pl: 'pl-PL', nl: 'nl-NL', tr: 'tr-TR', ar: 'ar-EG', hy: 'hy-AM', ka: 'ka-GE', zh: 'cmn-Hans-CN', ja: 'ja-JP', ko: 'ko-KR', hi: 'hi-IN' };
 function transcriptionLanguages(agent) {
   const configured = agent.supported_languages?.length ? agent.supported_languages : [agent.primary_language].filter(Boolean);
-  const languageCodes = [...new Set(configured.flatMap(code => { try { return Intl.getCanonicalLocales(code); } catch { return []; } }))];
+  const languageCodes = [...new Set(configured.flatMap(code => { const short = String(code || '').toLowerCase(); if (TRANSCRIPTION_LOCALES[short]) return [TRANSCRIPTION_LOCALES[short]]; try { return Intl.getCanonicalLocales(code); } catch { return []; } }))];
   return languageCodes.length ? { languageCodes } : {};
 }
 

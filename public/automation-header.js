@@ -226,6 +226,11 @@
     menuButton.addEventListener('click', () => { root.querySelector('.auto-menu-toggle')?.click(); menuButton.setAttribute('aria-expanded', String(root.classList.contains('menu-open'))); });
   }
 
+  // Phones: the bottom bar hides while a text field is being typed in (the keyboard would push it up over the page).
+  const typingField = target => target?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]):not([type=file]),textarea,select,[contenteditable="true"]');
+  document.addEventListener('focusin', event => { if (typingField(event.target)) document.body.classList.add('auto-typing'); });
+  document.addEventListener('focusout', () => setTimeout(() => { if (!typingField(document.activeElement)) document.body.classList.remove('auto-typing'); }, 50));
+
   // Phones: credits and the photo stay in the header, next to the light/dark switch, on every page
   // (header.js fills the same elements), instead of hiding inside the menu.
   placeAccount();
