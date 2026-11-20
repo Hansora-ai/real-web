@@ -89,3 +89,8 @@ test('Seedance from ChatGPT has sound unless the user asked for silence', () => 
     assert.equal(buildGenerationPayload(id, { prompt: 'silent clip', sound: false }, 'u', 'r').generate_audio, false, id);
   }
 });
+
+test('the video guide keeps sound on unless the user explicitly asked for a silent video', async () => {
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.match(VIDEO_SELECTION_GUIDE, /Sound stays on\. Make a video silent .* only when the user explicitly asked for no sound\. Never decide it yourself/);
+});
