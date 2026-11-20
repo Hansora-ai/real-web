@@ -6,7 +6,7 @@
    The pages load and work as before: this file runs after the page and adds the offer when the server answers.
      - every page: a small floating pill that opens the pricing page (with the countdown once the timer runs);
      - pricing pages: a countdown strip above the packs and, on each pack, the credits the offer gives (+25% free);
-     - pricing pages: a popup with the $4.99 starter pack, shown when the visitor is leaving or has waited a while
+     - pricing pages: a popup with the $4.99 starter pack, shown when the visitor is leaving (computer), comes back to the tab (phone) or has waited a while
        without buying. The starter pack is never in the pack list.
    The server decides who gets the offer and what a payment grants; this file only shows it. Everyone else sees
    nothing and the pages work as before. International cards only (Dodo). */
@@ -21,6 +21,10 @@
   var CACHE_PREFIX = "hansora:cgoffer:";
   var NOT_ELIGIBLE_CACHE_MS = 2 * 60 * 60 * 1000;
   var POPUP_DELAY_MS = 40 * 1000;
+  // Phones have no mouse, so "leaving through the top of the page" never fires there: on a phone the popup waits
+  // less, and also opens when the visitor comes back to the tab after switching away (back from ChatGPT, another app).
+  var POPUP_DELAY_PHONE_MS = 15 * 1000;
+  var RETURN_MIN_AWAY_MS = 3 * 1000;
   // The starter popup opens by itself once per person (remembered in this browser); after that only the button opens it.
   var POPUP_AUTO_KEY = "hansora:cgoffer:starter-auto:";
   var MULTIPLIER = 10; // stored credits -> credits as shown on the site
@@ -125,7 +129,7 @@
   // element_id = the detail):
   //   welcome_offer_shown           the banner with the clock appeared on the pricing page (once per visit)
   //   welcome_offer_pill_clicked    the pill on another page was clicked
-  //   welcome_starter_shown         the $4.99 popup appeared (details: waited / leaving / link)
+  //   welcome_starter_shown         the $4.99 popup appeared (details: waited / leaving / returned / link)
   //   welcome_starter_closed        it was closed (details: x / no_thanks / outside)
   //   welcome_starter_reopened      the small "Starter pack" button was clicked
   //   welcome_starter_buy_clicked   its Buy button was clicked
@@ -500,11 +504,28 @@
       if (document.documentElement.getAttribute("data-payment-mode") === "ru") return;
       openStarter(reason);
     }
-    popupTimer = setTimeout(function () { maybeOpen("waited"); }, POPUP_DELAY_MS);
+    var phone = isPhone();
+    popupTimer = setTimeout(function () { maybeOpen("waited"); }, phone ? POPUP_DELAY_PHONE_MS : POPUP_DELAY_MS);
     // On a computer: the pointer leaving through the top of the page means the visitor is about to go.
     document.addEventListener("mouseout", function (event) {
       if (!event.relatedTarget && event.clientY <= 0) maybeOpen("leaving");
     });
+    // On a phone: switching to another app or tab is the closest thing to leaving; show it when they come back.
+    if (phone) {
+      var hiddenAt = 0;
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden") { hiddenAt = Date.now(); return; }
+        if (hiddenAt && Date.now() - hiddenAt >= RETURN_MIN_AWAY_MS) maybeOpen("returned");
+        hiddenAt = 0;
+      });
+    }
+  }
+  function isPhone() {
+    try {
+      var coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      var noHover = window.matchMedia && window.matchMedia("(hover: none)").matches;
+      return Boolean(coarse && noHover) || /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent || "");
+    } catch (_) { return false; }
   }
   var popupArmed = false, shownByItself = false;
   function autoShown() {
