@@ -16,15 +16,15 @@ import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { veoResting } from '../../lib/hansora-mcp/veo-rest.mjs';
 import { useSavedFiles } from '../../lib/hansora-mcp/own-results.mjs';
 import { photoCount, recordPendingPhotos, recordPendingVideo, recordToolEvent, recordVideoRecipe } from '../../lib/hansora-mcp/events.mjs';
-import { NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
+import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoPlan, imageBackupOption, simpleVideoOption, firstVideoLengthNote, newSceneStep, grokEightSecondsStep, firstVideoOrder, insufficientCreditsResult, nextFirstVideoOption, optionsWithinBalance, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
 // Models that add a reference video's length to the price (on every platform that offers them).
-const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'kling40']);
+const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance25-flash', 'seedance20', 'wan-3', 'kling40', 'gemini-omni-flash-1-2']);
 // Launchers that report the real charge, measured from the uploaded files.
 const EDIT_MODELS = new Set(['henshin', 'henshin-lite']);
-const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'henshin', 'henshin-lite', 'kling40']);
+const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance25-flash', 'seedance20', 'wan-3', 'henshin', 'henshin-lite', 'kling40', 'gemini-omni-flash-1-2']);
 // Launchers that refuse any request without the quoted price, even without video input.
 const PRICE_CHECKED_MODELS = new Set(['henshin-lite', 'kling40']);
 // ChatGPT gives up on a tool call after roughly a minute; answer well before that.
@@ -72,6 +72,8 @@ const BUSY_STEPS = {
 
 // Each get_generation call draws another card, so after a start the assistant should leave updates to the
 // card unless the user asks.
+const CHECK_CARD_WINDOW_MS = 6 * 60 * 60 * 1000;
+const STILL_GENERATING_STEP = 'Still generating. The card that started it shows the progress and the result by itself, so do not call get_generation again on your own: each call adds another card. Call it again only when the user asks about the status or the result.';
 const CARD_FOLLOWS_RUN = 'Tell the user briefly that it has started. The card shows progress and the result by itself, so do not call get_generation on your own; call it only when the user asks about the status or the result, or says they cannot see it.';
 
 function toolError(error, kind = 'read') {
@@ -92,7 +94,7 @@ function toolError(error, kind = 'read') {
 function startingRun(runId) {
   const startedAt = Number((String(runId).match(/-mcp-(?:audio-)?(\d{13})-/) || [])[1]);
   if (!Number.isFinite(startedAt) || Date.now() - startedAt > 5 * 60 * 1000) return null;
-  return { run_id: runId, status: 'processing', message: 'Starting. This card updates automatically.', next_step: 'The generation is starting. Check again with get_generation in a little while.' };
+  return { run_id: runId, status: 'processing', message: 'Starting. This card updates automatically.', next_step: 'The generation is starting. The card shows the progress and the result by itself; do not call get_generation again on your own, only when the user asks.' };
 }
 
 function generationToolMeta(invoking, invoked) {
@@ -103,6 +105,11 @@ function generationToolMeta(invoking, invoked) {
   };
 }
 
+// Every ready result also says where the user's saved generations are (their own history page, no sales wording).
+// ?from=chatgpt_result lets the website count who opened it (public/header.js, click_events).
+const RESULT_LINK = 'https://hansora.co/usage.html?from=chatgpt_result';
+const RESULT_LINE = `After the result link, add this one plain line, worded as a fact with no sales wording: "All your generations are saved in your Hansora account: [check your generations](${RESULT_LINK})."`;
+
 function creditFailureMessage(meta) {
   const reason = [meta.error_summary, meta.error, meta.fail_reason].map((value) => (typeof value === 'string' ? value : '')).join(' ');
   if (!/not_enough_credits|insufficient_credits/i.test(reason)) return '';
@@ -111,7 +118,7 @@ function creditFailureMessage(meta) {
   const amounts = Number.isFinite(need) && Number.isFinite(credits)
     ? ` It needed ${Number((need * 10).toFixed(2))} Hansora credits and the balance was ${Number((credits * 10).toFixed(2))}.`
     : '';
-  return `Not enough credits for this generation.${amounts} Nothing was generated and no credits were used. Do not retry on your own; tell the user and let them choose how to continue.`;
+  return `Not enough credits for this generation.${amounts} Nothing was generated and no credits were used. Do not retry on your own; tell the user and let them choose how to continue. ${ACCOUNT_LINE}`;
 }
 
 function presentGeneration(generation, runId, unavailable = new Set()) {
@@ -164,6 +171,7 @@ function presentGeneration(generation, runId, unavailable = new Set()) {
       link_for_user: generation.result_url,
       next_step: [
         `The result is ready. Give the user this exact link to open or download it, copied character for character: ${generation.result_url} . Never build, shorten or change a link yourself.`,
+        RESULT_LINE,
         meta.henshin_model === 'lite' ? 'Only if they are not satisfied, offer to redo it with Henshin, the stronger version, and tell them its price from quote_generation; do not offer it otherwise.' : ''
       ].filter(Boolean).join(' ')
     } : {})
@@ -204,7 +212,7 @@ function temporaryIssueResult(model, price, unavailable, reason = '') {
 
 // reAPI runs a limited number of tasks at once for the whole account (150, shared by images and videos). Each
 // user may have up to 50 running per engine, so no single user or runaway series can take them all.
-const RUNNING_ENGINES = Object.freeze({ 'wan-3': 'wan-3', seedance25: 'seedance-2.5', seedance20: 'seedance-2.0' });
+const RUNNING_ENGINES = Object.freeze({ 'wan-3': 'wan-3', seedance25: 'seedance-2.5', 'seedance25-flash': 'seedance-2.5', seedance20: 'seedance-2.0' });
 const MAX_RUNNING_PER_USER = 50;
 function busyResult(model, { running = null, provider = false } = {}) {
   const value = {
@@ -249,7 +257,7 @@ function pictureNotReadyResult(model, pictureRun, planned = false) {
 // ready, under the picture's card. ChatGPT often stopped after the picture, so the user got a picture and no video.
 const PLAN_TTL_MS = 15 * 60 * 1000;
 // Results that send a request back to ChatGPT to be made again (another model, a question, a short wait).
-const SENT_BACK = new Set(['insufficient_credits', 'first_video_on_grok', 'first_paid_video_choice', 'too_many_running', 'picture_not_ready', 'temporarily_unavailable', 'model_temporarily_unavailable']);
+const SENT_BACK = new Set(['insufficient_credits', 'first_video_on_grok', 'first_video_on_wan', 'first_paid_video_choice', 'too_many_running', 'picture_not_ready', 'temporarily_unavailable', 'model_temporarily_unavailable']);
 const PHOTOS_KEPT_MS = 10 * 60 * 1000;
 const restoredPhotoInputs = new WeakSet();
 const AUTO_VIDEO_SUFFIX = '-video'; // getRecentAutoVideo (data.mjs) looks for the same ending
@@ -349,9 +357,17 @@ function autoVideoAlreadyStarted(model, automatic) {
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
-// A video prompt that talks about the user's photo, but no photo came with the request: ChatGPT forgot to attach
-// it. Asked once (nothing starts or is charged); sent again the same way, it starts.
+// A prompt that talks about the user's photo, but no photo came with the request: the assistant forgot to attach it,
+// or its app cannot pass chat attachments to tools at all (Claude), and would otherwise quietly make a text-only
+// result. Asked once (nothing starts or is charged); sent again the same way, it starts.
 const PHOTO_REFERENCE = /\b(supplied|attached|uploaded|provided|user'?s|this exact|the exact) (photo|image|picture|portrait|selfie|first frame)\b|\bimage-to-video\b|\banimate (this|the|my) (photo|image|picture)\b/i;
+const PHOTO_MISSING_STEP = [
+  'Nothing was started or charged. Your prompt talks about the user\'s photo, but no photo was attached to this request.',
+  'If the user sent a photo and you can attach it, call create_generation again with that photo attached (image_files), and do not describe the photo in words instead.',
+  'If the user sent a photo but you cannot pass chat attachments to tools (for example in Claude), open Hansora\'s upload card with the same model_id and prompt instead, so the user uploads the photo there:',
+  'open_image_to_video_upload_card for a video from one photo, or start_multimedia_generation with required_inputs ["image"] for a picture edit or several photos. Tell the user in one short line to upload the photo in the card.',
+  'If there is no photo from the user, call create_generation again with a prompt that does not mention one. Do not tell the user about this check.'
+].join(' ');
 async function missingPhotoResultFor(userId, model, input) {
   if (!PHOTO_REFERENCE.test(String(input.prompt || ''))) return null;
   const files = normalizeGenerationFiles(input);
@@ -362,7 +378,7 @@ async function missingPhotoResultFor(userId, model, input) {
   if (await hadRecentOutcome(userId, ['photo_missing'], new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
   const value = {
     ok: false, error: 'photo_missing', generated: false, credits_used: 0, model_id: model.id, model_name: model.name,
-    next_step: 'Nothing was started or charged. Your prompt talks about the user\'s photo, but no photo was attached to this request. If the user sent a photo for this video, call create_generation again with that photo attached (image_files), and do not describe the photo in words instead. If there is no photo from the user, call create_generation again with a prompt that does not mention one. Do not tell the user about this.'
+    next_step: PHOTO_MISSING_STEP
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
@@ -602,19 +618,24 @@ async function veoRestSwitch(input) {
 // first video sent to Veo comes back once with "use Grok". Veo stays right only for speech in a language other
 // than English: ChatGPT then sends Veo again, and a recent steer (this one, or the free-credit switch) lets it
 // through, so it never loops.
-const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'switched_to_affordable'];
+const FIRST_VIDEO_STEERED = ['first_video_on_grok', 'first_video_on_wan', 'switched_to_affordable'];
 
 // A user who bought credits (more than the 30 free credits) and has no video yet is not given a cheap model
 // on their first paid video: ChatGPT asks one plain question (recommended Kling 4.0, best Seedance 2.5, budget
 // Wan 3.0) instead. Asked once: if ChatGPT sends the same request again (the user chose it, or people must
 // speak a language other than English), it goes through.
 const FREE_CREDITS_INTERNAL = 3;
-const CHEAP_FIRST_MODELS = new Set(['grok-video', ...VEO_MODELS, 'gemini-omni-video', 'gemini-omni-flash-1-1']);
+const CHEAP_FIRST_MODELS = new Set(['grok-video', ...VEO_MODELS, 'gemini-omni-video', 'gemini-omni-flash-1-1', 'gemini-omni-flash-1-2']);
 const PAID_FIRST_CHOICES = [
   { model_id: 'kling40', label: 'Recommended: great quality, smooth motion' },
   { model_id: 'seedance25', label: 'Best, cinema quality' },
   { model_id: 'wan-3', label: 'Budget: good quality, cheapest' }
 ];
+// The first-video plan shown with the account: only for a user with no video yet, still on the free credits.
+function firstVideoFor(userId, account, lastVideo) {
+  if (lastVideo || !account || Number(account.internal_credits || 0) > FREE_CREDITS_INTERNAL) return null;
+  try { return firstVideoPlan(userId); } catch { return null; }
+}
 async function firstPaidVideoChoice(userId, model, input, balanceInternal) {
   if (!model || !CHEAP_FIRST_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
   if (!(Number(balanceInternal) > FREE_CREDITS_INTERNAL)) return null;
@@ -648,36 +669,111 @@ async function firstPaidVideoChoice(userId, model, input, balanceInternal) {
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
+// A new user's first video goes to their half of the first-video test (credits.mjs firstVideoPlan): Grok Video
+// (720p, 6 s) or Wan 3.0 (480p, 5 s, text only). ChatGPT is told the plan through the account, and a first video sent
+// to another cheap model comes back once with the plan.
 async function firstVideoOnGrok(userId, input, balanceInternal) {
   const model = getModel(input.model_id);
-  if (!model || !VEO_MODELS.has(model.id) || input.usage_mode === 'unlimited') return null;
+  if (!model || input.usage_mode === 'unlimited') return null;
   const files = normalizeGenerationFiles(input);
   const photos = (files.image_urls || []).length + (input.first_frame_url ? 1 : 0);
   if (files.video_urls?.length || input.source_video_url || input.last_frame_url || photos > 1) return null;
   if (String(input.prompt || '').length > 5000) return null;
+  // Wan 3.0 is for text-only first videos; with a photo the Grok rules (and Wan for a new scene) stay as they were.
+  let plan = firstVideoPlan(userId);
+  if (plan.model_id === 'wan-3' && photos) plan = null;
   const grok = quote('grok-video', { duration: 6, resolution: '720p' });
-  if (Number(balanceInternal) < grok.internalCredits) return null;
-  // Grok first is for free credits. A user who bought credits is asked instead (firstPaidVideoChoice).
+  const target = plan || { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: grok.displayedCredits, internal_credits: grok.internalCredits };
+  const steerable = VEO_MODELS.has(model.id) || (target.model_id === 'wan-3' && model.id === 'grok-video');
+  if (!steerable || model.id === target.model_id) return null;
+  if (Number(balanceInternal) < target.internal_credits) return null;
+  // The first video is for free credits. A user who bought credits is asked instead (firstPaidVideoChoice).
   if (Number(balanceInternal) > FREE_CREDITS_INTERNAL) return null;
   if (!(await isFirstGeneration(userId))) return null;
   if (await hadRecentOutcome(userId, FIRST_VIDEO_STEERED, new Date(Date.now() - 10 * 60 * 1000).toISOString())) return null;
-  // Right after this user's Grok video failed, Grok is not the better first video: let Veo through.
-  if (await hadRecentGrokFailure(userId, new Date(Date.now() - 30 * 60 * 1000).toISOString())) return null;
+  // Right after this user's Grok video failed, Grok is not the better first video: let the request through.
+  if (target.model_id === 'grok-video' && await hadRecentGrokFailure(userId, new Date(Date.now() - 30 * 60 * 1000).toISOString())) return null;
+  const onWan = target.model_id === 'wan-3';
+  const settings = `duration ${target.settings.duration}, resolution ${target.settings.resolution}`;
   const value = {
-    ok: false, error: 'first_video_on_grok', generated: false, credits_used: 0,
+    ok: false, error: onWan ? 'first_video_on_wan' : 'first_video_on_grok', generated: false, credits_used: 0,
     model_id: model.id, model_name: model.name,
-    next_option: { model_id: 'grok-video', model_name: 'Grok Video', settings: { duration: 6, resolution: '720p' }, credits: grok.displayedCredits },
+    next_option: { model_id: target.model_id, model_name: target.model_name, settings: target.settings, credits: target.credits },
     next_step: [
       `Nothing was generated or charged. This is the user's first video, so do not ask anything:`,
-      `call create_generation right now with model_id grok-video, duration 6, resolution 720p, keeping the same prompt, photo and aspect_ratio.`,
-      grokEightSecondsStep(balanceInternal),
+      `call create_generation right now with model_id ${target.model_id}, ${settings}, keeping the same prompt, photo and aspect_ratio.`,
+      onWan ? '' : grokEightSecondsStep(balanceInternal),
       `Exception: only if people in the video must speak a language other than English (Chinese included), call create_generation again exactly as before with ${model.id}.`,
       `When it starts, tell the user in one short, friendly line which model is making their first video and its credits.`,
-      firstVideoLengthNote(6),
+      firstVideoLengthNote(target.settings.duration),
       photos ? newSceneStep(balanceInternal) : ''
     ].filter(Boolean).join(' ')
   };
   return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+}
+
+// An image that failed on the provider's side (a temporary issue, not the prompt or photo) is made once more on a
+// backup image model, under a fixed run id so it can never start twice, never for more than the failed try cost
+// (it was refunded). The card keeps following the original run id, shows the new image and says which model
+// made it. A picture made first for a video is left alone (that video follows the picture's own run).
+async function imageProviderRetry({ userId, token, origin, runId, presented, generation }) {
+  if (presented.status !== 'failed' || runId.endsWith(RETRY_SUFFIX) || generation?.kind !== 'image') return null;
+  if (!['temporary', 'unknown'].includes(presented.failure_kind)) return null;
+  const failedMeta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+  if (NEVER_RETRY_CONTENT.test(failureText(failedMeta))) return null;
+  const recipe = await getFirstVideoRecipe(userId, runId);
+  const failed = recipe ? getModel(recipe.model_id) : null;
+  if (!failed || failed.category !== 'image' || !recipe.prompt) return null;
+  const retryId = `${runId}${RETRY_SUFFIX}`;
+  let retry = await getGeneration(userId, retryId).catch(() => null);
+  let startedModel = null;
+  if (!retry) {
+    if (await getPendingVideo(userId, new Date(Date.now() - 15 * 60 * 1000).toISOString()).catch(() => null)) return null;
+    const firstTry = Number(failedMeta.charged_cost ?? failedMeta.charge_cost ?? failedMeta.refund_amount) * 10;
+    if (!(firstTry > 0)) return null;
+    const account = await getAccount(userId).catch(() => null);
+    if (!account) return null;
+    const request = {
+      prompt: String(recipe.prompt),
+      image_urls: Array.isArray(recipe.image_urls) ? recipe.image_urls : [],
+      ...(recipe.aspect_ratio ? { aspect_ratio: recipe.aspect_ratio } : {}),
+      ...(recipe.resolution ? { resolution: recipe.resolution } : {})
+    };
+    const option = imageBackupOption(failed.id, request, firstTry, Number(account.internal_credits || 0), alternativeFor(failed.id, new Set()));
+    const model = option ? getModel(option.model_id) : null;
+    const endpoint = model ? getRunner(model.id) : '';
+    if (!model || !endpoint) return null;
+    const payload = buildGenerationPayload(model.id, { ...request, ...option.settings }, userId, retryId);
+    try {
+      const { response } = await submitRun({ origin, token, userId, endpoint, model, prompt: request.prompt, usageMode: 'credits', payload, timeoutMs: 15000 });
+      if (!response.ok) return null;
+    } catch (error) {
+      if (!/abort|timeout/i.test(String(error?.name) + String(error?.message))) return null;
+    }
+    console.warn('hansora_mcp_image_retry', JSON.stringify({ runId, from: failed.id, to: model.id }));
+    startedModel = model;
+    retry = await getGeneration(userId, retryId).catch(() => null);
+  } else if (await refreshFromProvider(userId, [retry], origin).catch(() => false)) {
+    retry = (await getGeneration(userId, retryId).catch(() => null)) || retry;
+  }
+  const view = retry ? presentGeneration(retry, retryId) : { status: 'processing', media_type: 'image', kind: 'image', model_name: startedModel?.name || '', prompt: presented.prompt };
+  const retryMeta = retry?.meta && typeof retry.meta === 'object' ? retry.meta : {};
+  const credits = Number(retryMeta.charged_cost ?? retryMeta.charge_cost ?? retryMeta.refund_amount) * 10;
+  const retryName = view.model_name || startedModel?.name || 'another model';
+  const note = [`${failed.name} had a temporary issue on the provider's side, so this image was made with ${retryName} instead.`,
+    credits > 0 ? `You were charged the ${retryName} price (${Number(credits.toFixed(2))} credits).` : '',
+    `The ${failed.name} try was refunded.`].filter(Boolean).join(' ');
+  return {
+    ...view,
+    run_id: runId,
+    retry_run_id: retryId,
+    switch_note: note,
+    meta: { ...(view.meta && typeof view.meta === 'object' ? view.meta : {}), run_id: runId },
+    ...(view.status === 'processing' ? {
+      message: note,
+      next_step: `${note} The card shows this and the new image by itself. In your next reply, tell the user this in one short line. This switch was only for this image: the user's next images use ${failed.name} again.`
+    } : {})
+  };
 }
 
 // What the user reads when a video was made with another model than the one they asked for.
@@ -754,13 +850,14 @@ async function batchFields(userId, runId) {
   const batch = rows.map(batchItem);
   const count = (status) => batch.filter((item) => item.status === status).length;
   const ready = batch.map((item, index) => ({ ...item, number: index + 1 })).filter((item) => item.status === 'ready');
+  // Each ChatGPT card shows only its own result: ChatGPT already makes one card per generation, so a gallery of the
+  // whole burst in every card repeated the same images. ChatGPT still gets the full list as text.
   return {
-    batch,
     batch_summary: [
       `${batch.length} generations were started together in this request: ${count('ready')} ready, ${count('processing')} still generating, ${count('failed')} failed.`,
       ready.length ? `Ready results: ${ready.map((item) => `#${item.number} ${item.result_url}`).join(' ; ')}.` : '',
-      'The card shows all of them as a gallery; in your reply also give the user a link to every ready result above, numbered in this order, so none is missed.',
-      count('processing') ? 'Results that are still generating are not missing: call get_generation again with any of these run_ids in a little while to refresh all of them.' : ''
+      'Each card shows only its own result; in your reply also give the user a link to every ready result above, numbered in this order, so none is missed.',
+      count('processing') ? 'Results that are still generating are not missing: their cards show them by themselves when they are ready. Call get_generation again only when the user asks.' : ''
     ].filter(Boolean).join(' ')
   };
 }
@@ -870,11 +967,21 @@ export function createHansoraServer(ctx) {
     }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ category, include_unavailable }) => {
-    const unavailable = await unavailableModels();
+    // For video, the balance and last video come along, so ChatGPT needs no separate get_account call
+    // (fewer round trips). A slow or failed lookup just leaves "account" out.
+    const wantsAccount = !category || category === 'video';
+    const [unavailable, account] = await Promise.all([
+      unavailableModels(),
+      wantsAccount ? Promise.race([
+        Promise.all([getAccount(userId), getLastVideo(userId).catch(() => null)])
+          .then(([found, lastVideo]) => accountSummary(found, lastVideoModel(lastVideo), firstVideoFor(userId, found, lastVideo))).catch(() => null),
+        new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+      ]) : null
+    ]);
     const models = listModels({ category, includeUnavailable: include_unavailable }).map((model) => withHealth(model, unavailable));
     const listed = models.map(({ video_selection_guide: _guide, ...model }) => model);
     const hasVideo = listed.some((model) => model.category === 'video');
-    return jsonText({ ...(hasVideo ? { video_selection_guide: VIDEO_SELECTION_GUIDE } : {}), models: listed, count: listed.length });
+    return jsonText({ ...(hasVideo ? { video_selection_guide: VIDEO_SELECTION_GUIDE } : {}), ...(hasVideo && account ? { account } : {}), models: listed, count: listed.length });
   });
 
   server.registerTool('get_model', {
@@ -916,6 +1023,9 @@ export function createHansoraServer(ctx) {
       }
       const price = quote(model_id, options);
       const value = publicQuote(price);
+      // The cheaper option of video_selection_guide step 3 in the same answer, so no second quote is needed.
+      const simple = getModel(model_id) && !options.has_video_input ? simpleVideoOption(getModel(model_id), options) : null;
+      if (simple) value.simple_video_option = simple;
       // ChatGPT sometimes quotes before reading the balance and then shows prices the user cannot pay.
       // A failed balance lookup just leaves the quote as it is.
       if (getModel(model_id)?.category === 'video') {
@@ -945,13 +1055,13 @@ export function createHansoraServer(ctx) {
         getAccount(userId),
         Promise.race([getLastVideo(userId), new Promise((resolve) => setTimeout(() => resolve(null), 2500))])
       ]);
-      return jsonText(accountSummary(account, lastVideoModel(lastVideo)));
+      return jsonText(accountSummary(account, lastVideoModel(lastVideo), firstVideoFor(userId, account, lastVideo)));
     } catch (error) { return toolError(error); }
   });
 
   server.registerTool('open_image_to_video_upload_card', {
     title: 'Open image-to-video upload card',
-    description: 'Open Hansora’s in-chat upload card only when the host cannot pass the user’s attached image directly to create_generation. The card uploads the file, shows the credit quote, and starts the selected Hansora video model after the user confirms.',
+    description: 'Opens Hansora’s in-chat upload card, for hosts that cannot pass the user’s attached image directly to create_generation. The card uploads the file, shows the credit quote, and starts the selected Hansora video model after the user confirms.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora video model that accepts an image input.'),
       prompt: z.string().min(1),
@@ -1006,7 +1116,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('start_video_generation', {
     title: 'Transform an uploaded video',
-    description: 'Open Hansora’s in-chat upload card only when the host cannot pass the user’s attached video directly to create_generation. The card accepts MP4, MOV, or WebM, shows the credit quote, and starts the selected compatible Hansora model after the user confirms.',
+    description: 'Opens Hansora’s in-chat upload card, for hosts that cannot pass the user’s attached video directly to create_generation. The card accepts MP4, MOV, or WebM, shows the credit quote, and starts the selected compatible Hansora model after the user confirms.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora video model that accepts a source or reference video.'),
       prompt: z.string().min(1),
@@ -1070,7 +1180,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('start_multimedia_generation', {
     title: 'Create with uploaded reference media',
-    description: 'Open one Hansora upload card only when the host cannot pass attached reference files directly to create_generation. Select only the input types the request needs; Hansora checks them against the chosen model and the card shows exactly those supported upload choices.',
+    description: 'Opens one Hansora upload card, for hosts that cannot pass attached reference files directly to create_generation. The card shows the requested input types that the chosen model supports; Hansora checks them against that model.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora image or video model.'),
       prompt: z.string().min(1),
@@ -1114,7 +1224,7 @@ export function createHansoraServer(ctx) {
       const uploadLimits = {
         image: { max_files: Number(limits.max_images) || defaultCounts.image, max_mb: 30 },
         video: { max_files: Number(limits.max_videos) || defaultCounts.video, max_mb: 200 },
-        audio: { max_files: Number(limits.max_audio) || defaultCounts.audio, max_mb: model.id === 'seedance25' ? 15 : 200 }
+        audio: { max_files: Number(limits.max_audio) || defaultCounts.audio, max_mb: model.id === 'seedance25' || model.id === 'seedance25-flash' ? 15 : 200 }
       };
       const price = quote(model.id, {
         duration: input.duration,
@@ -1152,10 +1262,10 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('start_audio_generation', {
     title: 'Process an uploaded audio file',
-    description: 'Open Hansora’s in-chat audio upload card for Voice Isolation or Voice Changer. Use this instead of asking the user to host a local audio file. The card accepts MP3, WAV, M4A, AAC, OGG, or FLAC, reads its duration, calculates the credit quote, and starts processing after the user confirms.',
+    description: 'Opens Hansora’s in-chat audio upload card for Voice Isolation or Voice Changer, so the user can upload a local audio file. The card accepts MP3, WAV, M4A, AAC, OGG, or FLAC, reads its duration, calculates the credit quote, and starts processing after the user confirms.',
     inputSchema: z.object({
       audio_tool_id: z.enum(['isolation', 'voice-change']),
-      voice_id: z.string().optional().describe('Required for Voice Changer. Call list_audio_voices first.'),
+      voice_id: z.string().optional().describe('Required for Voice Changer. Available voices come from list_audio_voices.'),
       remove_background_noise: z.boolean().default(true)
     }),
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -1246,7 +1356,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('create_generation', {
     title: 'Create with Hansora',
-    description: 'Submit an image or video generation to any available Hansora model. When the user attaches media in chat, pass it through image_files, video_files, or audio_files and start generation directly without opening an upload card. URL fields remain available for existing public HTTPS media. Call get_model and quote_generation first.',
+    description: 'Submits an image or video generation to an available Hansora model. Media the user attaches in chat can be passed as image_files, video_files, or audio_files, with no upload card needed. URL fields accept existing public HTTPS media. get_model describes each model’s inputs and settings, and quote_generation returns the exact price before anything is submitted.',
     inputSchema: z.object({
       model_id: z.string().min(1),
       prompt: z.string().min(1),
@@ -1315,6 +1425,10 @@ export function createHansoraServer(ctx) {
         const missing = await missingPhotoResultFor(userId, model, input);
         if (missing) return missing;
       }
+      if (model.category === 'image') {
+        const missing = await missingPhotoResultFor(userId, model, input);
+        if (missing) return missing;
+      }
 
       const normalizedInput = normalizeGenerationFiles(input);
       let price = null;
@@ -1326,7 +1440,7 @@ export function createHansoraServer(ctx) {
         // The runner re-checks the balance, so a failed lookup here should not block the request.
         const account = await getAccount(userId).catch(() => null);
         if (account && Number(account.internal_credits || 0) < price.internalCredits) {
-          return keepPicturePlan(insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) }), normalizedInput);
+          return keepPicturePlan(insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId), userId }), normalizedInput);
         }
         if (account) {
           const choice = await firstPaidVideoChoice(userId, model, normalizedInput, account.internal_credits);
@@ -1378,6 +1492,16 @@ export function createHansoraServer(ctx) {
       const firstVideo = retryable ? isFirstGeneration(userId).catch(() => false) : Promise.resolve(false);
       const startFrame = String(storedInput.first_frame_url || '') || startingFrame(model.id, storedInput);
       const keepRecipe = async () => {
+        // Images keep what they were made from too, so a provider failure is remade on a backup (imageProviderRetry).
+        if (model.category === 'image' && normalizedInput.usage_mode !== 'unlimited') {
+          recordVideoRecipe(userId, runId, model.id, {
+            prompt: String(normalizedInput.prompt || '').slice(0, 5000),
+            image_urls: Array.isArray(storedInput.image_urls) ? storedInput.image_urls.slice(0, 16) : [],
+            ...(storedInput.aspect_ratio ? { aspect_ratio: storedInput.aspect_ratio } : {}),
+            ...(normalizedInput.resolution ? { resolution: normalizedInput.resolution } : {})
+          }, waitUntil, { image: true });
+          return;
+        }
         const first = await firstVideo;
         if (!retryable || (!first && !RECIPE_MODELS.has(model.id))) return;
         recordVideoRecipe(userId, runId, model.id, {
@@ -1442,7 +1566,7 @@ export function createHansoraServer(ctx) {
         const charged = Number.isFinite(need) && need > 0
           ? { ...(price || {}), displayedCredits: Number((need * 10).toFixed(2)) }
           : price;
-        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId) });
+        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput, firstGeneration: await isFirstGeneration(userId), userId });
       }
       // Henshin and reference-video launchers measure the uploaded files and report the real charge.
       const debited = Number(result?.debited);
@@ -1489,7 +1613,7 @@ export function createHansoraServer(ctx) {
 
   server.registerTool('create_audio', {
     title: 'Create audio with Hansora',
-    description: 'Create speech, isolate a voice, change a voice, or generate music with Hansora. For file-based tools, audio_url must be a public HTTPS audio URL. Call quote_generation first.',
+    description: 'Creates speech, isolates a voice, changes a voice, or generates music with Hansora. File-based tools take audio_url as a public HTTPS audio URL. quote_generation returns the exact price before anything is submitted.',
     inputSchema: z.object({
       audio_tool_id: z.enum(['voice', 'isolation', 'voice-change', 'music']),
       text: z.string().max(4200).optional(),
@@ -1567,6 +1691,10 @@ export function createHansoraServer(ctx) {
         const starting = startingRun(run_id);
         return starting ? jsonText(starting) : toolError(new Error('generation_not_found'));
       }
+      // The assistant checking a run it started recently: the card that started it already shows it, so this
+      // call's card is drawn as one slim line, and the assistant is told again that it need not check.
+      const startedHere = /-mcp-/.test(run_id) && Date.now() - Date.parse(generation.created_at || '') < CHECK_CARD_WINDOW_MS;
+      const slim = (value) => (startedHere && value && typeof value === 'object' ? { ...value, card_view: 'compact' } : value);
       // The card refreshes through this tool every few seconds; never query model health here.
       const unavailable = new Set();
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
@@ -1577,10 +1705,11 @@ export function createHansoraServer(ctx) {
       const presented = presentGeneration(generation, run_id, unavailable);
       if (presented.status === 'ready' && generation.kind === 'image') {
         const automatic = await autoVideoFromPicture({ userId, token, origin, pictureRun: run_id, picture: generation, waitUntil }).catch(() => null);
-        if (automatic) return jsonText(automatic);
+        if (automatic) return jsonText(slim(automatic));
       }
-      const retried = await providerRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
-      if (retried) return jsonText(retried);
+      const retried = await providerRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null)
+        || await imageProviderRetry({ userId, token, origin, runId: run_id, presented, generation }).catch(() => null);
+      if (retried) return jsonText(slim(retried));
       // A refused first video (temporary issues already switch model on their own).
       if (presented.status === 'failed' && presented.failure_kind && presented.failure_kind !== 'temporary') {
         const meta = generation.meta && typeof generation.meta === 'object' ? generation.meta : {};
@@ -1596,7 +1725,8 @@ export function createHansoraServer(ctx) {
           presented.next_step = step.replace(' could not make this video and nothing was charged.', ' could not make this video; its credits were refunded.');
         }
       }
-      return jsonText({ ...presented, ...(await batchFields(userId, run_id)) });
+      if (startedHere && presented.status === 'processing' && !presented.next_step) presented.next_step = STILL_GENERATING_STEP;
+      return jsonText(slim({ ...presented, ...(await batchFields(userId, run_id)) }));
     } catch (error) { return toolError(error); }
   });
 

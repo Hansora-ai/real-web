@@ -57,3 +57,13 @@ Run `npm run test:reapi`, `npm run test:henshin`, `npm run test:kie`, `npm run t
 - [Tasks, polling and callbacks](https://reapi.ai/docs/api/tasks)
 
 The 2.0 playground still mentions a 4,000-character prompt cap; its API reference documents 3–20,000. This implementation follows the API reference. No paid test has yet verified the upstream's long-prompt behavior.
+
+## Seedance 2.5 Flash
+
+Added 2026-11-18 from the [Seedance 2.5 Flash API](https://reapi.ai/docs/seedance-2-5-flash) and its [price card](https://reapi.ai/models/seedance-2-5-flash).
+
+- A separate reAPI model, `seedance-2-5-flash`, with a content-block body (`content: [{type:'text'}, {type:'image_url', role}, …]`, `ratio`, `omni_reference_task_type: generate | edit`). Only documented fields are sent: no watermark, bitrate, output format, draft, last frame or web search. Built by `buildFlash` in `lib/reapi/request.cjs`.
+- It runs on `run-seedance-25` with `variant: 'flash'`, so reservation, refunds, `reapi-check`, the sweep and archiving are shared with Seedance 2.5. Rows are saved as provider `Seedance 2.5 Flash`, `meta.model_id: 'seedance25-flash'`.
+- 480p or 720p, 4–30 s. Either a first frame (and optional last frame) or references: up to 10 images, 5 videos and 5 audio clips (30 s of video and of audio in total). Editing: one 4–30 s source video with `duration: -1`.
+- Prices (`public/seedance-pricing.js`, agreed with the owner), in displayed credits: 13 / 25 per second without video input (130 / 250 for 10 s, reAPI $0.96 / $1.92), and 8 / 16 per billed second with a video input (reAPI $0.06 / $0.12). reAPI bills an edit as 2 × source seconds and a reference video as output + max(output, input); a 10-second edit is 160 / 320.
+- Website: a Seedance 2.5 / Flash switch on Seedance 2.5 and a "Seedance 2.5 Flash" menu entry (`?model=seedance25-flash`). ChatGPT and Claude: the `seedance25-flash` model.

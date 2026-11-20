@@ -103,3 +103,16 @@ test('reAPI image task state: done with its image, failed with its reason, other
   globalThis.fetch = async () => { throw new Error('network'); };
   assert.equal((await reapi.imageState('task_abc')).pending, true);
 });
+
+test('reAPI errors in Chinese reach users in English; English errors stay as they are', async () => {
+  globalThis.fetch = async () => reply(200, { id: 'task_abc', status: 'failed', error: { code: 80007, message: '非常抱歉，该提示可能违反了关于裸露、色情或情色内容的防护限制。如果你认为此判断有误，请重试或修改提示语。' } });
+  assert.match((await reapi.imageState('task_abc')).error, /^Blocked by the content filter: the prompt may contain nudity or sexual content\. Nothing was charged/);
+  globalThis.fetch = async () => reply(200, { id: 'task_abc', status: 'failed', error: { code: 80007, message: '非常抱歉，生成的图片可能违反了我们的内容政策。如果你认为此判断有误，请重试或修改提示语。' } });
+  assert.match((await reapi.imageState('task_abc')).error, /^Blocked by the content filter: the image may violate the content policy/);
+  assert.equal(reapi.readableError('上游服务繁忙'), 'Generation failed at the provider. Please try again.');
+  assert.equal(reapi.readableError('Insufficient credits. Required: 23'), 'Insufficient credits. Required: 23');
+  // ChatGPT hears "change the prompt", for new English rows and for rows saved in Chinese before.
+  const { classifyFailure } = await import('../../lib/hansora-mcp/failures.mjs');
+  assert.equal(classifyFailure({ error: (await reapi.imageState('task_abc')).error }), 'content');
+  assert.equal(classifyFailure({ error: '非常抱歉，该提示可能违反了关于裸露、色情或情色内容的防护限制。', error_code: 80007 }), 'content');
+});

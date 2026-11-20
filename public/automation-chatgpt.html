@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><script src="automation-i18n.js?v=20261118h"></script><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hansora Automation in ChatGPT</title><link rel="icon" href="/favicon.png" type="image/png"><link rel="apple-touch-icon" href="/favicon.png">
+  <meta name="description" content="Run your AI employee from ChatGPT: create it, teach it, test it, start AI phone calls and see your orders and bookings.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js?v=20261008"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css?v=20261119m"><link rel="stylesheet" href="automation-ui.css?v=20261118e">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261112-web"></script><script defer src="automation-header.js?v=20261119m"></script><script defer src="automation-chatgpt.js?v=20261115"></script>
+  <style>
+    .gpt{max-width:860px;margin:0 auto}
+    .gpt-url{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+    .gpt-url code{flex:1 1 260px;min-width:0;padding:11px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-soft);font:500 14px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+    .gpt-steps{margin:0;padding:0;list-style:none;display:grid;gap:14px;counter-reset:step}
+    .gpt-steps li{counter-increment:step;display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start}
+    .gpt-steps li::before{content:counter(step);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--border-2);font-weight:600;font-size:13px}
+    .gpt-steps b{display:block;margin-bottom:2px}
+    .gpt-steps p,.gpt-note p{margin:0;color:var(--text-2);font-size:14px;line-height:1.5}
+    .gpt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    @media(max-width:640px){.gpt-grid{grid-template-columns:1fr}}
+    .gpt-grid h3{margin:0 0 8px;font-size:15px}
+    .gpt-grid ul{margin:0;padding-left:18px;color:var(--text-2);font-size:14px;line-height:1.6}
+    .gpt section{margin-top:22px}
+    .gpt h2{margin:0 0 12px;font-size:18px}
+  </style>
+</head>
+<body class="ui" data-automation-page="chatgpt">
+  <div data-automation-header></div>
+  <main class="ui-page gpt">
+    <header class="ui-center-head ui-enter">
+      <h1>Run your AI employee from ChatGPT</h1>
+      <p>Create it, teach it, test it and start AI phone calls by just asking.</p>
+    </header>
+
+    <section class="ui-card ui-card-pad ui-enter">
+      <h2>Connect in one minute</h2>
+      <ol class="gpt-steps">
+        <li><div><b>Open ChatGPT settings</b><p>In ChatGPT settings, find the apps and connectors section and choose to add a custom one. Until Hansora Automation is listed in the ChatGPT app directory, this needs developer mode turned on there.</p></div></li>
+        <li><div><b>Paste this address</b><p>Name it “Hansora Automation” and paste the address below.</p>
+          <div class="gpt-url"><code id="gpt-url">https://hansora.co/automation/v2/mcp</code><button class="ui-btn secondary" id="gpt-copy" type="button">Copy</button></div></div></li>
+        <li><div><b>Log in to Hansora</b><p>ChatGPT opens the Hansora login. Use the same account as on this site.</p></div></li>
+        <li><div><b>Ask anything</b><p>For example: “How is my business doing today?”</p></div></li>
+      </ol>
+    </section>
+
+    <section class="ui-enter">
+      <h2>What you can ask</h2>
+      <div class="gpt-grid">
+        <div class="ui-card ui-card-pad"><h3>Your AI employee</h3><ul><li>“Create an AI employee for my bakery”</li><li>“Add our new prices to what it knows”</li><li>“Ask it about delivery, as a customer”</li></ul></div>
+        <div class="ui-card ui-card-pad"><h3>Phone calls</h3><ul><li>“Call +1 555 010 2030 and confirm tomorrow’s appointment”</li><li>“What happened on today’s calls?”</li><li>“Call customers to confirm new orders”</li></ul></div>
+        <div class="ui-card ui-card-pad"><h3>Orders and bookings</h3><ul><li>“Show today’s bookings”</li><li>“Mark order 14 as completed”</li><li>“Add a product: Mug, $12, 30 in stock”</li></ul></div>
+        <div class="ui-card ui-card-pad"><h3>Day to day</h3><ul><li>“What needs my attention?”</li><li>“Answer the visitor waiting in my website chat”</li><li>“When someone comments ‘price’, send them my price list”</li></ul></div>
+      </div>
+    </section>
+
+    <section class="ui-card ui-card-pad gpt-note ui-enter">
+      <h2>Your customers’ privacy</h2>
+      <p>Chats from Instagram, WhatsApp, TikTok, Telegram and Messenger are not sent to ChatGPT. There you see how many chats are waiting and a link to your Hansora inbox. Website chats and phone calls can be read in ChatGPT.</p>
+      <p style="margin-top:8px">Using the app is free. AI replies, test messages and phone minutes use your credits as usual.</p>
+    </section>
+  </main>
+</body>
+</html>

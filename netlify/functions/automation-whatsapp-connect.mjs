@@ -1,10 +1,17 @@
 import { authenticateRequest, isUuid } from '../../lib/sales-agent/auth.mjs';
 import { decryptSecret, encryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, rows, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
-import { exchangeWhatsAppCode, generateWhatsAppPin, getWhatsAppPhone, listWhatsAppPhoneNumbers, registerWhatsAppPhone, subscribeWhatsAppApp } from '../../lib/automation/whatsapp.mjs';
+import { exchangeWhatsAppCode, generateWhatsAppPin, getWhatsAppPhone, listWhatsAppPhoneNumbers, registerWhatsAppPhone, sharedWhatsAppAccounts, subscribeWhatsAppApp, whatsAppOnBusinessApp } from '../../lib/automation/whatsapp.mjs';
 
 const HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const json=(statusCode,body)=>({statusCode,headers:HEADERS,body:JSON.stringify(body)});
+// On phones Meta's window comes back to the connect page itself (no popup), so the code arrives with only this address.
+function allowedRedirect(value){
+  const address=String(value||'').trim();if(!address)return '';
+  const origins=new Set(['https://hansora.co','https://www.hansora.co']);
+  for(const url of [process.env.URL,process.env.DEPLOY_PRIME_URL])try{if(url)origins.add(new URL(url).origin)}catch(_){}
+  try{const url=new URL(address);return origins.has(url.origin)&&url.pathname==='/automation-connect.html'&&!url.search&&!url.hash?address:null}catch(_){return null}
+}
 
 // Two calls are possible: the first carries the single-use Embedded Signup code; if the number already has a
 // two-step verification PIN, the owner retries with only phone_number_id + pin and the stored token is reused.
@@ -15,20 +22,32 @@ export async function handler(event){
   try{
     const user=await authenticateRequest(event);if(!user)return json(401,{error:'authentication_required'});
     let body;try{body=JSON.parse(event.body||'{}')}catch(_){return json(400,{error:'invalid_json'})}
-    const code=String(body.code||'').trim(),manualToken=String(body.access_token||'').trim(),wabaId=String(body.waba_id||'').trim(),ownerPin=String(body.pin||'').trim();
+    const code=String(body.code||'').trim(),manualToken=String(body.access_token||'').trim(),ownerPin=String(body.pin||'').trim();let wabaId=String(body.waba_id||'').trim();
+    const redirectUri=allowedRedirect(body.redirect_uri);if(redirectUri===null)return json(400,{error:'invalid_whatsapp_connection'});
+    // Phone flow: Meta sends no account details, only the code; they are looked up with the token below.
+    const fromRedirect=Boolean(code&&redirectUri);
     // Coexistence: the number stays in the WhatsApp Business app on the owner's phone and is shared with Hansora.
-    const coexistence=body.coexistence===true;
+    let coexistence=body.coexistence===true;
     let phoneNumberId=String(body.phone_number_id||'').trim();
     if(coexistence&&code&&!phoneNumberId&&/^\d{5,40}$/.test(wabaId))phoneNumberId='pending';
+    if(fromRedirect&&!phoneNumberId)phoneNumberId='pending';
     if(!isUuid(body.business_id)||!/^(\d{5,40}|pending)$/.test(phoneNumberId)||code.length>4000||manualToken.length>4000||(manualToken&&!/^[A-Za-z0-9_-]{20,}$/.test(manualToken)))return json(400,{error:'invalid_whatsapp_connection'});
     if(ownerPin&&!/^\d{6}$/.test(ownerPin))return json(400,{error:'whatsapp_pin_invalid'});
     if(!code&&!manualToken&&!ownerPin)return json(400,{error:'invalid_whatsapp_connection'});
-    if((code||manualToken)&&!/^\d{5,40}$/.test(wabaId))return json(400,{error:'invalid_whatsapp_connection'});
+    if((code||manualToken)&&!fromRedirect&&!/^\d{5,40}$/.test(wabaId))return json(400,{error:'invalid_whatsapp_connection'});
     const business=await first(`/rest/v1/automation_businesses?id=eq.${body.business_id}&owner_user_id=eq.${user.id}&select=id&limit=1`);if(!business)return json(404,{error:'business_not_found'});
 
     let resource,accessToken;
     if(code||manualToken){
-      const token=code?await exchangeWhatsAppCode(code):{accessToken:manualToken,expiresIn:0};accessToken=token.accessToken;
+      const token=code?await exchangeWhatsAppCode(code,fetch,redirectUri):{accessToken:manualToken,expiresIn:0};accessToken=token.accessToken;
+      if(fromRedirect){
+        // The first shared WhatsApp account that has a number; a number that stays in the WhatsApp Business app is coexistence.
+        if(!/^\d{5,40}$/.test(wabaId)){
+          for(const id of await sharedWhatsAppAccounts({accessToken})){const numbers=await listWhatsAppPhoneNumbers({wabaId:id,accessToken});if(numbers.length){wabaId=id;if(phoneNumberId==='pending')phoneNumberId=numbers[0];break;}}
+          if(!/^\d{5,40}$/.test(wabaId))return json(409,{error:'whatsapp_number_not_found'});
+        }
+        if(phoneNumberId!=='pending'&&await whatsAppOnBusinessApp({phoneNumberId,accessToken}))coexistence=true;
+      }
       if(phoneNumberId==='pending'){const numbers=await listWhatsAppPhoneNumbers({wabaId,accessToken});phoneNumberId=numbers[0]||'';if(!phoneNumberId)return json(409,{error:'whatsapp_number_not_found'});}
       const phone=await getWhatsAppPhone({phoneNumberId,accessToken});
       await subscribeWhatsAppApp({wabaId,accessToken});
@@ -61,7 +80,7 @@ export async function handler(event){
     if(!sharedWithPhone&&phone.platformType!=='CLOUD_API'){
       const pin=ownerPin||generateWhatsAppPin();
       try{await registerWhatsAppPhone({phoneNumberId,pin,accessToken});}
-      catch(error){if(error?.status===400)return json(409,{error:ownerPin?'whatsapp_pin_incorrect':'whatsapp_pin_required'});throw error;}
+      catch(error){if(error?.status===400)return json(409,{error:ownerPin?'whatsapp_pin_incorrect':'whatsapp_pin_required',phone_number_id:phoneNumberId});throw error;}
       await serviceUpsert('automation_provider_credentials','provider_resource_id,credential_type',{business_id:business.id,provider_resource_id:resource.id,credential_type:'registration_pin',...encryptSecret(pin),expires_at:null});
     }
 

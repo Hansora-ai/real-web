@@ -244,10 +244,11 @@
       phone: ['Phone calls', 'Answer calls with a natural voice', 'phone', 'phone'],
       telegram: ['Telegram', 'Answer chats on your Telegram account (Telegram Business)', 'telegram', 'telegram'],
       messenger: ['Messenger', 'Answer Facebook Messenger chats of your Page', 'messenger', 'messenger'],
-      tiktok: ['TikTok', 'Reply to comments now. Direct messages coming soon', 'tiktok', 'tiktok']
+      tiktok: ['TikTok', 'Reply to comments now. Direct messages coming soon', 'tiktok', 'tiktok'],
+      website: ['Website chat', 'A chat bubble on your own website', 'globe', 'website']
     };
     // Channels that are not open yet are shown as "Coming soon" and cannot be opened.
-    const COMING_SOON = new Set(['whatsapp', 'messenger']);
+    const COMING_SOON = new Set(['messenger']); // WhatsApp opened Nov 13 after Meta approved it.
     const businessQuery = `business=${encodeURIComponent(business.id)}${previewLinks ? '&preview=1' : ''}`;
     const destinations = {
       instagram_dm: `automation-connect.html?channel=instagram&${businessQuery}`,
@@ -256,7 +257,8 @@
       phone: `automation-phone.html?${businessQuery}`,
       telegram: `automation-connect.html?channel=telegram&${businessQuery}`,
       messenger: `automation-connect.html?channel=messenger&${businessQuery}`,
-      tiktok: `automation-tiktok-comments.html?${businessQuery}`
+      tiktok: `automation-tiktok-comments.html?${businessQuery}`,
+      website: `automation-website.html?${businessQuery}`
     };
     const channels = (business.automation_channel_connections || []).sort((a, b) => a.setup_order - b.setup_order);
     $('#channel-stack').innerHTML = channels.map(channel => {
@@ -266,7 +268,7 @@
         : channel.status === 'connected' ? '<span class="ui-badge dot green live">Live</span>'
         : channel.status === 'connecting' ? '<span class="ui-badge dot amber">Finish setup</span>'
         : channel.status === 'error' ? '<span class="ui-badge dot red">Needs attention</span>'
-        : `<span class="ui-badge">${channel.channel_type === 'instagram_comments' ? 'Build flow' : 'Connect'}</span>`;
+        : `<span class="ui-badge">${channel.channel_type === 'instagram_comments' ? 'Build flow' : channel.channel_type === 'website' ? (channel.status === 'paused' ? 'Paused' : 'Set up') : 'Connect'}</span>`;
       return `<a class="ui-row" href="${destinations[channel.channel_type] || '#'}"><span class="ui-icon-tile ${tone}">${ui.icon(iconName)}</span><span class="ui-row-main"><span class="ui-row-title">${escapeHtml(title)}</span><span class="ui-row-sub">${escapeHtml(description)}</span></span>${badge}<span class="ui-chevron">${ui.icon('chevron')}</span></a>`;
     }).join('');
     const connected = channels.filter(channel => channel.status === 'connected' && !COMING_SOON.has(channel.channel_type)).length;
@@ -280,7 +282,7 @@
       ['calendar', 'Bookings', 'Check free times and book appointments', 'calendar', 'calendar'],
       ['orders', 'Orders', 'Collect every detail and create orders', 'bag', 'orders'],
       ['leads', 'Leads', 'Save interested customers for sales', 'spark', 'leads'],
-      ['notifications', 'Notifications', 'WhatsApp and email alerts to you', 'bell', 'notifications']
+      ['notifications', 'Notifications', 'Email alerts to you', 'bell', 'notifications']
     ];
     $('#actions-list').innerHTML = rows.map(([key, title, description, iconName, tab]) => {
       const value = state ? state[key] : undefined;
@@ -318,6 +320,8 @@
   function initializeLiveTest(business, profile) {
     const newSession = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`);
     let session = newSession();
+    // The engine picker is a Hansora-only comparison tool: shown with ?engine=1, hidden for owners.
+    if (new URLSearchParams(location.search).get('engine') === '1' && $('.test-engine')) $('.test-engine').style.display = '';
     const engineChoice = () => $('#test-engine')?.value || '';
     const form = $('#test-form');
     const input = $('#test-message');

@@ -1,15 +1,23 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-upscale-mode="video">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HANSORA • Upscale</title>
+  <title>Улучшение видео · Hansora AI</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="/header.css" rel="stylesheet" />
+  <script>
+    if (new URLSearchParams(location.search).get('mode') === 'image') {
+      document.documentElement.dataset.upscaleMode = 'image';
+      document.title = 'Улучшение изображений · Hansora AI';
+    }
+  </script>
   <script defer src="/header.js"></script>
   <script src="/kie-upload-bridge.js"></script>
+  <script src="/video-upscale-pricing.js"></script>
+  <script src="/image-upscale-pricing.js"></script>
   <style>
     :root{
       --base-bg:#050714;
@@ -34,7 +42,6 @@
     }
     button,input,select{font:inherit}
     .page-shell{max-width:1180px;margin:0 auto;padding:32px 18px 42px}
-    .provider-notice{margin:0 0 22px;padding:14px 18px;border:1px solid #ef4444;border-radius:14px;background:#450f18;color:#fee2e2;font-size:14px;font-weight:600;line-height:1.6}
     .hero{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22px;align-items:start}
     .glass,.panel{
       border:1px solid rgba(255,255,255,.10);
@@ -115,26 +122,44 @@
     @media(max-width:900px){.page-shell{padding:18px 12px 28px}.hero{grid-template-columns:1fr}.drop{min-height:240px}.mobile-bottom-space{height:70px}.safe-name{max-width:240px}.desktop-title{font-size:42px!important}#resultsList{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.result-card{scroll-snap-align:start}}
     @media(max-width:430px){.safe-name{max-width:180px}.controls-grid{grid-template-columns:1fr!important}.run-row{justify-content:stretch!important}.run-row button{width:100%}}
   </style>
+  <link rel="stylesheet" href="/video-upscale.css" />
 </head>
 <body>
   <div id="sharedHeader"></div>
   <main class="page-shell">
-    <p class="provider-notice" role="alert">Повышение качества временно недоступно из-за сбоя у провайдера. Попробуйте позже.</p>
+    <div class="video-only vu-heading">
+      <div>
+        <p class="vu-kicker">Hansora Creative</p>
+        <h1>Улучшение видео</h1>
+        <p>Повысьте чёткость видео до 1080p, 2K или 4K.</p>
+      </div>
+      <div class="vu-quality"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4h4l4 4V6l-4 4H4Zm11-1a4.2 4.2 0 0 1 0 6m2.5-8.5a7.7 7.7 0 0 1 0 11"/></svg><span>Исходный звук сохраняется</span></div>
+    </div>
+    <div class="image-only vu-heading">
+      <div>
+        <h1>Улучшение изображений</h1>
+        <p>Повысьте чёткость в исходном размере или увеличьте изображение до 8×.</p>
+      </div>
+    </div>
     <section class="hero">
-      <div class="glass rounded-[34px] p-6 sm:p-8">
-        <div class="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <p class="small-label">Hansora Upscale</p>
-            <h1 class="desktop-title text-5xl font-black tracking-tight leading-none mt-2">Сделайте изображение чётче</h1>
-            <p class="text-slate-300/80 mt-4 max-w-2xl">Загрузите одно изображение или видео.</p>
-          </div>
-        </div>
-        <input id="mediaInput" type="file" accept="image/*,video/*" class="hidden" />
+      <div class="glass vu-upload rounded-[28px] p-6 sm:p-8">
+        <input id="mediaInput" type="file" accept="video/*,.mp4,.mov,.webm" class="hidden" />
         <div id="dropZone" class="drop">
           <div id="dropEmpty">
-            <div class="mx-auto h-16 w-16 rounded-3xl bg-indigo-100 text-indigo-700 grid place-items-center text-3xl mb-4">⬆️</div>
-            <h2 class="text-2xl font-black">Загрузить изображение или видео</h2>
-            <p class="text-sm text-slate-400 mt-2">Одно изображение или видео</p>
+            <div class="video-only">
+              <div class="vu-upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M12 15V9m-2.5 2.5L12 9l2.5 2.5"/></svg></div>
+              <h2 class="vu-upload-title">Загрузите видео</h2>
+              <p class="vu-upload-help">Перетащите видео сюда</p>
+              <button type="button" class="vu-select-file">Выбрать видео</button>
+              <p class="vu-file-limits">MP4, MOV или WebM · до 60 секунд · до 50 МБ</p>
+            </div>
+            <div class="image-only">
+              <div class="vu-upload-icon" aria-hidden="true">↑</div>
+              <h2 class="vu-upload-title">Загрузите изображение</h2>
+              <p class="vu-upload-help">Перетащите изображение сюда</p>
+              <button type="button" class="vu-select-file">Выбрать изображение</button>
+              <p class="vu-file-limits">JPG, PNG, WebP, BMP или GIF · до 20 МБ</p>
+            </div>
           </div>
           <div id="previewWrap" class="hidden w-full">
             <div id="previewBox" class="preview mb-4"></div>
@@ -149,42 +174,35 @@
         </div>
       </div>
       <aside class="space-y-4">
-        <div class="panel rounded-[30px] p-5">
-          <p class="small-label mb-3">Режим</p>
-          <div class="grid grid-cols-2 gap-2 mb-5">
-            <button id="imageModeBtn" type="button" class="pill active px-4 py-3 font-bold">Изображение</button>
-            <button id="videoModeBtn" type="button" class="pill px-4 py-3 font-bold">Видео</button>
-          </div>
-          <div id="imageControls" class="space-y-4">
-            <div>
-              <p class="small-label mb-2">Качество</p>
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" data-image-resolution="2K" class="pill active px-4 py-3 font-bold">2K</button>
-                <button type="button" data-image-resolution="4K" class="pill px-4 py-3 font-bold">4K</button>
-              </div>
+        <div class="panel vu-settings rounded-[28px] p-5">
+          <div id="imageControls" class="image-only">
+            <p id="scaleLabel" class="small-label mb-3">Масштаб</p>
+            <div class="vu-options image-upscale-options" role="group" aria-labelledby="scaleLabel">
+              <button type="button" data-image-factor="1" class="pill" aria-pressed="false"><strong>1×</strong><span>Исходный размер</span></button>
+              <button type="button" data-image-factor="2" class="pill active" aria-pressed="true"><strong>2×</strong><span></span></button>
+              <button type="button" data-image-factor="4" class="pill" aria-pressed="false"><strong>4×</strong><span></span></button>
+              <button type="button" data-image-factor="8" class="pill" aria-pressed="false"><strong>8×</strong><span></span></button>
             </div>
+            <p id="imageCostHint" aria-live="polite">Стоимость появится после выбора изображения.</p>
+            <p class="image-media-note">Прозрачные области станут белыми. Для GIF используется первый кадр.</p>
           </div>
-          <div id="videoControls" class="hidden space-y-4">
-            <div>
-              <p class="small-label mb-2">Увеличение</p>
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" data-video-scale="2" class="pill active px-4 py-3 font-bold">2×</button>
-                <button type="button" data-video-scale="4" class="pill px-4 py-3 font-bold">4×</button>
-              </div>
+          <div class="video-only">
+            <p id="outputLabel" class="small-label mb-3">Разрешение видео</p>
+            <div class="vu-options" role="group" aria-labelledby="outputLabel">
+              <button type="button" data-video-resolution="1080P" class="pill" aria-pressed="false"><strong>1080p</strong><span>Full HD</span></button>
+              <button type="button" data-video-resolution="2K" class="pill active" aria-pressed="true"><strong>2K</strong><span>Quad HD</span></button>
+              <button type="button" data-video-resolution="4K" class="pill" aria-pressed="false"><strong>4K</strong><span>Ultra HD</span></button>
             </div>
+            <p id="costHint" class="vu-hint" aria-live="polite">Стоимость появится после выбора видео.</p>
           </div>
           <form id="upscaleForm" class="mt-5 space-y-3">
-            <div id="errorBox" class="hidden rounded-2xl border border-red-400/30 bg-red-500/10 text-red-100 px-4 py-3 text-sm"></div>
-            <button id="runBtn" type="submit" class="btn-main w-full px-8 py-4 font-black">Upscale • —⚡</button>
+            <div id="errorBox" role="alert" class="hidden rounded-2xl border border-red-400/30 bg-red-500/10 text-red-100 px-4 py-3 text-sm"></div>
+            <button id="runBtn" type="submit" class="btn-main w-full px-8 py-4 font-black" disabled>Upscale</button>
           </form>
-        </div>
-        <div class="hidden" aria-hidden="true">
-          <p id="costText">—</p>
-          <p id="costHint">Загрузите файл, чтобы рассчитать точную стоимость.</p>
         </div>
       </aside>
     </section>
-    <section class="panel rounded-[30px] p-5 sm:p-6 mt-5">
+    <section class="panel vu-history rounded-[28px] p-5 sm:p-6 mt-5">
       <div class="flex items-center justify-between gap-3 mb-4"><div><p class="small-label">История</p><h3 class="text-xl font-black mt-1">Недавние результаты Upscale</h3></div><button id="refreshResultsBtn" class="btn-soft px-4 py-2 text-sm" type="button">Обновить</button></div>
       <div id="resultsList" class="grid md:grid-cols-3 gap-3"></div>
       <div id="emptyResults" class="rounded-2xl border border-dashed border-white/14 p-8 text-center text-slate-400">Результатов Upscale пока нет.</div>
@@ -203,8 +221,12 @@
   const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   window.__HANSORA_SB__ = supabaseClient; window.hansoraSupabase = supabaseClient;
   const $ = (id)=>document.getElementById(id);
-  let currentUser=null,currentCredits=0,selectedFile=null,selectedKind='image',imageResolution='2K',videoScale='2',videoDuration=0,pollTimer=null,lastHistorySignature='';
-  const IMAGE_PROMPT = 'Upscale and enhance this image with Nano Banana Pro. Preserve the original composition, identity, colors, and style. Improve resolution, natural detail, texture clarity, edge sharpness, lighting balance, and overall quality. Do not add new objects, text, logos, watermarks, or change the subject.';
+  let currentUser=null,currentCredits=0,selectedFile=null,imageFactor=2,imageDimensions=null,videoResolution='2K',videoDuration=0,pollTimer=null,lastHistorySignature='';
+  const selectedKind = document.documentElement.dataset.upscaleMode;
+  const uploads = new WeakMap();
+  let isSubmitting = false;
+  let previewUrl = '';
+  let upscaleRetry = null;
   function parseCredits(value){const n=Number(String(value??'').replace(/[^\d.-]/g,''));return Number.isFinite(n)?n:0}
   function formatCredit(n){n=Number(n||0)*10;return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,'')}
   function setCreditsEverywhere(value){currentCredits=parseCredits(value);document.querySelectorAll('#navCredits').forEach(n=>{n.dataset.internalCredits=String(currentCredits);n.textContent=`${formatCredit(currentCredits)}⚡`});if(window.HansoraHeader&&typeof window.HansoraHeader.setCredits==='function')window.HansoraHeader.setCredits(currentCredits)}
@@ -215,39 +237,243 @@
   async function refreshCredits(){try{const r=await readSupabaseCredits();if(r.user){currentUser=r.user;setCreditsEverywhere(r.credits)}}catch(e){console.warn(e)}return currentCredits}
   function showError(msg){$('errorBox').textContent=msg;$('errorBox').classList.remove('hidden')}
   function clearError(){$('errorBox').textContent='';$('errorBox').classList.add('hidden')}
-  function isImage(file){return String(file&&file.type||'').startsWith('image/')||/\.(png|jpe?g|webp)$/i.test(String(file&&file.name||''))}
+  function isImage(file) {
+    return /\.(jpe?g|png|webp|bmp|gif)$/i.test(file.name) || /^image\/(jpeg|png|webp|bmp|x-ms-bmp|gif)$/i.test(file.type);
+  }
   function isVideo(file){return String(file&&file.type||'').startsWith('video/')||/\.(mp4|mov|webm|m4v)$/i.test(String(file&&file.name||''))}
   function formatDuration(seconds){const total=Math.max(0,Math.round(Number(seconds||0)));return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`}
-  function estimateCost(){if(selectedKind==='image')return imageResolution==='4K'?3:2;const seconds=Math.max(0,videoDuration||0);if(!seconds)return videoScale==='4'?1:0.7;return Math.ceil(seconds)*(videoScale==='4'?1:0.7)}
-  function updateCostUI(){const cost=estimateCost();$('costText').textContent=`${formatCredit(cost)} кредитов`;$('runBtn').textContent=`Upscale • ${formatCredit(cost)}⚡`;if(selectedKind==='image')$('costHint').textContent=`Upscale изображения до ${imageResolution}.`;else $('costHint').textContent=videoDuration?`Длительность: ${formatDuration(videoDuration)} • Upscale видео ${videoScale}×.`:`Стоимость видео рассчитывается по фактической длительности.`}
-  function selectedFileKind(){if(!selectedFile)return '';return isVideo(selectedFile)?'video':isImage(selectedFile)?'image':''}
-  function updateModeAvailability(){const locked=selectedFileKind();$('imageModeBtn').disabled=locked==='video';$('videoModeBtn').disabled=locked==='image';}
-  function syncMode(kind){const locked=selectedFileKind();if(locked&&kind!==locked)kind=locked;selectedKind=kind;$('imageModeBtn').classList.toggle('active',kind==='image');$('videoModeBtn').classList.toggle('active',kind==='video');$('imageControls').classList.toggle('hidden',kind!=='image');$('videoControls').classList.toggle('hidden',kind!=='video');updateModeAvailability();updateCostUI()}
+  function imageQuote(factor = imageFactor) {
+    if (!imageDimensions) return null;
+    try { return ImageUpscalePricing.quote({ ...imageDimensions, factor }); }
+    catch { return null; }
+  }
+  function updateImageOptions() {
+    document.querySelectorAll('[data-image-factor]').forEach(option => {
+      const factor = Number(option.dataset.imageFactor);
+      const quote = imageQuote(factor);
+      const active = factor === imageFactor;
+      option.classList.toggle('active', active);
+      option.setAttribute('aria-pressed', String(active));
+      option.disabled = !!imageDimensions && !quote;
+      option.querySelector('span').textContent = quote
+        ? quote.outputWidth + ' × ' + quote.outputHeight
+        : imageDimensions ? "Слишком большой" : (factor === 1 ? "Исходный размер" : '');
+    });
+  }
+  function estimateCost(){
+    if (selectedKind === 'image') return imageQuote()?.internalCredits ?? null;
+    if (videoDuration <= 0 || videoDuration > VideoUpscalePricing.maxSeconds) return null;
+    return VideoUpscalePricing.quote({resolution:videoResolution, seconds:videoDuration}).internalCredits;
+  }
+  function updateCostUI(){
+    const cost = estimateCost();
+    const button = $('runBtn');
+    button.disabled = isSubmitting || cost === null;
+    if (isSubmitting) return;
+    button.textContent = cost === null ? 'Upscale' : 'Upscale • ' + formatCredit(cost) + '⚡';
+    if (selectedKind === 'image') {
+      updateImageOptions();
+      $('imageCostHint').textContent = !imageDimensions ? "Стоимость появится после выбора изображения." : cost === null ? "Изображение превышает максимально допустимый размер." : '';
+      return;
+    }
+    $('costHint').textContent = cost === null ? "Стоимость появится после выбора видео." : formatDuration(videoDuration) + ' · видео ' + videoResolution;
+  }
   function readVideoDuration(file){return new Promise(resolve=>{try{const url=URL.createObjectURL(file);const v=document.createElement('video');v.preload='metadata';v.onloadedmetadata=()=>{const d=Number(v.duration||0);URL.revokeObjectURL(url);resolve(Number.isFinite(d)?d:0)};v.onerror=()=>{URL.revokeObjectURL(url);resolve(0)};v.src=url}catch{resolve(0)}})}
   function shortName(name){const s=String(name||'file');return s.length>22?s.slice(0,10)+'....'+s.slice(-8):s}
-  async function setFile(file){clearError();selectedFile=file||null;videoDuration=0;if(!selectedFile){$('previewWrap').classList.add('hidden');$('dropEmpty').classList.remove('hidden');updateModeAvailability();updateCostUI();return}if(!isImage(selectedFile)&&!isVideo(selectedFile)){selectedFile=null;updateModeAvailability();showError('Загрузите одно изображение или видео.');return}if(isVideo(selectedFile)&&selectedFile.size>50*1024*1024){selectedFile=null;updateModeAvailability();showError('Размер видео должен быть меньше 50 МБ.');return}selectedKind=isVideo(selectedFile)?'video':'image';syncMode(selectedKind);$('dropEmpty').classList.add('hidden');$('previewWrap').classList.remove('hidden');$('fileName').textContent=shortName(selectedFile.name);$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} МБ • чтение...`;const url=URL.createObjectURL(selectedFile);$('previewBox').innerHTML=isVideo(selectedFile)?`<video src="${url}" controls muted playsinline></video>`:`<img src="${url}" alt="предпросмотр" />`;if(isVideo(selectedFile)){videoDuration=await readVideoDuration(selectedFile);if(videoDuration<4||videoDuration>30){showError('Длительность видео должна быть от 4 до 30 секунд.');}$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} МБ • видео • ${formatDuration(videoDuration)}`;}else{$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} МБ • изображение`;}updateCostUI()}
-  function wireUpload(){const input=$('mediaInput'),drop=$('dropZone');drop.addEventListener('click',(e)=>{if(e.target.closest('#removeFileBtn'))return;input.click()});input.addEventListener('change',()=>setFile(input.files&&input.files[0]));['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>setFile(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]));$('removeFileBtn').addEventListener('click',e=>{e.stopPropagation();input.value='';setFile(null)})}
-  function wireControls(){$('imageModeBtn').addEventListener('click',()=>syncMode('image'));$('videoModeBtn').addEventListener('click',()=>syncMode('video'));document.querySelectorAll('[data-image-resolution]').forEach(b=>b.addEventListener('click',()=>{imageResolution=b.dataset.imageResolution;document.querySelectorAll('[data-image-resolution]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}));document.querySelectorAll('[data-video-scale]').forEach(b=>b.addEventListener('click',()=>{videoScale=b.dataset.videoScale;document.querySelectorAll('[data-video-scale]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}))}
+  async function setFile(file){
+    clearError();
+    if (file && (selectedKind === 'video' ? !isVideo(file) : !isImage(file))) {
+      $('mediaInput').value = '';
+      showError(selectedKind === 'video' ? "Выберите видеофайл." : "Выберите изображение.");
+      return;
+    }
+    if (file && selectedKind === 'video' && file.size > VideoUpscalePricing.maxBytes) {
+      $('mediaInput').value = '';
+      showError("Размер видео не должен превышать 50 МБ.");
+      return;
+    }
+    if (file && selectedKind === 'image' && file.size > ImageUpscalePricing.maxBytes) {
+      $('mediaInput').value = '';
+      showError("Размер изображения не должен превышать 20 МБ.");
+      return;
+    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = file ? URL.createObjectURL(file) : '';
+    selectedFile = file || null;
+    videoDuration = 0;
+    imageDimensions = null;
+    $('previewWrap').classList.toggle('hidden', !file);
+    $('dropEmpty').classList.toggle('hidden', !!file);
+    $('previewBox').replaceChildren();
+    updateCostUI();
+    if (!file) return;
+    const video = selectedKind === 'video';
+    const media = document.createElement(video ? 'video' : 'img');
+    if (video) {
+      media.controls = true;
+      media.muted = true;
+      media.playsInline = true;
+      media.preload = 'metadata';
+    } else {
+      media.alt = file.name;
+    }
+    media.src = previewUrl;
+    $('previewBox').append(media);
+    $('fileName').textContent = shortName(file.name);
+    const mb = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+    $('fileMeta').textContent = video ? mb + ' · ' + "Читаем видео…" : mb;
+    if (video) {
+      const seconds = await readVideoDuration(file);
+      if (selectedFile !== file) return;
+      videoDuration = seconds;
+      if (seconds <= 0 || seconds > VideoUpscalePricing.maxSeconds) showError("Загрузите видео длительностью до 60 секунд.");
+      $('fileMeta').textContent = seconds > 0 ? mb + ' · ' + formatDuration(seconds) : mb;
+      updateCostUI();
+    } else {
+      try {
+        await media.decode();
+        if (selectedFile !== file) return;
+        imageDimensions = { width: media.naturalWidth, height: media.naturalHeight };
+        if (!imageQuote()) imageFactor = ImageUpscalePricing.factors.filter(factor => factor < imageFactor && imageQuote(factor)).at(-1) ?? imageFactor;
+        $('fileMeta').textContent = imageDimensions.width + ' × ' + imageDimensions.height + ' · ' + mb;
+      } catch {
+        if (selectedFile !== file) return;
+        showError("Не удалось прочитать изображение.");
+      }
+      updateCostUI();
+    }
+  }
+  function wireUpload(){const input=$('mediaInput'),drop=$('dropZone');if(selectedKind==='image')input.accept='.jpg,.jpeg,.png,.webp,.bmp,.gif';drop.addEventListener('click',(e)=>{if(e.target.closest('#previewWrap'))return;input.click()});input.addEventListener('change',()=>setFile(input.files&&input.files[0]));['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>setFile(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]));$('removeFileBtn').addEventListener('click',e=>{e.stopPropagation();input.value='';setFile(null)})}
+  function wireControls(){
+    document.querySelectorAll('[data-image-factor]').forEach(button => button.addEventListener('click', () => {
+      imageFactor = Number(button.dataset.imageFactor);
+      updateCostUI();
+    }));
+    const options = document.querySelectorAll('[data-video-resolution]');
+    options.forEach(button => button.addEventListener('click', () => {
+      videoResolution = button.dataset.videoResolution;
+      options.forEach(option => {
+        option.classList.toggle('active', option === button);
+        option.setAttribute('aria-pressed', String(option === button));
+      });
+      updateCostUI();
+    }));
+  }
   async function ensureUser(){const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(!currentUser)throw new Error('Сначала войдите в аккаунт.');return currentUser}
-  async function submit(e){e.preventDefault();clearError();const btn=$('runBtn'),old=btn.textContent;try{const user=await ensureUser();if(!selectedFile)throw new Error('Сначала загрузите одно изображение или видео.');if(selectedKind==='video'){if(selectedFile.size>50*1024*1024)throw new Error('Размер видео должен быть меньше 50 МБ.');if(videoDuration<4||videoDuration>30)throw new Error('Длительность видео должна быть от 4 до 30 секунд.')}const cost=estimateCost();const available=await getAvailableCredits(cost);if(available<cost)throw new Error(`Недостаточно кредитов. Требуется ${formatCredit(cost)}.`);if(!window.kieUploadBridge||typeof window.kieUploadBridge.upload!=='function')throw new Error('upload_bridge_missing');const session=await supabaseClient.auth.getSession();const token=session?.data?.session?.access_token||'';if(!token)throw new Error('Войдите в аккаунт ещё раз.');btn.disabled=true;btn.textContent='Загрузка...';const uploaded=await window.kieUploadBridge.upload(selectedFile);if(!uploaded||!uploaded.publicUrl)throw new Error('upload_failed');const runId=`${user.id}-upscale-${Date.now()}`;const body={uid:user.id,run_id:runId,kind:selectedKind,fileUrl:uploaded.publicUrl,fileName:selectedFile.name,fileType:selectedFile.type,durationSeconds:videoDuration,imageResolution,videoScale,prompt:IMAGE_PROMPT};addPending(runId);btn.textContent='Отправка...';const resp=await fetch('/.netlify/functions/run-upscale',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(body)});const data=await resp.json().catch(()=>({}));if(!data.submitted)throw new Error(data.error||'submit_failed');await refreshCredits();if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(90000,1500);startPolling()}catch(err){showError(String(err.message||err))}finally{btn.disabled=false;btn.textContent=old;updateCostUI()}}
+  async function submit(event){
+    event.preventDefault();
+    const button = $('runBtn');
+    if (button.disabled) return;
+    clearError();
+    isSubmitting = true;
+    button.disabled = true;
+    const file = selectedFile, kind = selectedKind, resolution = videoResolution;
+    const factor = imageFactor, cost = estimateCost();
+    const option = kind === 'image' ? factor : resolution;
+    try {
+      const user = await ensureUser();
+      if (!file) throw new Error("Сначала загрузите одно изображение или видео.");
+      if (kind === 'video' && file.size > VideoUpscalePricing.maxBytes) throw new Error("Размер видео не должен превышать 50 МБ.");
+      if (cost === null) throw new Error("Загрузите видео длительностью до 60 секунд.");
+      if (await getAvailableCredits(cost) < cost) throw new Error("Недостаточно кредитов. Требуется" + ' ' + formatCredit(cost) + ' ⚡.');
+      const session = await supabaseClient.auth.getSession();
+      const token = session?.data?.session?.access_token;
+      if (!token) throw new Error("Войдите в аккаунт ещё раз.");
+      let uploaded = uploads.get(file);
+      if (!uploaded) {
+        button.textContent = "Загрузка…";
+        uploaded = await window.kieUploadBridge.upload(file);
+        if (!uploaded?.publicUrl) throw new Error("Не удалось загрузить файл.");
+        uploads.set(file, uploaded);
+      }
+      const retry = upscaleRetry?.file === file && upscaleRetry.option === option;
+      const runId = retry ? upscaleRetry.runId : user.id + '-upscale-' + crypto.randomUUID();
+      upscaleRetry = {file,option,runId};
+      const body = {
+        uid:user.id, run_id:runId, kind, fileUrl:uploaded.publicUrl, fileName:file.name, fileType:file.type,
+        upscale_factor:factor, videoResolution:resolution, expected_credits:Math.round(cost*10)
+      };
+      button.textContent = "Отправка…";
+      const response = await fetch('/.netlify/functions/run-upscale',{
+        method:'POST',
+        headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+        body:JSON.stringify(body)
+      });
+      const data = await response.json().catch(()=>({}));
+      if (typeof data.submitted === 'boolean') upscaleRetry = null;
+      if (response.status === 409 && selectedFile === file) {
+        if (kind === 'video' && Number.isFinite(data.duration_seconds)) {
+          videoDuration = data.duration_seconds;
+          throw new Error("Ниже указана проверенная цена. Нажмите Upscale ещё раз для подтверждения.");
+        }
+        if (kind === 'image' && Number.isInteger(data.width) && Number.isInteger(data.height)) {
+          imageDimensions = { width: data.width, height: data.height };
+          $('fileMeta').textContent = data.width + ' × ' + data.height;
+          throw new Error("Ниже указана проверенная цена. Нажмите Upscale ещё раз для подтверждения.");
+        }
+      }
+      if (!data.submitted) throw new Error(data.error || "Не удалось отправить запрос.");
+      addPending(runId);
+      await refreshCredits();
+      if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(90000,1500);
+      startPolling();
+    } catch (error) {
+      showError(String(error.message || error));
+    } finally {
+      isSubmitting = false;
+      updateCostUI();
+    }
+  }
   function addPending(runId){$('emptyResults').classList.add('hidden');const div=document.createElement('div');div.className='result-card processing-card p-3';div.dataset.runId=runId;div.innerHTML='<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">Upscale</p><p class="text-xs text-slate-400 mt-1 safe-name">Обработка...</p></div><span class="status-dot"></span></div><div class="result-media result-placeholder"><div class="processing-orb"></div><div class="processing-label mt-3">Создание...</div></div>';$('resultsList').prepend(div);Array.from($('resultsList').children).slice(12).forEach(node=>node.remove())}
   function isUsableUrl(url){const v=String(url||'').trim().toLowerCase();return /^https?:\/\//.test(v)&&!v.includes('callback')}
   function collectUrls(row){const meta=row.meta||{};const arr=[];if(row.result_url)arr.push(row.result_url);if(meta.result_url)arr.push(meta.result_url);if(Array.isArray(meta.result_urls))arr.push(...meta.result_urls);if(Array.isArray(meta.urls))arr.push(...meta.urls);return [...new Set(arr.filter(isUsableUrl))]}
-  function downloadName(name,type){const base=String(name||'hansora-upscale').replace(/\.[a-z0-9]{2,5}$/i,'').replace(/[^a-z0-9._-]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,80)||'hansora-upscale';return `${base}-upscaled.${type==='video'?'mp4':'png'}`}
-  async function downloadMedia(url,name,type,btn){const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Скачивание...'}try{const res=await fetch(url,{mode:'cors'});if(!res.ok)throw new Error('download_failed');const blob=await res.blob();const objectUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=objectUrl;a.download=downloadName(name,type);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),1200)}catch(e){const a=document.createElement('a');a.href=url;a.download=downloadName(name,type);document.body.appendChild(a);a.click();a.remove()}finally{if(btn){btn.disabled=false;btn.textContent=old||'Скачать'}}}
+  function downloadName(name, type, url, contentType) {
+    const base = String(name || 'hansora-upscale').replace(/\.[a-z0-9]{2,5}$/i, '')
+      .replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'hansora-upscale';
+    const imageFormats = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+    const fromUrl = /\.(jpe?g|webp|png)(?:$|[?#])/i.exec(url)?.[1]?.toLowerCase();
+    const extension = type === 'video' ? 'mp4' : (imageFormats[contentType] || fromUrl || 'png');
+    return base + '-upscaled.' + extension;
+  }
+  async function downloadMedia(url,name,type,btn){const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Скачивание...'}try{const res=await fetch(url,{mode:'cors'});if(!res.ok)throw new Error('download_failed');const blob=await res.blob();const objectUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=objectUrl;a.download=downloadName(name,type,url,blob.type);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),1200)}catch(e){const a=document.createElement('a');a.href=url;a.download=downloadName(name,type,url);document.body.appendChild(a);a.click();a.remove()}finally{if(btn){btn.disabled=false;btn.textContent=old||'Скачать'}}}
+  function upscaleHistory(columns){
+    const query = supabaseClient.from('user_generations').select(columns).eq('user_id', currentUser.id);
+    if (selectedKind === 'video') {
+      return query.or('meta->>tool_feature.eq.video-upscale,and(kind.eq.upscale,meta->>media_type.eq.video),and(kind.eq.upscale,provider.eq.topaz-video-upscale)');
+    }
+    return query.eq('kind','upscale').neq('provider','topaz-video-upscale').or('meta->>media_type.is.null,meta->>media_type.neq.video');
+  }
   function historySignature(rows){return rows.map(row=>{const meta=row.meta||{},urls=collectUrls(row);return [row.created_at||'',urls[0]||'',meta.status||'',meta.task_id||meta.taskId||'',meta.run_id||meta.runId||''].join('|')}).join('||')}
   function primeResultVideos(){document.querySelectorAll('#resultsList video').forEach(video=>{video.muted=true;video.playsInline=true;video.preload='auto';const seek=()=>{try{if(Number(video.duration||0)>0&&video.currentTime<0.05)video.currentTime=Math.min(.2,Math.max(.05,video.duration*.04))}catch{}};video.addEventListener('loadedmetadata',seek,{once:true});video.load()})}
-  async function loadRecentHistory(force=false){if(!currentUser)return;if($('previewOverlay').classList.contains('show')&&!force)return;const {data,error}=await supabaseClient.from('user_generations').select('provider,kind,prompt,result_url,meta,created_at').eq('user_id',currentUser.id).eq('kind','upscale').order('created_at',{ascending:false}).limit(12);if(error)return;const rows=(data||[]).slice(0,12);const signature=historySignature(rows);if(!force&&signature===lastHistorySignature)return;lastHistorySignature=signature;$('resultsList').innerHTML='';$('emptyResults').classList.toggle('hidden',rows.length>0);rows.forEach(row=>{const meta=row.meta||{},urls=collectUrls(row),url=urls[0]||'',type=String(meta.media_type||'image'),status=url?'ready':String(meta.status||'processing'),name=type==='video'?'Video Upscale':'Image Upscale',fileName=meta.file_name||row.prompt||name;const media=url?`<div class="result-media">${type==='video'?`<video src="${escapeHtml(url)}" muted playsinline preload="auto"></video>`:`<img src="${escapeHtml(url)}" alt="результат" loading="lazy" />`}</div>`:`<div class="result-media result-placeholder">${status==='failed'?'Ошибка':'<div class="processing-orb"></div><div class="processing-label mt-3">Создание...</div>'}</div>`;const div=document.createElement('div');div.className=`result-card p-3 ${!url&&status!=='failed'?'processing-card':''}`;if(url){div.dataset.url=url;div.dataset.type=type;div.dataset.name=fileName}div.innerHTML=`<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">${escapeHtml(name)}</p><p class="text-xs text-slate-400 mt-1 safe-name">${escapeHtml(fileName)}</p></div><span class="status-dot ${url?'ready':status==='failed'?'failed':''}"></span></div>${media}${url?'<div class="mt-3"><button class="get-btn" type="button">Скачать</button></div>':''}`;if(url){div.querySelector('.get-btn').addEventListener('click',(e)=>{e.stopPropagation();downloadMedia(url,fileName,type,e.currentTarget)})}$('resultsList').appendChild(div)});primeResultVideos()}
+  async function loadRecentHistory(force=false){if(!currentUser)return;if($('previewOverlay').classList.contains('show')&&!force)return;const {data,error}=await upscaleHistory('provider,kind,prompt,result_url,meta,created_at').order('created_at',{ascending:false}).limit(12);if(error)return;const rows=(data||[]).slice(0,12);const signature=historySignature(rows);if(!force&&signature===lastHistorySignature)return;lastHistorySignature=signature;$('resultsList').innerHTML='';$('emptyResults').classList.toggle('hidden',rows.length>0);rows.forEach(row=>{const meta=row.meta||{},urls=collectUrls(row),url=urls[0]||'',type=String(meta.media_type||selectedKind),status=url?'ready':String(meta.status||'processing'),name=type==='video'?'Video Upscale':'Image Upscale',fileName=meta.file_name||row.prompt||name;const media=url?`<div class="result-media">${type==='video'?`<video src="${escapeHtml(url)}" muted playsinline preload="auto"></video>`:`<img src="${escapeHtml(url)}" alt="результат" loading="lazy" />`}</div>`:`<div class="result-media result-placeholder">${status==='failed'?'Ошибка':'<div class="processing-orb"></div><div class="processing-label mt-3">Создание...</div>'}</div>`;const div=document.createElement('div');div.className=`result-card p-3 ${!url&&status!=='failed'?'processing-card':''}`;if(url){div.dataset.url=url;div.dataset.type=type;div.dataset.name=fileName}div.innerHTML=`<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">${escapeHtml(name)}</p><p class="text-xs text-slate-400 mt-1 safe-name">${escapeHtml(fileName)}</p></div><span class="status-dot ${url?'ready':status==='failed'?'failed':''}"></span></div>${media}${url?'<div class="mt-3"><button class="get-btn" type="button">Скачать</button></div>':''}`;if(url){div.querySelector('.get-btn').addEventListener('click',(e)=>{e.stopPropagation();downloadMedia(url,fileName,type,e.currentTarget)})}$('resultsList').appendChild(div)});primeResultVideos()}
   function isResultVideoPlaying(){return Array.from(document.querySelectorAll('#resultsList video')).some(v=>!v.paused&&!v.ended&&v.readyState>2)}
-  function shouldCheckUpscaleRow(row){const meta=row&&row.meta?row.meta:{};const status=String(meta.status||'').toLowerCase();if(status==='failed'||status==='error'||status==='refunded')return false;return collectUrls(row).length===0&&!!(meta.run_id||meta.runId)&&!!(meta.task_id||meta.taskId)}
-  async function hitUpscaleCheck(row){if(!currentUser||!shouldCheckUpscaleRow(row))return false;const meta=row.meta||{};const runId=meta.run_id||meta.runId||'',taskId=meta.task_id||meta.taskId||'';try{await fetch(`/.netlify/functions/upscale-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`,{method:'GET',cache:'no-store',headers:{'Accept':'application/json'}});return true}catch{return false}}
-  async function checkPending(){if(!currentUser)return 0;const {data,error}=await supabaseClient.from('user_generations').select('result_url,meta,created_at').eq('user_id',currentUser.id).eq('kind','upscale').order('created_at',{ascending:false}).limit(30);if(error)return 0;const rows=(data||[]).filter(shouldCheckUpscaleRow);let checked=0;await Promise.all(rows.map(async row=>{if(await hitUpscaleCheck(row))checked++}));return checked}
+  function isProtectedUpscale(meta) {
+    return ['video-upscale', 'image-upscale'].includes(meta?.tool_feature);
+  }
+  function shouldCheckUpscaleRow(row){const meta=row&&row.meta?row.meta:{};const status=String(meta.status||'').toLowerCase();if(status==='failed'||status==='error'||status==='refunded')return false;return collectUrls(row).length===0&&!!(meta.run_id||meta.runId)&&!!(meta.task_id||meta.taskId||isProtectedUpscale(meta))}
+  async function hitUpscaleCheck(row, token){
+    if (!currentUser || !shouldCheckUpscaleRow(row)) return false;
+    const meta = row.meta || {};
+    const params = new URLSearchParams({uid:currentUser.id, run_id:meta.run_id||meta.runId||'', taskId:meta.task_id||meta.taskId||''});
+    const protectedUpscale = isProtectedUpscale(meta);
+    const checker = protectedUpscale ? 'kling4-check' : 'upscale-check';
+    if (protectedUpscale && !token) return false;
+    const headers = {'Accept':'application/json'};
+    if (protectedUpscale) headers.Authorization = 'Bearer '+token;
+    try {
+      await fetch('/.netlify/functions/'+checker+'?'+params,{cache:'no-store',headers});
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function checkPending(){if(!currentUser)return 0;const {data,error}=await upscaleHistory('result_url,meta,created_at').order('created_at',{ascending:false}).limit(30);if(error)return 0;const rows=(data||[]).filter(shouldCheckUpscaleRow);const token=rows.some(row=>isProtectedUpscale(row.meta))?(await supabaseClient.auth.getSession()).data?.session?.access_token:'';let checked=0;await Promise.all(rows.map(async row=>{if(await hitUpscaleCheck(row,token))checked++}));return checked}
   function startPolling(){if(pollTimer)clearInterval(pollTimer);let ticks=0;const runOnce=async()=>{ticks++;const p=await checkPending();if(!isResultVideoPlaying())await loadRecentHistory();if((p===0&&ticks>2)||ticks>80){clearInterval(pollTimer);pollTimer=null}};runOnce();pollTimer=setInterval(runOnce,3000)}
   function escapeHtml(str){return String(str||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
   function openPreview(url,type){if(!url)return;$('previewContent').innerHTML=type==='video'?`<video src="${escapeHtml(url)}" controls autoplay playsinline></video>`:`<img src="${escapeHtml(url)}" alt="Предпросмотр Upscale" />`;$('previewOverlay').classList.add('show');$('previewOverlay').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
   function closePreview(){$('previewOverlay').classList.remove('show');$('previewOverlay').setAttribute('aria-hidden','true');$('previewContent').innerHTML='';document.body.style.overflow='';loadRecentHistory().catch(()=>{})}
   function wirePreview(){$('resultsList').addEventListener('click',(event)=>{if(event.target.closest('.get-btn'))return;const card=event.target.closest('.result-card[data-url]');if(!card)return;openPreview(card.dataset.url,card.dataset.type)});$('previewClose').addEventListener('click',closePreview);$('previewOverlay').addEventListener('click',(event)=>{if(event.target===$('previewOverlay'))closePreview()});document.addEventListener('keydown',(event)=>{if(event.key==='Escape')closePreview()})}
-  async function init(){wireUpload();wireControls();wirePreview();syncMode('image');$('upscaleForm').addEventListener('submit',submit);$('refreshResultsBtn').addEventListener('click',async()=>{const p=await checkPending();await loadRecentHistory(true);if(p>0)startPolling()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});window.addEventListener('focus',()=>{if(currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(currentUser){await refreshCredits();const pending=await checkPending();await loadRecentHistory(true);if(pending>0)startPolling()}if(window.HansoraHeader&&typeof window.HansoraHeader.init==='function'){try{window.HansoraHeader.init({supabaseClient})}catch{}}}
+  async function init(){wireUpload();wireControls();wirePreview();updateCostUI();$('upscaleForm').addEventListener('submit',submit);$('refreshResultsBtn').addEventListener('click',async()=>{const p=await checkPending();await loadRecentHistory(true);if(p>0)startPolling()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});window.addEventListener('focus',()=>{if(currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(currentUser){await refreshCredits();const pending=await checkPending();await loadRecentHistory(true);if(pending>0)startPolling()}if(window.HansoraHeader&&typeof window.HansoraHeader.init==='function'){try{window.HansoraHeader.init({supabaseClient})}catch{}}}
   document.addEventListener('DOMContentLoaded',init);
 </script>
 </body>

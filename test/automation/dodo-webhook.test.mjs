@@ -65,3 +65,12 @@ test('A Creative plan product cannot be upgraded by editing metadata_plan_id', a
   const payment = writes.find(item => item.u.includes('/payments') && item.method === 'POST');
   assert.equal(payment.body[0].credits, 250);
 });
+
+test('The Lite Monthly product ($25, formerly Scale) gives the Lite plan, whatever the link metadata says', async () => {
+  const { response, writes } = await run({ type: 'subscription.active', data: { status: 'active', subscription_id: 'sub_lite', product_id: 'pdt_0NpeRJQYrPCPCIK9zbEb1', total_amount: 2500, currency: 'USD', next_billing_date: '2026-12-13T00:00:00Z', previous_billing_date: '2026-11-13T00:00:00Z', metadata: { uid: 'u1', plan_id: 'automation_scale_monthly' } } });
+  assert.equal(response.statusCode, 200);
+  const subscription = writes.find(item => item.u.includes('/automation_subscriptions'));
+  assert.equal(subscription.body[0].plan_id, 'automation_lite_monthly');
+  const payment = writes.find(item => item.u.includes('/payments') && item.method === 'POST');
+  assert.equal(payment.body[0].credits, 250, '2,500⚡ a month, not Scale\'s 19,900⚡');
+});

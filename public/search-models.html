@@ -4317,6 +4317,7 @@
 
 	    </style>
   <script src="/kling4-pricing.js?v=20261022"></script>
+  <script src="/gemini-omni-12-pricing.js?v=20261110"></script>
   <script src="/seedance-pricing.js?v=20261025-prices"></script>
   <script src="/seedance-draft.js?v=20261024"></script>
   <script src="/wan-pricing.js?v=20261021"></script>
@@ -7627,6 +7628,16 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 5.9
       },
       {
+        id: 'seedance25-flash',
+        name: 'Seedance 2.5 Flash',
+        emoji: '🌱',
+        subtitle: 'Cheaper Seedance 2.5 · 480p / 720p',
+        category: 'video',
+        description: 'Seedance 2.5 quality at a lower price: 480p or 720p, 4–30 seconds, first/last frame or image, video and audio references.',
+        __flashOf: 'seedance25',
+        isNew: true
+      },
+      {
         id: 'kling40', name: 'Kling 4.0', emoji: 'K4', subtitle: 'Text / Image / Video / Voice → Video', category: 'video',
         description: 'Kling 4.0 with image, video and voice references, native audio, and 3–30 second videos.',
         endpoint: '/.netlify/functions/run-kling-40', needsImage: false, maxFiles: 0,
@@ -7677,6 +7688,27 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         costLabel: 'Mini 1.3⚡/s',
         minCredits: 5.2
+      },
+      {
+        id: 'gemini-omni-flash-1-2',
+        name: 'Gemini Omni 1.2 Flash',
+        emoji: 'GF',
+        subtitle: 'Text / Frames / Image / Video → Video',
+        category: 'video',
+        description: 'Gemini Omni 1.2 Flash: 3-15 s videos with sound, first/last frame, up to 6 reference images, or editing a video of up to 15 s.',
+        endpoint: '/.netlify/functions/run-gemini-omni-flash-1-2',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 100,
+        specificUpload: 'geminiOmni',
+        aspectOptions: ['16:9', '9:16', 'auto'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['360p', '720p', '1080p', '4K'],
+        defaultResolution: '720p',
+        durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        costLabel: '',
+        minCredits: 1,
+        isNew: true
       },
       {
         id: 'gemini-omni-flash-1-1',
@@ -7940,7 +7972,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
 	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
 	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance25', 'kling40', 'henshin', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance25-flash', 'kling40', 'henshin', 'gemini-omni-flash-1-2', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
       return String(value || '').trim().toLowerCase();
@@ -8104,7 +8136,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('happyhorse')) return 'HH';
       if (id.includes('qwen')) return 'Q';
       if (id.includes('z-image')) return 'Z';
-      if (id === 'seedance25') return 'S25';
+      if (id === 'seedance25' || id === 'seedance25-flash') return 'S25';
       if (id === 'seedance20-mini') return 'SM';
       if (id.includes('seedance20')) return 'S2';
       if (id.includes('gemini-omni')) return 'GO';
@@ -8127,7 +8159,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('happyhorse')) return 'seedance';
       if (id.includes('qwen')) return 'qwen';
       if (id.includes('z-image')) return 'z';
-      if (id.includes('seedance20') || id === 'seedance25') return 'seedance';
+      if (id.includes('seedance20') || id.startsWith('seedance25')) return 'seedance';
       if (id.includes('gemini-omni')) return 'seedance';
       if (id.includes('kling')) return 'kling';
       if (id.includes('veo')) return 'veo';
@@ -8145,7 +8177,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('seedream')) return MODEL_LOGO_BASE_URL + '5.png';
       if (id.includes('grok')) return MODEL_LOGO_BASE_URL + '4.png';
       if (id.includes('wan') || id.includes('qwen') || id.includes('z-image')) return MODEL_LOGO_BASE_URL + '6.png';
-      if (id.includes('seedance20') || id === 'seedance25') return MODEL_LOGO_BASE_URL + '5.png';
+      if (id.includes('seedance20') || id.startsWith('seedance25')) return MODEL_LOGO_BASE_URL + '5.png';
       if (id.includes('gemini-omni') || id.includes('veo')) return MODEL_LOGO_BASE_URL + '3.png';
       if (id.includes('happyhorse')) return MODEL_LOGO_BASE_URL + '15.png';
       if (id === 'henshin') return '/icons/henshin.svg';
@@ -9083,7 +9115,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return files;
     }
 
-    function applyReusableImagesToCurrentModel(files) {
+    function applyReusableImagesToCurrentModel(files, { fromArticle = false } = {}) {
       const imageFiles = (files || []).filter((file) => file && (fileIsKind(file, 'image') || fileHasGenericMime(file)));
       if (!currentModel || !imageFiles.length) return false;
       clearPreviewInputValues();
@@ -9108,16 +9140,21 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         syncSeedanceInputLocks();
         return true;
       }
-      if (currentModel.specificUpload === 'grokVideo' || currentModel.specificUpload === 'geminiOmni') {
-        const limit = currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : 7;
+      const wanArticle = fromArticle && currentModel.specificUpload === 'wan30';
+      if (wanArticle || currentModel.specificUpload === 'grokVideo' || currentModel.specificUpload === 'geminiOmni') {
+        const limit = wanArticle
+          ? getListUploadConfig('videoRefImagesThumbs').max
+          : (currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7);
         videoRefImageFiles = imageFiles.slice(0, limit);
         renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
           videoRefImageFiles.splice(index, 1);
           const input = document.getElementById('videoRefImagesInput');
           if (input) input.value = '';
+          if (wanArticle) syncVideoRefsInputLocks();
           updateCostDisplay();
           updateRunButtonLabel();
         });
+        if (wanArticle) syncVideoRefsInputLocks();
         updateCostDisplay();
         updateRunButtonLabel();
         return true;
@@ -9174,8 +9211,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function selectWorkspaceModel(id, options = {}) {
-      const next = MODELS.find((m) => m.id === id);
+      let next = MODELS.find((m) => m.id === id);
       if (!next) return;
+      if (next.__flashOf) {
+        currentSeedanceVariant = 'flash';
+        next = MODELS.find((m) => m.id === next.__flashOf);
+        if (!next) return;
+      } else if (next.id === 'seedance25') {
+        currentSeedanceVariant = 'standard';
+      }
       if (next.__navTo) { window.location.href = next.__navTo; return; }
       const shouldPreserveUploads = options.preserveUploads !== false;
       const reusableImages = shouldPreserveUploads ? collectReusableImageFiles() : [];
@@ -9222,12 +9266,18 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'seedance20': 'seedance20',
         'seedance-2.5': 'seedance25',
         'seedance25': 'seedance25',
+        'seedance25-flash': 'seedance25-flash',
+        'seedance-2.5-flash': 'seedance25-flash',
+        'seedance-2-5-flash': 'seedance25-flash',
+        'seedance25flash': 'seedance25-flash',
         'seedance-2-mini': 'seedance20-mini',
         'seedance-2.0-mini': 'seedance20-mini',
         'seedance20-mini': 'seedance20-mini',
         'gemini-omni-flash': 'gemini-omni-flash-1-1',
         'gemini-omni-1.1-flash': 'gemini-omni-flash-1-1',
         'gemini-omni-flash-1-1': 'gemini-omni-flash-1-1',
+        'gemini-omni-flash-1-2': 'gemini-omni-flash-1-2',
+        'gemini-omni-1.2-flash': 'gemini-omni-flash-1-2',
         'gemini-omni': 'gemini-omni-video',
 	        'geminiomni': 'gemini-omni-video',
 	        'gemini-omni-video': 'gemini-omni-video',
@@ -9330,7 +9380,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       items.forEach((model) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-lite' && ['veo31-lite','veo31-fast','veo31'].includes(currentModel.id)));
+        const active = currentModel && (model.id === 'seedance25-flash' ? seedance25FlashSelected() : model.id === 'seedance25' ? (currentModel.id === 'seedance25' && !seedance25FlashSelected()) : currentModel.id === model.id || (model.id === 'veo31-lite' && ['veo31-lite','veo31-fast','veo31'].includes(currentModel.id)));
         btn.className = 'model-tab' + (active ? ' active' : '');
         const newMark = model.isTop ? '<span class="model-top-badge">Top</span>' : model.isNew ? '<span class="text-[9px] font-bold uppercase tracking-wide text-emerald-300">NEW</span>' : '';
         btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>' + newMark;
@@ -9416,7 +9466,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
 
     function updateModelButtonLabels() {
-      const labelText = currentModel ? currentModel.name : 'Choose model';
+      const labelText = currentModel ? (seedance25FlashSelected() ? 'Seedance 2.5 Flash' : currentModel.name) : 'Choose model';
       const btnLabel = document.getElementById('modelButtonLabel');
       if (btnLabel) btnLabel.textContent = labelText;
 
@@ -9497,6 +9547,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 5));
         return Number((seconds * 1.3).toFixed(1));
       }
+	      if (model.id === 'gemini-omni-flash-1-2') {
+	        // Per second (public/gemini-omni-12-pricing.js); an edit is priced by its source video's length.
+	        const firstAndLast = !!(videoFirstFrameFile && videoLastFrameFile);
+	        const seconds = Math.max(3, Math.min(firstAndLast ? 10 : 15, Math.round(Number(currentDuration || 4))));
+	        const inputSeconds = videoSourceFile ? Math.min(15, Number(geminiOmniSourceDuration) || 15) : 0;
+	        return window.GeminiOmni12Pricing.quote({ resolution: currentResolution, duration: seconds, inputSeconds, firstAndLast }).internalCredits;
+	      }
 	      if (model.id === 'gemini-omni-flash-1-1') {
 	        const hasVideoInput = !!videoSourceFile;
 	        if (hasVideoInput) return currentResolution === '4K' ? 16 : 11;
@@ -9658,6 +9715,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function isResolutionAllowedForCurrentModel(val) {
       if (!currentModel) return true;
       if (currentModel.id === 'seedance20' && currentSeedanceVariant === 'fast') return val === '720p';
+      if (seedance25FlashSelected()) return val === '480p' || val === '720p';
       if (currentModel.id !== 'gpt-image-2') return true;
       if (currentAspect === 'auto') return val === '1K';
       if (currentAspect === '1:1') return val === '1K' || val === '2K';
@@ -10100,6 +10158,37 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           };
           veoQualityPills.appendChild(makeBtn('Seedance 2.0', 'standard'));
           veoQualityPills.appendChild(makeBtn('Fast', 'fast'));
+        }
+      } else if (currentModel.id === 'seedance25') {
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
+        currentWanTier = 'normal';
+        currentVeoFamily = null;
+        currentVeoVariant = 'fast';
+        currentSeedanceVariant = currentSeedanceVariant === 'flash' ? 'flash' : 'standard';
+        if (currentSeedanceVariant === 'flash' && currentResolution === '1080p') currentResolution = '720p';
+        if (veoQualityBlock) veoQualityBlock.classList.remove('hidden');
+        if (veoQualityPills) {
+          veoQualityPills.innerHTML = '';
+          const makeBtn = (label, val) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (val === currentSeedanceVariant) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              currentSeedanceVariant = val;
+              if (val === 'flash' && currentResolution === '1080p') currentResolution = '720p';
+              Array.from(veoQualityPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+              renderResolutionControls();
+              updateModelButtonLabels();
+              updateCostDisplay();
+              updateRunButtonLabel();
+            });
+            return b;
+          };
+          veoQualityPills.appendChild(makeBtn('Seedance 2.5', 'standard'));
+          veoQualityPills.appendChild(makeBtn('Flash', 'flash'));
         }
       } else if (isMotionControl) {
         if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
@@ -10549,7 +10638,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (hint) hint.textContent = '';
       if (imageLabel) imageLabel.textContent = 'Upload images';
       if (imageInput) imageInput.multiple = true;
-      const isGeminiFlash = kind === 'geminiOmni' && currentModel && currentModel.id === 'gemini-omni-flash-1-1';
+      const isGeminiFlash = kind === 'geminiOmni' && currentModel && currentModel.id.startsWith('gemini-omni-flash');
+      // Gemini Omni 1.2 Flash has no voice presets.
+      const hasGeminiVoices = kind === 'geminiOmni' && !(currentModel && currentModel.id === 'gemini-omni-flash-1-2');
       const showsFirstFrame = kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash;
       const showsLastFrame = kind === 'wan27' || kind === 'wan30' || isGeminiFlash;
       const showsSourceVideo = kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni';
@@ -10559,7 +10650,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       show('videoImageReferencesSection', true);
       show('videoVideoReferencesSection', showsSourceVideo || showsVideoReferences);
       show('videoAudioReferencesSection', showsAudioReferences);
-      show('geminiVoiceSection', kind === 'geminiOmni');
+      show('geminiVoiceSection', hasGeminiVoices);
       show('wanPromptExtendSection', kind === 'wan27');
       show('videoFirstFrameControl', showsFirstFrame);
       show('videoLastFrameControl', showsLastFrame);
@@ -10567,7 +10658,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       show('videoRefImagesControl', true);
       show('videoRefVideosControl', showsVideoReferences);
       show('videoRefAudioControl', showsAudioReferences);
-      show('geminiAudioIdsControl', kind === 'geminiOmni');
+      show('geminiAudioIdsControl', hasGeminiVoices);
       show('wanPromptExtendControl', kind === 'wan27');
       syncUploadButtonCopy();
       if (typeof syncVideoRefsInputLocks === 'function') syncVideoRefsInputLocks();
@@ -11119,6 +11210,23 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      }
 	    }
 
+	    // Gemini Omni 1.2 Flash edits the whole video (up to 15 s, no trimming); the price follows its length.
+	    async function checkGemini12SourceVideo(file) {
+	      geminiOmniSourceDuration = await readVideoFileDuration(file) || 0;
+	      if (videoSourceFile !== file) return;
+	      if (geminiOmniSourceDuration > 15.05) {
+	        videoSourceFile = null;
+	        geminiOmniSourceDuration = 0;
+	        const input = document.getElementById('videoSourceInput');
+	        if (input) input.value = '';
+	        renderSingleThumb(null, document.getElementById('videoSourceThumb'));
+	        showStatus('Gemini Omni 1.2 Flash edits a video of up to 15 seconds. Trim it and try again.', 'error');
+	      }
+	      syncVideoRefsInputLocks();
+	      updateCostDisplay();
+	      updateRunButtonLabel();
+	    }
+
 	    function openGeminiOmniTrimModal(file) {
 	      if (!file || !currentModel || !currentModel.id.startsWith('gemini-omni')) return;
 	      const overlay = document.getElementById('geminiOmniTrimOverlay');
@@ -11184,6 +11292,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (card) card.classList.toggle('control-disabled', !!disabled);
     }
 
+    // Seedance 2.5 Flash: the cheaper Seedance 2.5 option (480p/720p, no 1080p draft finish), sent as variant 'flash'.
+    function seedance25FlashSelected() {
+      return !!(currentModel && currentModel.id === 'seedance25' && currentSeedanceVariant === 'flash');
+    }
     function seedance25UsesSourceVideoSettings() {
       return !!(currentModel && currentModel.id === 'seedance25' && seedanceVideoRefFiles.length === 1);
     }
@@ -11459,6 +11571,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
     function getSeedanceReferenceLimit(kind) {
       const defaults = { image: 9, video: 3, audio: 3 };
+      if (seedance25FlashSelected()) return { image: 10, video: 5, audio: 5 }[kind] || 1;
       const configured = currentModel && currentModel.referenceLimits;
       return Math.max(1, Number(configured && configured[kind] || defaults[kind] || 1));
     }
@@ -11578,13 +11691,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function usesExclusiveVideoFramePair() {
-      return !!(currentModel && (currentModel.id === 'gemini-omni-flash-1-1' || currentModel.id === 'wan-3'));
+      return !!(currentModel && (currentModel.id.startsWith('gemini-omni-flash') || currentModel.id === 'wan-3'));
     }
 
     function hasVideoReferenceInputs() {
       if (!currentModel) return false;
-      if (currentModel.id === 'gemini-omni-flash-1-1') {
-        return !!(videoSourceFile || videoRefImageFiles.length || geminiOmniAudioIds.length);
+      if (currentModel.id.startsWith('gemini-omni-flash')) {
+        return !!(videoSourceFile || videoRefImageFiles.length || (currentModel.id === 'gemini-omni-flash-1-1' && geminiOmniAudioIds.length));
       }
       if (currentModel.id === 'wan-3') {
         return !!(videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length);
@@ -11780,7 +11893,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        updateRunButtonLabel();
 	        syncVideoRefsInputLocks();
 	      });
-	      if (videoSourceFile && currentModel && currentModel.id.startsWith('gemini-omni')) openGeminiOmniTrimModal(videoSourceFile);
+	      if (videoSourceFile && currentModel && currentModel.id === 'gemini-omni-flash-1-2') checkGemini12SourceVideo(videoSourceFile);
+	      else if (videoSourceFile && currentModel && currentModel.id.startsWith('gemini-omni')) openGeminiOmniTrimModal(videoSourceFile);
 	      updateCostDisplay();
 	      updateRunButtonLabel();
 	      syncVideoRefsInputLocks();
@@ -11792,7 +11906,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         showStatus('Remove the frames before adding image references.', 'error');
         return;
       }
-      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : (currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 10 : 9));
+      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : (currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7)) : (currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 10 : 9));
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
       e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
@@ -12921,13 +13035,13 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             uid,
             user_id: uid,
             prompt,
-            variant: model.id === 'seedance20-mini' ? 'mini' : (currentSeedanceVariant === 'fast' ? 'fast' : 'standard'),
+            variant: model.id === 'seedance20-mini' ? 'mini' : (model.id === 'seedance25' && currentSeedanceVariant === 'flash' ? 'flash' : (currentSeedanceVariant === 'fast' ? 'fast' : 'standard')),
             model: model.id === 'seedance20-mini' ? 'bytedance/seedance-2-mini' : undefined,
             aspect_ratio: model.id === 'seedance25' && ((firstFrameUrl || lastFrameUrl) || seedance25UsesSourceVideoSettings()) ? 'adaptive' : (aspect || '16:9'),
             duration: model.id === 'seedance25' && seedance25UsesSourceVideoSettings() ? -1 : (duration ? Number(duration) : 5),
             source_video_duration: model.id === 'seedance25' && seedance25UsesSourceVideoSettings() ? seedanceSingleVideoDuration : undefined,
             resolution: model.id === 'seedance20-mini' ? (currentResolution || '720p') : (currentSeedanceVariant === 'fast' ? '720p' : (currentResolution || '720p')),
-            draft: model.id === 'seedance25' && currentResolution === '480p',
+            draft: model.id === 'seedance25' && currentSeedanceVariant !== 'flash' && currentResolution === '480p',
             generate_audio: !!seedanceGenerateAudio,
             enable_web_search: !!seedanceWebSearch,
             web_search: !!seedanceWebSearch,
@@ -12936,6 +13050,26 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             reference_image_urls: imageRefUrls,
             reference_video_urls: videoRefUrls,
             reference_audio_urls: audioRefUrls,
+            run_id: runId
+          };
+        }
+        case 'gemini-omni-flash-1-2': {
+          let cursor = 0;
+          const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = videoLastFrameFile ? (urls || [])[cursor++] : '';
+          const sourceVideoUrl = videoSourceFile ? (urls || [])[cursor++] : '';
+          const imageUrls = (urls || []).slice(cursor, cursor + videoRefImageFiles.length);
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            aspect_ratio: aspect || '16:9',
+            duration: Number(duration || 4),
+            resolution: String(resolution || currentResolution || '720p').toLowerCase(),
+            first_frame_url: firstFrameUrl || undefined,
+            last_frame_url: lastFrameUrl || undefined,
+            image_urls: imageUrls,
+            video_url: sourceVideoUrl || undefined,
             run_id: runId
           };
         }
@@ -13292,6 +13426,13 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           removeClientRequestPlaceholder(initialRequestContext);
           showStatus('Kling 4.0: use 1–10,000 prompt characters, up to 10 images, 5 videos (2–30 seconds each, 30 seconds combined), 3 voices, and 15 reference items total.','error');return;
         }
+      }
+
+      if (seedance25FlashSelected() && (seedanceImageRefFiles.length > 10 || seedanceVideoRefFiles.length > 5 || seedanceAudioRefFiles.length > 5
+          || ((seedanceFirstFrameFile || seedanceLastFrameFile) && (seedanceImageRefFiles.length || seedanceVideoRefFiles.length || seedanceAudioRefFiles.length)))) {
+        removeClientRequestPlaceholder(initialRequestContext);
+        showStatus('Seedance 2.5 Flash takes up to 10 images, 5 videos and 5 audio clips, and first/last frames cannot be combined with references.', 'error');
+        return;
       }
 
       if (['seedance20','seedance25'].includes(currentModel.id)) {
@@ -14141,7 +14282,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           updateRunButtonLabel();
           return true;
         }
-        if (currentModel.id === 'gemini-omni-flash-1-1' || ['wan27', 'wan30', 'happyhorse'].includes(currentModel.specificUpload)) {
+        if (currentModel.id.startsWith('gemini-omni-flash') || ['wan27', 'wan30', 'happyhorse'].includes(currentModel.specificUpload)) {
           // The picture becomes the video's first frame, so the video starts from it.
           videoFirstFrameFile = files[0] || null;
           renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {
@@ -14318,7 +14459,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     async function restorePreviewGeneration(data, setStatus) {
       const model = findPreviewModel(data);
       if (model) {
-        selectWorkspaceModel(model.id, { preserveUploads: false });
+        const flashRun = model.id === 'seedance25' && (data?.meta?.variant === 'flash' || /flash/i.test(String(data?.provider || '')));
+        selectWorkspaceModel(flashRun ? 'seedance25-flash' : model.id, { preserveUploads: false });
       }
       setPromptForPreviewRun(data && data.prompt ? data.prompt : '');
       applyPreviewOptions(data || {});
@@ -14389,7 +14531,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           ? getSeedanceReferenceLimit('image')
           : Math.max(1, Number(currentModel && currentModel.maxFiles || referenceUrls.length));
         const files = await hydratePreviewFiles(referenceUrls, 'image', limit);
-        if (!applyReusableImagesToCurrentModel(files)) {
+        if (!applyReusableImagesToCurrentModel(files, { fromArticle: true })) {
           throw new Error('Could not add the article reference images to this model.');
         }
       }

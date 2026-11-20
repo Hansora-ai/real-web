@@ -17,6 +17,10 @@
 [functions."run-heygen-avatar"]
   timeout = 60
 
+[functions."run-upscale"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
 [functions."heygen-check"]
   timeout = 60
 
@@ -88,6 +92,13 @@
   timeout = 60
 
 [functions."hansora-mcp"]
+  timeout = 60
+  # Image conversion for photos from ChatGPT (lib/hansora-mcp/file-inputs.mjs): sharp has native files and
+  # heic-convert loads its decoder at run time, so both are shipped as packages instead of being bundled.
+  external_node_modules = ["sharp", "heic-convert"]
+
+# Hansora Automation MCP server (ChatGPT app), served at /automation/mcp
+[functions."automation-mcp"]
   timeout = 60
 
 # Unlimited generation queue dispatcher (runs once per minute)
@@ -172,3 +183,236 @@ function = "inject-bottom-nav-inline"
     X-Frame-Options = "DENY"
     Referrer-Policy = "no-referrer"
     X-Content-Type-Options = "nosniff"
+
+# Hansora Automation in Armenian and Russian: the same page at an _arm / _ru address, like Hansora Creative.
+# automation-i18n.js reads the language from the address and translates the page.
+[[redirects]]
+  from = "/automation-agent_arm.html"
+  to = "/automation-agent.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-agent_ru.html"
+  to = "/automation-agent.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-chatgpt_arm.html"
+  to = "/automation-chatgpt.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-chatgpt_ru.html"
+  to = "/automation-chatgpt.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-comments_arm.html"
+  to = "/automation-comments.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-comments_ru.html"
+  to = "/automation-comments.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-connect_arm.html"
+  to = "/automation-connect.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-connect_ru.html"
+  to = "/automation-connect.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-contact_arm.html"
+  to = "/automation-contact.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-contact_ru.html"
+  to = "/automation-contact.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-contacts_arm.html"
+  to = "/automation-contacts.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-contacts_ru.html"
+  to = "/automation-contacts.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-dashboard_arm.html"
+  to = "/automation-dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-dashboard_ru.html"
+  to = "/automation-dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-data-deletion_arm.html"
+  to = "/automation-data-deletion.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-data-deletion_ru.html"
+  to = "/automation-data-deletion.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-inbox_arm.html"
+  to = "/automation-inbox.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-inbox_ru.html"
+  to = "/automation-inbox.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-operations_arm.html"
+  to = "/automation-operations.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-operations_ru.html"
+  to = "/automation-operations.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-phone_arm.html"
+  to = "/automation-phone.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-phone_ru.html"
+  to = "/automation-phone.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-pricing_arm.html"
+  to = "/automation-pricing.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-pricing_ru.html"
+  to = "/automation-pricing.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-privacy_arm.html"
+  to = "/automation-privacy.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-privacy_ru.html"
+  to = "/automation-privacy.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-products_arm.html"
+  to = "/automation-products.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-products_ru.html"
+  to = "/automation-products.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-profile_arm.html"
+  to = "/automation-profile.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-profile_ru.html"
+  to = "/automation-profile.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-setup_arm.html"
+  to = "/automation-setup.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-setup_ru.html"
+  to = "/automation-setup.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-terms_arm.html"
+  to = "/automation-terms.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-terms_ru.html"
+  to = "/automation-terms.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-tiktok-comments_arm.html"
+  to = "/automation-tiktok-comments.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-tiktok-comments_ru.html"
+  to = "/automation-tiktok-comments.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-tools_arm.html"
+  to = "/automation-tools.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-tools_ru.html"
+  to = "/automation-tools.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-usage_arm.html"
+  to = "/automation-usage.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-usage_ru.html"
+  to = "/automation-usage.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-website_arm.html"
+  to = "/automation-website.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-website_ru.html"
+  to = "/automation-website.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-workflows_arm.html"
+  to = "/automation-workflows.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation-workflows_ru.html"
+  to = "/automation-workflows.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation_arm.html"
+  to = "/automation.html"
+  status = 200
+
+[[redirects]]
+  from = "/automation_ru.html"
+  to = "/automation.html"
+  status = 200
+

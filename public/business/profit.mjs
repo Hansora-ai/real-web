@@ -130,7 +130,8 @@ function render(d) {
   table($("#journeys"), ["Bought", "Buyer", "Last before buying", "Tries", "Failed", "Time to buy"],
     d.journeys.map((j) => [when(j.first_purchase), esc(j.email || j.user_id.slice(0, 8)), esc(j.last_model), int(j.generations), int(j.failed), j.hours_to_buy == null ? "—" : j.hours_to_buy < 1 ? `${Math.round(j.hours_to_buy * 60)} min` : j.hours_to_buy < 48 ? `${Math.round(j.hours_to_buy)} h` : `${Math.round(j.hours_to_buy / 24)} days`]));
   table($("#sales"), ["When", "Buyer", "Via", "Credits", "Paid", "Tax", "Fee", "Money in"],
-    d.sales.map((s) => [when(s.paid_at), esc(s.email || s.user_id?.slice(0, 8)), s.provider, int(s.credits), usd(s.gross), usd(s.tax), usd(s.fees), `<b>${usd(s.net)}</b>`]));
+    d.sales.map((s) => [when(s.paid_at), esc(s.email || s.user_id?.slice(0, 8)), s.auto_topup ? `${s.provider} · 🔁 auto top-up` : s.provider, int(s.credits), usd(s.gross), usd(s.tax), usd(s.fees), `<b>${usd(s.net)}</b>`]));
+  renderAutoTopup(d.auto_topup);
   table($("#buyers"), ["Buyer", "Paid (net)", "Credits bought", "Used", "Real cost of use", "Profit so far", "Unused", "Expected on unused", "Total profit", "Margin"],
     [...d.buyers].sort((a, b) => b.paid - a.paid).slice(0, 40).map((b) => [esc(b.email || b.user_id.slice(0, 8)), usd(b.paid), int(b.bought), int(b.used_credits), usd(b.used_cost),
       `<span class="${tone(b.earned)}">${usd(b.earned)}</span>`, int(b.unused), usd(b.expected), `<b class="${tone(b.profit)}">${usd(b.profit)}</b>`, b.margin == null ? "—" : `${b.margin}%`]));
@@ -146,6 +147,17 @@ function render(d) {
 }
 
 // Traffic: live counters, today against yesterday and the week, hours, sources and ratings.
+function renderAutoTopup(t) {
+  if (!t) { kv($("#topup-totals"), [["Auto top-up", "not set up yet (run the migration)"]]); table($("#topup-charges"), [], []); table($("#topup-people"), [], []); return; }
+  const T = t.totals;
+  kv($("#topup-totals"), [["Switched on now", int(T.switched_on)], ["Card saved (ever)", int(T.set_up)], ["Opened checkout, card not saved", int(T.checkout_not_finished)],
+    ["Top-ups paid this period", `${int(T.topups)} · ${usd(T.topup_usd)}`], ["Failed charges this period", int(T.failed)]]);
+  table($("#topup-charges"), ["When", "Buyer", "Credits", "Amount", "Result"],
+    t.charges.map((c) => [when(c.at), esc(c.email || c.user_id?.slice(0, 8)), int(c.credits), usd(c.amount_usd), esc(c.status === "succeeded" ? "paid" : c.status === "charging" ? "processing" : c.status === "expired" ? "not charged" : `failed${c.error ? ` (${c.error})` : ""}`)]));
+  table($("#topup-people"), ["Buyer", "State", "Pack", "When below", "Failures", "Since"],
+    t.people.map((p) => [esc(p.email || p.user_id?.slice(0, 8)), esc(p.state), int(p.pack_credits), int(p.level_credits), p.failures ? `${p.failures}${p.last_error ? ` (${esc(p.last_error)})` : ""}` : "0", when(p.since)]));
+}
+
 function renderActivity(a) {
   const L = a.live, fresh = (t, mins) => t && Date.now() - new Date(t) < mins * 60000;
   const chip = (label, value, sub, on) => `<div class="chip${on ? " on" : ""}"><span>${label}</span><b>${value}</b><small>${sub}</small></div>`;

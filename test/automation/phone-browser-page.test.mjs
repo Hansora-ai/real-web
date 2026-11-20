@@ -56,7 +56,7 @@ test('real page opens directly in Test for a new business with no phone row, and
   await p.click();
   assert.equal(room.microphone.at(-1),false);
   assert.equal(p.timers.size,0);
-  assert.match(p.element('#call-timer').textContent,/not billed/);
+  assert.match(p.element('#call-timer').textContent,/4⚡ a minute/);
 });
 
 test('missing worker ends the test, releases the microphone, and allows a clean retry',async()=>{

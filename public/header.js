@@ -141,7 +141,7 @@
     en: {
       home: 'HANSORA AI home', primaryNav: 'Primary navigation', image: 'Image', imageMenu: 'Image tools and models', imageSection: 'Image models and tools',
       video: 'Video', videoMenu: 'Video models', features: 'Features', featureMenu: 'Feature tools', imageTools: 'Image tools', videoAudioTools: 'Video and audio tools',
-      audio: 'Audio', audioTools: 'Audio tools', trend: 'Trend', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT Plugin', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
+      audio: 'Audio', audioTools: 'Audio tools', trend: 'Trend', automation: 'Automation', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT Plugin', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
       startCreating: 'Start creating', profile: 'Profile', history: 'History', credits: 'Credits', aiCourse: 'AI Course', logout: 'Logout', language: 'Language',
       closeCourse: 'Close course selection', courseEyebrow: 'Hansora AI Course', courseTitle: 'Choose your course language', courseIntro: 'Select the language in which you would like to study.',
       closeLanguage: 'Close language selection', languageEyebrow: 'Hansora language', languageTitle: 'Choose website language', languageIntro: 'Select the language for this page and every Hansora menu and popup.', current: 'Current',
@@ -156,12 +156,12 @@
     hy: {
       home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
       video: 'Տեսանյութ', videoMenu: 'Տեսանյութի մոդելներ', features: 'Գործիքներ', featureMenu: 'Լրացուցիչ գործիքներ', imageTools: 'Պատկերի գործիքներ', videoAudioTools: 'Տեսանյութի և ձայնի գործիքներ',
-      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', trend: 'Թրենդ', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT պլագին', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
+      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', trend: 'Թրենդ', automation: 'Automation', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT պլագին', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
       startCreating: 'Սկսել ստեղծել', profile: 'Պրոֆիլ', history: 'Պատմություն', credits: 'Կրեդիտներ', aiCourse: 'AI դասընթաց', logout: 'Դուրս գալ', language: 'Լեզու',
       closeCourse: 'Փակել դասընթացի լեզվի ընտրությունը', courseEyebrow: 'Hansora AI դասընթաց', courseTitle: 'Ընտրեք դասընթացի լեզուն', courseIntro: 'Ընտրեք, թե որ լեզվով եք ցանկանում սովորել։',
       closeLanguage: 'Փակել լեզվի ընտրությունը', languageEyebrow: 'Hansora-ի լեզու', languageTitle: 'Ընտրեք կայքի լեզուն', languageIntro: 'Ընտրեք այս էջի, Hansora-ի ընտրացանկերի և պատուհանների լեզուն։', current: 'Ընտրված',
       logIn: 'Մուտք գործել', createAccount: 'Ստեղծեք ձեր հաշիվը', google: 'Շարունակել Google-ով', telegram: 'Շարունակել Telegram-ով', secureAuth: 'Անվտանգ շարունակեք Google-ով, Telegram-ով կամ էլփոստով և գաղտնաբառով։',
-      or: 'կամ', email: 'Էլփոստ', password: 'Գաղտնաբառ', signUp: 'Գրանցվել', analyticsAria: 'Վերլուծական տվյալների կարգավորումներ', analyticsQuestion: 'Թույլատրե՞լ անանուն վերլուծությունը։', analyticsNotice: 'Մենք օգտագործում ենք անանուն վերլուծություն։ Դադարեցնելու համար մերժեք։',
+      or: 'կամ', email: 'Էլփոստ', password: 'Գաղտնաբառ', signUp: 'Գրանցվել', analyticsAria: 'Վերլուծական տվյալների կարգավորումներ', analyticsQuestion: 'Թույլատրե՞լ անանուն վերլուծությունը։', analyticsNotice: 'Մենք օգտագործում ենք անանուն վիճակագրություն։',
       reject: 'Մերժել', acceptAnalytics: 'Թույլատրել', continue: 'Շարունակել', telegramFailure: 'Telegram-ով մուտքը չի ավարտվել', telegramCancelled: 'Telegram-ով մուտքը չեղարկվել կամ չի ավարտվել։ Փորձեք կրկին։',
       creatorOffer: 'Զեղչային առաջարկ ստեղծողների համար', pricingOffer: 'Hansora-ի գնային առաջարկ', closeOffer: 'Փակել առաջարկը', openingGoogle: 'Բացվում է Google-ով մուտքը…', googleFailed: 'Google-ով մուտքը ձախողվեց։',
       openingTelegram: 'Բացվում է Telegram-ով մուտքը…', tryAgain: 'Փորձեք կրկին։', enterCredentials: 'Մուտքագրեք էլփոստը և գաղտնաբառը։', signingIn: 'Մուտք է կատարվում…', loginFailed: 'Մուտքը ձախողվեց։', notLoggedIn: 'Մուտք չեք գործել', notEnoughCredits: 'Բավարար կրեդիտներ չկան',
@@ -171,12 +171,12 @@
     ru: {
       home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
       video: 'Видео', videoMenu: 'Видеомодели', features: 'Инструменты', featureMenu: 'Дополнительные инструменты', imageTools: 'Инструменты для изображений', videoAudioTools: 'Инструменты для видео и аудио',
-      audio: 'Аудио', audioTools: 'Аудиоинструменты', trend: 'Тренды', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'Плагин ChatGPT', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
+      audio: 'Аудио', audioTools: 'Аудиоинструменты', trend: 'Тренды', automation: 'Automation', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'Плагин ChatGPT', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
       startCreating: 'Начать создавать', profile: 'Профиль', history: 'История', credits: 'Кредиты', aiCourse: 'AI-курс', logout: 'Выйти', language: 'Язык',
       closeCourse: 'Закрыть выбор языка курса', courseEyebrow: 'AI-курс Hansora', courseTitle: 'Выберите язык курса', courseIntro: 'Выберите язык, на котором хотите проходить обучение.',
       closeLanguage: 'Закрыть выбор языка', languageEyebrow: 'Язык Hansora', languageTitle: 'Выберите язык сайта', languageIntro: 'Выберите язык этой страницы, меню и всех окон Hansora.', current: 'Выбрано',
       logIn: 'Войти', createAccount: 'Создайте аккаунт', google: 'Продолжить с Google', telegram: 'Продолжить с Telegram', secureAuth: 'Безопасно продолжите через Google, Telegram или с помощью эл. почты и пароля.',
-      or: 'или', email: 'Эл. почта', password: 'Пароль', signUp: 'Зарегистрироваться', analyticsAria: 'Настройки аналитики', analyticsQuestion: 'Разрешить анонимную аналитику?', analyticsNotice: 'Мы используем анонимную аналитику. Нажмите «Отклонить», чтобы остановить сбор.',
+      or: 'или', email: 'Эл. почта', password: 'Пароль', signUp: 'Зарегистрироваться', analyticsAria: 'Настройки аналитики', analyticsQuestion: 'Разрешить анонимную аналитику?', analyticsNotice: 'Мы собираем анонимную статистику.',
       reject: 'Отклонить', acceptAnalytics: 'Разрешить', continue: 'Продолжить', telegramFailure: 'Вход через Telegram не завершён', telegramCancelled: 'Вход через Telegram отменён или не завершён. Попробуйте ещё раз.',
       creatorOffer: 'Скидочное предложение для создателей', pricingOffer: 'Ценовое предложение Hansora', closeOffer: 'Закрыть предложение', openingGoogle: 'Открывается вход через Google…', googleFailed: 'Не удалось войти через Google.',
       openingTelegram: 'Открывается вход через Telegram…', tryAgain: 'Попробуйте ещё раз.', enterCredentials: 'Введите эл. почту и пароль.', signingIn: 'Выполняется вход…', loginFailed: 'Не удалось войти.', notLoggedIn: 'Вход не выполнен', notEnoughCredits: 'Недостаточно кредитов',
@@ -186,8 +186,8 @@
   };
 
   const NOTE_TRANSLATIONS = {
-    hy: { 'Transform video characters':'Փոխակերպել տեսանյութի կերպարները','Latest image generation':'Պատկերների նորագույն գեներացում','Fast image edits':'Պատկերների արագ խմբագրում','Low-cost 1K image edits':'Մատչելի 1K պատկերների խմբագրում','Pro image generation':'Պրոֆեսիոնալ պատկերների գեներացում','Pro controlled image edits':'Պրոֆեսիոնալ վերահսկվող խմբագրում','Light creative images':'Արագ ստեղծագործական պատկերներ','Stylized image model':'Ոճավորված պատկերների մոդել','Image generator':'Պատկերների գեներացում','Image and frame work':'Պատկերների և կադրերի ստեղծում','Image generation':'Պատկերների գեներացում','Creative image model':'Ստեղծագործական պատկերների մոդել','OpenAI image model':'OpenAI-ի պատկերների մոդել','Image editing':'Պատկերների խմբագրում','Increase image quality':'Բարձրացնել պատկերի որակը','Different angles chosen':'Ստեղծել տարբեր դիտանկյուններ','Extend image edges':'Ընդլայնել պատկերի եզրերը','Character creator':'Կերպարների ստեղծում','Product selling cards':'Վաճառող ապրանքային քարտեր','Cartoon prompt builder':'Մուլտֆիլմի prompt-ների ստեղծում','Cinematic video model':'Կինեմատոգրաֆիկ տեսանյութերի մոդել','Advanced video generation':'Տեսանյութերի առաջադեմ գեներացում','Fast cinematic video model':'Արագ կինեմատոգրաֆիկ տեսանյութերի մոդել','Fast text or image video model':'Տեքստից կամ պատկերից արագ տեսանյութ','Prompt, image, and video inputs':'Prompt, պատկեր և տեսանյութ որպես մուտքային տվյալներ','Edit uploaded video':'Խմբագրել ներբեռնված տեսանյութը','Change video background':'Փոխել տեսանյութի ֆոնը','Change video lighting':'Փոխել տեսանյութի լուսավորությունը','Video and audio model':'Տեսանյութի և ձայնի մոդել','Google video model':'Google-ի տեսանյութերի մոդել','Cinematic video':'Կինեմատոգրաֆիկ տեսանյութ','Video with sound':'Ձայնով տեսանյութ','Fast Kling video model':'Kling-ի արագ տեսանյութերի մոդել','First and last frame control':'Առաջին և վերջին կադրերի կառավարում','Motion transfer':'Շարժման փոխանցում','Video transformation':'Տեսանյութի ձևափոխում','Increase video quality':'Բարձրացնել տեսանյութի որակը','Talking avatar video':'Խոսող avatar տեսանյութ','Add your kid in cartoon':'Ավելացնել ձեր երեխային մուլտֆիլմում','Generate voice from text':'Տեքստից ձայն գեներացնել','Separate clean vocals':'Առանձնացնել մաքուր վոկալը','Transform a voice':'Փոխակերպել ձայնը','Create music tracks':'Ստեղծել երաժշտական թրեքեր','Analyse hooks and ideas':'Վերլուծել հուկերն ու գաղափարները' },
-    ru: { 'Transform video characters':'Преобразовать персонажей видео','Latest image generation':'Новейшая генерация изображений','Fast image edits':'Быстрое редактирование изображений','Low-cost 1K image edits':'Доступное редактирование изображений 1K','Pro image generation':'Профессиональная генерация изображений','Pro controlled image edits':'Профессиональное управляемое редактирование','Light creative images':'Быстрые креативные изображения','Stylized image model':'Модель для стилизованных изображений','Image generator':'Генерация изображений','Image and frame work':'Работа с изображениями и кадрами','Image generation':'Генерация изображений','Creative image model':'Креативная модель изображений','OpenAI image model':'Модель изображений OpenAI','Image editing':'Редактирование изображений','Increase image quality':'Повысить качество изображения','Different angles chosen':'Создать разные ракурсы','Extend image edges':'Расширить границы изображения','Character creator':'Создание персонажей','Product selling cards':'Продающие карточки товаров','Cartoon prompt builder':'Создание prompt для мультфильмов','Cinematic video model':'Модель кинематографичного видео','Advanced video generation':'Продвинутая генерация видео','Fast cinematic video model':'Быстрая модель кинематографичного видео','Fast text or image video model':'Быстрое видео из текста или изображения','Prompt, image, and video inputs':'Prompt, изображение и видео на входе','Edit uploaded video':'Редактировать загруженное видео','Change video background':'Изменить фон видео','Change video lighting':'Изменить освещение видео','Video and audio model':'Модель видео и аудио','Google video model':'Видеомодель Google','Cinematic video':'Кинематографичное видео','Video with sound':'Видео со звуком','Fast Kling video model':'Быстрая видеомодель Kling','First and last frame control':'Управление первым и последним кадрами','Motion transfer':'Перенос движения','Video transformation':'Преобразование видео','Increase video quality':'Повысить качество видео','Talking avatar video':'Видео с говорящим avatar','Add your kid in cartoon':'Добавить ребёнка в мультфильм','Generate voice from text':'Генерировать голос из текста','Separate clean vocals':'Отделить чистый вокал','Transform a voice':'Преобразовать голос','Create music tracks':'Создавать музыкальные треки','Analyse hooks and ideas':'Анализировать хуки и идеи' }
+    hy: { 'Cheaper Seedance 2.5':'Ավելի մատչելի Seedance 2.5','Transform video characters':'Փոխակերպել տեսանյութի կերպարները','Latest image generation':'Պատկերների նորագույն գեներացում','Fast image edits':'Պատկերների արագ խմբագրում','Low-cost 1K image edits':'Մատչելի 1K պատկերների խմբագրում','Pro image generation':'Պրոֆեսիոնալ պատկերների գեներացում','Pro controlled image edits':'Պրոֆեսիոնալ վերահսկվող խմբագրում','Light creative images':'Արագ ստեղծագործական պատկերներ','Stylized image model':'Ոճավորված պատկերների մոդել','Image generator':'Պատկերների գեներացում','Image and frame work':'Պատկերների և կադրերի ստեղծում','Image generation':'Պատկերների գեներացում','Creative image model':'Ստեղծագործական պատկերների մոդել','OpenAI image model':'OpenAI-ի պատկերների մոդել','Image editing':'Պատկերների խմբագրում','Increase image quality':'Բարձրացնել պատկերի որակը','Different angles chosen':'Ստեղծել տարբեր դիտանկյուններ','Extend image edges':'Ընդլայնել պատկերի եզրերը','Character creator':'Կերպարների ստեղծում','Product selling cards':'Վաճառող ապրանքային քարտեր','Cartoon prompt builder':'Մուլտֆիլմի prompt-ների ստեղծում','Cinematic video model':'Կինեմատոգրաֆիկ տեսանյութերի մոդել','Advanced video generation':'Տեսանյութերի առաջադեմ գեներացում','Fast cinematic video model':'Արագ կինեմատոգրաֆիկ տեսանյութերի մոդել','Fast text or image video model':'Տեքստից կամ պատկերից արագ տեսանյութ','Prompt, image, and video inputs':'Prompt, պատկեր և տեսանյութ որպես մուտքային տվյալներ','Edit uploaded video':'Խմբագրել ներբեռնված տեսանյութը','Change video background':'Փոխել տեսանյութի ֆոնը','Change video lighting':'Փոխել տեսանյութի լուսավորությունը','Video and audio model':'Տեսանյութի և ձայնի մոդել','Google video model':'Google-ի տեսանյութերի մոդել','Cinematic video':'Կինեմատոգրաֆիկ տեսանյութ','Video with sound':'Ձայնով տեսանյութ','Fast Kling video model':'Kling-ի արագ տեսանյութերի մոդել','First and last frame control':'Առաջին և վերջին կադրերի կառավարում','Motion transfer':'Շարժման փոխանցում','Video transformation':'Տեսանյութի ձևափոխում','Increase video quality':'Բարձրացնել տեսանյութի որակը','Talking avatar video':'Խոսող avatar տեսանյութ','Add your kid in cartoon':'Ավելացնել ձեր երեխային մուլտֆիլմում','Generate voice from text':'Տեքստից ձայն գեներացնել','Separate clean vocals':'Առանձնացնել մաքուր վոկալը','Transform a voice':'Փոխակերպել ձայնը','Create music tracks':'Ստեղծել երաժշտական թրեքեր','Analyse hooks and ideas':'Վերլուծել հուկերն ու գաղափարները' },
+    ru: { 'Cheaper Seedance 2.5':'Seedance 2.5 дешевле','Transform video characters':'Преобразовать персонажей видео','Latest image generation':'Новейшая генерация изображений','Fast image edits':'Быстрое редактирование изображений','Low-cost 1K image edits':'Доступное редактирование изображений 1K','Pro image generation':'Профессиональная генерация изображений','Pro controlled image edits':'Профессиональное управляемое редактирование','Light creative images':'Быстрые креативные изображения','Stylized image model':'Модель для стилизованных изображений','Image generator':'Генерация изображений','Image and frame work':'Работа с изображениями и кадрами','Image generation':'Генерация изображений','Creative image model':'Креативная модель изображений','OpenAI image model':'Модель изображений OpenAI','Image editing':'Редактирование изображений','Increase image quality':'Повысить качество изображения','Different angles chosen':'Создать разные ракурсы','Extend image edges':'Расширить границы изображения','Character creator':'Создание персонажей','Product selling cards':'Продающие карточки товаров','Cartoon prompt builder':'Создание prompt для мультфильмов','Cinematic video model':'Модель кинематографичного видео','Advanced video generation':'Продвинутая генерация видео','Fast cinematic video model':'Быстрая модель кинематографичного видео','Fast text or image video model':'Быстрое видео из текста или изображения','Prompt, image, and video inputs':'Prompt, изображение и видео на входе','Edit uploaded video':'Редактировать загруженное видео','Change video background':'Изменить фон видео','Change video lighting':'Изменить освещение видео','Video and audio model':'Модель видео и аудио','Google video model':'Видеомодель Google','Cinematic video':'Кинематографичное видео','Video with sound':'Видео со звуком','Fast Kling video model':'Быстрая видеомодель Kling','First and last frame control':'Управление первым и последним кадрами','Motion transfer':'Перенос движения','Video transformation':'Преобразование видео','Increase video quality':'Повысить качество видео','Talking avatar video':'Видео с говорящим avatar','Add your kid in cartoon':'Добавить ребёнка в мультфильм','Generate voice from text':'Генерировать голос из текста','Separate clean vocals':'Отделить чистый вокал','Transform a voice':'Преобразовать голос','Create music tracks':'Создавать музыкальные треки','Analyse hooks and ideas':'Анализировать хуки и идеи' }
   };
 
   function copy(key) {
@@ -207,6 +207,8 @@
       if (url.origin !== location.origin) return href;
       let pathname = url.pathname || '/';
       if (pathname === '/') pathname = '/index.html';
+      // Hansora Automation pages have _arm/_ru addresses too (netlify.toml serves the English file there).
+      if (/^\/automation(?:-[a-z0-9-]+)?$/i.test(pathname)) pathname += '.html';
       if (/^\/henshin(?:-template)?(?:_(?:arm|ru))?\/?$/i.test(pathname)) pathname = pathname.replace(/\/$/,'')+'.html';
       if (/\/(?:course_arm|course_ru)\/?$/i.test(pathname) || !/\.html$/i.test(pathname)) {
         return location.protocol === 'file:' ? url.href : `${pathname}${url.search}${url.hash}`;
@@ -403,6 +405,34 @@
     } catch (_) { return ''; }
   }
 
+  // Logging in from a pricing page (the header's Login, not only Buy) comes back to that pricing page, not the home
+  // page. A Buy click saves its own entry first (with the package to buy); that one is kept.
+  function rememberPricingAuthReturn() {
+    if (!/^\/pricing(?:_ru|_arm)?(?:\.html)?$/.test(location.pathname)) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem('hansora:pricing-buy-return') || 'null');
+      if (saved && Date.now() - Number(saved.createdAt || 0) < 15 * 60 * 1000) return;
+      localStorage.setItem('hansora:pricing-buy-return', JSON.stringify({ path: `${location.pathname}${location.search}`, createdAt: Date.now() }));
+    } catch (_) {}
+  }
+
+  // A page to come back to after logging in, saved for 15 minutes: the pricing page (Buy clicked while logged out,
+  // saved by pricing*.html) or the history page (opened logged out from ChatGPT, saved by usage*.html).
+  function pendingPageReturn() {
+    const pages = [
+      ['hansora:pricing-buy-return', /^\/pricing(?:_ru|_arm)?(?:\.html)?(?:\?[^\s#]*)?$/],
+      ['hansora:auth-return', /^\/usage(?:_ru|_arm)?(?:\.html)?(?:\?[^\s#]*)?$/]
+    ];
+    for (const [key, valid] of pages) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || 'null');
+        const path = String(saved && saved.path || '');
+        if (Date.now() - Number(saved && saved.createdAt || 0) < 15 * 60 * 1000 && valid.test(path)) return path;
+      } catch (_) {}
+    }
+    return '';
+  }
+
   function oauthReturnUrl() {
     // Logins started on an Automation page come straight back to Automation (index.html covers itself if Supabase
     // sends the visitor to the home page instead).
@@ -414,6 +444,9 @@
       callback.searchParams.set('mcp_return_to', mcpReturn);
       return callback.href;
     }
+    // Buy clicked while logged out on a pricing page, or the history page opened logged out: come back there.
+    const pageReturn = pendingPageReturn();
+    if (pageReturn) return new URL(pageReturn, location.origin).href;
     const target = localizedHref('/index.html');
     try { return new URL(target, location.origin).href; } catch (_) { return `${location.origin}${target}`; }
   }
@@ -453,7 +486,7 @@
   ];
 
   const IMAGE_MENU_TOOLS = [
-    { label: 'Image Upscale', href: '/upscale.html', icon: 'UP', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/7.png', note: 'Increase image quality' },
+    { label: 'Image Upscale', href: '/upscale.html?mode=image', icon: 'UP', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/7.png', note: 'Increase image quality' },
     { label: 'Full angles', href: '/expand.html?mode=angles', icon: 'FA', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/8.png', note: 'Different angles chosen' },
     { label: 'Expand', href: '/expand.html?mode=expand', icon: 'EX', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/9.png', note: 'Extend image edges' },
     { label: 'Character', href: '/character.html', icon: 'CH', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/11.png', note: 'Character creator' },
@@ -471,7 +504,9 @@
   const VIDEO_MENU_ITEMS = [
     { label: 'Henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Transform video characters' },
     { label: 'Seedance 2.5', id: 'seedance25', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },
+    { label: 'Seedance 2.5 Flash', id: 'seedance25-flash', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cheaper Seedance 2.5' },
     { label: 'Kling 4.0', id: 'kling40', icon: 'K4', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Image, video and voice references' },
+    { label: 'Gemini Omni Flash 1.2', id: 'gemini-omni-flash-1-2', icon: 'GO', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/3.png', note: 'Newest Gemini video, up to 15 s' },
     { label: 'Gemini Omni Flash 1.1', id: 'gemini-omni-flash-1-1', icon: 'GO', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/3.png', note: 'Prompt, image, and video inputs' },
     { label: 'Wan 3.0', id: 'wan-3', icon: 'W3', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/6.png', note: 'Advanced video generation' },
     { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },
@@ -2211,6 +2246,21 @@
       .site-header .btn-primary{ box-shadow:0 8px 26px rgba(99,102,241,.38), inset 0 1px 0 rgba(255,255,255,.25); transition:transform .18s ease, box-shadow .18s ease, filter .18s ease; }
       .site-header .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 12px 34px rgba(99,102,241,.5), inset 0 1px 0 rgba(255,255,255,.3); filter:brightness(1.06); }
       .nav-links .hansora-nav-henshin{ gap:6px; }
+      /* Automation button: animated gradient ring (GPU-only transform), hidden on phones where the menu has it. */
+      .hansora-automation-btn{ position:relative; isolation:isolate; display:inline-flex; align-items:center; height:40px; padding:0 16px; border-radius:999px; color:#fff; text-decoration:none; font-weight:800; font-size:.86rem; white-space:nowrap; overflow:hidden; box-shadow:0 6px 22px rgba(139,92,246,.28); transition:transform .18s ease, box-shadow .18s ease; }
+      .hansora-automation-btn::before{ content:""; position:absolute; z-index:-2; left:50%; top:50%; width:220px; height:220px; margin:-110px 0 0 -110px; background:conic-gradient(from 0deg,#38bdf8,#8b5cf6,#ec4899,#f59e0b,#38bdf8); animation:hansora-auto-spin 4s linear infinite; }
+      .hansora-automation-btn::after{ content:""; position:absolute; z-index:-1; inset:1.5px; border-radius:inherit; background:linear-gradient(180deg,#151827,#0d0f19); }
+      .hansora-automation-btn:hover{ transform:translateY(-1px); box-shadow:0 10px 30px rgba(139,92,246,.45); }
+      @keyframes hansora-auto-spin{ to{ transform:rotate(360deg); } }
+      @media (max-width:900px){ .site-header .hansora-automation-btn{ display:none; } }
+      @media (min-width:901px) and (max-width:1680px){ html[lang="ru"] .site-header .hansora-automation-btn, html[lang="hy"] .site-header .hansora-automation-btn{ height:36px; padding:0 12px; font-size:.8rem; } }
+      @media (min-width:901px) and (max-width:1200px){ .site-header .hansora-automation-btn{ height:36px; padding:0 11px; font-size:.78rem; } }
+      @media (min-width:901px) and (max-width:1000px){
+        html .site-header .nav-actions{ gap:6px; }
+        html .site-header .hansora-feedback-button{ display:none; }
+        html[lang] .site-header .hansora-automation-btn{ padding:0 9px; font-size:.74rem; }
+        html[lang="ru"] body .site-header .nav-links a, html[lang="hy"] body .site-header .nav-links a{ padding:8px 3px; font-size:.74rem; }
+      }
       .hansora-top-badge{ display:inline-flex; align-items:center; height:17px; padding:0 6px; border-radius:6px; background:linear-gradient(135deg,#d9ff3d,#a3f05a); color:#0b1203; font-size:10px; font-weight:900; letter-spacing:.02em; line-height:1; box-shadow:0 0 12px rgba(201,255,61,.35); }
       /* Mid-size screens: keep the menu between the logo and the buttons instead of floating over them. */
       @media (min-width:901px){
@@ -3028,6 +3078,7 @@
             <a class="hansora-nav-trend" href="${siteHref('/mcp-setup.html')}" title="${copy('chatgptPluginFull')}">${copy('chatgptPlugin')}</a>
           </nav>
           <div class="nav-actions">
+            <a class="hansora-automation-btn" href="${withAffiliateRef('/automation.html')}" title="${copy('automation')}"><span class="hansora-automation-text">${copy('automation')}</span></a>
             <button class="hansora-feedback-button" type="button" data-hansora-feedback aria-label="${FEEDBACK_LABEL[CURRENT_LANGUAGE]}" title="${FEEDBACK_LABEL[CURRENT_LANGUAGE]}" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8H5l-3 3V11.5a9 9 0 0 1 18 0Z"/><path d="M7 10h8M7 14h5"/></svg></button>
             <a class="hansora-mobile-pricing" href="${siteHref('/pricing.html')}" aria-label="${copy('pricingAria')}">
               <span>${copy('pricing')}</span>
@@ -3563,6 +3614,7 @@
 
   function openAuth(mode) {
     rememberCourseAuthReturn(location.pathname);
+    rememberPricingAuthReturn();
     const savedVerification = readPendingEmailVerification();
     const requestedSignup = mode === 'signup';
     emailAuthOpenedFromChooser = false;
@@ -4922,6 +4974,13 @@
       window.location.replace(pendingMcpReturn);
       return profile;
     }
+    // Buy clicked while logged out on a pricing page (or the history page opened logged out), and Google brought the
+    // user to another page: go back there (that page reads and clears what was saved).
+    const pageReturnPath = pendingPageReturn();
+    if (pageReturnPath && pageReturnPath.split('?')[0] !== location.pathname) {
+      window.location.replace(pageReturnPath);
+      return profile;
+    }
     const newAccountNeedsLanguage = !registrationLanguageChoiceIsCompleted(user) && (
       profile.__hansoraNewSignup || isRecentlyCreatedAccount(user)
     );
@@ -5013,6 +5072,8 @@
         });
       },
       getCurrentCredits: function () { return currentCredits; },
+      // Lets other scripts (public/chatgpt-offer.js) save a named event for the signed-in person in click_events.
+      recordEvent: function (name, details) { return recordRegisteredClickEvent(name, details); },
       toDisplayCredits,
       creditDisplayMultiplier: CREDIT_DISPLAY_MULTIPLIER,
       openAuth,
@@ -5088,12 +5149,88 @@
     setTimeout(finish, 10000);
   }
 
+  // The welcome offer for people who never bought (public/chatgpt-offer.js): loaded after the page.
+  // It shows nothing unless the server says this person has a running offer.
+  function loadChatgptOffer() {
+    // Inside a frame only the pricing page shows it (the pricing popup the header opens for new users).
+    if (window.top !== window.self && !/^\/pricing(_ru|_arm)?(\.html)?\/?$/.test(location.pathname)) return;
+    if (document.querySelector('script[data-chatgpt-offer]')) return;
+    // Signed in, on a pricing page, or a logged-out visitor whose offer clock is already running in this browser.
+    let needed = /^\/pricing(_ru|_arm)?(\.html)?\/?$/.test(location.pathname);
+    try {
+      if (localStorage.getItem('hansora:cgoffer:anon')) needed = true;
+      for (let i = 0; !needed && i < localStorage.length; i++) {
+        if (/^sb-.*-auth-token$/.test(localStorage.key(i) || '')) needed = true;
+      }
+    } catch (_) {}
+    if (!needed) return;
+    const script = document.createElement('script');
+    script.src = '/chatgpt-offer.js';
+    script.defer = true;
+    script.setAttribute('data-chatgpt-offer', '1');
+    document.head.appendChild(script);
+  }
+
+  // Someone opened hansora.co from the account link ChatGPT shows when credits run out
+  // (?from=chatgpt_credits). Recorded once per visit, so we can count: stopped for credits
+  // in ChatGPT -> opened the link -> bought.
+  function recordChatgptCreditsLinkOpen() {
+    let params;
+    try { params = new URLSearchParams(location.search || ''); } catch (_) { return; }
+    const from = params.get('from');
+    if (!from || !/^chatgpt_[a-z_]{1,40}$/.test(from)) return;
+    const eventName = `${from}_link_opened`;
+    try {
+      params.delete('from');
+      const query = params.toString();
+      history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash || ''}`);
+    } catch (_) {}
+    try {
+      if (sessionStorage.getItem('hansora:' + eventName)) return;
+      sessionStorage.setItem('hansora:' + eventName, '1');
+    } catch (_) {}
+    const pagePath = location.pathname;
+    // Sign-in and the analytics consent mode load a moment after the page: try a few times.
+    function attempt(triesLeft) {
+      recordRegisteredClickEvent(eventName, { elementType: 'link', elementId: from, destination: pagePath })
+        .then(function (recorded) {
+          if (recorded) return;
+          const visitorId = analyticsVisitorId();
+          if (!visitorId) {
+            if (triesLeft > 0) setTimeout(function () { attempt(triesLeft - 1); }, 1500);
+            return;
+          }
+          fetch(`${SUPABASE_URL}/rest/v1/anonymous_click_events`, {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              visitor_id: visitorId,
+              session_id: analyticsSessionId(),
+              event_name: 'click',
+              element_type: 'link',
+              element_id: from,
+              element_label: eventName,
+              destination: pagePath,
+              page_path: pagePath.slice(0, 300),
+              device_type: window.matchMedia && window.matchMedia('(max-width: 900px)').matches ? 'mobile' : 'desktop',
+              consent_version: ANALYTICS_CONSENT_VERSION
+            })
+          }).catch(function () {});
+        })
+        .catch(function () {});
+    }
+    attempt(5);
+  }
+
   function startHeaderSession() {
     ensureSupabaseClient();
     exposeApi();
     loadSalesAgentWidget();
     bindEvents();
     bindGlobalClickTracking();
+    recordChatgptCreditsLinkOpen();
+    loadChatgptOffer();
     bindCourseLessonFunnelTracking();
     preserveAffiliateRefAcrossPageLinks();
     authCallbackArrivalWrite = captureAuthCallbackArrival().catch(function (error) {

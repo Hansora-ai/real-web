@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { AccessToken, AgentDispatchClient, TrackSource } from 'livekit-server-sdk';
 import { authenticateRequest, isUuid } from '../../lib/sales-agent/auth.mjs';
 import { first } from '../../lib/automation/db.mjs';
+import { automationPricesFor, canAfford } from '../../lib/automation/billing.mjs';
 import { PHONE_AGENT_NAME, phoneTestMaxSeconds, phoneTestSettings } from '../../lib/automation/phone.mjs';
 
 const HEADERS = {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
@@ -21,6 +22,8 @@ export async function handler(event) {
     if (!business) return json(404, { error: 'business_not_found' });
     const hasRecord = value => Array.isArray(value) ? value.length > 0 : Boolean(value?.id);
     if (!hasRecord(business.automation_agents) || !hasRecord(business.automation_business_knowledge)) return json(409, { error: 'phone_agent_configuration_incomplete' });
+    // Test calls cost 4⚡ a minute: the owner needs at least one minute's credits to start one.
+    if (!(await canAfford(businessId, (await automationPricesFor(businessId)).testVoiceMinute)).ok) return json(402, { error: 'credits_required' });
 
     const url = String(process.env.LIVEKIT_URL || '').trim();
     const apiKey = String(process.env.LIVEKIT_API_KEY || '').trim();

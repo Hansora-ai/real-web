@@ -57,8 +57,11 @@ test("valid owner receives private aggregates through the service-only RPC", asy
   const calls = mock();
   const result = await handler(event());
   assert.equal(result.statusCode, 200);
-  assert.equal(calls.length, 3);
+  // Owner check, snapshot, sign-ups, then auto top-up settings and charges.
+  assert.equal(calls.length, 5);
   assert.match(calls[1].url, /rpc\/business_dashboard_snapshot$/);
+  assert.match(calls[3].url, /auto_topups\?/);
+  assert.match(calls[4].url, /auto_topup_charges\?select=\*&created_at=gte\.2026-10-30T00:00:00Z/);
   // 30 days back, so the real cost of one credit can be measured; sign-ups by UTC day, like Dodo.
   assert.deepEqual(JSON.parse(calls[1].options.body), { p_start: "2026-09-30", p_end: "2026-10-30" });
   // From the start of the 30-day window, so today can be compared with the days before.

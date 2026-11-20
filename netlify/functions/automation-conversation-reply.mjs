@@ -25,8 +25,10 @@ export async function handler(event){
     // The AI handed this chat over (AI off) or the team took it: the owner can reply without pressing Take over.
     if(conversation.ai_enabled!==false||['resolved','archived'].includes(conversation.status))return json(409,{error:'take_over_before_replying'});
     const contact=await first(`/rest/v1/automation_contacts?id=eq.${conversation.contact_id}&business_id=eq.${business.id}&select=*&limit=1`);if(!contact)return json(404,{error:'contact_not_found'});
-    if(!['instagram_dm','whatsapp','telegram','messenger','tiktok'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
+    if(!['instagram_dm','whatsapp','telegram','messenger','tiktok','website'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
     let providerMessageId='',provider='meta';
+    // Website chat: the reply is saved and the visitor's chat bubble shows it within a few seconds (it checks for new messages).
+    if(conversation.channel_type==='website'){if(template)return json(400,{error:'template_whatsapp_only'});provider='website';return await saveReply();}
     // A TikTok comment chat: TikTok does not allow messaging someone who only commented.
     if(conversation.channel_type==='tiktok'&&String(conversation.external_thread_id||'').startsWith('comment:'))return json(409,{error:'tiktok_comment_thread',message:'This person only commented. TikTok doesn’t allow sending them a message; reply under the comment in the TikTok app.'});
     // TikTok: replies are possible for 48 hours after the customer's last message.

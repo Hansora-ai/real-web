@@ -9,20 +9,43 @@
   const appPage = !['landing', 'legal', 'pricing', 'contact'].includes(page);
   const moon = '<svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>';
   const sun = '<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
+  // Language: the same choice as on Hansora Creative (automation-i18n.js translates the page).
+  const currentLang = window.HansoraI18n?.lang || 'en';
+  const langPicker = `<select class="auto-lang" data-lang-picker aria-label="Language" data-no-i18n>${[['en','EN'],['hy','ՀԱՅ'],['ru','РУ']].map(([code, label]) => `<option value="${code}"${code === currentLang ? ' selected' : ''}>${label}</option>`).join('')}</select>`;
   const themeButton = `<button class="auto-theme" type="button" data-theme-toggle aria-label="Switch to light mode">${moon}${sun}</button>`;
+  const pricingLink = `<a class="auto-pricing" href="automation-pricing.html${previewQuery}"${page === 'pricing' ? ' aria-current="page"' : ''} aria-label="Pricing, 30% off">Pricing<em>30% OFF</em></a>`;
   const mainLinks = appPage
-    ? `<a href="automation-dashboard.html${previewQuery}"${page === 'dashboard' ? ' aria-current="page"' : ''}>AI employees</a><a href="automation.html${previewQuery}">Product</a><a href="automation-contact.html${previewQuery}">Contact</a>`
-    : page === 'landing' ? `<a href="#channels">Channels</a><a href="#how-it-works">How it works</a><a href="automation-pricing.html${previewQuery}">Pricing</a><a href="#faq">FAQ</a><a href="automation-contact.html${previewQuery}">Contact</a>` : `<a href="automation.html${previewQuery}#channels">Channels</a><a href="automation.html${previewQuery}#how-it-works">How it works</a><a href="automation-pricing.html${previewQuery}"${page === 'pricing' ? ' aria-current="page"' : ''}>Pricing</a><a href="automation.html${previewQuery}#faq">FAQ</a><a href="automation-contact.html${previewQuery}"${page === 'contact' ? ' aria-current="page"' : ''}>Contact</a>`;
+    ? `<a href="automation-dashboard.html${previewQuery}"${page === 'dashboard' ? ' aria-current="page"' : ''}>AI employees</a><a href="automation.html${previewQuery}">Product</a>${pricingLink}<a href="automation-contact.html${previewQuery}">Contact</a>`
+    : page === 'landing' ? `<a href="#channels">Channels</a><a href="#how-it-works">How it works</a>${pricingLink}<a href="#faq">FAQ</a><a href="automation-contact.html${previewQuery}">Contact</a>` : `<a href="automation.html${previewQuery}#channels">Channels</a><a href="automation.html${previewQuery}#how-it-works">How it works</a>${pricingLink}<a href="automation.html${previewQuery}#faq">FAQ</a><a href="automation-contact.html${previewQuery}"${page === 'contact' ? ' aria-current="page"' : ''}>Contact</a>`;
   // Account area: the same login window, credits and photo as the Hansora Creative header (header.js fills these ids).
   const realSite = !api?.isLocalPreview;
   let cachedLoggedIn = false;
   try { cachedLoggedIn = localStorage.getItem('hansora.header.loggedIn') === '1'; } catch (_) {}
+  // The photo header.js saved last time, so it does not flash an "H" on every page.
+  let cachedAvatar = 'https://ui-avatars.com/api/?name=H&background=6366f1&color=fff';
+  try { const saved = localStorage.getItem('hansora.header.avatar'); if (/^(https:|data:image\/)/.test(saved || '')) cachedAvatar = saved.replace(/"/g, '%22'); } catch (_) {}
+  // One rule for the main button on every page: "Dashboard" when the account has AI employees, "Get started" when not.
+  // Decided from what the browser remembers (instant), then checked in the background.
+  let knownEmployees = false;
+  try { knownEmployees = cachedLoggedIn && (localStorage.getItem('hansora_automation_has_employees') === '1' || /^[0-9a-f-]{36}$/i.test(localStorage.getItem('hansora_automation_business') || '')); } catch (_) {}
+  if (appPage && page !== 'setup') knownEmployees = true;
+  const ctaHtml = has => has ? `<a class="auto-cta" href="automation-dashboard.html${previewQuery}">Dashboard</a>` : `<a class="auto-cta" href="automation-setup.html${previewQuery}">Get started</a>`;
   const accountArea = realSite
-    ? `<span class="auto-account"><button class="auto-auth-link" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Log in</button><span class="auto-credits" id="navCredits" title="Your credits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"></span><button class="auto-avatar" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"><img id="navAvatarImg" alt="" src="https://ui-avatars.com/api/?name=H&background=6366f1&color=fff"></button></span>`
+    ? `<span class="auto-account"><button class="auto-auth-link" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Log in</button><span class="auto-credits" id="navCredits" title="Your credits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"></span><button class="auto-avatar" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"><img id="navAvatarImg" alt="" src="${cachedAvatar}"></button></span>`
     : (appPage ? '' : `<a class="auto-auth-link" href="automation-dashboard.html${previewQuery}">Dashboard</a>`);
-  const accountMenu = realSite ? `<div class="auto-user-menu" id="navMenu"><a href="automation-dashboard.html">AI employees</a><a href="automation-profile.html">Profile</a><a href="automation-pricing.html">Buy credits</a><a href="/">Hansora Creative</a><button type="button" id="autoLogout">Log out</button></div>` : '';
-  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><a class="auto-back" href="/">Hansora Creative ↗</a>${themeButton}${['dashboard','setup'].includes(page) ? '' : `<a class="auto-cta" href="automation-setup.html${previewQuery}">${appPage ? 'New AI employee' : 'Get started'}</a>`}${accountArea}</nav>${accountMenu}</header>`;
+  // Language inside the account menu, like on Hansora Creative: "Language 🇬🇧 English ›" opens the three choices.
+  const LANGS = [['en', '🇬🇧', 'English'], ['hy', '🇦🇲', 'Հայերեն'], ['ru', '🇷🇺', 'Русский']];
+  const current = LANGS.find(item => item[0] === currentLang) || LANGS[0];
+  const langMenu = `<button type="button" class="auto-lang-item" data-lang-toggle aria-expanded="false"><span>Language</span><span class="auto-lang-value" data-no-i18n>${current[1]} ${current[2]} ›</span></button><div class="auto-lang-list" data-lang-list hidden data-no-i18n>${LANGS.map(([code, flag, name]) => `<button type="button" data-lang-choice="${code}"${code === current[0] ? ' class="current"' : ''}>${flag} ${name}${code === current[0] ? ' <i>✓</i>' : ''}</button>`).join('')}</div>`;
+  const accountMenu = realSite ? `<div class="auto-user-menu" id="navMenu"><a href="automation-dashboard.html">AI employees</a><a href="automation-profile.html">Profile</a><a href="automation-pricing.html">Buy credits</a><a href="/">Hansora Creative</a>${langMenu}<button type="button" id="autoLogout">Log out</button></div>` : '';
+  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${langPicker}${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><button class="auto-help" type="button" data-need-help="">Need help?</button><a class="auto-back" href="/">Hansora Creative ↗</a>${realSite && cachedLoggedIn ? '' : langPicker}${themeButton}${['dashboard','setup'].includes(page) ? '' : ctaHtml(knownEmployees)}${accountArea}</nav>${accountMenu}</header>`;
 
+  root.querySelectorAll('[data-lang-picker]').forEach(select => select.addEventListener('change', () => window.HansoraI18n?.set(select.value)));
+  root.querySelector('[data-lang-toggle]')?.addEventListener('click', event => {
+    const list = root.querySelector('[data-lang-list]'); list.hidden = !list.hidden;
+    event.currentTarget.setAttribute('aria-expanded', String(!list.hidden));
+  });
+  root.querySelectorAll('[data-lang-choice]').forEach(button => button.addEventListener('click', () => window.HansoraI18n?.set(button.dataset.langChoice)));
   const syncThemeLabels = () => {
     const light = document.documentElement.getAttribute('data-theme') === 'light';
     root.querySelectorAll('[data-theme-toggle]').forEach(button => button.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode'));
@@ -66,7 +89,7 @@
       ['agent', 'Overview', 'sparkle', q ? `automation-agent.html?id=${encodeURIComponent(businessId)}${preview}` : ''],
       ['inbox', 'Inbox', 'message', q ? `automation-inbox.html?${q}` : ''],
       ['contacts', 'Contacts', 'user', q ? `automation-contacts.html?${q}` : ''],
-      ['workflows', 'Automations', 'comment', q ? `automation-workflows.html?${q}` : '', ['comments']],
+      ['workflows', 'Comments & DMs', 'comment', q ? `automation-workflows.html?${q}` : '', ['comments']],
       ['operations', 'Orders & bookings', 'bag', q ? `automation-operations.html?${q}` : ''],
       ['products', 'Products', 'box', q ? `automation-products.html?${q}` : ''],
       ['tools', 'Business tools', 'spark', q ? `automation-tools.html?${q}` : ''],
@@ -119,6 +142,7 @@
       const n = Math.max(0, Number(count) || 0);
       try { sessionStorage.setItem(key, String(n)); } catch (_) {}
       document.querySelectorAll('a[href^="automation-inbox.html"]').forEach(link => {
+        if (link.closest('.auto-switch')) return; // employees in the switcher show their own count
         let badge = link.querySelector('.auto-badge');
         if (!n) { badge?.remove(); return; }
         if (!badge) { badge = document.createElement('b'); badge.className = 'auto-badge'; link.appendChild(badge); }
@@ -159,13 +183,15 @@
       const sub = current ? (current.ig ? current.name : 'No Instagram connected') : `${list.length} AI employee${list.length === 1 ? '' : 's'}`;
       boxes.forEach(box => {
         const open = box.classList.contains('open');
-        box.innerHTML = `<button class="auto-switch-button" type="button" aria-haspopup="menu" aria-expanded="${open}" title="Change AI employee"><span class="auto-switch-ig">${icon('instagram')}</span><span class="auto-switch-text"><b>${escape(label)}</b><small>${escape(sub)}</small></span><span class="auto-switch-chev" aria-hidden="true">⌄</span></button><div class="auto-switch-menu" role="menu"${open ? '' : ' hidden'}>${list.map(item => `<a role="menuitem" href="${escape(targetFor(item.id))}" class="${item.id === businessId ? 'current' : ''}"><span class="auto-switch-ig sm">${icon('instagram')}</span><span><b>${escape(item.ig || item.name)}</b><small>${escape(item.ig ? item.name : 'No Instagram connected')}</small></span>${item.id === businessId ? '<i aria-hidden="true">✓</i>' : ''}</a>`).join('')}<a role="menuitem" class="auto-switch-new" href="automation-setup.html${preview ? '?preview=1' : ''}">+ New AI employee</a></div>`;
+        box.innerHTML = `<button class="auto-switch-button" type="button" aria-haspopup="menu" aria-expanded="${open}" title="Change AI employee"><span class="auto-switch-ig">${icon('instagram')}</span><span class="auto-switch-text"><b>${escape(label)}</b><small>${escape(sub)}</small></span><span class="auto-switch-chev" aria-hidden="true">⌄</span></button><div class="auto-switch-menu" role="menu"${open ? '' : ' hidden'}>${list.map(item => `<a role="menuitem" href="${escape(targetFor(item.id))}" class="${item.id === businessId ? 'current' : ''}"><span class="auto-switch-ig sm">${icon('instagram')}</span><span><b>${escape(item.ig || item.name)}</b><small>${escape(item.ig ? item.name : 'No Instagram connected')}</small></span>${item.id === businessId ? '<i aria-hidden="true">✓</i>' : ''}${waiting[item.id] ? `<b class="auto-badge" aria-label="${waiting[item.id]} chat${waiting[item.id] === 1 ? '' : 's'} need you">${waiting[item.id] > 99 ? '99+' : waiting[item.id]}</b>` : ''}</a>`).join('')}<a role="menuitem" class="auto-switch-new" href="automation-setup.html${preview ? '?preview=1' : ''}">+ New AI employee</a></div>`;
         box.querySelector('.auto-switch-button').addEventListener('click', event => { event.stopPropagation(); const now = !box.classList.contains('open'); box.classList.toggle('open', now); box.querySelector('.auto-switch-menu').hidden = !now; event.currentTarget.setAttribute('aria-expanded', String(now)); });
       });
     };
     document.addEventListener('click', event => { boxes.forEach(box => { if (!box.contains(event.target) && box.classList.contains('open')) { box.classList.remove('open'); box.querySelector('.auto-switch-menu').hidden = true; box.querySelector('.auto-switch-button').setAttribute('aria-expanded', 'false'); } }); });
     let cached = [];
     try { cached = JSON.parse(sessionStorage.getItem(CACHE) || '[]'); } catch (_) {}
+    // Chats waiting for a person, per AI employee (same rule as the Inbox badge).
+    let waiting = {};
     render(cached);
     if (api?.isLocalPreview) return render([{ id: 'preview', name: 'Luma Assistant', ig: '@luma.studio' }, { id: 'preview-2', name: 'Second shop', ig: '' }]);
     api?.db?.from('automation_businesses').select('id,name,updated_at,automation_agents(display_name),automation_channel_connections(channel_type,status,connected_account_label)').order('updated_at', { ascending: false }).then(({ data }) => {
@@ -176,7 +202,11 @@
         return { id: row.id, name: agent?.display_name || row.name || 'AI employee', ig: label ? (label.startsWith('@') ? label : `@${label}`) : '' };
       });
       try { sessionStorage.setItem(CACHE, JSON.stringify(list)); localStorage.setItem('hansora_automation_has_employees', list.length ? '1' : '0'); } catch (_) {}
+      setCta(list.length > 0);
       render(list);
+      if (list.length > 1) Promise.resolve(api.db.from('automation_conversations').select('business_id').in('business_id', list.map(item => item.id))
+        .or('status.eq.needs_attention,and(ai_enabled.eq.false,status.not.in.(human_handling,resolved,archived))').limit(5000))
+        .then(result => { if (result?.error || !Array.isArray(result?.data)) return; waiting = {}; result.data.forEach(row => { waiting[row.business_id] = (waiting[row.business_id] || 0) + 1; }); render(list); }).catch(() => {});
     }).catch(() => {});
   }
 
@@ -195,6 +225,11 @@
     const menuButton = bar.querySelector('[data-bottom-menu]');
     menuButton.addEventListener('click', () => { root.querySelector('.auto-menu-toggle')?.click(); menuButton.setAttribute('aria-expanded', String(root.classList.contains('menu-open'))); });
   }
+
+  // Phones: the bottom bar hides while a text field is being typed in (the keyboard would push it up over the page).
+  const typingField = target => target?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]):not([type=file]),textarea,select,[contenteditable="true"]');
+  document.addEventListener('focusin', event => { if (typingField(event.target)) document.body.classList.add('auto-typing'); });
+  document.addEventListener('focusout', () => setTimeout(() => { if (!typingField(document.activeElement)) document.body.classList.remove('auto-typing'); }, 50));
 
   // Phones: credits and the photo stay in the header, next to the light/dark switch, on every page
   // (header.js fills the same elements), instead of hiding inside the menu.
@@ -249,7 +284,7 @@
     if (cachedLoggedIn) showBar();
     apply();
     api?.getUser?.().then(async user => {
-      if (!user) { hasEmployees = false; businessId = ''; hideBar(); apply(); return; }
+      if (!user) { hasEmployees = false; businessId = ''; setCta(false); hideBar(); apply(); return; }
       showBar();
       const result = await api.db.from('automation_businesses').select('id').order('updated_at', { ascending: false }).limit(1);
       if (result?.error) return;
@@ -258,6 +293,7 @@
       if (!first) businessId = '';
       else if (!businessId) businessId = first.id;
       try { localStorage.setItem('hansora_automation_has_employees', hasEmployees ? '1' : '0'); if (!hasEmployees) localStorage.removeItem('hansora_automation_business'); } catch (_) {}
+      setCta(hasEmployees);
       apply();
       if (businessId) inboxBadge(businessId);
     }).catch(() => {});
@@ -296,13 +332,78 @@
       setTimeout(open, 600);
     };
     document.body.appendChild(script);
-    if (page === 'landing' && api && typeof api.getUser === 'function') {
-      api.getUser().then(user => {
-        const cta = root.querySelector('.auto-cta');
-        if (!cta || !user) return;
-        cta.textContent = 'Dashboard';
-        cta.href = 'automation-dashboard.html';
+    // Pages other than the landing page (which checks above) and the app pages (which list the employees).
+    if (!appPage && page !== 'landing' && api && typeof api.getUser === 'function') {
+      api.getUser().then(async user => {
+        if (!user) return setCta(false);
+        const result = await api.db.from('automation_businesses').select('id').limit(1);
+        if (result?.error || !Array.isArray(result?.data)) return;
+        try { localStorage.setItem('hansora_automation_has_employees', result.data.length ? '1' : '0'); } catch (_) {}
+        setCta(result.data.length > 0);
       }).catch(() => {});
     }
   }
+  // "Need help?": the owner leaves a WhatsApp or Telegram and the Hansora team messages them to set things up.
+  // One popup for the whole site; any element with data-need-help="topic" opens it.
+  const NEED_HELP_METHODS = { whatsapp: ['WhatsApp', '+1 555 010 0000'], telegram: ['Telegram', '@username'] };
+  let helpDialog = null;
+  function openNeedHelp(topic = '') {
+    if (!helpDialog) {
+      helpDialog = document.createElement('dialog');
+      helpDialog.className = 'ui-dialog auto-help-dialog';
+      helpDialog.innerHTML = `<form method="dialog" class="auto-help-form" novalidate>
+        <div class="auto-help-head"><h2>Need help?</h2><button class="ui-btn ghost icon sm" type="button" data-help-close aria-label="Close">✕</button></div>
+        <p class="auto-help-intro">Leave your WhatsApp or Telegram. Our team messages you and sets it up with you, usually within a day.</p>
+        <div class="auto-help-row"><select class="ui-input" data-help-method aria-label="How should we contact you?">${Object.entries(NEED_HELP_METHODS).map(([value, [label]]) => `<option value="${value}">${label}</option>`).join('')}</select><input class="ui-input" data-help-value autocomplete="tel" placeholder="${NEED_HELP_METHODS.whatsapp[1]}" aria-label="Your WhatsApp number"></div>
+        <textarea class="ui-textarea" data-help-note rows="3" maxlength="800" placeholder="What do you need help with? (optional)"></textarea>
+        <p class="auto-help-error" role="alert" hidden></p>
+        <div class="auto-help-actions"><a class="ui-link" href="https://t.me/Hansora_support" target="_blank" rel="noopener">Or write to @Hansora_support</a><button class="ui-btn primary" type="submit" data-help-send>Send</button></div>
+      </form>`;
+      document.body.appendChild(helpDialog);
+      const form = helpDialog.querySelector('form');
+      const method = helpDialog.querySelector('[data-help-method]'); const value = helpDialog.querySelector('[data-help-value]');
+      const error = helpDialog.querySelector('.auto-help-error');
+      method.addEventListener('change', () => { value.placeholder = NEED_HELP_METHODS[method.value][1]; value.setAttribute('aria-label', `Your ${NEED_HELP_METHODS[method.value][0]}`); });
+      helpDialog.querySelector('[data-help-close]').addEventListener('click', () => helpDialog.close());
+      helpDialog.addEventListener('click', event => { if (event.target === helpDialog) helpDialog.close(); });
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const contact = value.value.trim();
+        const valid = method.value === 'whatsapp' ? /^\+?[\d\s()-]{7,20}$/.test(contact) : /^@?[A-Za-z0-9_]{4,32}$|^\+?[\d\s()-]{7,20}$/.test(contact);
+        if (!valid) { error.textContent = method.value === 'whatsapp' ? 'Enter your WhatsApp number with the country code, for example +1 555 010 0000.' : 'Enter your Telegram @username or phone number.'; error.hidden = false; value.focus(); return; }
+        error.hidden = true;
+        const send = helpDialog.querySelector('[data-help-send]'); send.disabled = true; send.textContent = 'Sending…';
+        try {
+          if (api?.isLocalPreview) throw Object.assign(new Error('preview'), { preview: true });
+          const user = await api?.getUser?.().catch(() => null);
+          const note = helpDialog.querySelector('[data-help-note]').value.trim();
+          const message = [`Need help${helpDialog.dataset.topic ? ` – ${helpDialog.dataset.topic}` : ''}`, `${NEED_HELP_METHODS[method.value][0]}: ${contact}`, user?.id ? `Hansora account: ${user.email || user.id}` : 'Not signed in', `Page: ${location.pathname}${location.search}`, note ? `Message: ${note}` : ''].filter(Boolean).join('\n');
+          const response = await fetch('/.netlify/functions/contact-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: user?.email || 'not signed in', message }) });
+          if (!response.ok) throw new Error('send_failed');
+          helpDialog.close(); form.reset(); value.placeholder = NEED_HELP_METHODS.whatsapp[1];
+          window.HansoraUI?.toast?.('Thanks! We’ll message you, usually within a day.', 'success');
+        } catch (sendError) {
+          error.textContent = sendError.preview ? 'This works on the live site, not in the local preview.' : 'Could not send right now. Please try again, or write to @Hansora_support on Telegram.';
+          error.hidden = false;
+        } finally { send.disabled = false; send.textContent = 'Send'; }
+      });
+    }
+    helpDialog.dataset.topic = topic;
+    helpDialog.querySelector('.auto-help-error').hidden = true;
+    if (!helpDialog.open) helpDialog.showModal();
+    setTimeout(() => helpDialog.querySelector('[data-help-value]').focus(), 50);
+  }
+  window.HansoraNeedHelp = { open: openNeedHelp };
+  function setCta(has) {
+    const cta = root.querySelector('.auto-cta');
+    if (!cta) return;
+    cta.textContent = has ? 'Dashboard' : 'Get started';
+    cta.href = `${has ? 'automation-dashboard.html' : 'automation-setup.html'}${previewQuery}`;
+  }
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('[data-need-help]');
+    if (!trigger) return;
+    event.preventDefault();
+    openNeedHelp(trigger.dataset.needHelp || '');
+  });
 })();

@@ -123,7 +123,7 @@ test('Every mode keeps its detailed built-in instructions; the user text is only
   assert.equal(templateInput({video_url:url,image_urls:body.image_urls,mode,prompt}).transformation_prompt,'');
  }
  const custom='Make the jacket red.',text=common.promptFor({...body,mode:'swap',prompt:custom});
- assert.match(text,/Replace the main object or objects in @Video 1/);assert.match(text,/the user's prompt wins\.\nUser's prompt: Make the jacket red\.$/);
+ assert.match(text,/Replace the main object or objects in @Video 1/);assert.match(text,/^Most important: follow @Video 1 frame by frame\./);assert.match(text,/Extra request from the user: Make the jacket red\.\nApply it to the look/);assert.match(text,/It never changes the movements, lip movements, positions, camera or timing of @Video 1\./);assert.match(text,/Only the look of what is replaced changes\.$/);
 });
 test('Source preparation uploads a silent video and saves the original soundtrack on the server',async()=>{
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
@@ -227,9 +227,20 @@ test('Concurrent server finishers claim the soundtrack only once',async()=>{
  const original=global.fetch,services=finishServices({status:'restoring_audio'});global.fetch=services.fetch;
  try{const worker=require('../../netlify/functions/henshin-finish-background');await Promise.all([worker.handler(backgroundEvent(services.row.id)),worker.handler(backgroundEvent(services.row.id))]);assert.equal(services.row.meta.audio_attempts,1);assert.equal(services.row.meta.audio_restored,true);}finally{global.fetch=original;}
 });
-test('Duration mismatch stays an explicit audio failure and never publishes a mismatched final video',async()=>{
+test('Duration mismatch never publishes an out-of-sync final video: the user gets the generated video without the original sound',async()=>{
  const original=global.fetch,services=finishServices({status:'restoring_audio',duration:7});global.fetch=services.fetch;
- try{await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.row.id));assert.equal(services.row.meta.status,'audio_failed');assert.equal(services.row.result_url,null);assert.equal(services.row.meta.audio_restored,undefined);assert.match(services.row.meta.audio_error,/duration differs/);assert.equal(services.row.meta.refunded,undefined);}finally{global.fetch=original;}
+ const generated=services.row.meta.generated_video_url||services.row.result_url;
+ try{
+  await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.row.id));
+  assert.ok(require('../../lib/henshin/common.cjs').mediaURL(generated));
+  assert.equal(services.row.meta.status,'done');
+  assert.equal(services.row.result_url,generated);
+  assert.doesNotMatch(services.row.result_url,/henshin-final\.mp4$/);
+  assert.equal(services.row.meta.audio_fallback,true);
+  assert.equal(services.row.meta.audio_restored,true);
+  assert.match(services.row.meta.audio_error,/duration differs/);
+  assert.equal(services.row.meta.refunded,undefined);
+ }finally{global.fetch=original;}
 });
 test('Transient finishing errors persist a retry job rather than relying on the user page',async()=>{
  const original=global.fetch,services=finishServices({status:'restoring_audio',downloadFailure:true});global.fetch=services.fetch;

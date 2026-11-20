@@ -7,6 +7,7 @@ import {
 import { buildProfit, paymentUsd } from "../../lib/business/profit.mjs";
 import { buildActivity } from "../../lib/business/activity.mjs";
 import { INTERNAL_IDS } from "../../lib/business/access.mjs";
+import { autoTopupReport } from "../../lib/business/auto-topup.mjs";
 import { validateExpense, dayNumber, dateString } from "../../public/business/finance.mjs";
 const uuid = (value) =>
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(
@@ -110,8 +111,22 @@ export async function handler(event) {
       await addEmails(auth, snapshot, lo, hi);
       await completeFromDodo(snapshot, lo, hi);
       await completeYooMoney(auth, snapshot, lo, hi);
+      // Auto top-up: who switched it on, and which payments in the period it made (marked in Sales too).
+      const list = (rows) => (Array.isArray(rows) ? rows : []);
+      const [topupSettings, topupCharges] = (await Promise.all([
+        database(auth, "auto_topups?select=*&order=created_at.desc&limit=1000").catch(() => []),
+        database(auth, `auto_topup_charges?select=*&created_at=gte.${lo}&created_at=lt.${hi}&order=created_at.desc&limit=1000`).catch(() => []),
+      ])).map(list);
+      const topupIds = [...new Set([...topupSettings, ...topupCharges].map((r) => r.user_id))].filter((id) => uuid(id) && !(id in (snapshot.emails || {})));
+      snapshot.emails = snapshot.emails || {};
+      for (let i = 0; i < topupIds.length; i += 100) {
+        const rows = await database(auth, `profiles?select=user_id,email&user_id=in.(${topupIds.slice(i, i + 100).join(",")})`).catch(() => []);
+        for (const r of Array.isArray(rows) ? rows : []) snapshot.emails[r.user_id] = r.email;
+      }
+      const autoTopup = autoTopupReport({ settings: topupSettings, charges: topupCharges, emails: snapshot.emails });
+      for (const p of snapshot.payments || []) if (autoTopup.payment_ids.has(p.transaction_id)) p.auto_topup = true;
       const profit = buildProfit(snapshot, { start, end });
-      return json(200, { ...profit, activity: buildActivity(snapshot, { start, end }) });
+      return json(200, { ...profit, activity: buildActivity(snapshot, { start, end }), auto_topup: { ...autoTopup, payment_ids: undefined } });
     }
     if ((event.body || "").length > 50000)
       return json(413, { error: "Request is too large." });

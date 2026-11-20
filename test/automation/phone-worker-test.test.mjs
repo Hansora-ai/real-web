@@ -11,7 +11,7 @@ const id = '123e4567-e89b-42d3-a456-426614174000';
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function fixture(owner = 'new-owner') {
-  const inserts = [], updates = [], timeouts = [], sessions = [];
+  const inserts = [], updates = [], timeouts = [], sessions = [], charges = [];
   let toolContext;
   class Session extends EventEmitter {
     constructor() { super(); sessions.push(this); }
@@ -27,19 +27,19 @@ function fixture(owner = 'new-owner') {
     serviceUpsert:async(table,valueKey,value)=>({id:table,...value}),
     serviceInsert:async(table,value)=>{inserts.push({table,value});return{id:table,...value};},
     serviceUpdate:async(table,query,value)=>{updates.push({table,value});}, notifyOwner:async()=>{throw Error('must not notify');},
-    automationPrices:()=>({voiceMinute:0.8,testVoiceMinute:0.8}),
-    canAfford:async(businessId,price)=>{assert.equal(price,0);return{ok:true,balance:null};},
+    automationPrices:()=>({voiceMinute:0.8,testVoiceMinute:0.4}), automationPricesFor:async()=>({voiceMinute:0.8,testVoiceMinute:0.4}),
+    canAfford:async(businessId,price)=>{assert.equal(price,0.4);return{ok:true,balance:null};},
     affordableVoiceSeconds:()=>{throw Error('must not check balance');},
-    chargeCredits:async()=>{throw Error('must not charge');}, handleOutOfCredits:async()=>{throw Error('must not check credits');}, voiceCredits:()=>{throw Error('must not charge');},
+    chargeCredits:async args=>{charges.push(args);return{ok:true,charged:args.credits};}, handleOutOfCredits:async()=>{throw Error('must not check credits');}, voiceCredits:(seconds,perMinute)=>perMinute,
     loadToolConfigs:async()=>[],buildToolDefinitions:()=>[],createToolRunner:context=>{toolContext=context;const run=async()=>({ok:true});run.liveBrief=async()=>'';return run;},
     toolInstructions:()=>'',businessClock:()=>'',buildAutomationInstructions:()=>'',firstMessageFor:()=> 'Hello'
   };
   vm.runInNewContext(source,sandbox);
   const ctx = {job:{metadata:JSON.stringify({business_id:id,owner_user_id:'new-owner',participant_identity:'caller',direction:'test'})},room:{name:'test-room',on(){}},connect:async()=>{},waitForParticipant:async identity=>{assert.equal(identity,'caller');return{identity,attributes:{}};},addShutdownCallback(){},shutdown(){}};
-  return {entry:()=>sandbox.definition.entry(ctx),inserts,updates,timeouts,sessions,get toolContext(){return toolContext;}};
+  return {entry:()=>sandbox.definition.entry(ctx),inserts,updates,timeouts,sessions,charges,get toolContext(){return toolContext;}};
 }
 
-test('zero-credit browser tests stay free, simulate actions, log tokens and enforce the test deadline', async () => {
+test('browser tests are charged at the test rate, simulate actions, log tokens and enforce the test deadline', async () => {
   const f = fixture();
   await f.entry();
   const session = f.sessions[0];
@@ -51,7 +51,8 @@ test('zero-credit browser tests stay free, simulate actions, log tokens and enfo
   session.emit('close');
   await flush(); await flush();
   const usage = f.inserts.find(item=>item.table==='automation_usage_events').value;
-  assert.equal(usage.credits,0);
+  assert.equal(usage.credits,0.4);
+  assert.equal(f.charges[0].kind,'test_voice');
   assert.equal(usage.billable_quantity,0);
   assert.equal(usage.metadata.provider_usage.input_audio_tokens,18);
   assert.deepEqual(Array.from(usage.metadata.provider_usage.model_first_audio_token_ms),[240]);
