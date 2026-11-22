@@ -94,3 +94,9 @@ test('the video guide keeps sound on unless the user explicitly asked for a sile
   const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
   assert.match(VIDEO_SELECTION_GUIDE, /Sound stays on\. Make a video silent .* only when the user explicitly asked for no sound\. Never decide it yourself/);
 });
+
+test('the video guide never drops speech in another language to fit a cheaper model', async () => {
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.match(VIDEO_SELECTION_GUIDE, /Never remove the speech or singing to fit a cheaper model that cannot speak the language/);
+  assert.match(VIDEO_SELECTION_GUIDE, /ask the user first and name what changes \(no voice\) and both prices/);
+});
