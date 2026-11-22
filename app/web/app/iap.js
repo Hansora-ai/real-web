@@ -25,6 +25,11 @@
     automation_business_monthly: 'co.hansora.app.automation.business.monthly2',
     automation_scale_monthly: 'co.hansora.app.automation.scale.monthly'
   };
+  // Google Play product IDs are at most 40 characters: two plans have shorter IDs there.
+  if (platform === 'android') {
+    PLANS.automation_starter_monthly = 'co.hansora.app.automation.starter';
+    PLANS.automation_business_monthly = 'co.hansora.app.automation.business';
+  }
   var storeName = platform === 'android' ? 'Google Play' : 'the App Store';
 
   function message(text) { try { (window.HansoraUI && window.HansoraUI.toast) ? window.HansoraUI.toast(text, 'info') : alert(text); } catch (_) { alert(text); } }
