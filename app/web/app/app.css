@@ -344,3 +344,8 @@ html.light .hs-audio-time, [data-theme="light"] .hs-audio-time { color: rgba(0,0
 
 /* Automation language choice (website i18n): the app stays English for now, like Creative. */
 html.hansora-app .auto-lang, html.hansora-app .auto-lang-item, html.hansora-app .auto-lang-list { display: none !important; }
+
+/* "Saved to your gallery" message (Android saving, app-shim.js). */
+.hs-toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 96px); transform: translateX(-50%); z-index: 2147483647; padding: 12px 18px; border-radius: 999px;
+  background: rgba(20,22,30,.95); color: #fff; font: 600 14px/1.2 Inter, -apple-system, sans-serif; box-shadow: 0 10px 30px rgba(0,0,0,.4); transition: opacity .35s; white-space: nowrap; }
+.hs-toast.out { opacity: 0; }

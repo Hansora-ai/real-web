@@ -15,7 +15,7 @@
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
   try { localStorage.removeItem('hansora.language.v1'); } catch (_) {}
-  var HANSORA_BUILD = '2026.11.22-1';
+  var HANSORA_BUILD = '2026.11.22-2';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
@@ -440,6 +440,10 @@
       return /video/.test(type) ? 'mp4' : /png/.test(type) ? 'png' : /webp/.test(type) ? 'webp' : /gif/.test(type) ? 'gif' : /audio|mpeg/.test(type) ? 'mp3' : 'jpg';
     };
     var blobToBase64 = function (blob) { return new Promise(function (resolve, reject) { var r = new FileReader(); r.onload = function () { resolve(String(r.result).split(',')[1] || ''); }; r.onerror = reject; r.readAsDataURL(blob); }); };
+    var toast = function (text) {
+      var t = document.createElement('div'); t.className = 'hs-toast'; t.textContent = text; document.body.appendChild(t);
+      setTimeout(function () { t.classList.add('out'); }, 2200); setTimeout(function () { t.remove(); }, 2600);
+    };
     window.HansoraSave = async function (href, filename) {
       if (saving) return; saving = true;
       try {
@@ -463,6 +467,18 @@
           var where = await Plugins.Filesystem.getUri({ path: name, directory: 'CACHE' });
           if (Plugins.FileTransfer) { await Plugins.FileTransfer.downloadFile({ url: url, path: where.uri }); target = where; }
           else { var b = await (await nativeFetch(url)).blob(); target = await Plugins.Filesystem.writeFile({ path: name, data: await blobToBase64(b), directory: 'CACHE' }); }
+        }
+        // Android: straight into the gallery (its share sheet has no "Save image"). iPhone: share sheet with Save Image.
+        if (Cap.getPlatform() === 'android' && Plugins.HansoraGallery) {
+          var ext = name.split('.').pop().toLowerCase();
+          var mime = ext === 'mp4' || ext === 'mov' || ext === 'webm' ? 'video/' + (ext === 'mov' ? 'quicktime' : ext)
+            : ext === 'mp3' ? 'audio/mpeg' : ext === 'wav' ? 'audio/wav' : ext === 'm4a' ? 'audio/mp4'
+            : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+          try {
+            await Plugins.HansoraGallery.save({ path: target.uri, name: name, mime: mime });
+            toast(/^video/.test(mime) ? 'Video saved to your gallery' : /^audio/.test(mime) ? 'Audio saved to Music' : 'Image saved to your gallery');
+            return;
+          } catch (_) { /* older Android: share sheet below */ }
         }
         await Plugins.Share.share({ files: [target.uri] });
       } catch (error) {
