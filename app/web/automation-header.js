@@ -9,6 +9,9 @@
   const appPage = !['landing', 'legal', 'pricing', 'contact'].includes(page);
   const moon = '<svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>';
   const sun = '<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
+  // Language: the same choice as on Hansora Creative (automation-i18n.js translates the page).
+  const currentLang = window.HansoraI18n?.lang || 'en';
+  const langPicker = `<select class="auto-lang" data-lang-picker aria-label="Language" data-no-i18n>${[['en','EN'],['hy','ՀԱՅ'],['ru','РУ']].map(([code, label]) => `<option value="${code}"${code === currentLang ? ' selected' : ''}>${label}</option>`).join('')}</select>`;
   const themeButton = `<button class="auto-theme" type="button" data-theme-toggle aria-label="Switch to light mode">${moon}${sun}</button>`;
   const pricingLink = `<a class="auto-pricing" href="automation-pricing.html${previewQuery}"${page === 'pricing' ? ' aria-current="page"' : ''} aria-label="Pricing, 30% off">Pricing<em>30% OFF</em></a>`;
   // App: someone who already has AI employees gets the full app menu on the Automation home too.
@@ -33,9 +36,19 @@
   const accountArea = realSite
     ? `<span class="auto-account"><button class="auto-auth-link" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Log in</button><span class="auto-credits" id="navCredits" title="Your credits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"></span><button class="auto-avatar" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"><img id="navAvatarImg" alt="" src="${cachedAvatar}"></button></span>`
     : (appPage ? '' : `<a class="auto-auth-link" href="automation-dashboard.html${previewQuery}">Dashboard</a>`);
-  const accountMenu = realSite ? `<div class="auto-user-menu" id="navMenu"><a href="automation-dashboard.html">AI employees</a><a href="automation-profile.html">Profile</a><a href="automation-pricing.html">Buy credits</a><a href="/">Hansora Creative</a><button type="button" id="autoLogout">Log out</button></div>` : '';
-  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><button class="auto-help" type="button" data-need-help="">Need help?</button><a class="auto-back" href="/">Hansora Creative ↗</a>${themeButton}${['dashboard','setup'].includes(page) ? '' : ctaHtml(knownEmployees)}${accountArea}</nav>${accountMenu}</header>`;
+  // Language inside the account menu, like on Hansora Creative: "Language 🇬🇧 English ›" opens the three choices.
+  const LANGS = [['en', '🇬🇧', 'English'], ['hy', '🇦🇲', 'Հայերեն'], ['ru', '🇷🇺', 'Русский']];
+  const current = LANGS.find(item => item[0] === currentLang) || LANGS[0];
+  const langMenu = `<button type="button" class="auto-lang-item" data-lang-toggle aria-expanded="false"><span>Language</span><span class="auto-lang-value" data-no-i18n>${current[1]} ${current[2]} ›</span></button><div class="auto-lang-list" data-lang-list hidden data-no-i18n>${LANGS.map(([code, flag, name]) => `<button type="button" data-lang-choice="${code}"${code === current[0] ? ' class="current"' : ''}>${flag} ${name}${code === current[0] ? ' <i>✓</i>' : ''}</button>`).join('')}</div>`;
+  const accountMenu = realSite ? `<div class="auto-user-menu" id="navMenu"><a href="automation-dashboard.html">AI employees</a><a href="automation-profile.html">Profile</a><a href="automation-pricing.html">Buy credits</a><a href="/">Hansora Creative</a>${langMenu}<button type="button" id="autoLogout">Log out</button></div>` : '';
+  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${langPicker}${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><button class="auto-help" type="button" data-need-help="">Need help?</button><a class="auto-back" href="/">Hansora Creative ↗</a>${realSite && cachedLoggedIn ? '' : langPicker}${themeButton}${['dashboard','setup'].includes(page) ? '' : ctaHtml(knownEmployees)}${accountArea}</nav>${accountMenu}</header>`;
 
+  root.querySelectorAll('[data-lang-picker]').forEach(select => select.addEventListener('change', () => window.HansoraI18n?.set(select.value)));
+  root.querySelector('[data-lang-toggle]')?.addEventListener('click', event => {
+    const list = root.querySelector('[data-lang-list]'); list.hidden = !list.hidden;
+    event.currentTarget.setAttribute('aria-expanded', String(!list.hidden));
+  });
+  root.querySelectorAll('[data-lang-choice]').forEach(button => button.addEventListener('click', () => window.HansoraI18n?.set(button.dataset.langChoice)));
   const syncThemeLabels = () => {
     const light = document.documentElement.getAttribute('data-theme') === 'light';
     root.querySelectorAll('[data-theme-toggle]').forEach(button => button.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode'));
@@ -227,6 +240,11 @@
     const menuButton = bar.querySelector('[data-bottom-menu]');
     menuButton.addEventListener('click', () => { root.querySelector('.auto-menu-toggle')?.click(); menuButton.setAttribute('aria-expanded', String(root.classList.contains('menu-open'))); });
   }
+
+  // Phones: the bottom bar hides while a text field is being typed in (the keyboard would push it up over the page).
+  const typingField = target => target?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]):not([type=file]),textarea,select,[contenteditable="true"]');
+  document.addEventListener('focusin', event => { if (typingField(event.target)) document.body.classList.add('auto-typing'); });
+  document.addEventListener('focusout', () => setTimeout(() => { if (!typingField(document.activeElement)) document.body.classList.remove('auto-typing'); }, 50));
 
   // Phones: credits and the photo stay in the header, next to the light/dark switch, on every page
   // (header.js fills the same elements), instead of hiding inside the menu.

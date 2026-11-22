@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="en">
 <head><script src="/app/app-shim.js"></script><link rel="stylesheet" href="/app/app.css"><link rel="manifest" href="/app/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Hansora"><meta name="apple-mobile-web-app-status-bar-style" content="black"><link rel="apple-touch-icon" href="/app/icon-180.png">
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8"><script src="automation-i18n.js?v=20261118h"></script><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>AI employee workspace — Hansora Automation</title><link rel="icon" href="/favicon.png" type="image/png"><link rel="apple-touch-icon" href="/favicon.png">
   <meta name="description" content="Manage business knowledge, channels and actions for your Hansora AI employee.">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#08090b">
   <script src="automation-theme.js?v=20261008"></script>
   <link rel="stylesheet" href="/app/fonts/inter.css">
-  <link rel="stylesheet" href="automation-header.css?v=20261112b"><link rel="stylesheet" href="automation-ui.css?v=20261112-web">
+  <link rel="stylesheet" href="automation-header.css?v=20261119m"><link rel="stylesheet" href="automation-ui.css?v=20261118e">
   <link rel="stylesheet" href="automation-voice-test.css?v=20261005">
   <script src="/app/vendor/supabase-js-2.118.0.js"></script>
-  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261112-web"></script><script defer src="automation-header.js?v=20261112c"></script><script defer src="automation-voice-test.js?v=20261005-isolation"></script><script defer src="automation-agent.js?v=20261113a"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261112-web"></script><script defer src="automation-header.js?v=20261119m"></script><script defer src="automation-voice-test.js?v=20261115-price"></script><script defer src="automation-agent.js?v=20261116-email"></script>
 </head>
 <body class="ui" data-automation-page="agent">
   <div data-automation-header></div>
@@ -87,9 +87,9 @@
             <p class="voice-talk-note">Uses your employee’s knowledge and rules. Test actions don’t create real orders or bookings.</p>
           </section>
           <section class="ui-card" id="live-test">
-            <div class="ui-card-head"><div><h2 class="ui-h2">Live test</h2><p>Chat as a customer. Nothing is sent or saved.</p></div><button class="ui-btn ghost sm" id="clear-test" type="button" data-icon="refresh">Clear</button></div>
+            <div class="ui-card-head"><div><h2 class="ui-h2">Live test</h2><p>Chat as a customer. Nothing is sent to anyone. 0.5⚡ per reply.</p></div><button class="ui-btn ghost sm" id="clear-test" type="button" data-icon="refresh">Clear</button></div>
             <div class="ui-chat" id="test-conversation" aria-live="polite"><div class="ui-bubble assistant">Hi! I’m your AI employee. Ask me anything a customer would.</div></div>
-            <label class="test-engine"><span>AI engine</span><select id="test-engine"><option value="">Current</option><option value="compare">Compare: ElevenLabs vs Gemini direct</option><option value="gemini">Gemini direct</option><option value="elevenlabs">ElevenLabs agent</option></select></label>
+            <label class="test-engine" style="display:none"><span>AI engine</span><select id="test-engine"><option value="">Current</option><option value="compare">Compare: ElevenLabs vs Gemini direct</option><option value="gemini">Gemini direct</option><option value="elevenlabs">ElevenLabs agent</option></select></label>
             <form class="ui-composer" id="test-form"><label class="sr-only" for="test-message">Test message</label><textarea id="test-message" rows="1" placeholder="Ask a customer question…"></textarea><button class="ui-btn accent icon" type="submit" aria-label="Send" data-icon="send"></button></form>
           </section>
 

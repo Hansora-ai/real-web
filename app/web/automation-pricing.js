@@ -29,7 +29,7 @@
   ];
   // No longer sold: shown only to owners who already have it ("You are on …").
   const LEGACY_PLANS = [
-    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeRJQYrPCPCIK9zbEb1', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, voiceReply: 1, commentRun: 0.3, voiceMinute: 7 } }
+    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: '', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, voiceReply: 1, commentRun: 0.3, voiceMinute: 7 } }
   ];
 
   const fmt = new Intl.NumberFormat('en-US');
@@ -52,7 +52,8 @@
       <li>${icon('phone')}<b>${count(rates.voiceMinute)}</b><span>call minutes</span></li>
       <li>${icon('eye')}<b>${count(rates.mediaReply)}</b><span>photo / video replies</span></li>
       <li>${icon('play')}<b>${count(rates.voiceReply)}</b><span>voice replies</span></li>
-    </ul><small>Mix them as you like – one balance.</small></div>`;
+    </ul><small>Mix them as you like – one balance.</small></div>
+    <p class="ui-pack-perk" data-i18n-html>✨ <b>Also works in Hansora Creative</b>: the same credits make images, videos and audio.</p>`;
   }
 
   function renderPacks() {

@@ -91,10 +91,10 @@
         $('#call-orb').classList.remove('ringing', 'live'); elements.root.dataset.callState = 'idle'; $('#call-status').textContent = status;
         const button = $('#test-call'); button.disabled = false; button.textContent = 'Call'; button.classList.remove('danger'); button.classList.add('accent');
         const seconds = callStartedAt ? Math.max(0, Math.floor((Date.now() - callStartedAt) / 1000)) : 0;
-        $('#call-timer').textContent = `${formatTimer(seconds)} · test call · not billed`;
+        $('#call-timer').textContent = `${formatTimer(seconds)} · test call · 4⚡ a minute`;
         liveRoom = null;
       }
-      function updateTimer() { $('#call-timer').textContent = `${formatTimer(Math.floor((Date.now() - callStartedAt) / 1000))} / ${formatTimer(callMaxSeconds)} · test call · not billed`; }
+      function updateTimer() { $('#call-timer').textContent = `${formatTimer(Math.floor((Date.now() - callStartedAt) / 1000))} / ${formatTimer(callMaxSeconds)} · test call · 4⚡ a minute`; }
       function formatTimer(seconds) { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; }
       function renderTranscript() {
         if (!elements.transcript) return;
@@ -102,7 +102,7 @@
         $('#phone-transcript').scrollTop = $('#phone-transcript').scrollHeight;
       }
       function phoneError(code) {
-        return ({ phone_service_not_configured:'Voice testing is not available yet. Please try again later.', phone_test_unavailable:'The voice service is temporarily unavailable.', business_not_found:'This AI employee could not be found.', phone_agent_configuration_incomplete:'Finish creating your AI employee before testing its voice.', authentication_required:'Sign in to test your AI employee.' })[code] || 'Could not start the live test call.';
+        return ({ phone_service_not_configured:'Voice testing is not available yet. Please try again later.', phone_test_unavailable:'The voice service is temporarily unavailable.', business_not_found:'This AI employee could not be found.', phone_agent_configuration_incomplete:'Finish creating your AI employee before testing its voice.', authentication_required:'Sign in to test your AI employee.', credits_required:'Add credits to make a test call. Test calls cost 4⚡ a minute.' })[code] || 'Could not start the live test call.';
       }
       function showError(message) { elements.error.textContent = message; elements.error.hidden = false; }
       function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }

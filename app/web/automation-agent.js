@@ -282,7 +282,7 @@
       ['calendar', 'Bookings', 'Check free times and book appointments', 'calendar', 'calendar'],
       ['orders', 'Orders', 'Collect every detail and create orders', 'bag', 'orders'],
       ['leads', 'Leads', 'Save interested customers for sales', 'spark', 'leads'],
-      ['notifications', 'Notifications', 'WhatsApp and email alerts to you', 'bell', 'notifications']
+      ['notifications', 'Notifications', 'Email alerts to you', 'bell', 'notifications']
     ];
     $('#actions-list').innerHTML = rows.map(([key, title, description, iconName, tab]) => {
       const value = state ? state[key] : undefined;
@@ -320,6 +320,8 @@
   function initializeLiveTest(business, profile) {
     const newSession = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`);
     let session = newSession();
+    // The engine picker is a Hansora-only comparison tool: shown with ?engine=1, hidden for owners.
+    if (new URLSearchParams(location.search).get('engine') === '1' && $('.test-engine')) $('.test-engine').style.display = '';
     const engineChoice = () => $('#test-engine')?.value || '';
     const form = $('#test-form');
     const input = $('#test-message');

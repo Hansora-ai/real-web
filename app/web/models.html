@@ -182,6 +182,7 @@
       'gpt-image-2-6': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%285%29.jpg',
       'gpt-image-2-5': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%285%29.jpg',
       'seedance25': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg',
+      'seedance25-flash': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg',
       'wan-3': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%287%29.jpg',
       'gpt-image-2': `${MODEL_IMAGE_BASE}/2.png`,
       'nano-banana-2': `${MODEL_IMAGE_BASE}/4.png`,
@@ -265,6 +266,7 @@
 
     const VIDEO_MODELS = fromHeaderItems([
       { label: 'Seedance 2.5', id: 'seedance25', logo: 5, note: 'Cinematic video with sound' },
+      { label: 'Seedance 2.5 Flash', id: 'seedance25-flash', logo: 5, note: 'Seedance 2.5 quality, lower price' },
       { label: 'Kling 4.0', id: 'kling40', logo: 14, note: 'Create and edit videos' },
       { label: 'Henshin', id: 'henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Video edit and motion control' },
       { label: 'Gemini Omni Flash 1.2', id: 'gemini-omni-flash-1-2', logo: 3, note: 'Newest Gemini video, up to 15 s' },
@@ -309,7 +311,7 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation', logo: 20, note: 'Full songs from a prompt' }
     ], 'audio', 9);
 
-    const MX_TAGS = { 'seedance25': 'TOP', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+    const MX_TAGS = { 'seedance25': 'TOP', 'seedance25-flash': 'NEW', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
 
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';

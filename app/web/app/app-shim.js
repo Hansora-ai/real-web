@@ -14,7 +14,8 @@
   var Plugins = (Cap && Cap.Plugins) || {};
   // The app's version: shown at the bottom of the menus, and printed by the update command, so we always know
   // which version a phone runs. Change it with every update.
-  var HANSORA_BUILD = '2026.11.18-1';
+  try { localStorage.removeItem('hansora.language.v1'); } catch (_) {}
+  var HANSORA_BUILD = '2026.11.22-1';
   window.HANSORA_BUILD = HANSORA_BUILD;
   var root = document.documentElement;
   root.classList.add('hansora-app', 'hansora-app-' + (native ? Cap.getPlatform() : 'web'));
