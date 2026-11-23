@@ -39,7 +39,9 @@ const post = (event, headers = { authorization: AUTH }) => ({ httpMethod: 'POST'
 test('the products match the website packs and plans', () => {
   assert.deepEqual(Object.values(APP_PACKS), [90, 200, 510, 1050]);
   for (const plan of Object.values(APP_PLANS)) assert.ok(CREATIVE_PLANS[plan] || AUTOMATION_PLANS[plan], plan);
-  assert.equal(Object.keys(APP_PLANS).length, 8); // 3 Creative + Lite, Starter, Growth, Business, Scale (Scale: existing subscribers only)
+  assert.equal(Object.keys(APP_PLANS).length, 10); // 3 Creative + Lite, Starter, Growth, Business, Scale (Scale: existing subscribers only) + 2 shorter Google Play IDs
+  assert.equal(APP_PLANS['co.hansora.app.automation.starter'], 'automation_starter_monthly');
+  assert.equal(APP_PLANS['co.hansora.app.automation.business'], 'automation_business_monthly');
 });
 
 test('a call without the RevenueCat password is refused', async () => {
