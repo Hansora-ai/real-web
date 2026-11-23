@@ -3,5 +3,5 @@
 // Fill them in when the App Store / Google Play apps exist in RevenueCat (see docs/mobile-app/PURCHASES.md).
 window.HANSORA_IAP_KEYS = {
   ios: 'appl_gJBOdlfLjMvjReirzmgtOKgXpEb',     // starts with "appl_"
-  android: ''  // starts with "goog_"
+  android: 'goog_bKHBKkWuCWBbxzoShGboxCMLIHb'  // starts with "goog_"
 };
