@@ -1,5 +1,5 @@
 /* KIE regular rates (without top-up bonuses) for Seedream 5.5 and FLUX 3 Klein, priced at a 30% margin:
-   displayed credits = provider cost / 0.7 × 100, rounded UP to the next 0.1. 1 stored credit = 10 displayed credits;
+   displayed credits = provider cost / 0.7 × 100, rounded UP to the next 0.5 (prices read 1, 1.5, 2, 2.5…). 1 stored credit = 10 displayed credits;
    the page shows displayed credits and the server debits the stored value. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.NewImagePricing=api;})(typeof globalThis==='object'?globalThis:this,function(){
  'use strict';
@@ -13,9 +13,9 @@
   const rate=rates[model],res=String(resolution).toUpperCase(),count=Number(imageCount);
   if(!rate||!Object.hasOwn(rate.output,res)||!Number.isInteger(count)||count<0||count>rate.maxImages)throw Error('Unsupported resolution or image count.');
   const providerCostUSD=rate.output[res]+rate.input*count;
-  // Work in tenths of a displayed credit, so floating point never rounds a price down.
-  const tenths=Math.ceil(Math.round(providerCostUSD/(1-MARGIN)*1000*1e6)/1e6-1e-9);
-  return {displayedCredits:tenths/10,internalCredits:tenths/100,providerCostUSD};
+  // Work in halves of a displayed credit, so floating point never rounds a price down.
+  const halves=Math.ceil(Math.round(providerCostUSD/(1-MARGIN)*200*1e6)/1e6-1e-9);
+  return {displayedCredits:halves/2,internalCredits:halves/20,providerCostUSD};
  }
  return {quote,rates,margin:MARGIN};
 });

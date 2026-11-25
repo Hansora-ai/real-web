@@ -7,7 +7,7 @@ const pricing = require('../../public/new-image-pricing.js');
 exports.handler = launcher({
   id: 'flux-3-klein', name: 'FLUX 3 Klein', maxPrompt: 5000, maxImages: 10,
   defaultAspect: '1:1', aspects: ['auto', '1:1', '4:3', '3:4', '3:2', '2:3', '16:9', '9:16', '21:9', '9:21'],
-  costs: { '1K': 0.12, '2K': 0.18, '4K': 0.47 },
+  costs: { '1K': 0.15, '2K': 0.2, '4K': 0.5 },
   cost: ({ resolution, imageCount }) => pricing.quote('flux-3-klein', { resolution, imageCount }).internalCredits,
   payload: ({ prompt, urls, aspect, resolution, format }) => ({
     model: urls.length ? 'flux-3/klein-edit-image' : 'flux-3/klein-text-to-image',
