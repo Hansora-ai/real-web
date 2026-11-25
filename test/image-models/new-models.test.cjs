@@ -124,10 +124,10 @@ const seedream55=require('../../netlify/functions/run-seedream-5-5.js').handler;
 const flux3=require('../../netlify/functions/run-flux-3-klein.js').handler;
 const imagePricing=require('../../public/new-image-pricing.js');
 
-test('Seedream 5.5 and FLUX 3 Klein prices keep a 30% margin (shown ×10, debited as stored credits)',()=>{
- for(const [model,res,images,shown] of [['seedream-5-5','1K',0,2.6],['seedream-5-5','1.5K',0,2.6],['seedream-5-5','2K',0,4.5],['seedream-5-5','1K',1,3.6],['seedream-5-5','2K',2,6.6],['seedream-5-5','2K',10,14.8],['flux-3-klein','1K',0,1.2],['flux-3-klein','2K',3,1.8],['flux-3-klein','4K',0,4.7]]){
+test('Seedream 5.5 and FLUX 3 Klein prices keep at least a 30% margin in whole or half credits (shown ×10, debited as stored)',()=>{
+ for(const [model,res,images,shown] of [['seedream-5-5','1K',0,3],['seedream-5-5','1.5K',0,3],['seedream-5-5','2K',0,4.5],['seedream-5-5','1K',1,4],['seedream-5-5','2K',2,7],['seedream-5-5','2K',10,15],['flux-3-klein','1K',0,1.5],['flux-3-klein','2K',3,2],['flux-3-klein','4K',0,5]]){
   const q=imagePricing.quote(model,{resolution:res,imageCount:images});
-  assert.equal(q.displayedCredits,shown,`${model} ${res} ${images}`);assert.equal(q.internalCredits,Math.round(shown*10)/100);
+  assert.equal(q.displayedCredits,shown,`${model} ${res} ${images}`);assert.equal(q.internalCredits,Math.round(shown*10)/100);assert.equal(shown*2%1,0,'whole or half credits only');
   assert.ok(q.providerCostUSD/(q.displayedCredits/100)<=0.7+1e-9,`${model} ${res} margin`);
  }
  assert.throws(()=>imagePricing.quote('seedream-5-5',{resolution:'4K'}));assert.throws(()=>imagePricing.quote('flux-3-klein',{resolution:'1.5K'}));
@@ -135,7 +135,7 @@ test('Seedream 5.5 and FLUX 3 Klein prices keep a 30% margin (shown ×10, debite
 });
 
 test('Seedream 5.5 sends the documented generation/edit inputs and debits the per-image price',async()=>{
- for(const [resolution,urls,cost] of [['1K',[],.26],['1.5K',[],.26],['2K',[],.45],['2K',['https://uploads.test/a.png','https://uploads.test/b.png'],.66]])await withMock({},async m=>{
+ for(const [resolution,urls,cost] of [['1K',[],.3],['1.5K',[],.3],['2K',[],.45],['2K',['https://uploads.test/a.png','https://uploads.test/b.png'],.7]])await withMock({},async m=>{
   const result=await seedream55(event({resolution,urls,size:urls.length?'auto':'21:9',format:'png'}));assert.equal(result.statusCode,201,result.body);
   assert.equal(JSON.parse(result.body).cost,cost);assert.equal(m.balance,Number((10-cost).toFixed(2)));
   const p=m.payloads[0];assert.equal(p.model,urls.length?'seedream/5-5-image-to-image':'seedream/5-5-text-to-image');
@@ -146,7 +146,7 @@ test('Seedream 5.5 sends the documented generation/edit inputs and debits the pe
 });
 
 test('FLUX 3 Klein sends one documented image per job and charges the same for edits',async()=>{
- for(const [resolution,urls,cost] of [['1K',[],.12],['2K',['https://uploads.test/a.png'],.18],['4K',[],.47]])await withMock({},async m=>{
+ for(const [resolution,urls,cost] of [['1K',[],.15],['2K',['https://uploads.test/a.png'],.2],['4K',[],.5]])await withMock({},async m=>{
   const result=await flux3(event({resolution,urls,size:'9:21',format:'jpg'}));assert.equal(result.statusCode,201,result.body);assert.equal(m.balance,Number((10-cost).toFixed(2)));
   const p=m.payloads[0];assert.equal(p.model,urls.length?'flux-3/klein-edit-image':'flux-3/klein-text-to-image');
   assert.equal(p.input.resolution,resolution);assert.equal(p.input.aspect_ratio,'9:21');assert.equal(p.input.output_format,'jpeg');assert.equal('num_images' in p.input,false);assert.equal('size' in p.input,false);
@@ -167,8 +167,8 @@ test('pages list Seedream 5.5 (top 3, NEW) and FLUX 3 Klein, with prices shown �
   const sd=sandbox.models.find(m=>m.id==='seedream-5-5'),fx=sandbox.models.find(m=>m.id==='flux-3-klein'),kf=sandbox.models.find(m=>m.id==='kling40-flash');
   assert.equal(sd.isNew,true);assert.ok(!fx.isNew&&!fx.isTop);assert.equal(kf.isNew,true);assert.deepEqual(Array.from(kf.resolutionOptions),['720p']);
   assert.ok(sandbox.append.has('seedream-5-5')&&sandbox.append.has('flux-3-klein'));
-  sandbox.currentModel=sd;sandbox.currentResolution='2K';sandbox.uploadedFiles=[{},{}];assert.equal(Math.round(sandbox.getModelUnitCreditValue(sd)*10*10)/10,6.6);
-  sandbox.currentModel=fx;sandbox.currentResolution='4K';assert.equal(Math.round(sandbox.getModelUnitCreditValue(fx)*100)/10,4.7);
+  sandbox.currentModel=sd;sandbox.currentResolution='2K';sandbox.uploadedFiles=[{},{}];assert.equal(Math.round(sandbox.getModelUnitCreditValue(sd)*10*10)/10,7);
+  sandbox.currentModel=fx;sandbox.currentResolution='4K';assert.equal(Math.round(sandbox.getModelUnitCreditValue(fx)*100)/10,5);
   assert.match(html,/new-image-pricing\.js\?v=/);
  }
  const safe=fs.readFileSync(path.join(root,'netlify/functions/safe-run.cjs'),'utf8');for(const name of ['run-seedream-5-5','run-flux-3-klein','run-kling-40-flash'])assert.match(safe,new RegExp(name));
