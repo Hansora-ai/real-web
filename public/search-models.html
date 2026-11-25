@@ -4316,7 +4316,8 @@
     }
 
 	    </style>
-  <script src="/kling4-pricing.js?v=20261022"></script>
+  <script src="/kling4-pricing.js?v=20261125"></script>
+  <script src="/new-image-pricing.js?v=20261125"></script>
   <script src="/gemini-omni-12-pricing.js?v=20261110"></script>
   <script src="/seedance-pricing.js?v=20261025-prices"></script>
   <script src="/seedance-draft.js?v=20261024"></script>
@@ -7374,6 +7375,45 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 0.3
       },
       {
+        id: 'seedream-5-5',
+        name: 'Seedream 5.5',
+        emoji: '🎨',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Newest Seedream: photorealistic images and precise edits with up to 10 reference images.',
+        endpoint: '/.netlify/functions/run-seedream-5-5',
+        needsImage: false,
+        maxFiles: 10,
+        uploadMaxMB: 10,
+        aspectOptions: ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9', '21:9'],
+        defaultAspect: '1:1',
+        resolutionOptions: ['1K', '1.5K', '2K'],
+        defaultResolution: '1K',
+        durations: null,
+        costLabel: '',
+        minCredits: 0.26,
+        isNew: true
+      },
+      {
+        id: 'flux-3-klein',
+        name: 'FLUX 3 Klein',
+        emoji: '🎨',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Fast, low-cost FLUX 3 images up to 4K, and edits with up to 10 reference images.',
+        endpoint: '/.netlify/functions/run-flux-3-klein',
+        needsImage: false,
+        maxFiles: 10,
+        uploadMaxMB: 30,
+        aspectOptions: ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9', '21:9', '9:21'],
+        defaultAspect: '1:1',
+        resolutionOptions: ['1K', '2K', '4K'],
+        defaultResolution: '1K',
+        durations: null,
+        costLabel: '',
+        minCredits: 0.12
+      },
+      {
         id: 'seedream-5-pro',
         name: 'Seedream 5.0 Pro',
         emoji: '🎨',
@@ -7645,6 +7685,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         aspectOptions: ['auto','16:9','9:16','1:1','21:9'], defaultAspect: 'auto',
         resolutionOptions: ['720p','1080p'], defaultResolution: '720p',
         durations: Array.from({length:28},(_,i)=>i+3), costLabel: '', minCredits: 5.7, isNew: true
+      },
+      {
+        id: 'kling40-flash', name: 'Kling 4.0 Flash', emoji: 'K4', subtitle: 'Text / First frame / Image / Video → Video', category: 'video',
+        description: 'Faster, cheaper Kling 4.0 at 720p: a first frame, or up to 10 image and 5 video references, native audio, and 3–20 second videos.',
+        endpoint: '/.netlify/functions/run-kling-40-flash', needsImage: false, maxFiles: 0,
+        uploadMaxMB: 10, uploadLimitsMB: { image: 10, video: 10, audio: 10 }, specificUpload: 'kling40',
+        aspectOptions: ['auto','16:9','9:16','1:1','21:9','4:3','3:4'], defaultAspect: 'auto',
+        resolutionOptions: ['720p'], defaultResolution: '720p',
+        durations: Array.from({length:18},(_,i)=>i+3), costLabel: '', minCredits: 3.7, isNew: true
       },
       { id:'henshin', name:'Henshin', emoji:'H', category:'video', subtitle:'Transform the scene. Keep the motion.', __navTo:'/henshin.html', isTop:true },
       {
@@ -7970,9 +8019,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let currentVeoVariant = 'fast'; // 'lite' | 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
-	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
-	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance25-flash', 'kling40', 'henshin', 'gemini-omni-flash-1-2', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-5', 'flux-3-klein', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
+	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-6', 'seedream-5-5', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'flux-3-klein', 'grok-image'];
+    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance25-flash', 'kling40-flash', 'kling40', 'henshin', 'gemini-omni-flash-1-2', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
       return String(value || '').trim().toLowerCase();
@@ -8131,6 +8180,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id === 'nano-banana-pro') return 'NP';
       if (id.includes('nano')) return 'NB';
       if (id.includes('seedream')) return 'S';
+      if (id.includes('flux')) return 'FX';
       if (id.includes('grok')) return '𝕏';
       if (id.includes('wan')) return 'W';
       if (id.includes('happyhorse')) return 'HH';
@@ -8183,6 +8233,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id === 'henshin') return '/icons/henshin.svg';
       if (id.includes('kling')) return MODEL_LOGO_BASE_URL + '14.png';
       if (id.includes('aleph')) return MODEL_LOGO_BASE_URL + '16.png';
+      if (id.includes('flux')) return '/icons/flux.svg';
       return '';
     }
 
@@ -8361,7 +8412,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         kling30ElementsThumbs: { inputId: 'kling30ElementsInput', kind: 'image', max: 4 }
       };
       if (id === 'videoRefVideosThumbs') {
-        return { inputId: 'videoRefVideosInput', kind: 'video', max: currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 5 : 3 };
+        return { inputId: 'videoRefVideosInput', kind: 'video', max: currentModel && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) ? 5 : 3 };
       }
       if (id === 'videoRefAudioThumbs') {
         return { inputId: 'videoRefAudioInput', kind: 'audio', max: currentModel && currentModel.id === 'kling40' ? 3 : (currentModel && currentModel.id === 'wan-3' ? 5 : 1) };
@@ -8378,7 +8429,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id === 'videoRefImagesThumbs') {
         const max = currentModel && currentModel.id === 'grok-video'
           ? getGrokVideoImageLimit()
-          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : (currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 10 : 9));
+          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : (currentModel && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) ? 10 : 9));
         return { inputId: 'videoRefImagesInput', kind: 'image', max };
       }
       return byId[id] || null;
@@ -8619,7 +8670,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	    }
 
 	    function getPromptMentionImageItems() {
-          if(currentModel?.id==='kling40') return videoRefImageFiles.map((file,index)=>({file,key:getPromptMentionFileKey(file),label:'image_'+(index+1),url:getPromptMentionPreviewUrl(file)}));
+          if(['kling40','kling40-flash'].includes(currentModel?.id)) return videoRefImageFiles.map((file,index)=>({file,key:getPromptMentionFileKey(file),label:'image_'+(index+1),url:getPromptMentionPreviewUrl(file)}));
 	      const files = [];
 	      const seen = new Set();
 	      const addFile = (file) => {
@@ -9225,6 +9276,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const reusableImages = shouldPreserveUploads ? collectReusableImageFiles() : [];
       currentModel = next;
       if (next.id === 'kling40') { videoFirstFrameFile = null; videoLastFrameFile = null; videoSourceFile = null; }
+      if (next.id === 'kling40-flash') { videoLastFrameFile = null; videoSourceFile = null; }
       currentMode = next.category === 'video' ? 'video' : 'image';
       const btnImage = document.getElementById('btnModeImage');
       const btnVideo = document.getElementById('btnModeVideo');
@@ -9284,6 +9336,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        'nano-banana-2-lite': 'nano-banana-2-lite',
 	        'nano-banana-2.1': 'nano-banana-2-1',
           'seedream-5.0-flash': 'seedream-5-flash',
+          'seedream-5.5': 'seedream-5-5',
+          'flux-3': 'flux-3-klein',
+          'kling-4-flash': 'kling40-flash',
           'nanobanana2lite': 'nano-banana-2-lite',
 	        'gpt-image-2.6': 'gpt-image-2-6',
 	        'gptimage26': 'gpt-image-2-6',
@@ -9499,6 +9554,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.3 : (currentResolution === '2K' ? 0.8 : 0.5);
 	      if (model.id === 'nano-banana-2-1') return currentResolution === '4K' ? 0.7 : (currentResolution === '2K' ? 0.5 : 0.3);
           if (model.id === 'seedream-5-flash') return 0.3;
+          // Seedream 5.5 also bills each uploaded image; FLUX 3 Klein references are free (new-image-pricing.js).
+          if (model.id === 'seedream-5-5' || model.id === 'flux-3-klein') {
+            try { return window.NewImagePricing.quote(model.id, { resolution: currentResolution || '1K', imageCount: model === currentModel ? Math.min(10, uploadedFiles.length) : 0 }).internalCredits; } catch { return null; }
+          }
           if (model.id === 'nano-banana-2-lite') return 0.3;
 	      if (model.id === 'gpt-image-2-6') return 0.4;
 	      if (model.id === 'gpt-image-2' || model.id === 'gpt-image-2-5') return currentResolution === '4K' ? 1.2 : (currentResolution === '2K' ? 0.7 : 0.5);
@@ -9511,6 +9570,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 5));
         const rate = currentResolution === '1080p' ? 2 : 1.5;
         return Number((seconds * rate).toFixed(1));
+      }
+      if (model.id === 'kling40-flash') {
+        const inputSeconds = videoFirstFrameFile ? 0 : wan3InputSeconds();
+        if (inputSeconds === null) return null;
+        try { return window.Kling4Pricing.quote({resolution:'720p',duration:Number(currentDuration||5),inputSeconds,flash:true}).internalCredits; } catch { return null; }
       }
       if (model.id === 'kling40') {
         const inputSeconds = wan3InputSeconds();
@@ -10641,11 +10705,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const isGeminiFlash = kind === 'geminiOmni' && currentModel && currentModel.id.startsWith('gemini-omni-flash');
       // Gemini Omni 1.2 Flash has no voice presets.
       const hasGeminiVoices = kind === 'geminiOmni' && !(currentModel && currentModel.id === 'gemini-omni-flash-1-2');
-      const showsFirstFrame = kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash;
+      const isKlingFlash = kind === 'kling40' && currentModel && currentModel.id === 'kling40-flash';
+      const showsFirstFrame = kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash || isKlingFlash;
       const showsLastFrame = kind === 'wan27' || kind === 'wan30' || isGeminiFlash;
       const showsSourceVideo = kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni';
       const showsVideoReferences = kind === 'wan27' || kind === 'wan30' || kind === 'kling40';
-      const showsAudioReferences = kind === 'wan27' || kind === 'wan30' || kind === 'kling40';
+      const showsAudioReferences = kind === 'wan27' || kind === 'wan30' || (kind === 'kling40' && !isKlingFlash);
       show('videoFramesSection', showsFirstFrame || showsLastFrame);
       show('videoImageReferencesSection', true);
       show('videoVideoReferencesSection', showsSourceVideo || showsVideoReferences);
@@ -11691,7 +11756,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function usesExclusiveVideoFramePair() {
-      return !!(currentModel && (currentModel.id.startsWith('gemini-omni-flash') || currentModel.id === 'wan-3'));
+      return !!(currentModel && (currentModel.id.startsWith('gemini-omni-flash') || currentModel.id === 'wan-3' || currentModel.id === 'kling40-flash'));
     }
 
     function hasVideoReferenceInputs() {
@@ -11702,6 +11767,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (currentModel.id === 'wan-3') {
         return !!(videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length);
       }
+      if (currentModel.id === 'kling40-flash') return !!(videoRefImageFiles.length || videoRefVideoFiles.length);
       return false;
     }
 
@@ -11906,7 +11972,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         showStatus('Remove the frames before adding image references.', 'error');
         return;
       }
-      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : (currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7)) : (currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 10 : 9));
+      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : (currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7)) : (currentModel && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) ? 10 : 9));
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
       e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
@@ -11927,7 +11993,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         showStatus('Remove the frames before adding video references.', 'error');
         return;
       }
-      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && ['wan-3','kling40'].includes(currentModel.id) ? 5 : 3);
+      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) ? 5 : 3);
       renderFileListThumbs(videoRefVideoFiles, document.getElementById('videoRefVideosThumbs'), (index) => {
         videoRefVideoFiles.splice(index, 1);
         document.getElementById('videoRefVideosInput').value = '';
@@ -12943,6 +13009,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', resolution: (resolution || '1K'), run_id: runId };
           case 'seedream-5-flash':
             return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), run_id: runId };
+          case 'seedream-5-5':
+            return { urls, prompt: prompt || '', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), run_id: runId };
+          case 'flux-3-klein':
+            return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), run_id: runId };
           case 'nano-banana-2':
 	          return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', resolution: (resolution || '1K'), google_search: true, run_id: runId };
 	        case 'nano-banana-2-lite':
@@ -13097,6 +13167,13 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 	            audio_ids: geminiOmniAudioIds,
 	            run_id: runId
 	          };
+        }
+        case 'kling40-flash': {
+          // A first frame goes to the keyframe model alone; otherwise images then videos (no voices on Flash).
+          if (videoFirstFrameFile) return {uid,run_id:runId,prompt,duration:Number(duration||5),resolution:'720p',aspect_ratio:'auto',first_frame_url:(urls||[])[0],image_urls:[],video_urls:[]};
+          const images=(urls||[]).slice(0,videoRefImageFiles.length), start=images.length;
+          const videos=(urls||[]).slice(start,start+videoRefVideoFiles.length);
+          return {uid,run_id:runId,prompt,duration:Number(duration||5),resolution:'720p',aspect_ratio:aspect||'auto',image_urls:images,video_urls:videos,keep_original_sound:true};
         }
         case 'kling40': {
           const images=(urls||[]).slice(0,videoRefImageFiles.length), start=images.length;
@@ -13332,7 +13409,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     }
 
     function persistGenerationInputUrlsInBackground(details) {
-      if (['seedance20','seedance25','wan-3','kling40'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
+      if (['seedance20','seedance25','wan-3','kling40','kling40-flash'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
       const uid = String(details && details.uid || '').trim();
       const runId = String(details && details.runId || '').trim();
       const inputUrls = Array.isArray(details && details.urls)
@@ -13416,6 +13493,16 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         removeClientRequestPlaceholder(initialRequestContext);
         showStatus('Please log in first.', 'error');
         return;
+      }
+
+      if (currentModel.id === 'kling40-flash') {
+        const durations=await Promise.all(videoRefVideoFiles.map(readWan3VideoDuration));
+        const total=durations.reduce((sum,value)=>sum+value,0);
+        const mixed=!!videoFirstFrameFile&&(videoRefImageFiles.length||videoRefVideoFiles.length);
+        if (!prompt || prompt.length>8000 || videoRefImageFiles.length>10 || videoRefVideoFiles.length>5 || mixed || durations.some(value=>!Number.isFinite(value)||value<2||value>20) || (videoRefVideoFiles.length && total>20.0001)) {
+          removeClientRequestPlaceholder(initialRequestContext);
+          showStatus('Kling 4.0 Flash: use 1–8,000 prompt characters and either a first frame, or up to 10 images and 5 videos (2–20 seconds combined).','error');return;
+        }
       }
 
       if (currentModel.id === 'kling40') {
@@ -13648,7 +13735,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           soraQuality: __soraQuality,
           resolution: currentResolution
         });
-        if (['seedance20','seedance25','wan-3','kling40'].includes(currentModel.id)) {
+        if (['seedance20','seedance25','wan-3','kling40','kling40-flash'].includes(currentModel.id)) {
           const unitCredits = getModelUnitCreditValue();
           if (!Number.isFinite(unitCredits)) throw new Error('Please check the reference durations and output length before generating.');
           body.expected_credits = Math.round(unitCredits * 10);
@@ -13844,7 +13931,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               seedanceVerifiedQuote = {files:[...seedanceVideoRefFiles],seconds:j.input_seconds};
               updateCostDisplay(); updateRunButtonLabel();
             }
-            if (res.status === 409 && ['wan-3','kling40'].includes(currentModel.id) && Number.isFinite(j.input_seconds)) {
+            if (res.status === 409 && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) && Number.isFinite(j.input_seconds)) {
               wan3VerifiedQuote = {files:[...videoRefVideoFiles],seconds:j.input_seconds};
               updateCostDisplay(); updateRunButtonLabel();
             }
@@ -14085,6 +14172,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         'seedream 5.0 flash': 'seedream-5-flash',
         'seedream5flash': 'seedream-5-flash',
         'seedream50flash': 'seedream-5-flash',
+        'seedream 5.5': 'seedream-5-5',
+        'seedream55': 'seedream-5-5',
+        'flux 3 klein': 'flux-3-klein',
+        'flux3klein': 'flux-3-klein',
         'nano banana 2 lite': 'nano-banana-2-lite',
         'nanobanana2lite': 'nano-banana-2-lite',
         'nano banana 2': 'nano-banana-2',
@@ -14101,6 +14192,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         'wan27image': 'wan-2-7-image',
         'grok video': 'grok-video',
         'grokvideo': 'grok-video',
+        'kling 4.0 flash': 'kling40-flash', 'kling40flash': 'kling40-flash', 'kling40-flash': 'kling40-flash',
         'kling 4.0': 'kling40', 'kling-4': 'kling40', 'kling40': 'kling40',
         'kling 3.0': 'kling30',
         'kling30': 'kling30',

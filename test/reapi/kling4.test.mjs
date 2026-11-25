@@ -354,3 +354,55 @@ test('the server rejects a full video above 30 seconds even when a client claims
  }
  assert.equal(posts.length,0);assert.equal(await balance(),1000);assert.equal(stored.length,0);
 });
+
+const launchFlash=require('../../netlify/functions/run-kling-40-flash.js').handler;
+const {buildFlash}=require('../../lib/kling4/request.cjs');
+
+test('Kling 4.0 Flash prices: $0.085/s, $0.0565/s with reference video (2× / input+output seconds), 30% margin, 720p 3–20 s',()=>{
+ assert.equal(pricing.quote({duration:5,flash:true}).displayedCredits,61);
+ assert.equal(pricing.quote({duration:10,flash:true}).displayedCredits,122);
+ assert.equal(pricing.quote({duration:10,flash:true}).internalCredits,12.2);
+ const video=pricing.quote({duration:10,inputSeconds:10,flash:true});
+ assert.equal(video.billedSeconds,20);assert.ok(Math.abs(video.providerCostUSD-1.13)<1e-9);assert.equal(video.displayedCredits,162);
+ assert.equal(pricing.quote({duration:10,inputSeconds:15,flash:true}).billedSeconds,25);
+ for(const quote of [{duration:3,flash:true},{duration:20,flash:true},{duration:7,inputSeconds:12,flash:true}]){const q=pricing.quote(quote);assert.ok(q.providerCostUSD/(q.displayedCredits/100)<=0.7+1e-9);}
+ assert.throws(()=>pricing.quote({duration:21,flash:true}));assert.throws(()=>pricing.quote({duration:5,resolution:'1080p',flash:true}));
+ assert.throws(()=>pricing.quote({duration:5,inputSeconds:21,flash:true}));assert.throws(()=>pricing.quote({inputSeconds:10,lite:true,flash:true}));
+ // Kling 4.0 is unchanged.
+ assert.equal(pricing.quote({duration:10,inputSeconds:10}).displayedCredits,227);
+});
+
+test('Kling 4.0 Flash builds the documented keyframe and reference requests',()=>{
+ const key=buildFlash({prompt:'She smiles',duration:5,resolution:'720p',aspect_ratio:'auto',first_frame_url:source+'.png',image_urls:[],video_urls:[]}).payload;
+ assert.equal(key.model,'kling-4.0/flash-keyframe-to-video');
+ assert.deepEqual(key.input,{prompt:'She smiles\nREFERENCES: @first_frame is the exact opening frame.',first_frame_url:source+'.png',duration:5,resolution:'720p'});
+ assert.equal(buildFlash({prompt:'@first_frame waves',duration:5,first_frame_url:source+'.png'}).payload.input.prompt,'@first_frame waves');
+ const ref=buildFlash({prompt:'@image_1 dances in @video_1',duration:8,aspect_ratio:'9:16',image_urls:[source+'.jpg'],video_urls:[source],keep_original_sound:true},{inputSeconds:6}).payload;
+ assert.equal(ref.model,'kling-4.0/flash-reference-to-video');
+ assert.deepEqual(ref.input,{prompt:'@image_1 dances in @video_1',duration:8,resolution:'720p',image_urls:[source+'.jpg'],video_urls:[source],aspect_ratio:'9:16',keep_original_sound:true});
+ const text=buildFlash({prompt:'A fox',duration:3,aspect_ratio:'auto'}).payload;
+ assert.equal(text.model,'kling-4.0/flash-reference-to-video');assert.equal('aspect_ratio' in text.input,false);assert.equal('keep_original_sound' in text.input,false);
+ assert.throws(()=>buildFlash({prompt:'x',first_frame_url:source+'.png',image_urls:[source+'.jpg']}),/first frame/);
+ assert.throws(()=>buildFlash({prompt:'x',audio_urls:[source+'.mp3']}));
+ assert.throws(()=>buildFlash({prompt:'x'.repeat(8001)}),/8,000/);
+ assert.throws(()=>buildFlash({prompt:'x',video_urls:[source]},{inputSeconds:21}),/2–20/);
+ assert.throws(()=>buildFlash({prompt:'@video_1',image_urls:[source+'.jpg']}),/Unknown/);
+ assert.throws(()=>buildFlash({prompt:'x',duration:25}));
+});
+
+test('Kling 4.0 Flash verifies the price, debits the stored credits once and saves its own model',async()=>{
+ const stale=await launchFlash(event({duration:10,expected_credits:190}));
+ assert.equal(stale.statusCode,409);assert.equal(JSON.parse(stale.body).displayed_credits,122);assert.equal(posts.length,0);assert.equal(await balance(),1000);
+ const ok=await launchFlash(event({duration:10,aspect_ratio:'16:9',expected_credits:122}));
+ assert.equal(ok.statusCode,201,ok.body);assert.equal(await balance(),987.8);
+ assert.equal(posts[0].model,'kling-4.0/flash-reference-to-video');assert.equal(posts[0].input.resolution,'720p');assert.equal(posts[0].input.duration,10);
+ const row=(await saved())[0];assert.equal(row.provider,'Kling 4.0 Flash');assert.equal(row.meta.model_id,'kling40-flash');assert.equal(row.meta.checker,'kling4-check');assert.equal(Number(row.meta.refund_amount),12.2);
+});
+
+test('Kling 4.0 Flash measures reference video on the server and keeps its sound',async()=>{
+ const response=await launchFlash(event({duration:10,video_urls:[source],prompt:'Restyle @video_1',expected_credits:162}));
+ assert.equal(response.statusCode,201,response.body);assert.equal(await balance(),983.8);
+ assert.equal(posts[0].input.keep_original_sound,true);assert.deepEqual(posts[0].input.video_urls,[source]);
+ const first=await launchFlash(event({duration:5,first_frame_url:source.replace('.mp4','.png'),expected_credits:61}));
+ assert.equal(first.statusCode,201,first.body);assert.equal(posts[1].model,'kling-4.0/flash-keyframe-to-video');assert.equal(posts[1].input.first_frame_url,source.replace('.mp4','.png'));
+});

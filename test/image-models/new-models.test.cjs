@@ -119,3 +119,59 @@ test('new image jobs use the documented Market checker and archive only output i
  };
  try{const r=await checker({httpMethod:'GET',queryStringParameters:{uid:'verified-user',run_id:'fixture-run',taskId:'fixture-task'}});const data=JSON.parse(r.body);assert.equal(data.status,'done');assert.deepEqual(calls,['/api/v1/jobs/recordInfo']);assert.equal(row.meta.status,'done');assert.match(data.result_url,/generation-history/);assert.notEqual(data.result_url,'https://uploads.test/ref.png');}finally{global.fetch=original;}
 });
+
+const seedream55=require('../../netlify/functions/run-seedream-5-5.js').handler;
+const flux3=require('../../netlify/functions/run-flux-3-klein.js').handler;
+const imagePricing=require('../../public/new-image-pricing.js');
+
+test('Seedream 5.5 and FLUX 3 Klein prices keep a 30% margin (shown ×10, debited as stored credits)',()=>{
+ for(const [model,res,images,shown] of [['seedream-5-5','1K',0,2.6],['seedream-5-5','1.5K',0,2.6],['seedream-5-5','2K',0,4.5],['seedream-5-5','1K',1,3.6],['seedream-5-5','2K',2,6.6],['seedream-5-5','2K',10,14.8],['flux-3-klein','1K',0,1.2],['flux-3-klein','2K',3,1.8],['flux-3-klein','4K',0,4.7]]){
+  const q=imagePricing.quote(model,{resolution:res,imageCount:images});
+  assert.equal(q.displayedCredits,shown,`${model} ${res} ${images}`);assert.equal(q.internalCredits,Math.round(shown*10)/100);
+  assert.ok(q.providerCostUSD/(q.displayedCredits/100)<=0.7+1e-9,`${model} ${res} margin`);
+ }
+ assert.throws(()=>imagePricing.quote('seedream-5-5',{resolution:'4K'}));assert.throws(()=>imagePricing.quote('flux-3-klein',{resolution:'1.5K'}));
+ assert.throws(()=>imagePricing.quote('seedream-5-5',{imageCount:11}));
+});
+
+test('Seedream 5.5 sends the documented generation/edit inputs and debits the per-image price',async()=>{
+ for(const [resolution,urls,cost] of [['1K',[],.26],['1.5K',[],.26],['2K',[],.45],['2K',['https://uploads.test/a.png','https://uploads.test/b.png'],.66]])await withMock({},async m=>{
+  const result=await seedream55(event({resolution,urls,size:urls.length?'auto':'21:9',format:'png'}));assert.equal(result.statusCode,201,result.body);
+  assert.equal(JSON.parse(result.body).cost,cost);assert.equal(m.balance,Number((10-cost).toFixed(2)));
+  const p=m.payloads[0];assert.equal(p.model,urls.length?'seedream/5-5-image-to-image':'seedream/5-5-text-to-image');
+  assert.equal(p.input.size,resolution);assert.equal(p.input.aspect_ratio,urls.length?'auto':'21:9');assert.equal(p.input.output_format,'png');assert.equal(p.input.nsfw_checker,true);assert.deepEqual(p.input.image_urls,urls.length?urls:undefined);
+  const row=[...m.rows.values()][0];assert.equal(row.provider,'Seedream 5.5');assert.equal(row.meta.refund_amount,cost);
+ });
+ await withMock({},async m=>{await seedream55(event({size:'auto'}));assert.equal(m.payloads[0].input.aspect_ratio,'1:1');});
+});
+
+test('FLUX 3 Klein sends one documented image per job and charges the same for edits',async()=>{
+ for(const [resolution,urls,cost] of [['1K',[],.12],['2K',['https://uploads.test/a.png'],.18],['4K',[],.47]])await withMock({},async m=>{
+  const result=await flux3(event({resolution,urls,size:'9:21',format:'jpg'}));assert.equal(result.statusCode,201,result.body);assert.equal(m.balance,Number((10-cost).toFixed(2)));
+  const p=m.payloads[0];assert.equal(p.model,urls.length?'flux-3/klein-edit-image':'flux-3/klein-text-to-image');
+  assert.equal(p.input.resolution,resolution);assert.equal(p.input.aspect_ratio,'9:21');assert.equal(p.input.output_format,'jpeg');assert.equal('num_images' in p.input,false);assert.equal('size' in p.input,false);
+ });
+});
+
+test('Seedream 5.5 / FLUX 3 Klein reject unsupported input before any debit',async()=>{
+ for(const [handler,body] of [[seedream55,{prompt:'cat'}],[seedream55,{resolution:'4K'}],[seedream55,{size:'9:21'}],[flux3,{resolution:'1.5K'}],[flux3,{urls:Array(11).fill('https://uploads.test/a.png')}]])await withMock({},async m=>{assert.equal((await handler(event(body))).statusCode,400);assert.equal(m.payloads.length,0);assert.equal(m.balance,10);});
+ await withMock({balance:.2},async m=>{assert.equal((await seedream55(event({}))).statusCode,402);assert.equal(m.payloads.length,0);});
+});
+
+test('pages list Seedream 5.5 (top 3, NEW) and FLUX 3 Klein, with prices shown ×10',()=>{
+ for(const suffix of ['', '_arm','_ru']){
+  const html=fs.readFileSync(path.join(root,`public/search-models${suffix}.html`),'utf8');const source=scripts(html).find(s=>s.includes('const MODELS ='));
+  const sandbox={window:{NewImagePricing:imagePricing},uploadedFiles:[]};vm.createContext(sandbox);
+  vm.runInContext(declaration(source,'MODELS')+declaration(source,'IMAGE_MODEL_ORDER')+declaration(source,'VIDEO_MODEL_ORDER')+declaration(source,'__MULTI_APPEND_IMAGE_MODELS')+fn(source,'getModelUnitCreditValue')+';this.models=MODELS;this.order=IMAGE_MODEL_ORDER;this.video=VIDEO_MODEL_ORDER;this.append=__MULTI_APPEND_IMAGE_MODELS;',sandbox);
+  assert.equal(sandbox.order.indexOf('seedream-5-5'),2);assert.ok(sandbox.order.indexOf('flux-3-klein')>2);assert.equal(sandbox.video.indexOf('kling40-flash'),2);
+  const sd=sandbox.models.find(m=>m.id==='seedream-5-5'),fx=sandbox.models.find(m=>m.id==='flux-3-klein'),kf=sandbox.models.find(m=>m.id==='kling40-flash');
+  assert.equal(sd.isNew,true);assert.ok(!fx.isNew&&!fx.isTop);assert.equal(kf.isNew,true);assert.deepEqual(Array.from(kf.resolutionOptions),['720p']);
+  assert.ok(sandbox.append.has('seedream-5-5')&&sandbox.append.has('flux-3-klein'));
+  sandbox.currentModel=sd;sandbox.currentResolution='2K';sandbox.uploadedFiles=[{},{}];assert.equal(Math.round(sandbox.getModelUnitCreditValue(sd)*10*10)/10,6.6);
+  sandbox.currentModel=fx;sandbox.currentResolution='4K';assert.equal(Math.round(sandbox.getModelUnitCreditValue(fx)*100)/10,4.7);
+  assert.match(html,/new-image-pricing\.js\?v=/);
+ }
+ const safe=fs.readFileSync(path.join(root,'netlify/functions/safe-run.cjs'),'utf8');for(const name of ['run-seedream-5-5','run-flux-3-klein','run-kling-40-flash'])assert.match(safe,new RegExp(name));
+ const header=fs.readFileSync(path.join(root,'public/header.js'),'utf8');assert.match(header,/id: 'seedream-5-5'.*badge: 'NEW'/);assert.match(header,/id: 'kling40-flash'.*badge: 'NEW'/);assert.doesNotMatch(header,/id: 'flux-3-klein'.*badge/);
+ for(const suffix of ['', '_arm','_ru']){const page=fs.readFileSync(path.join(root,`public/models${suffix}.html`),'utf8');assert.match(page,/'seedream-5-5': 'NEW', 'kling40-flash': 'NEW'/);assert.match(page,/id: 'flux-3-klein'/);assert.doesNotMatch(page,/'flux-3-klein': '/);}
+});
