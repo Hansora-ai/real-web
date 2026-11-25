@@ -100,3 +100,22 @@ test('the video guide never drops speech in another language to fit a cheaper mo
   assert.match(VIDEO_SELECTION_GUIDE, /Never remove the speech or singing to fit a cheaper model that cannot speak the language/);
   assert.match(VIDEO_SELECTION_GUIDE, /ask the user first and name what changes \(no voice\) and both prices/);
 });
+
+test('Seedream 5.5, FLUX 3 Klein and Kling 4.0 Flash are available at the website prices, never as a default', async () => {
+  const images = (await import('../../public/new-image-pricing.js')).default;
+  assert.equal(getRunner('seedream-5.5'), '/.netlify/functions/run-seedream-5-5');
+  assert.equal(getRunner('flux 3 klein'), '/.netlify/functions/run-flux-3-klein');
+  assert.equal(getRunner('kling-4.0-flash'), '/.netlify/functions/run-kling-40-flash');
+  assert.equal(quote('seedream-5-5', { resolution: '2K', image_count: 2 }).displayedCredits, images.quote('seedream-5-5', { resolution: '2K', imageCount: 2 }).displayedCredits);
+  assert.deepEqual(['1K', '2K', '4K'].map((resolution) => quote('flux-3-klein', { resolution }).displayedCredits), [1.5, 2, 5]);
+  assert.equal(quote('kling40-flash', { duration: 5 }).displayedCredits, 61);
+  for (const id of ['seedream-5-5', 'flux-3-klein', 'kling40-flash']) assert.match(getModel(id).recommendation, /only when the user asks/);
+  const framed = buildGenerationPayload('kling40-flash', { prompt: 'A cat', first_frame_url: 'https://cdn.test/a.png', image_urls: ['https://cdn.test/b.png'], duration: 25 }, 'u', 'r');
+  assert.equal(framed.first_frame_url, 'https://cdn.test/a.png');
+  assert.deepEqual(framed.image_urls, []);
+  assert.equal(framed.duration, 20);
+  assert.equal(framed.resolution, '720p');
+  const refs = buildGenerationPayload('kling40-flash', { prompt: 'A cat like @image1', image_urls: ['https://cdn.test/b.png'], duration: 8 }, 'u', 'r');
+  assert.equal(refs.prompt, 'A cat like @image_1');
+  assert.deepEqual(refs.image_urls, ['https://cdn.test/b.png']);
+});
