@@ -375,8 +375,8 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   // the user's last video comes first, so "ok" keeps the price they already know.
   assert.match(guide, /4\. Complex: first read the balance and last_video from the account \(before quoting or showing any price\)\. Then ask one short question before generating, at any length, with these options/);
   assert.match(guide, /If the balance covers none of the options, do not ask and do not show their prices/);
-  assert.match(guide, /   - Same quality as your last video: .*it always comes first and is the default\.\n   - Our best, cinema quality: Seedance 2\.5, 720p\n   - High quality, lower price: Kling 4\.0, 720p\n   - Good quality, budget: Wan 3\.0, 720p\n/);
-  assert.match(guide, /list it only once, first, as "Same quality as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, list Kling 4\.0 first as "Recommended: great quality, smooth motion", then Seedance 2\.5, then Wan 3\.0\./);
+  assert.match(guide, /   - Same quality as your last video: .*it always comes first and is the default\.\n   - Our best, cinema quality: Seedance 2\.5, 720p\n   - High quality, lower price: Kling 4\.0, 720p\n   - Cinema quality in 1080p, low price: MAGI-2, 1080p\n   - Good quality, budget: Wan 3\.0, 720p\n/);
+  assert.match(guide, /list it only once, first, as "Same quality as your last video"\. If the last model cannot do this request .*leave it out and say why in one short line\. Without a last video, list Kling 4\.0 first as "Recommended: great quality, smooth motion", then Seedance 2\.5, then MAGI-2, then Wan 3\.0\./);
   assert.match(guide, /1080p \(sharpest, only when the user asks for 1080p or the best possible quality; never pick it on your own\)/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
