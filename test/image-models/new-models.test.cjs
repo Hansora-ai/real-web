@@ -163,7 +163,7 @@ test('pages list Seedream 5.5 (top 3, NEW) and FLUX 3 Klein, with prices shown Ã
   const html=fs.readFileSync(path.join(root,`public/search-models${suffix}.html`),'utf8');const source=scripts(html).find(s=>s.includes('const MODELS ='));
   const sandbox={window:{NewImagePricing:imagePricing},uploadedFiles:[]};vm.createContext(sandbox);
   vm.runInContext(declaration(source,'MODELS')+declaration(source,'IMAGE_MODEL_ORDER')+declaration(source,'VIDEO_MODEL_ORDER')+declaration(source,'__MULTI_APPEND_IMAGE_MODELS')+fn(source,'getModelUnitCreditValue')+';this.models=MODELS;this.order=IMAGE_MODEL_ORDER;this.video=VIDEO_MODEL_ORDER;this.append=__MULTI_APPEND_IMAGE_MODELS;',sandbox);
-  assert.equal(sandbox.order.indexOf('seedream-5-5'),2);assert.ok(sandbox.order.indexOf('flux-3-klein')>2);assert.equal(sandbox.video.indexOf('kling40-flash'),2);
+  assert.equal(sandbox.order.indexOf('seedream-5-5'),2);assert.ok(sandbox.order.indexOf('flux-3-klein')>2);assert.equal(sandbox.video.indexOf('kling40-flash'),3);
   const sd=sandbox.models.find(m=>m.id==='seedream-5-5'),fx=sandbox.models.find(m=>m.id==='flux-3-klein'),kf=sandbox.models.find(m=>m.id==='kling40-flash');
   assert.equal(sd.isNew,true);assert.ok(!fx.isNew&&!fx.isTop);assert.equal(kf.isNew,true);assert.deepEqual(Array.from(kf.resolutionOptions),['720p']);
   assert.ok(sandbox.append.has('seedream-5-5')&&sandbox.append.has('flux-3-klein'));
@@ -174,4 +174,18 @@ test('pages list Seedream 5.5 (top 3, NEW) and FLUX 3 Klein, with prices shown Ã
  const safe=fs.readFileSync(path.join(root,'netlify/functions/safe-run.cjs'),'utf8');for(const name of ['run-seedream-5-5','run-flux-3-klein','run-kling-40-flash'])assert.match(safe,new RegExp(name));
  const header=fs.readFileSync(path.join(root,'public/header.js'),'utf8');assert.match(header,/id: 'seedream-5-5'.*badge: 'NEW'/);assert.match(header,/id: 'kling40-flash'.*badge: 'NEW'/);assert.doesNotMatch(header,/id: 'flux-3-klein'.*badge/);
  for(const suffix of ['', '_arm','_ru']){const page=fs.readFileSync(path.join(root,`public/models${suffix}.html`),'utf8');assert.match(page,/'seedream-5-5': 'NEW', 'kling40-flash': 'NEW'/);assert.match(page,/id: 'flux-3-klein'/);assert.doesNotMatch(page,/'flux-3-klein': '/);}
+});
+
+test('MAGI-2 is listed as NEW (3rd video model) on Search Models, the header and the models pages',()=>{
+ const magi=require('../../public/magi-pricing.js');
+ for(const suffix of ['', '_arm','_ru']){
+  const html=fs.readFileSync(path.join(root,`public/search-models${suffix}.html`),'utf8');const source=scripts(html).find(s=>s.includes('const MODELS ='));
+  const sandbox={window:{MagiPricing:magi},currentDuration:10};vm.createContext(sandbox);
+  vm.runInContext(declaration(source,'MODELS')+declaration(source,'VIDEO_MODEL_ORDER')+fn(source,'getModelUnitCreditValue')+';this.models=MODELS;this.video=VIDEO_MODEL_ORDER;',sandbox);
+  assert.equal(sandbox.video.indexOf('magi-2'),2);const m=sandbox.models.find(x=>x.id==='magi-2');assert.equal(m.isNew,true);assert.equal(m.specificUpload,'wan30');assert.deepEqual(Array.from(m.resolutionOptions),['1080p']);
+  sandbox.currentModel=m;assert.equal(sandbox.getModelUnitCreditValue(m),11.5);assert.match(html,/magi-pricing\.js\?v=/);
+ }
+ assert.match(fs.readFileSync(path.join(root,'public/header.js'),'utf8'),/id: 'magi-2'.*badge: 'NEW'/);
+ assert.match(fs.readFileSync(path.join(root,'netlify/functions/safe-run.cjs'),'utf8'),/run-magi-2/);
+ for(const suffix of ['', '_arm','_ru'])assert.match(fs.readFileSync(path.join(root,`public/models${suffix}.html`),'utf8'),/'magi-2': 'NEW'/);
 });

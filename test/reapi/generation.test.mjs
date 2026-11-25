@@ -437,3 +437,48 @@ test('Seedance 2.5 Flash runs on the Seedance 2.5 launcher at its own price and 
  const out=JSON.parse((await checker(polling(row))).body);assert.equal(out.status,'done');assert.match(out.result_url,/generation-history/);
  assert.equal(await balance(),975);
 });
+
+const launchMagi=require('../../netlify/functions/run-magi-2.js').handler;
+const magiPricing=require('../../public/magi-pricing.js');
+const buildMagi=require('../../lib/reapi/magi-request.cjs').build;
+
+test('MAGI-2 price: $0.08 per second at 1080p with a 30% margin, shown ×10, references free',()=>{
+ for(const [seconds,shown] of [[4,46],[5,58],[10,115],[15,172],[30,343]]){
+  const q=magiPricing.quote({duration:seconds});assert.equal(q.displayedCredits,shown);assert.equal(q.internalCredits,shown/10);
+  assert.ok(q.providerCostUSD/(q.displayedCredits/100)<=0.7+1e-9);
+ }
+ assert.throws(()=>magiPricing.quote({duration:3}));assert.throws(()=>magiPricing.quote({duration:31}));assert.throws(()=>magiPricing.quote({duration:5,resolution:'720p'}));
+});
+
+test('MAGI-2 picks the documented text, frame or reference model',()=>{
+ const text=buildMagi({prompt:'A dog on a beach',duration:5,aspect_ratio:'9:16'}).payload;
+ assert.deepEqual(text,{model:'magi-2-text-to-video',prompt:'A dog on a beach',duration:5,quality:'1080p',aspect_ratio:'9:16',generate_audio:true});
+ const frames=buildMagi({prompt:'Push in',duration:8,first_frame_url:source+'.png',last_frame_url:source+'2.png'}).payload;
+ assert.equal(frames.model,'magi-2-image-to-video');assert.deepEqual(frames.image_urls,[source+'.png',source+'2.png']);
+ const refs=buildMagi({duration:6,aspect_ratio:'adaptive',reference_image_urls:[source+'.png'],reference_video_urls:[source],reference_audio_urls:[source+'.mp3']}).payload;
+ assert.equal(refs.model,'magi-2-reference-to-video');assert.equal('prompt' in refs,false);assert.equal(refs.aspect_ratio,'16:9');
+ assert.deepEqual([refs.image_urls,refs.video_urls,refs.audio_urls],[[source+'.png'],[source],[source+'.mp3']]);
+ assert.throws(()=>buildMagi({duration:5}),/prompt/);
+ assert.throws(()=>buildMagi({prompt:'x',first_frame_url:source+'.png',reference_image_urls:[source+'.png']}),/frames/);
+ assert.throws(()=>buildMagi({prompt:'x',last_frame_url:source+'.png'}),/first frame/);
+ assert.throws(()=>buildMagi({prompt:'x'.repeat(15001)}));assert.throws(()=>buildMagi({prompt:'x',aspect_ratio:'2:1'}));
+ assert.throws(()=>buildMagi({prompt:'x',reference_audio_urls:Array(6).fill(source+'.mp3')}));
+});
+
+test('MAGI-2 requires the shown price, debits it once and completes through the reAPI checker',async()=>{
+ assert.equal((await launchMagi(event({resolution:'1080p'}))).statusCode,409);
+ const stale=await launchMagi(event({resolution:'1080p',duration:10,expected_credits:100}));assert.equal(stale.statusCode,409);assert.equal(JSON.parse(stale.body).displayed_credits,115);
+ assert.equal(posts.length,0);assert.equal(await balance(),1000);
+ const request=event({resolution:'1080p',duration:10,aspect_ratio:'1:1',expected_credits:115});
+ const results=await Promise.all([launchMagi(request),launchMagi(request)]);assert.ok(results.every(r=>[200,201].includes(r.statusCode)),JSON.stringify(results));
+ assert.equal(posts.length,1);assert.equal(await balance(),988.5);assert.equal(posts[0].model,'magi-2-text-to-video');assert.equal(posts[0].aspect_ratio,'1:1');
+ const row=(await saved())[0];assert.equal(row.provider,'MAGI-2');assert.equal(row.meta.model_id,'magi-2');assert.equal(row.meta.checker,'reapi-check');
+ const task=tasks.get(row.meta.task_id);task.status='completed';task.output={url:'https://cdn.reapi.ai/magi.mp4'};
+ const out=JSON.parse((await checker(polling(row))).body);assert.equal(out.status,'done');assert.match(out.result_url,/generation-history/);
+});
+
+test('MAGI-2 reference video is measured on the server; a rejected task refunds',async()=>{
+ const res=await launchMagi(event({resolution:'1080p',duration:5,reference_video_urls:[source],expected_credits:58}));
+ assert.equal(res.statusCode,201,res.body);assert.equal(posts[0].model,'magi-2-reference-to-video');assert.equal(await balance(),994.2);
+ reject=true;assert.equal((await launchMagi(event({resolution:'1080p',duration:5,expected_credits:58}))).statusCode,422);assert.equal(await balance(),994.2);
+});

@@ -4286,6 +4286,7 @@
 	    </style>
   <script src="/kling4-pricing.js?v=20261125"></script>
   <script src="/new-image-pricing.js?v=20261125b"></script>
+  <script src="/magi-pricing.js?v=20261125"></script>
   <script src="/gemini-omni-12-pricing.js?v=20261110"></script>
   <script src="/seedance-pricing.js?v=20261025-prices"></script>
   <script src="/seedance-draft.js?v=20261024"></script>
@@ -6771,7 +6772,7 @@ function createResultCard(data) {
     }
 
     function checkerForCurrentModel(model, endpoint) {
-      return ['seedance25', 'seedance20', 'wan-3'].includes(model?.id) ? 'reapi-check' : 'kie-check';
+      return ['seedance25', 'seedance20', 'wan-3', 'magi-2'].includes(model?.id) ? 'reapi-check' : 'kie-check';
     }
 
     function directResultUrlFromCheck(js) {
@@ -7603,6 +7604,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         isNew: true
       },
       {
+        id: 'magi-2', name: 'MAGI-2', emoji: 'M2', subtitle: 'Text / Frames / Media refs → Video', category: 'video',
+        description: 'MAGI-2: 1080p videos up to 30 seconds with native speech, sound and music, from a prompt, a first/last frame, or up to 10 images, 5 videos and 5 audio references.',
+        endpoint: '/.netlify/functions/run-magi-2', needsImage: false, maxFiles: 0,
+        uploadMaxMB: 100, uploadLimitsMB: { image: 30, video: 100, audio: 15 }, specificUpload: 'wan30',
+        aspectOptions: ['16:9','9:16','1:1','4:3','3:4','21:9'], defaultAspect: '16:9',
+        resolutionOptions: ['1080p'], defaultResolution: '1080p',
+        durations: Array.from({length:27},(_,i)=>i+4), costLabel: '', minCredits: 4.6, isNew: true
+      },
+      {
         id: 'kling40', name: 'Kling 4.0', emoji: 'K4', subtitle: 'Text / Image / Video / Voice → Video', category: 'video',
         description: 'Kling 4.0 with image, video and voice references, native audio, and 3–30 second videos.',
         endpoint: '/.netlify/functions/run-kling-40', needsImage: false, maxFiles: 0,
@@ -7946,7 +7956,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
 	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-2-1', 'seedream-5-5', 'flux-3-klein', 'seedream-5-flash', 'nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-6', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
 	    const IMAGE_MODEL_ORDER = ['nano-banana-2-1', 'gpt-image-2-6', 'seedream-5-5', 'gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-flash', 'seedream-5-pro', 'seedream-5-lite', 'flux-3-klein', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance25-flash', 'kling40-flash', 'kling40', 'henshin', 'gemini-omni-flash-1-2', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance25-flash', 'magi-2', 'kling40-flash', 'kling40', 'henshin', 'gemini-omni-flash-1-2', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
       return String(value || '').trim().toLowerCase();
@@ -8159,6 +8169,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('kling')) return MODEL_LOGO_BASE_URL + '14.png';
       if (id.includes('aleph')) return MODEL_LOGO_BASE_URL + '16.png';
       if (id.includes('flux')) return '/icons/flux.svg';
+      if (id === 'magi-2') return '/icons/magi.svg';
       return '';
     }
 
@@ -8337,10 +8348,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         kling30ElementsThumbs: { inputId: 'kling30ElementsInput', kind: 'image', max: 4 }
       };
       if (id === 'videoRefVideosThumbs') {
-        return { inputId: 'videoRefVideosInput', kind: 'video', max: currentModel && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) ? 5 : 3 };
+        return { inputId: 'videoRefVideosInput', kind: 'video', max: currentModel && ['wan-3','magi-2','kling40','kling40-flash'].includes(currentModel.id) ? 5 : 3 };
       }
       if (id === 'videoRefAudioThumbs') {
-        return { inputId: 'videoRefAudioInput', kind: 'audio', max: currentModel && currentModel.id === 'kling40' ? 3 : (currentModel && currentModel.id === 'wan-3' ? 5 : 1) };
+        return { inputId: 'videoRefAudioInput', kind: 'audio', max: currentModel && currentModel.id === 'kling40' ? 3 : (currentModel && ['wan-3','magi-2'].includes(currentModel.id) ? 5 : 1) };
       }
       if (id === 'seedanceImageRefsThumbs') {
         return { inputId: 'seedanceImageRefsInput', kind: 'image', max: getSeedanceReferenceLimit('image') };
@@ -8354,7 +8365,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id === 'videoRefImagesThumbs') {
         const max = currentModel && currentModel.id === 'grok-video'
           ? getGrokVideoImageLimit()
-          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : (currentModel && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) ? 10 : 9));
+          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : (currentModel && ['wan-3','magi-2','kling40','kling40-flash'].includes(currentModel.id) ? 10 : 9));
         return { inputId: 'videoRefImagesInput', kind: 'image', max };
       }
       return byId[id] || null;
@@ -9264,6 +9275,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           'seedream-5.5': 'seedream-5-5',
           'flux-3': 'flux-3-klein',
           'kling-4-flash': 'kling40-flash',
+          'magi2': 'magi-2',
           'nanobanana2lite': 'nano-banana-2-lite',
 	        'gpt-image-2.6': 'gpt-image-2-6',
 	        'gptimage26': 'gpt-image-2-6',
@@ -9495,6 +9507,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 5));
         const rate = currentResolution === '1080p' ? 2 : 1.5;
         return Number((seconds * rate).toFixed(1));
+      }
+      if (model.id === 'magi-2') {
+        // $0.08/s at 1080p; references are free, so only the length sets the price.
+        try { return window.MagiPricing.quote({ duration: Number(currentDuration || 5) }).internalCredits; } catch { return null; }
       }
       if (model.id === 'kling40-flash') {
         const inputSeconds = videoFirstFrameFile ? 0 : wan3InputSeconds();
@@ -11661,7 +11677,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function usesExclusiveVideoFramePair() {
-      return !!(currentModel && (currentModel.id.startsWith('gemini-omni-flash') || currentModel.id === 'wan-3' || currentModel.id === 'kling40-flash'));
+      return !!(currentModel && (currentModel.id.startsWith('gemini-omni-flash') || currentModel.id === 'wan-3' || currentModel.id === 'magi-2' || currentModel.id === 'kling40-flash'));
     }
 
     function hasVideoReferenceInputs() {
@@ -11669,6 +11685,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (currentModel.id.startsWith('gemini-omni-flash')) return !!(videoSourceFile || videoRefImageFiles.length || (currentModel.id === 'gemini-omni-flash-1-1' && geminiOmniAudioIds.length));
       if (currentModel.id === 'wan-3') return !!(videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length);
       if (currentModel.id === 'kling40-flash') return !!(videoRefImageFiles.length || videoRefVideoFiles.length);
+      if (currentModel.id === 'magi-2') return !!(videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length);
       return false;
     }
 
@@ -11867,7 +11884,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         showStatus('Удалите кадры перед добавлением референсов изображений.', 'error');
         return;
       }
-      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : (currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7)) : (currentModel && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) ? 10 : 9));
+      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : (currentModel.id === 'gemini-omni-flash-1-2' ? 6 : 7)) : (currentModel && ['wan-3','magi-2','kling40','kling40-flash'].includes(currentModel.id) ? 10 : 9));
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
       e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
@@ -11888,7 +11905,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         showStatus('Удалите кадры перед добавлением референсов видео.', 'error');
         return;
       }
-      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) ? 5 : 3);
+      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && ['wan-3','magi-2','kling40','kling40-flash'].includes(currentModel.id) ? 5 : 3);
       renderFileListThumbs(videoRefVideoFiles, document.getElementById('videoRefVideosThumbs'), (index) => {
         videoRefVideoFiles.splice(index, 1);
         document.getElementById('videoRefVideosInput').value = '';
@@ -11905,7 +11922,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        showStatus('Удалите кадры перед добавлением аудиореференсов.', 'error');
 	        return;
 	      }
-	      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'kling40' ? 3 : (currentModel && currentModel.id === 'wan-3' ? 5 : 1));
+	      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'kling40' ? 3 : (currentModel && ['wan-3','magi-2'].includes(currentModel.id) ? 5 : 1));
 	      renderFileListThumbs(videoRefAudioFiles, document.getElementById('videoRefAudioThumbs'), (index) => {
 	        videoRefAudioFiles.splice(index, 1);
 	        document.getElementById('videoRefAudioInput').value = '';
@@ -13071,6 +13088,20 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const voices=(urls||[]).slice(start+videoRefVideoFiles.length);
           return {uid,run_id:runId,prompt,duration:Number(duration||5),resolution:currentResolution||'720p',aspect_ratio:aspect||'auto',image_urls:images,video_urls:videos,audio_urls:voices,keep_original_sound:true};
         }
+        case 'magi-2': {
+          // Upload order: first frame, last frame, images, videos, audio (frames are never mixed with references).
+          let cursor = 0;
+          const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = videoLastFrameFile ? (urls || [])[cursor++] : '';
+          const imageRefUrls = (urls || []).slice(cursor, cursor + videoRefImageFiles.length);
+          cursor += videoRefImageFiles.length;
+          const videoRefUrls = (urls || []).slice(cursor, cursor + videoRefVideoFiles.length);
+          cursor += videoRefVideoFiles.length;
+          const audioRefUrls = (urls || []).slice(cursor, cursor + videoRefAudioFiles.length);
+          return { uid, user_id: uid, prompt, aspect_ratio: aspect || '16:9', duration: duration ? Number(duration) : 5, resolution: '1080p', generate_audio: true,
+            first_frame_url: firstFrameUrl || undefined, last_frame_url: lastFrameUrl || undefined,
+            reference_image_urls: imageRefUrls, reference_video_urls: videoRefUrls, reference_audio_urls: audioRefUrls, run_id: runId };
+        }
         case 'wan-3': {
           let cursor = 0;
           const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
@@ -13299,7 +13330,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     }
 
     function persistGenerationInputUrlsInBackground(details) {
-      if (['seedance20','seedance25','wan-3','kling40','kling40-flash'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
+      if (['seedance20','seedance25','wan-3','magi-2','kling40','kling40-flash'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
       const uid = String(details && details.uid || '').trim();
       const runId = String(details && details.runId || '').trim();
       const inputUrls = Array.isArray(details && details.urls)
@@ -13444,6 +13475,18 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         removeClientRequestPlaceholder(initialRequestContext);
         showStatus('Grok 1080p поддерживает одно референсное изображение. Удалите лишние изображения и попробуйте снова.', 'error');
         return;
+      }
+
+      if (currentModel.id === 'magi-2') {
+        const videoDurations = await Promise.all(videoRefVideoFiles.map(readWan3VideoDuration));
+        const audioDurations = await Promise.all(videoRefAudioFiles.map(readAudioFileDuration));
+        const total = list => list.reduce((sum, value) => sum + value, 0);
+        const hasInputs = videoFirstFrameFile || videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length;
+        let magiError = '';
+        if (prompt.length > 15000 || (!hasInputs && !prompt)) magiError = 'MAGI-2: enter a prompt of up to 15,000 characters.';
+        else if (![...videoDurations, ...audioDurations].every(Number.isFinite)) magiError = 'Could not read a reference duration. Please upload a valid video or audio file.';
+        else if ([...videoDurations, ...audioDurations].some(value => value < 2 || value > 30) || total(videoDurations) > 30.0001 || total(audioDurations) > 30.0001) magiError = 'MAGI-2 reference videos and audio must each be 2–30 seconds, and at most 30 seconds combined per type.';
+        if (magiError) { removeClientRequestPlaceholder(initialRequestContext); showStatus(magiError, 'error'); return; }
       }
 
       if (currentModel.id === 'wan-3') {
@@ -13625,7 +13668,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           soraQuality: __soraQuality,
           resolution: currentResolution
         });
-        if (['seedance20','seedance25','wan-3','kling40','kling40-flash'].includes(currentModel.id)) {
+        if (['seedance20','seedance25','wan-3','magi-2','kling40','kling40-flash'].includes(currentModel.id)) {
           const unitCredits = getModelUnitCreditValue();
           if (!Number.isFinite(unitCredits)) throw new Error('Please check the reference durations and output length before generating.');
           body.expected_credits = Math.round(unitCredits * 10);
@@ -13821,7 +13864,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               seedanceVerifiedQuote = {files:[...seedanceVideoRefFiles],seconds:j.input_seconds};
               updateCostDisplay(); updateRunButtonLabel();
             }
-            if (res.status === 409 && ['wan-3','kling40','kling40-flash'].includes(currentModel.id) && Number.isFinite(j.input_seconds)) {
+            if (res.status === 409 && ['wan-3','magi-2','kling40','kling40-flash'].includes(currentModel.id) && Number.isFinite(j.input_seconds)) {
               wan3VerifiedQuote = {files:[...videoRefVideoFiles],seconds:j.input_seconds};
               updateCostDisplay(); updateRunButtonLabel();
             }
@@ -14082,6 +14125,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         'wan27image': 'wan-2-7-image',
         'grok video': 'grok-video',
         'grokvideo': 'grok-video',
+        'magi 2': 'magi-2', 'magi2': 'magi-2', 'magi-2': 'magi-2',
         'kling 4.0 flash': 'kling40-flash', 'kling40flash': 'kling40-flash', 'kling40-flash': 'kling40-flash',
         'kling 4.0': 'kling40', 'kling-4': 'kling40', 'kling40': 'kling40',
         'kling 3.0': 'kling30',

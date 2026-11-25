@@ -412,6 +412,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-kling-40',
   '/.netlify/functions/run-kling-40-flash',
   '/.netlify/functions/run-kling-motion-control',
+  '/.netlify/functions/run-magi-2',
   '/.netlify/functions/run-kling21',
   '/.netlify/functions/run-midjourney',
   '/.netlify/functions/run-mj-video',

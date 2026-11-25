@@ -73,6 +73,9 @@
 [functions."run-wan-3"]
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+[functions."run-magi-2"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
 [functions."reapi-sweep"]
   timeout = 60
 
