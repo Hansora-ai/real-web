@@ -21,12 +21,12 @@ import { ACCOUNT_LINE, NEW_SCENE_FIRST_VIDEO, accountSummary, firstVideoPlan, im
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
 // Models that add a reference video's length to the price (on every platform that offers them).
-const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance25-flash', 'seedance20', 'wan-3', 'kling40', 'kling40-flash', 'gemini-omni-flash-1-2']);
+const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance25-flash', 'seedance20', 'wan-3', 'magi-2', 'kling40', 'kling40-flash', 'gemini-omni-flash-1-2']);
 // Launchers that report the real charge, measured from the uploaded files.
 const EDIT_MODELS = new Set(['henshin', 'henshin-lite']);
-const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance25-flash', 'seedance20', 'wan-3', 'henshin', 'henshin-lite', 'kling40', 'kling40-flash', 'gemini-omni-flash-1-2']);
+const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance25-flash', 'seedance20', 'wan-3', 'magi-2', 'henshin', 'henshin-lite', 'kling40', 'kling40-flash', 'gemini-omni-flash-1-2']);
 // Launchers that refuse any request without the quoted price, even without video input.
-const PRICE_CHECKED_MODELS = new Set(['henshin-lite', 'kling40', 'kling40-flash']);
+const PRICE_CHECKED_MODELS = new Set(['henshin-lite', 'kling40', 'kling40-flash', 'magi-2']);
 // ChatGPT gives up on a tool call after roughly a minute; answer well before that.
 const SUBMIT_BUDGET_MS = 25000;
 const PUBLIC_GENERATION_FAILURE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
@@ -212,7 +212,7 @@ function temporaryIssueResult(model, price, unavailable, reason = '') {
 
 // reAPI runs a limited number of tasks at once for the whole account (150, shared by images and videos). Each
 // user may have up to 50 running per engine, so no single user or runaway series can take them all.
-const RUNNING_ENGINES = Object.freeze({ 'wan-3': 'wan-3', seedance25: 'seedance-2.5', 'seedance25-flash': 'seedance-2.5', seedance20: 'seedance-2.0' });
+const RUNNING_ENGINES = Object.freeze({ 'wan-3': 'wan-3', 'magi-2': 'magi-2', seedance25: 'seedance-2.5', 'seedance25-flash': 'seedance-2.5', seedance20: 'seedance-2.0' });
 const MAX_RUNNING_PER_USER = 50;
 function busyResult(model, { running = null, provider = false } = {}) {
   const value = {

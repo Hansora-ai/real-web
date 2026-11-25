@@ -119,3 +119,15 @@ test('Seedream 5.5, FLUX 3 Klein and Kling 4.0 Flash are available at the websit
   assert.equal(refs.prompt, 'A cat like @image_1');
   assert.deepEqual(refs.image_urls, ['https://cdn.test/b.png']);
 });
+
+test('MAGI-2 is in the complex-video options at the website price, 1080p only', async () => {
+  const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
+  assert.equal(getRunner('magi 2'), '/.netlify/functions/run-magi-2');
+  assert.deepEqual([5, 10, 30].map((duration) => quote('magi-2', { duration }).displayedCredits), [58, 115, 343]);
+  assert.match(VIDEO_SELECTION_GUIDE, /Top quality, low price: MAGI-2, 1080p/);
+  const refs = buildGenerationPayload('magi-2', { prompt: 'A knight', image_urls: ['https://cdn.test/a.png'], duration: 10, aspect_ratio: 'adaptive', resolution: '720p' }, 'u', 'r');
+  assert.equal(refs.resolution, '1080p');
+  assert.equal(refs.aspect_ratio, '16:9');
+  assert.deepEqual(refs.reference_image_urls, ['https://cdn.test/a.png']);
+  assert.throws(() => buildGenerationPayload('magi-2', { prompt: 'A knight', first_frame_url: 'https://cdn.test/a.png', image_urls: ['https://cdn.test/b.png'], audio_urls: ['https://cdn.test/v.mp3'] }, 'u', 'r'), /frames_cannot_mix_with_references/);
+});
