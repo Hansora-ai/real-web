@@ -243,7 +243,9 @@ const NEGATED_SEXUAL_WORDS = /\b(?:no|not|non|nothing|without|avoid|avoiding|nev
 // "no ..." item, or at the end), never right after with/wearing/has. "No clothes", "no clothes from the reference",
 // "no clothing taken" or "girl with no outfit changes pose" stay checked.
 // Matched on the normalized prompt: '@' becomes 'a' and 0/1/3/4/5/7 become o/i/e/a/s/t ('@image5' → 'aimages').
-const OUTFIT_REUSE_RULES = /\b(?:no|never|without) (?:clothes|clothing|garments?|outfits?|costumes?) (?:(?:is|are) )?(?:taken|copied|reused|borrowed) from a?image ?[0-9ieasto]{1,2}(?: (?:or|and) a?image ?[0-9ieasto]{1,2})?\b|\bno (?:outfit|costume|clothing|wardrobe) (?:changes?|swaps?) between (?:shots|scenes|cuts|frames)\b|(?<=\b(?:exclusions|avoid) )no (?:outfit|costume|wardrobe) (?:changes?|swaps?)\b|(?<!\b(?:with|wearing|wears|wear|wore|has|have|having|is|are|in) )\bno (?:outfit|costume|wardrobe) (?:changes?|swaps?)(?=(?: no\b|$))/g;
+// "No clothing-only replacement" (a character-swap instruction: replace the whole person, not just the outfit) is
+// dropped too; a bare "no clothing" / "no clothing only" stays checked.
+const OUTFIT_REUSE_RULES = /(?<!\b(?:with|wearing|wears|wear|has|have|had|in) )\bno (?:clothes|clothing|outfit|costume|wardrobe) only (?:replacements?|swaps?|changes?|edits?)\b|\b(?:no|never|without) (?:clothes|clothing|garments?|outfits?|costumes?) (?:(?:is|are) )?(?:taken|copied|reused|borrowed) from a?image ?[0-9ieasto]{1,2}(?: (?:or|and) a?image ?[0-9ieasto]{1,2})?\b|\bno (?:outfit|costume|clothing|wardrobe) (?:changes?|swaps?) between (?:shots|scenes|cuts|frames)\b|(?<=\b(?:exclusions|avoid) )no (?:outfit|costume|wardrobe) (?:changes?|swaps?)\b|(?<!\b(?:with|wearing|wears|wear|wore|has|have|having|is|are|in) )\bno (?:outfit|costume|wardrobe) (?:changes?|swaps?)(?=(?: no\b|$))/g;
 
 function evaluatePrompt(prompt, options) {
   const hasImages = Boolean(options && options.hasImages);
