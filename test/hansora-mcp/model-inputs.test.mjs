@@ -124,7 +124,7 @@ test('MAGI-2 is in the complex-video options at the website price, 1080p only', 
   const { VIDEO_SELECTION_GUIDE } = await import('../../lib/hansora-mcp/registry.mjs');
   assert.equal(getRunner('magi 2'), '/.netlify/functions/run-magi-2');
   assert.deepEqual([5, 10, 30].map((duration) => quote('magi-2', { duration }).displayedCredits), [58, 115, 343]);
-  assert.match(VIDEO_SELECTION_GUIDE, /Cinema quality in 1080p, low price: MAGI-2, 1080p/);
+  assert.match(VIDEO_SELECTION_GUIDE, /Top quality, low price: MAGI-2, 1080p/);
   const refs = buildGenerationPayload('magi-2', { prompt: 'A knight', image_urls: ['https://cdn.test/a.png'], duration: 10, aspect_ratio: 'adaptive', resolution: '720p' }, 'u', 'r');
   assert.equal(refs.resolution, '1080p');
   assert.equal(refs.aspect_ratio, '16:9');
