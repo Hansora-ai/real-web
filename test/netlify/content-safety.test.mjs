@@ -175,3 +175,10 @@ test('"no outfit changes" passes only as an item of an exclusions list, never ne
     'a girl, no outfit changes her pose', 'girl with no outfit changes no hat', 'make her nude, no outfit changes, no text', 'a woman with no outfit'
   ]) assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, false, prompt);
 });
+
+test('"No clothing-only replacement" in a character-swap prompt passes; bare "no clothing" stays blocked', () => {
+  const swap = "Replace the main character in @video_1 completely with the character from @Image 1. CRITICAL: This is a full character and identity replacement, NOT a clothing replacement. Replace the original character's face, facial structure, eyes, nose, lips, hair, skin tone, body shape, clothing and accessories with those of the reference character. No clothing-only replacement, original face retention, identity blending, face morphing, flickering, identity drift, additional cuts or camera changes.";
+  for (const prompt of [swap, 'No clothing-only replacement.', 'no outfit-only swaps, no extra people']) assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, true, prompt);
+  for (const prompt of ['no clothing', 'no clothing only', 'woman with no clothing only swaps', 'she has no clothes only changes', 'show her with no clothing only', 'make her naked, no clothing-only replacement', 'remove her clothing'])
+    assert.equal(evaluatePrompt(prompt, { hasImages: true }).allowed, false, prompt);
+});
