@@ -25,7 +25,7 @@ for(const locale of ['', '_ru', '_arm'])test(`Kling 4.0 UI quote, reference mapp
  const payload=vm.runInContext('buildBodyForModel(currentModel,params)',ctx);
  assert.equal(JSON.stringify(payload.image_urls),'["image"]');assert.equal(JSON.stringify(payload.video_urls),'["video"]');assert.equal(JSON.stringify(payload.audio_urls),'["voice"]');assert.equal(payload.keep_original_sound,true);
  assert.doesNotMatch(html,/kling4Options|kling4KeepSound|kling4ReferenceHint/);
- assert.match(html,/VIDEO_MODEL_ORDER = \['seedance25', 'seedance25-flash', 'kling40-flash', 'kling40', 'henshin'/);
+ assert.match(html,/VIDEO_MODEL_ORDER = \['seedance25', 'seedance25-flash', 'magi-2', 'kling40-flash', 'kling40', 'henshin'/);
  assert.match(html,new RegExp(`__navTo:'/henshin${locale}\\.html'`));
  assert.match(html,/svg\.download-progress-spinner[\s\S]*animation:download-progress-rotate/);
 });

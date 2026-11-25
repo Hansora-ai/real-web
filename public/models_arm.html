@@ -268,6 +268,7 @@
     const VIDEO_MODELS = fromHeaderItems([
       { label: 'Seedance 2.5', id: 'seedance25', logo: 5, note: 'Կինեմատոգրաֆիկ տեսանյութերի մոդել' },
       { label: 'Seedance 2.5 Flash', id: 'seedance25-flash', logo: 5, note: 'Seedance 2.5-ի որակը՝ ավելի մատչելի' },
+      { label: 'MAGI-2', id: 'magi-2', logoUrl: '/icons/magi.svg', note: '1080p տեսանյութ ձայնով, մինչև 30 վ' },
       { label: 'Kling 4.0 Flash', id: 'kling40-flash', logo: 14, note: 'Ավելի արագ և մատչելի Kling 4.0' },
       { label: 'Kling 4.0', id: 'kling40', logo: 14, note: 'Տեսանյութերի ստեղծում և խմբագրում' },
       { label: 'Henshin', id: 'henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Փոխակերպեք տեսանյութի կերպարներին' },
@@ -313,7 +314,7 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation', logo: 20, note: 'Ստեղծել երաժշտական թրեքեր' }
     ], 'audio', 9);
 
-    const MX_TAGS = { 'seedance25': 'TOP', 'seedance25-flash': 'NEW', 'seedream-5-5': 'NEW', 'kling40-flash': 'NEW', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+    const MX_TAGS = { 'seedance25': 'TOP', 'seedance25-flash': 'NEW', 'seedream-5-5': 'NEW', 'kling40-flash': 'NEW', 'magi-2': 'NEW', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
 
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';
