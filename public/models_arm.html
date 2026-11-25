@@ -246,6 +246,7 @@
     const IMAGE_MODELS = fromHeaderItems([
       { label: 'Nano Banana 2.1', id: 'nano-banana-2-1', logo: 13, note: 'Պատկերների արագ խմբագրում' },
       { label: 'GPT Image 2.6', id: 'gpt-image-2-6', logo: 2, note: 'OpenAI-ի նորագույն պատկերային մոդելը' },
+      { label: 'Seedream 5.5', id: 'seedream-5-5', logo: 5, note: 'Seedream-ի նորագույն պատկերներ' },
       { label: 'GPT Image 2.5', id: 'gpt-image-2-5', logo: 2, note: 'OpenAI-ի պատկերների մոդել' },
       { label: 'GPT Image 2', id: 'gpt-image-2', logo: 2, note: 'Պատկերների նորագույն գեներացում' },
       { label: 'Nano Banana 2', id: 'nano-banana-2', logo: 13, note: 'Պատկերների արագ խմբագրում' },
@@ -254,6 +255,7 @@
       { label: 'Seedream 5.0 Pro', id: 'seedream-5-pro', logo: 5, note: 'Պրոֆեսիոնալ վերահսկվող խմբագրում' },
       { label: 'Seedream 5 Flash', id: 'seedream-5-flash', logo: 5, note: 'Արագ ստեղծագործական պատկերներ' },
       { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', logo: 5, note: 'Արագ ստեղծագործական պատկերներ' },
+      { label: 'FLUX 3 Klein', id: 'flux-3-klein', logoUrl: '/icons/flux.svg', note: 'Արագ և մատչելի պատկերներ' },
       { label: 'Grok Image', id: 'grok-image', logo: 4, note: 'Ոճավորված պատկերների մոդել' },
       { label: 'Seedream 4.5', id: 'seedream-4-5', logo: 5, note: 'Պատկերների գեներացում' },
       { label: 'Wan 2.7', id: 'wan-2-7', logo: 6, note: 'Պատկերների և կադրերի ստեղծում' },
@@ -266,6 +268,7 @@
     const VIDEO_MODELS = fromHeaderItems([
       { label: 'Seedance 2.5', id: 'seedance25', logo: 5, note: 'Կինեմատոգրաֆիկ տեսանյութերի մոդել' },
       { label: 'Seedance 2.5 Flash', id: 'seedance25-flash', logo: 5, note: 'Seedance 2.5-ի որակը՝ ավելի մատչելի' },
+      { label: 'Kling 4.0 Flash', id: 'kling40-flash', logo: 14, note: 'Ավելի արագ և մատչելի Kling 4.0' },
       { label: 'Kling 4.0', id: 'kling40', logo: 14, note: 'Տեսանյութերի ստեղծում և խմբագրում' },
       { label: 'Henshin', id: 'henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Փոխակերպեք տեսանյութի կերպարներին' },
       { label: 'Gemini Omni Flash 1.2', id: 'gemini-omni-flash-1-2', logo: 3, note: 'Gemini-ի նորագույն վիդեո, մինչև 15 վ' },
@@ -310,7 +313,7 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation', logo: 20, note: 'Ստեղծել երաժշտական թրեքեր' }
     ], 'audio', 9);
 
-    const MX_TAGS = { 'seedance25': 'TOP', 'seedance25-flash': 'NEW', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+    const MX_TAGS = { 'seedance25': 'TOP', 'seedance25-flash': 'NEW', 'seedream-5-5': 'NEW', 'kling40-flash': 'NEW', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
 
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';

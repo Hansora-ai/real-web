@@ -246,6 +246,7 @@
     const IMAGE_MODELS = fromHeaderItems([
       { label: 'Nano Banana 2.1', id: 'nano-banana-2-1', logo: 13, note: 'Быстрое редактирование изображений' },
       { label: 'GPT Image 2.6', id: 'gpt-image-2-6', logo: 2, note: 'Новейшая модель изображений OpenAI' },
+      { label: 'Seedream 5.5', id: 'seedream-5-5', logo: 5, note: 'Новейшие изображения Seedream' },
       { label: 'GPT Image 2.5', id: 'gpt-image-2-5', logo: 2, note: 'Модель изображений OpenAI' },
       { label: 'GPT Image 2', id: 'gpt-image-2', logo: 2, note: 'Новейшая генерация изображений' },
       { label: 'Nano Banana 2', id: 'nano-banana-2', logo: 13, note: 'Быстрое редактирование изображений' },
@@ -254,6 +255,7 @@
       { label: 'Seedream 5.0 Pro', id: 'seedream-5-pro', logo: 5, note: 'Профессиональное управляемое редактирование' },
       { label: 'Seedream 5 Flash', id: 'seedream-5-flash', logo: 5, note: 'Быстрые креативные изображения' },
       { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', logo: 5, note: 'Быстрые креативные изображения' },
+      { label: 'FLUX 3 Klein', id: 'flux-3-klein', logoUrl: '/icons/flux.svg', note: 'Быстрые и недорогие изображения' },
       { label: 'Grok Image', id: 'grok-image', logo: 4, note: 'Модель для стилизованных изображений' },
       { label: 'Seedream 4.5', id: 'seedream-4-5', logo: 5, note: 'Генерация изображений' },
       { label: 'Wan 2.7', id: 'wan-2-7', logo: 6, note: 'Работа с изображениями и кадрами' },
@@ -266,6 +268,7 @@
     const VIDEO_MODELS = fromHeaderItems([
       { label: 'Seedance 2.5', id: 'seedance25', logo: 5, note: 'Модель кинематографичного видео' },
       { label: 'Seedance 2.5 Flash', id: 'seedance25-flash', logo: 5, note: 'Качество Seedance 2.5 дешевле' },
+      { label: 'Kling 4.0 Flash', id: 'kling40-flash', logo: 14, note: 'Kling 4.0 быстрее и дешевле' },
       { label: 'Kling 4.0', id: 'kling40', logo: 14, note: 'Создание и редактирование видео' },
       { label: 'Henshin', id: 'henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Преобразуйте персонажей в видео' },
       { label: 'Gemini Omni Flash 1.2', id: 'gemini-omni-flash-1-2', logo: 3, note: 'Новейшее видео Gemini, до 15 с' },
@@ -310,7 +313,7 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation', logo: 20, note: 'Создавать музыкальные треки' }
     ], 'audio', 9);
 
-    const MX_TAGS = { 'seedance25': 'TOP', 'seedance25-flash': 'NEW', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+    const MX_TAGS = { 'seedance25': 'TOP', 'seedance25-flash': 'NEW', 'seedream-5-5': 'NEW', 'kling40-flash': 'NEW', 'kling40': 'HOT', 'henshin': 'TOP', 'gpt-image-2-6': 'NEW', 'gemini-omni-flash-1-2': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
 
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';
