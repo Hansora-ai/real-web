@@ -189,3 +189,13 @@ test('MAGI-2 is listed as NEW (3rd video model) on Search Models, the header and
  assert.match(fs.readFileSync(path.join(root,'netlify/functions/safe-run.cjs'),'utf8'),/run-magi-2/);
  for(const suffix of ['', '_arm','_ru'])assert.match(fs.readFileSync(path.join(root,`public/models${suffix}.html`),'utf8'),/'magi-2': 'NEW'/);
 });
+
+test('Recreate restores frames and references for reference video models before re-running',()=>{
+ for(const suffix of ['', '_arm','_ru']){
+  const html=fs.readFileSync(path.join(root,`public/search-models${suffix}.html`),'utf8');const source=scripts(html).find(s=>s.includes('const MODELS ='));
+  const restore=fn(source,'restorePreviewGeneration');assert.match(restore,/if \(await restorePreviewReferenceInputs\(data \|\| \{\}, setStatus\)\) return;/);
+  const refs=fn(source,'restorePreviewReferenceInputs');
+  for(const key of ['first_frame_url','last_frame_url','reference_image_urls','reference_video_urls','reference_audio_urls'])assert.match(refs,new RegExp(key));
+  assert.match(refs,/\['wan30', 'kling40', 'seedance'\]/);assert.match(refs,/restored < expected/);
+ }
+});

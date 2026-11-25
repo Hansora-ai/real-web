@@ -14482,6 +14482,61 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       return false;
     }
 
+    // Recreate for reference video models (MAGI-2, Wan 3.0, Kling 4.0 / Flash, Seedance): the saved first/last frame and
+    // reference images, videos and audio go back into the same upload boxes, through their own change handlers (limits,
+    // durations and the frame-or-references rule stay the same as a manual upload). Returns false for other models.
+    const PREVIEW_REFERENCE_INPUTS = {
+      seedance: ['seedanceFirstInput', 'seedanceLastInput', 'seedanceImageRefsInput', 'seedanceVideoRefsInput', 'seedanceAudioRefsInput'],
+      video: ['videoFirstFrameInput', 'videoLastFrameInput', 'videoRefImagesInput', 'videoRefVideosInput', 'videoRefAudioInput']
+    };
+    async function restorePreviewReferenceInputs(data, setStatus) {
+      const kind = currentModel && currentModel.specificUpload;
+      if (!['wan30', 'kling40', 'seedance'].includes(kind)) return false;
+      const meta = getPreviewMeta(data || {});
+      const one = (value) => (typeof value === 'string' && /^https?:\/\//i.test(value.trim()) ? value.trim() : '');
+      const list = (value) => (Array.isArray(value) ? value.map(one).filter(Boolean) : []);
+      const groups = [
+        { urls: [one(meta.first_frame_url)].filter(Boolean), name: 'first-frame.png', mime: 'image/png' },
+        { urls: [one(meta.last_frame_url)].filter(Boolean), name: 'last-frame.png', mime: 'image/png' },
+        { urls: list(meta.reference_image_urls), name: 'reference-image.png', mime: 'image/png' },
+        { urls: list(meta.reference_video_urls), name: 'reference-video.mp4', mime: 'video/mp4' },
+        { urls: list(meta.reference_audio_urls), name: 'reference-audio.mp3', mime: 'audio/mpeg' }
+      ];
+      // Start from empty boxes so nothing from the previous run is mixed in.
+      if (kind === 'seedance') {
+        seedanceFirstFrameFile = null; seedanceLastFrameFile = null; seedanceImageRefFiles = []; seedanceVideoRefFiles = []; seedanceAudioRefFiles = [];
+      } else {
+        videoFirstFrameFile = null; videoLastFrameFile = null; videoSourceFile = null; videoRefImageFiles = []; videoRefVideoFiles = []; videoRefAudioFiles = [];
+      }
+      if (!groups.some((group) => group.urls.length)) return true;
+      if (typeof setStatus === 'function') setStatus('Restoring uploaded files...', '');
+      let loaded;
+      try {
+        loaded = await Promise.all(groups.map((group) => Promise.all(group.urls.map((url) => fileFromPreviewUrl(url, group.name, group.mime)))));
+      } catch (_) {
+        throw new Error('Could not restore the uploaded files for this generation. Please upload them again.');
+      }
+      const ids = PREVIEW_REFERENCE_INPUTS[kind === 'seedance' ? 'seedance' : 'video'];
+      loaded.forEach((files, index) => {
+        if (!files.length) return;
+        const input = document.getElementById(ids[index]);
+        if (!input) return;
+        const transfer = new DataTransfer();
+        files.forEach((file) => transfer.items.add(file));
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      const restored = kind === 'seedance'
+        ? [seedanceFirstFrameFile, seedanceLastFrameFile, ...seedanceImageRefFiles, ...seedanceVideoRefFiles, ...seedanceAudioRefFiles].filter(Boolean).length
+        : [videoFirstFrameFile, videoLastFrameFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles].filter(Boolean).length;
+      const expected = groups.reduce((sum, group, index) => sum + (kind === 'kling40' && index === 4 && currentModel.id === 'kling40-flash' ? 0 : group.urls.length), 0);
+      // Never re-run with fewer inputs than the original: that would make a different (text-only) video.
+      if (restored < expected) throw new Error('Could not restore all uploaded files for this generation. Please upload them again.');
+      updateCostDisplay();
+      updateRunButtonLabel();
+      return true;
+    }
+
     async function restorePreviewGeneration(data, setStatus) {
       const model = findPreviewModel(data);
       if (model) {
@@ -14490,6 +14545,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       }
       setPromptForPreviewRun(data && data.prompt ? data.prompt : '');
       applyPreviewOptions(data || {});
+      if (await restorePreviewReferenceInputs(data || {}, setStatus)) return;
 
       const urls = collectPreviewInputUrls(data || {});
       const diag = getPreviewDiagnostic(data || {});
