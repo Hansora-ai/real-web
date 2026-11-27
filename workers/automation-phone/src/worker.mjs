@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { readFile, unlink } from 'node:fs/promises';
 import { cli, defineAgent, llm, ServerOptions, tool, voice } from '@livekit/agents';
 import * as google from '@livekit/agents-plugin-google';
 import { ParticipantKind, RoomEvent } from '@livekit/rtc-node';
@@ -9,6 +10,8 @@ import { notifyOwner } from '../../../lib/automation/notify.mjs';
 import { affordableVoiceSeconds, automationPricesFor, canAfford, chargeCredits, handleOutOfCredits, voiceCredits } from '../../../lib/automation/billing.mjs';
 import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, createPhoneMetrics, describePhoneCall, normalizePhoneNumber, parsePhoneMetadata, phoneLanguageSettings, phoneTestMaxSeconds, phoneTestSettings, phoneVoice, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
 import { canCallFrom } from '../../../lib/automation/phone-outgoing.mjs';
+import { RECORDING_NOTICE, compressRecording, correctCallerLines, ffmpegWorks, recordingOn } from '../../../lib/automation/call-recording.mjs';
+import { storeMedia } from '../../../lib/automation/media.mjs';
 import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs, toolInstructions } from '../../../lib/automation/tools.mjs';
 
 // The Google plugin (1.9.1) reports every model-started generation as caller
@@ -19,6 +22,12 @@ import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs,
 // Real barge-in (Gemini's "interrupted" signal) is left untouched. As a last
 // resort, a tool call still pending after STALE_TOOL_MS stops blocking audio.
 const STALE_TOOL_MS = 12_000;
+// ffmpeg for call recordings: LiveKit's bundled minimal build (Opus/Ogg), or LIVEKIT_FFMPEG_PATH.
+let ffmpegPathPromise = null;
+function ffmpegPath() {
+  ffmpegPathPromise ||= (process.env.LIVEKIT_FFMPEG_PATH ? Promise.resolve(process.env.LIVEKIT_FFMPEG_PATH) : import('@livekit/av').then(av => av.getFfmpegPath?.() || 'ffmpeg', () => 'ffmpeg'));
+  return ffmpegPathPromise;
+}
 // The team member the AI calls during a warm transfer joins the call under this identity.
 const TEAM_IDENTITY = 'hansora-team';
 function guardToolTurns(model, counts) {
@@ -381,6 +390,8 @@ export default defineAgent({
     });
     session.on(voice.AgentSessionEventTypes.Error, event => { if (callStatus !== 'transferred') callStatus = 'failed'; console.error('phone session error', { error: event.error?.message || String(event.error) }); });
 
+    // Real calls are recorded unless the owner turned it off (browser tests are not); without ffmpeg, never.
+    const recordCall = !isTest && !outOfCredits && recordingOn(settings) && await ffmpegWorks(await ffmpegPath());
     let finalized = false;
     async function finalize() {
       if (finalized) return;
@@ -421,6 +432,57 @@ export default defineAgent({
           metadata: { call_id: call.id, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: callVoice, test: isTest, provider_usage: metrics }
         }, { ignoreDuplicates: true });
       }
+      if (recordCall) await saveRecording(seconds).catch(error => console.error('phone recording failed', { message: error?.message }));
+    }
+
+    // The recording: a small private copy the owner plays in the inbox (shown first in the call), and one pass of
+    // Gemini over it that corrects the caller's lines in the transcript.
+    async function saveRecording(seconds) {
+      const recorder = session._recorderIO;
+      if (!recorder) return;
+      if (recorder.recording) await recorder.close();
+      const raw = recorder.outputPath;
+      if (!raw || seconds < 2) return;
+      const small = raw.replace(/\.ogg$/, '') + '-mono.ogg';
+      try {
+        if (!await compressRecording({ ffmpeg: await ffmpegPath(), input: raw, output: small })) return;
+        const audio = await readFile(small);
+        const mediaPath = await storeMedia({ buffer: audio, mimeType: 'audio/ogg', businessId: business.id, channel: 'phone', conversationId: conversation.id, key: `call-${call.id}` });
+        if (mediaPath) {
+          await serviceInsert('automation_messages', {
+            business_id: business.id,
+            conversation_id: conversation.id,
+            idempotency_key: `livekit:${descriptor.providerCallId}:recording`,
+            direction: 'internal',
+            sender_type: 'system',
+            content_type: 'audio',
+            content: 'Call recording',
+            status: 'received',
+            billable: false,
+            provider: 'livekit',
+            metadata: { call_id: call.id, call_recording: true, media_path: mediaPath, media_mime: 'audio/ogg', duration_seconds: seconds },
+            // Just before the first line of the call, so the player is the first thing in it.
+            occurred_at: new Date(Date.parse(call.connected_at || call.started_at) - 1000).toISOString()
+          }, { ignoreDuplicates: true });
+          await serviceUpdate('automation_calls', `id=eq.${call.id}`, { outcome: { ...call.outcome, duration_seconds: seconds, test: isTest, recording_path: mediaPath } }).catch(() => null);
+        }
+        if (settings.save_transcripts === false) return;
+        const ordered = [...turns].sort((a, b) => a.at.localeCompare(b.at));
+        const languages = (agent.supported_languages?.length ? agent.supported_languages : [agent.primary_language]).filter(Boolean);
+        const changes = await correctCallerLines({ audio, turns: ordered.map(turn => ({ id: turn.id, role: turn.role, text: turn.text })), languages });
+        if (!changes.length) return;
+        for (const change of changes) {
+          const turn = turns.find(item => item.id === change.id);
+          if (turn) turn.text = change.text;
+          await serviceUpdate('automation_messages', `idempotency_key=eq.${encodeURIComponent(`livekit:${descriptor.providerCallId}:${change.id}`)}`, { content: change.text.slice(0, 24000) }).catch(() => null);
+        }
+        const transcript = renderCallTranscript([...turns].sort((a, b) => a.at.localeCompare(b.at)));
+        await serviceUpdate('automation_calls', `id=eq.${call.id}`, { transcript }).catch(() => null);
+        console.log('phone transcript corrected from recording', { call: call.id, caller_lines: changes.length });
+      } finally {
+        await unlink(raw).catch(() => null);
+        await unlink(small).catch(() => null);
+      }
     }
     ctx.addShutdownCallback(finalize);
     session.once(voice.AgentSessionEventTypes.Close, () => { finalize().catch(error => console.error('phone finalize failed', { message: error?.message })).finally(() => ctx.shutdown?.('call_ended')); });
@@ -432,8 +494,10 @@ export default defineAgent({
       room: ctx.room,
       agent: voice.Agent.create({ instructions, tools: liveTools }),
       inputOptions: { participantIdentity: participant.identity, closeOnDisconnect: true },
-      record: { audio: false, transcript: settings.save_transcripts !== false, traces: true, logs: true }
+      record: { audio: recordCall, transcript: settings.save_transcripts !== false, traces: true, logs: true }
     });
+    // The recording stays with Hansora: it is not sent with LiveKit's own session report.
+    if (recordCall && session.sessionOptions?.recordingOptions) session.sessionOptions.recordingOptions.audio = false;
     const hangUp = async () => { try { await livekitApi.room.deleteRoom(ctx.room.name); } finally { ctx.shutdown?.(isTest ? 'test_limit_reached' : 'out_of_credits'); } };
     if (outOfCredits) {
       callStatus = 'failed';
@@ -452,8 +516,8 @@ export default defineAgent({
     }
     const greeting = text(settings.greeting, 300) || firstMessageFor({ business, agent });
     const opening = isOutbound
-      ? session.generateReply({ instructions: `The person you called has just answered. Greet them, say you are the AI assistant of ${business.name}, and say in one short sentence why you are calling: ${descriptor.purpose || 'to follow up'}. Then wait for their answer.` })
-      : session.generateReply({ instructions: `Say this opening sentence exactly, then wait for the caller: ${greeting}` });
+      ? session.generateReply({ instructions: `The person you called has just answered. Greet them, say you are the AI assistant of ${business.name}, and say in one short sentence why you are calling: ${descriptor.purpose || 'to follow up'}.${recordCall ? ' Also say in a few words that the call may be recorded.' : ''} Then wait for their answer.` })
+      : session.generateReply({ instructions: recordCall ? `Say this opening sentence exactly: ${greeting} ${RECORDING_NOTICE} Then wait for the caller.` : `Say this opening sentence exactly, then wait for the caller: ${greeting}` });
     // Listen once the greeting has played (or after 15 s at most, so a stalled greeting never leaves the call deaf).
     const listen = () => session.input?.setAudioEnabled?.(true);
     Promise.race([opening?.waitForPlayout?.() ?? Promise.resolve(), new Promise(resolve => later(resolve, 15000))]).then(listen, listen);
