@@ -993,3 +993,8 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 html[lang="hy"] .ui-row-sub,html[lang="ru"] .ui-row-sub{white-space:normal}
 /* Long Armenian/Russian row titles wrap instead of running under the badge */
 html[lang="hy"] .ui-row-title,html[lang="ru"] .ui-row-title{overflow-wrap:anywhere;min-width:0}
+/* Longer Russian and Armenian labels: keep the inbox list header inside its column (badges wrap, filter tabs scroll). */
+.ui-inbox-list{min-width:0;overflow:hidden}
+.ui-inbox-list-head{grid-template-columns:minmax(0,1fr)}
+.ui-inbox-title{flex-wrap:wrap;min-width:0;row-gap:6px}
+.ui-inbox-list .ui-filter-pills{min-width:0;flex-wrap:wrap;row-gap:4px;overflow:visible}
