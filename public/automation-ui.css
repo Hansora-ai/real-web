@@ -993,3 +993,17 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 html[lang="hy"] .ui-row-sub,html[lang="ru"] .ui-row-sub{white-space:normal}
 /* Long Armenian/Russian row titles wrap instead of running under the badge */
 html[lang="hy"] .ui-row-title,html[lang="ru"] .ui-row-title{overflow-wrap:anywhere;min-width:0}
+
+/* Call recording: pinned at the top of a recorded call in the inbox, big and easy to play. */
+.ui-call-recordings{position:sticky;top:-1px;z-index:3;display:grid;gap:8px;margin:0 0 12px;padding:6px 0 8px;background:var(--bg,#08090b)}
+.ui-call-recording{display:grid;gap:10px;padding:14px 16px;border:1px solid rgba(79,156,255,.45);border-radius:14px;background:linear-gradient(135deg,rgba(79,156,255,.14),rgba(139,92,246,.10));box-shadow:0 8px 24px -14px rgba(79,156,255,.6)}
+.ui-call-recording-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ui-call-recording-head strong{font-size:15px;color:var(--text)}
+.ui-call-recording-head small{margin-left:auto;color:var(--text-2);font-size:12.5px}
+.ui-call-recording-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:rgba(79,156,255,.2);font-size:18px}
+.ui-call-recording-player{margin:0}
+.ui-call-recording-player audio{display:block;width:100%;height:44px}
+.ui-call-recording-gone{margin:0;color:var(--text-2);font-size:13px}
+.phone-record-setting{margin-top:16px;padding:14px 16px;border:1px solid rgba(79,156,255,.45);border-radius:14px;background:rgba(79,156,255,.08)}
+.phone-record-setting strong{font-size:15px}
+.phone-record-setting.off{border-color:var(--border);background:transparent}

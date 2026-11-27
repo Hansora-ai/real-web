@@ -1,5 +1,15 @@
 // Hansora Automation in Armenian: English text -> Armenian (see automation-i18n.js).
 window.HansoraI18n && window.HansoraI18n.add('hy', {
+ "🎙 Record calls": "🎙 Զանգերի ձայնագրում",
+ "On: every call is recorded and you can play it in the inbox. Callers hear that the call may be recorded. Recordings are deleted after 30 days.": "Միացված է․ ամեն զանգ ձայնագրվում է, և այն կարող եք լսել նամակներում։ Զանգողը լսում է, որ զանգը կարող է ձայնագրվել։ Ձայնագրությունները ջնջվում են 30 օր հետո։",
+ "Off: calls are not recorded and callers hear no recording notice. Only the written transcript is saved.": "Անջատված է․ զանգերը չեն ձայնագրվում, և զանգողը ձայնագրման մասին չի լսում։ Պահվում է միայն գրավոր տեքստը։",
+ "Call recording": "Զանգի ձայնագրություն",
+ "On · play in the inbox": "Միացված · լսեք նամակներում",
+ "Call recording is on.": "Զանգերի ձայնագրումը միացված է։",
+ "Call recording is off.": "Զանգերի ձայնագրումն անջատված է։",
+ "Deleted after 30 days. The transcript stays below.": "Ջնջվել է 30 օր հետո։ Տեքստը մնում է ներքևում։",
+ "Loading the recording…": "Ձայնագրությունը բեռնվում է…",
+ "Record calls": "Զանգերի ձայնագրում",
  "AI employees": "AI աշխատակիցներ",
  "AI employee": "AI աշխատակից",
  "Product": "Ապրանք",

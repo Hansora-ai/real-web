@@ -74,6 +74,8 @@
   // The contact field's hint follows the chosen method.
   document.addEventListener('change', event => { if (event.target.matches('[data-contact-method]')) event.target.closest('.contact-box').querySelector('[data-contact-value]').placeholder = CONTACT_METHODS[event.target.value][1]; });
   $('#celebrate-done').addEventListener('click', () => { $('#phone-celebrate').hidden = true; });
+  // Recording on/off is saved right away: it changes what callers hear.
+  $('#record-calls').addEventListener('change', async () => { syncRecordHint(); if (await save({ quiet:true })) ui.toast($('#record-calls').checked ? 'Call recording is on.' : 'Call recording is off.'); });
   $('#call-now').addEventListener('click', callNow);
   // "Test a call" (top of the page): straight to the microphone test in step 4, no number needed.
   $('#phone-try').addEventListener('click', () => { step = 4; render(); $('#test-call')?.scrollIntoView({ behavior:'smooth', block:'center' }); });
@@ -192,7 +194,7 @@
   function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; $('#answer-mode-field').hidden = currentMode() !== 'forward'; renderLine(); }
   function collect() {
     const languages = languageMode() === 'only' ? chosenLanguages() : [];
-    return { number_mode:currentMode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:currentMode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_on:flowOn('transfer'), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', auto_calls:readAutoCalls(), save_transcripts:$('#save-transcripts').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
+    return { number_mode:currentMode(), forward_number:$('#phone-number').value.trim(), voice:selectedVoice(), voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:currentMode() === 'forward' ? document.querySelector('input[name="answer-mode"]:checked').value : 'always', transfer_number:$('#transfer-number').value.trim(), transfer_on:flowOn('transfer'), transfer_mode:$('#transfer-warm').checked ? 'warm' : 'direct', auto_calls:readAutoCalls(), save_transcripts:$('#save-transcripts').checked, record_calls:$('#record-calls').checked, country:line.where || undefined, language_mode:languages.length ? 'only' : 'auto', languages };
   }
   function applySaved(data) {
     // "Get a new phone number" was the old default, so a saved "new" is not a real choice and stays unchosen.
@@ -207,6 +209,7 @@
     if (data.transfer_mode === 'direct') $('#transfer-warm').checked = false;
     setFlowOn('transfer', data.transfer_on !== false && Boolean(data.transfer_number));
     if (data.save_transcripts === false) $('#save-transcripts').checked = false;
+    $('#record-calls').checked = data.record_calls !== false; syncRecordHint();
     if (data.language_mode === 'only' && Array.isArray(data.languages) && data.languages.length) document.querySelector('input[name="language-mode"][value="only"]').checked = true;
     renderLanguages(Array.isArray(data.languages) && data.languages.length ? data.languages : agentLanguages);
     syncForward();
@@ -326,6 +329,14 @@
       ? 'The AI speaks only the ticked languages: it answers in the caller’s language when it is one of them, keeps it for the whole call, and never switches to another language.'
       : 'The AI answers in the language the caller speaks and keeps it for the whole call.';
   }
+  // The recording switch says plainly what On and Off mean.
+  function syncRecordHint() {
+    const on = $('#record-calls').checked;
+    $('#record-calls-setting').classList.toggle('off', !on);
+    $('#record-calls-hint').textContent = on
+      ? 'On: every call is recorded and you can play it in the inbox. Callers hear that the call may be recorded. Recordings are deleted after 30 days.'
+      : 'Off: calls are not recorded and callers hear no recording notice. Only the written transcript is saved.';
+  }
   function render() {
     stopVoice();
     if (step !== 4) closeInline();
@@ -348,7 +359,7 @@
     const numbers = liveNumbers().map(item => item.e164).join(', ') || (data.number_mode === 'whatsapp' ? (waCalls.calling?.enabled ? `WhatsApp · ${waCalls.number?.display || 'calls on'}` : 'WhatsApp · calls not on yet') : 'Not set up yet');
     const languages = data.language_mode === 'only' ? data.languages.map(code => LANGUAGES[code]).join(', ') : 'The caller’s language';
     // Each card opens its settings right here, under the test call, so the owner can change and test again.
-    $('#phone-review').innerHTML = [['Number', numbers, 1], ['Voice', data.voice, 2], ['Answers', answer, 3], ['Languages', languages, 3], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message', 'calls']].map(([label, value, target]) => `<button type="button" data-edit-step="${target}" title="Change ${label.toLowerCase()}"><span>${label}<em>Edit</em></span><strong>${escapeHtml(value)}</strong></button>`).join('');
+    $('#phone-review').innerHTML = [['Number', numbers, 1], ['Voice', data.voice, 2], ['Answers', answer, 3], ['Languages', languages, 3], ['Transfer to', data.transfer_on && data.transfer_number ? data.transfer_number : 'Takes a message', 'calls'], ['Call recording', data.record_calls === false ? 'Off' : 'On · play in the inbox', 3]].map(([label, value, target]) => `<button type="button" data-edit-step="${target}" title="Change ${label.toLowerCase()}"><span>${label}<em>Edit</em></span><strong>${escapeHtml(value)}</strong></button>`).join('');
     // Tells the owner plainly whether real calls are answered yet, and what is left to do.
     // Once a number is live it is the first thing on this step, big and in the middle.
     const hero = $('#phone-number-hero');

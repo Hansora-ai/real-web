@@ -1,5 +1,15 @@
 // Hansora Automation in Russian: English text -> Russian (see automation-i18n.js).
 window.HansoraI18n && window.HansoraI18n.add('ru', {
+ "🎙 Record calls": "🎙 Запись звонков",
+ "On: every call is recorded and you can play it in the inbox. Callers hear that the call may be recorded. Recordings are deleted after 30 days.": "Включено: каждый звонок записывается, его можно прослушать во входящих. Звонящий слышит, что звонок может записываться. Записи удаляются через 30 дней.",
+ "Off: calls are not recorded and callers hear no recording notice. Only the written transcript is saved.": "Выключено: звонки не записываются, и звонящий не слышит предупреждения о записи. Сохраняется только текст разговора.",
+ "Call recording": "Запись звонка",
+ "On · play in the inbox": "Включено · слушать во входящих",
+ "Call recording is on.": "Запись звонков включена.",
+ "Call recording is off.": "Запись звонков выключена.",
+ "Deleted after 30 days. The transcript stays below.": "Удалено через 30 дней. Текст разговора остаётся ниже.",
+ "Loading the recording…": "Загрузка записи…",
+ "Record calls": "Запись звонков",
  "AI employees": "ИИ‑сотрудники",
  "AI employee": "ИИ‑сотрудник",
  "Product": "Продукт",

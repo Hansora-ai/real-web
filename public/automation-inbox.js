@@ -243,7 +243,11 @@
     const labels = { customer:current().name, ai:'AI employee', human:'Your team' };
     const operations = `automation-operations.html?business=${encodeURIComponent(businessId)}${api.isLocalPreview && location.protocol !== 'file:' ? '&preview=1' : ''}`;
     const eventNames = { order:['🛍','Order'], booking:['📅','Booking'], lead:['⭐','Lead'] };
-    document.querySelector('#message-timeline').innerHTML = current().messages.map((message, index, all) => {
+    // Call recordings: a big player pinned at the top of the call, so the owner can always listen while reading.
+    const recordings = current().messages.filter(message => message.role === 'recording');
+    const duration = seconds => seconds ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : '';
+    const recordingCards = recordings.length ? `<div class="ui-call-recordings">${recordings.slice().reverse().map(message => `<div class="ui-call-recording"><div class="ui-call-recording-head"><span class="ui-call-recording-icon" aria-hidden="true">🎧</span><strong>Call recording</strong><small>${escapeHtml([duration(message.seconds), message.time].filter(Boolean).join(' · '))}</small></div>${message.removed || !message.mediaPath ? '<p class="ui-call-recording-gone">Deleted after 30 days. The transcript stays below.</p>' : `<div class="ui-msg-media ui-call-recording-player" data-media-path="${escapeHtml(message.mediaPath)}" data-media-mime="${escapeHtml(message.mediaMime)}"><span class="ui-faint">Loading the recording…</span></div>`}</div>`).join('')}</div>` : '';
+    document.querySelector('#message-timeline').innerHTML = recordingCards + current().messages.filter(message => message.role !== 'recording').map((message, index, all) => {
       if (message.role === 'event') {
         const [emoji, name] = eventNames[message.kind] || ['•', 'Record'];
         return `<div class="ui-msg-event"><a href="${operations}&record=${encodeURIComponent(message.id)}">${emoji} ${name}${message.reference ? ` #${escapeHtml(message.reference)}` : ''} created · ${escapeHtml(message.text || '')} <span>${escapeHtml(message.time)} · Open →</span></a></div>`;
@@ -270,7 +274,7 @@
     }
     holders.forEach(holder => {
       const url = mediaUrls.get(holder.dataset.mediaPath);
-      if (!url || holder.childElementCount) return;
+      if (!url || holder.querySelector('audio,video,img')) return;
       const mime = holder.dataset.mediaMime || '';
       if (mime.startsWith('audio/')) holder.innerHTML = `<audio controls preload="none" src="${escapeHtml(url)}"></audio>`;
       else if (mime.startsWith('video/')) holder.innerHTML = `<video controls preload="metadata" src="${escapeHtml(url)}"></video>`;
@@ -451,14 +455,21 @@
     // Orders, bookings and leads created in this chat are shown in the timeline where they happened.
     const [result, outcomes] = await Promise.all([
       api.db.from('automation_messages').select('sender_type,content,billable,occurred_at,metadata').eq('business_id',businessId).eq('conversation_id',conversation.id).order('occurred_at',{ascending:false}).limit(100),
-      api.db.from('automation_outcomes').select('id,outcome_type,reference_number,title,status,created_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('created_at',{ascending:true}).limit(50)
-    ]);
-    result.data = (result.data || []).reverse();
+      api.db.from('automation_outcomes').select('id,outcome_type,reference_number,title,status,created_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('created_at',{ascending:true}).limit(50),
+      // Call recordings sit at the start of a call, so a long call could push them out of the last 100 messages.
+      conversation.channelType === 'phone' ? api.db.from('automation_messages').select('sender_type,content,billable,occurred_at,metadata').eq('business_id',businessId).eq('conversation_id',conversation.id).eq('metadata->>call_recording','true').order('occurred_at',{ascending:false}).limit(10) : Promise.resolve({ data:[] })
+    ]).then(([messagesResult, outcomesResult, recordingsResult]) => {
+      const have = new Set((messagesResult.data || []).map(row => row.metadata?.media_path).filter(Boolean));
+      const extra = (recordingsResult?.data || []).filter(row => !have.has(row.metadata?.media_path));
+      if (extra.length && messagesResult.data) messagesResult.data = [...messagesResult.data, ...extra];
+      return [messagesResult, outcomesResult];
+    });
+    result.data = (result.data || []).sort((a, b) => Date.parse(a.occurred_at) - Date.parse(b.occurred_at));
     if (result.error) throw result.error;
     const lastCustomer = [...(result.data||[])].reverse().find(row => row.sender_type === 'customer');
     conversation.lastCustomerAt = lastCustomer ? Date.parse(lastCustomer.occurred_at) : 0;
     const clock = value => new Date(value).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    const messages = (result.data||[]).map(row => ({role:row.sender_type==='customer'?'customer':row.sender_type==='human'?'human':'ai',text:row.content,time:clock(row.occurred_at),at:Date.parse(row.occurred_at),counted:Boolean(row.billable),mediaPath:row.metadata?.media_path||row.metadata?.product_photo_path||'',mediaUrl:row.metadata?.product_photo_url||'',mediaError:row.metadata?.media_error||'',mediaMime:row.metadata?.media_mime||''}));
+    const messages = (result.data||[]).map(row => row.metadata?.call_recording ? ({role:'recording',at:Date.parse(row.occurred_at),time:new Date(row.occurred_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),seconds:Number(row.metadata.duration_seconds)||0,mediaPath:row.metadata.media_path||'',mediaMime:row.metadata.media_mime||'audio/ogg',removed:Boolean(row.metadata.media_removed_at)}) : ({role:row.sender_type==='customer'?'customer':row.sender_type==='human'?'human':'ai',text:row.content,time:clock(row.occurred_at),at:Date.parse(row.occurred_at),counted:Boolean(row.billable),mediaPath:row.metadata?.media_path||row.metadata?.product_photo_path||'',mediaUrl:row.metadata?.product_photo_url||'',mediaError:row.metadata?.media_error||'',mediaMime:row.metadata?.media_mime||''}));
     const events = (outcomes.error ? [] : outcomes.data || []).map(row => ({role:'event',kind:row.outcome_type,id:row.id,reference:row.reference_number,text:row.title,status:row.status,time:clock(row.created_at),at:Date.parse(row.created_at)}));
     conversation.messages = [...messages, ...events].sort((a, b) => a.at - b.at);
   }
