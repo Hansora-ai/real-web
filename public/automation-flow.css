@@ -265,3 +265,5 @@ button.node-menu:hover{border-color:var(--border-2);background:var(--surface-3);
 @keyframes bd-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .flow-lines .moving{opacity:.18}
 .flow-lines path.edge-hit{cursor:grab}
+/* Long Armenian/Russian status line under the flow title: shorten with "…" instead of widening the page. */
+.flow-title-row>div{min-width:0}.flow-title-row p{overflow:hidden;text-overflow:ellipsis;max-width:100%}.flow-title-row p>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

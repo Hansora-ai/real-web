@@ -81,3 +81,5 @@
 .tt-picker .ui-dialog-head p{margin:4px 0 0}
 .tt-picker .ui-dialog-actions{padding:0 20px 20px;margin-top:14px}
 .tt-video.has-thumb .tt-play{display:none}
+/* Long Armenian/Russian text: the steps stay as wide as the screen and their content wraps. */
+.tt-steps{grid-template-columns:minmax(0,1fr)}.tt-step{min-width:0}
