@@ -997,4 +997,8 @@ html[lang="hy"] .ui-row-title,html[lang="ru"] .ui-row-title{overflow-wrap:anywhe
 .ui-inbox-list{min-width:0;overflow:hidden}
 .ui-inbox-list-head{grid-template-columns:minmax(0,1fr)}
 .ui-inbox-title{flex-wrap:wrap;min-width:0;row-gap:6px}
-.ui-inbox-list .ui-filter-pills{min-width:0;flex-wrap:wrap;row-gap:4px;overflow:visible}
+.ui-inbox-list-head{gap:8px}
+.ui-inbox-list .ui-filter-pills{min-width:0;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);padding-right:24px}
+.ui-inbox-list .ui-filter-pills::-webkit-scrollbar{display:none}
+.ui-inbox-list .ui-filter-pills button{height:26px;padding:0 9px;font-size:11.5px;gap:5px;flex:none;scroll-snap-align:start}
+.ui-inbox-list .ui-stage-pills{margin-top:0}

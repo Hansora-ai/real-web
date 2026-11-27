@@ -143,6 +143,16 @@
     Promise.resolve(event.detail?.request).then(settle, settle);
   });
 
+  // The inbox filter rows scroll sideways; let a normal mouse wheel move them too.
+  document.addEventListener('wheel', (event) => {
+    const row = event.target.closest && event.target.closest('.ui-inbox-list .ui-filter-pills');
+    if (!row || Math.abs(event.deltaY) <= Math.abs(event.deltaX) || row.scrollWidth <= row.clientWidth) return;
+    const max = row.scrollWidth - row.clientWidth;
+    if ((event.deltaY < 0 && row.scrollLeft <= 0) || (event.deltaY > 0 && row.scrollLeft >= max)) return;
+    row.scrollLeft += event.deltaY;
+    event.preventDefault();
+  }, { passive: false });
+
   window.HansoraUI = { icon, stagger, countUp, tabs, toast, typing, hydrateIcons, reduceMotion, busy };
   const ready = () => { hydrateIcons(); stagger(); document.querySelectorAll('.ui-tabs').forEach(tabs); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
