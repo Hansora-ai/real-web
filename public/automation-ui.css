@@ -1033,3 +1033,5 @@ html[lang="hy"] .ui-row-title,html[lang="ru"] .ui-row-title{overflow-wrap:anywhe
   .ui-vs-switch{display:flex;width:100%;max-width:100%;box-sizing:border-box}
   .ui-vs-switch button{flex:1 1 0;min-width:0;height:auto;min-height:36px;white-space:normal;text-align:center;justify-content:center;line-height:1.2;padding:6px 10px}
 }
+/* Segmented choices with long Russian/Armenian labels wrap inside their half instead of widening the card. */
+.ui-segmented label{min-width:0}.ui-segmented span{white-space:normal;height:auto;min-height:32px;text-align:center;line-height:1.2;padding:4px 6px}
