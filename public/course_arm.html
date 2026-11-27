@@ -865,7 +865,7 @@ Return only the final ready-to-use image-editing prompt.`,
           .from('payments')
           .select('id')
           .eq('uid',userId)
-          .gte('credits',100)
+          .gte('credits',90) // 90 = the course's $9.99 pack (900 shown); the $19.99 pack is 200
           .limit(1);
         if(session?.user?.id!==userId)return;
         if(error)throw error;
