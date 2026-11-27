@@ -170,7 +170,7 @@
   }
 
   var script = document.createElement('script');
-  script.src = 'automation-i18n-' + lang + '.js?v=20261118h';
+  script.src = 'automation-i18n-' + lang + '.js?v=20261127r';
   script.onload = function () { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); };
   script.onerror = function () { clearTimeout(safety); reveal(); readyResolve(); };
   document.head.appendChild(script);
