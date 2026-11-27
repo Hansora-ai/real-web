@@ -188,3 +188,7 @@ body.auto-sidebar-collapsed .auto-side-link .auto-badge{position:absolute;left:2
 .auto-lang-list button{display:flex;justify-content:space-between}
 .auto-lang-list button.current{font-weight:600}
 .auto-lang-list i{font-style:normal;color:#34c759}
+/* Longer Russian and Armenian tab names: equal columns, the label shrinks instead of pushing its neighbours. */
+.auto-bottom-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+.auto-tab{min-width:0}
+html[lang="hy"] .auto-tab,html[lang="ru"] .auto-tab{font-size:10px;letter-spacing:-.01em}
