@@ -262,26 +262,39 @@
   // Photos, videos and voice notes customers sent: private copies, shown through short-lived links.
   const mediaUrls = new Map();
   async function loadMessageMedia(timeline) {
-    const holders = [...timeline.querySelectorAll('[data-media-path]')];
-    if (!holders.length || api.isLocalPreview) return;
-    const missing = [...new Set(holders.map(holder => holder.dataset.mediaPath).filter(path => !mediaUrls.has(path)))];
+    const holders = () => [...document.querySelectorAll('#message-timeline [data-media-path]')];
+    if (!holders().length || api.isLocalPreview) return;
+    const missing = [...new Set(holders().map(holder => holder.dataset.mediaPath).filter(path => !mediaUrls.has(path)))];
+    let problem = '';
     if (missing.length) {
       try {
         const response = await api.authenticatedFetch('/.netlify/functions/automation-media-url', { method:'POST', body:JSON.stringify({ business_id:businessId, paths:missing }) });
         const result = await response.json().catch(() => ({}));
+        if (!response.ok) problem = result.error || `error ${response.status}`;
         Object.entries(result.urls || {}).forEach(([path, url]) => mediaUrls.set(path, url));
-      } catch (_) { return; }
+        if (!problem && missing.some(path => !mediaUrls.has(path))) problem = 'no link was returned';
+      } catch (error) { problem = error?.message || 'network error'; }
+      if (problem) console.warn('inbox media links failed', { problem, paths: missing });
     }
-    holders.forEach(holder => {
+    // The page may have been redrawn while the links were loading: fill what is on screen now.
+    holders().forEach(holder => {
       const url = mediaUrls.get(holder.dataset.mediaPath);
-      if (!url || holder.querySelector('audio,video,img')) return;
+      if (holder.querySelector('audio,video,img')) return;
+      if (!url) {
+        if (problem && holder.classList.contains('ui-call-recording-player')) {
+          holder.innerHTML = `<span class="ui-faint">Could not load the recording (${escapeHtml(problem)}).</span> <button class="ui-btn ghost sm" type="button" data-media-retry>Try again</button>`;
+          holder.querySelector('[data-media-retry]').addEventListener('click', () => { holder.innerHTML = '<span class="ui-faint">Loading the recording…</span>'; loadMessageMedia(timeline); });
+        }
+        return;
+      }
       const mime = holder.dataset.mediaMime || '';
-      if (mime.startsWith('audio/')) holder.innerHTML = `<audio controls preload="none" src="${escapeHtml(url)}"></audio>`;
+      if (mime.startsWith('audio/')) holder.innerHTML = `<audio controls preload="metadata" src="${escapeHtml(url)}"></audio>`;
       else if (mime.startsWith('video/')) holder.innerHTML = `<video controls preload="metadata" src="${escapeHtml(url)}"></video>`;
       else holder.innerHTML = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="Photo from the customer" loading="lazy"></a>`;
-      holder.querySelector('img,video')?.addEventListener('load', () => { timeline.scrollTop = timeline.scrollHeight; }, { once:true });
+      holder.querySelector('img,video')?.addEventListener('load', () => { const live = document.querySelector('#message-timeline'); if (live) live.scrollTop = live.scrollHeight; }, { once:true });
     });
   }
+
 
   function renderCustomer() {
     const conversation = current();
